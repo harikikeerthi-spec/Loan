@@ -731,8 +731,9 @@ export class KycService {
                 // Strict document type validation check
                 const expectedNorm = this.normalizeDocTypeForComparison(docType);
                 const detectedNorm = this.normalizeDocTypeForComparison(parsed.document_type || docType);
+                const isCustomDoc = docType.toLowerCase().includes('other');
 
-                if (expectedNorm !== detectedNorm) {
+                if (!isCustomDoc && expectedNorm !== detectedNorm) {
                     isValid = false;
                     validationError = `Document type mismatch: Expected a valid ${docType.toUpperCase().replace(/_/g, ' ')}, but detected a ${String(parsed.document_type || 'different document type').toUpperCase()}. Please upload the correct document.`;
                 } else {

@@ -276,6 +276,8 @@ export class AuthController {
     address?: string;
     notes?: string;
     intakeSeason?: string;
+    pincode?: string;
+    admissionStatus?: string;
   }) {
     if (!body || !body.userId) {
       return {
@@ -321,6 +323,8 @@ export class AuthController {
         address: body.address,
         notes: body.notes,
         intakeSeason: body.intakeSeason,
+        pincode: body.pincode,
+        admissionStatus: body.admissionStatus,
       });
       return {
         success: true,
@@ -329,6 +333,29 @@ export class AuthController {
     } catch (error) {
       console.error('Create application error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get all entries from the separate ApplyLoan table (leads)
+   * GET /auth/apply-loan-applications
+   */
+  @Get('apply-loan-applications')
+  async getApplyLoanApplications() {
+    try {
+      const { data, error } = await this.usersService.getApplyLoanApplications();
+      if (error) throw error;
+      return {
+        success: true,
+        applications: data,
+      };
+    } catch (error) {
+      console.error('Fetch apply loan applications error:', error);
+      return {
+        success: false,
+        message: 'Could not fetch apply loan applications',
+        error: error.message,
+      };
     }
   }
 

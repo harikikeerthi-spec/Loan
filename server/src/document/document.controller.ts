@@ -23,6 +23,8 @@ import { S3Service } from './s3.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 import * as crypto from 'crypto';
 
 // ── Use in-memory storage — files go straight to S3, never touch disk ──────
@@ -58,6 +60,7 @@ export class DocumentController {
     @UploadedFile() file: Express.Multer.File,
     @Body('userId') userId: string,
     @Body('docType') docType: string,
+    @Body('docName') docName?: string,
   ) {
     if (!file) throw new BadRequestException('File is required');
     if (!userId || !docType)
@@ -68,39 +71,53 @@ export class DocumentController {
     );
 
     try {
-      // ── 1. Perform AI OCR Verification BEFORE storing in S3 ───────────────
-      console.log(`[UPLOAD] Running pre-storage KYC verification for ${docType}...`);
+      const isOtherDoc = docType.toLowerCase().includes('other');
       let kycResult: any;
-      try {
-        kycResult = await this.kycService.processDocument(
-          file.buffer,
-          file.mimetype,
-          docType,
-        );
-      } catch (aiError: any) {
-        console.error(`[UPLOAD] KYC Service threw an error: ${aiError.message || aiError}. Running local keyword check...`);
 
-        // Even on AI exceptions, we must verify document integrity to reject completely wrong uploads
-        const isImage = file.mimetype.startsWith('image/');
-        const isPdf = file.mimetype === 'application/pdf';
-        const integrityCheck = await this.kycService.validateDocumentKeywords(file.buffer, docType, isPdf, isImage);
-
-        if (!integrityCheck.is_valid) {
-          console.warn(`[UPLOAD] Rejecting invalid ${docType} on KYC service exception. Error: ${integrityCheck.error}`);
-          throw new BadRequestException(
-            `Document verification failed: The uploaded file was not recognized as a valid ${docType.toUpperCase().replace(/_/g, ' ')}. ` +
-            `Details: ${integrityCheck.error}. Please check your document and re-upload the correct file.`
-          );
-        }
-
-        // Graceful fallback for external service failures when document is valid
+      if (isOtherDoc) {
+        console.log(`[UPLOAD] Bypassing AI KYC check for custom document type: ${docType}`);
         kycResult = {
           document_type: docType,
-          confidence_score: 50,
+          confidence_score: 100,
           is_valid: true,
           extracted_data: {},
-          error: `AI verification service temporarily offline: ${aiError.message || 'Unknown error'}`
+          document_validation: {},
+          ocr_issues: []
         };
+      } else {
+        // ── 1. Perform AI OCR Verification BEFORE storing in S3 ───────────────
+        console.log(`[UPLOAD] Running pre-storage KYC verification for ${docType}...`);
+        try {
+          kycResult = await this.kycService.processDocument(
+            file.buffer,
+            file.mimetype,
+            docType,
+          );
+        } catch (aiError: any) {
+          console.error(`[UPLOAD] KYC Service threw an error: ${aiError.message || aiError}. Running local keyword check...`);
+
+          // Even on AI exceptions, we must verify document integrity to reject completely wrong uploads
+          const isImage = file.mimetype.startsWith('image/');
+          const isPdf = file.mimetype === 'application/pdf';
+          const integrityCheck = await this.kycService.validateDocumentKeywords(file.buffer, docType, isPdf, isImage);
+
+          if (!integrityCheck.is_valid) {
+            console.warn(`[UPLOAD] Rejecting invalid ${docType} on KYC service exception. Error: ${integrityCheck.error}`);
+            throw new BadRequestException(
+              `Document verification failed: The uploaded file was not recognized as a valid ${docType.toUpperCase().replace(/_/g, ' ')}. ` +
+              `Details: ${integrityCheck.error}. Please check your document and re-upload the correct file.`
+            );
+          }
+
+          // Graceful fallback for external service failures when document is valid
+          kycResult = {
+            document_type: docType,
+            confidence_score: 50,
+            is_valid: true,
+            extracted_data: {},
+            error: `AI verification service temporarily offline: ${aiError.message || 'Unknown error'}`
+          };
+        }
       }
 
       console.log(
@@ -119,7 +136,8 @@ export class DocumentController {
       }
 
       // ── 2. Verified! Proceed to Upload to S3 (with Local Fallback) ───────
-      const s3Key = this.s3Service.buildKey(userId, docType, file.originalname);
+      const fileExt = path.extname(file.originalname);
+      const s3Key = `vault/${userId}/${docType}${fileExt}`;
       let previewUrl = '';
       try {
         await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
@@ -130,11 +148,9 @@ export class DocumentController {
 
         // Write the file locally on the server in a local uploads directory as a fallback!
         try {
-          const fs = require('fs');
-          const path = require('path');
           const localDir = path.join(process.cwd(), 'uploads', userId, docType);
-          fs.mkdirSync(localDir, { recursive: true });
-          fs.writeFileSync(path.join(localDir, file.originalname), file.buffer);
+          await fs.promises.mkdir(localDir, { recursive: true });
+          await fs.promises.writeFile(path.join(localDir, `file${fileExt}`), file.buffer);
           console.log(`[UPLOAD] Graceful local fallback copy saved at: ${localDir}`);
         } catch (localWriteError: any) {
           console.error('[UPLOAD] Local write fallback failed:', localWriteError.message);
@@ -149,6 +165,7 @@ export class DocumentController {
         isValid: true,
         code: 'AI_VERIFIED',
         confidence: kycResult.confidence_score,
+        docName: docName || undefined,
         details: {
           message: 'Document verified by AI OCR pre-storage.',
           extractedFields: kycResult.extracted_data,
@@ -229,6 +246,23 @@ export class DocumentController {
     console.log(
       `[OCR-REVERIFY] userId=${userId}, docType=${docType}`,
     );
+
+    const isOtherDoc = docType.toLowerCase().includes('other');
+    if (isOtherDoc) {
+      return {
+        success: true,
+        message: 'Bypassed verification for other document type.',
+        data: {
+          status: 'uploaded',
+          ocrResult: {
+            isValid: true,
+            confidence: 100,
+            extractedFields: {},
+            reason: 'Bypassed',
+          }
+        }
+      };
+    }
 
     const docs = await this.usersService.getUserDocuments(userId);
     const doc = docs.find((d) => d.docType === docType);

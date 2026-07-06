@@ -49,6 +49,7 @@ export default function ApplyLoanPage() {
         phone: "",
         dateOfBirth: "",
         address: "",
+        pincode: "",
         notes: "",
         admissionStatus: "waiting", // confirmed, conditional, waiting
         intakeSeason: "",
@@ -149,6 +150,32 @@ export default function ApplyLoanPage() {
         return Object.keys(errors).length === 0;
     };
 
+    const resolvePincode = async (pin: string) => {
+        try {
+            const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+            const data = await res.json();
+            if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice[0]) {
+                const po = data[0].PostOffice[0];
+                const city = po.District || po.Taluk || po.Name;
+                const state = po.State;
+                if (city && state) {
+                    setFormData(prev => {
+                        const currentAddr = prev.address.trim();
+                        if (currentAddr) {
+                            if (currentAddr.includes(city) || currentAddr.includes(state)) {
+                                return prev;
+                            }
+                            return { ...prev, address: `${currentAddr}, ${city}, ${state}` };
+                        }
+                        return { ...prev, address: `${city}, ${state}` };
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Failed to resolve pincode details:", e);
+        }
+    };
+
     const validateStep2 = (): boolean => {
         const errors: Record<string, string> = {};
         if (!formData.firstName.trim()) errors.firstName = "First name is required";
@@ -169,6 +196,16 @@ export default function ApplyLoanPage() {
             const age = new Date(ageMs).getUTCFullYear() - 1970;
             if (age < 18) errors.dateOfBirth = "You must be at least 18 years old to apply";
             else if (age > 40) errors.dateOfBirth = "Applicants above 40 years are not eligible for this loan";
+        }
+
+        if (!formData.pincode.trim()) {
+            errors.pincode = "Pincode is required";
+        } else if (formData.pincode.length !== 6) {
+            errors.pincode = "Pincode must be exactly 6 digits";
+        }
+
+        if (!formData.address.trim()) {
+            errors.address = "Residential address is required";
         }
 
         if (!formData.coApplicant) errors.coApplicant = "Please select co-applicant type";
@@ -474,15 +511,33 @@ export default function ApplyLoanPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <DatePicker
-                                        label="Date of Birth"
-                                        value={formData.dateOfBirth}
-                                        onChange={(v) => update("dateOfBirth", v)}
-                                        error={stepErrors.dateOfBirth}
-                                        required
-                                    />
-                                    <InputField label="Residential Address" icon="location_on" value={formData.address} onChange={(v) => update("address", v)} placeholder="City, State" />
-                                </div>
+                                     <DatePicker
+                                         label="Date of Birth"
+                                         value={formData.dateOfBirth}
+                                         onChange={(v) => update("dateOfBirth", v)}
+                                         error={stepErrors.dateOfBirth}
+                                         required
+                                     />
+                                     <InputField
+                                         label="Residential Pincode"
+                                         icon="pin_drop"
+                                         value={formData.pincode}
+                                         onChange={(v) => {
+                                             const numericVal = v.replace(/\D/g, "").slice(0, 6);
+                                             update("pincode", numericVal);
+                                             if (numericVal.length === 6) {
+                                                 resolvePincode(numericVal);
+                                             }
+                                         }}
+                                         placeholder="e.g. 400001"
+                                         error={stepErrors.pincode}
+                                         required
+                                     />
+                                 </div>
+
+                                 <div className="grid grid-cols-1 gap-8">
+                                     <InputField label="Residential Address" icon="location_on" value={formData.address} onChange={(v) => update("address", v)} placeholder="e.g. Flat No, Street, Locality, City, State" error={stepErrors.address} required />
+                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <SelectField label="Co-Applicant Identity" icon="family_history" value={formData.coApplicant} onChange={(v) => update("coApplicant", v)}
@@ -582,6 +637,7 @@ export default function ApplyLoanPage() {
                                                 { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
                                                 { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Collateral", value: formData.collateral.split(':')[0] },
+                                                { label: "Residential Pincode", value: formData.pincode },
                                             ].filter((f) => f.value).map((f) => (
                                                 <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100/50 last:border-0">
                                                     <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">{f.label}</span>

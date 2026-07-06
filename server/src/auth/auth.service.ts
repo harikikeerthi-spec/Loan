@@ -5,10 +5,33 @@ import { EmailService } from './email.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PhoneNumberUtil } from 'google-libphonenumber';
+
+const phoneUtil = PhoneNumberUtil.getInstance();
 
 @Injectable()
 export class AuthService {
   private otps = new Map<string, { otp: string; expiresAt: number }>();
+
+  private validatePhoneNumberStructurally(phoneNumber: string): { isValid: boolean; message?: string } {
+    if (!phoneNumber || phoneNumber.trim() === '') {
+      return { isValid: false, message: 'Please enter your phone number' };
+    }
+    const allowedCharsRegex = /^[0-9+\s\-()]+$/;
+    if (!allowedCharsRegex.test(phoneNumber)) {
+      return { isValid: false, message: 'Please enter a valid phone number (only digits, spaces, +, -, and parentheses are allowed)' };
+    }
+    try {
+      const parsed = phoneUtil.parseAndKeepRawInput(phoneNumber, 'IN');
+      const isValid = phoneUtil.isValidNumber(parsed);
+      if (!isValid) {
+        return { isValid: false, message: 'The phone number is structurally invalid for the parsed region/country code.' };
+      }
+      return { isValid: true };
+    } catch (error: any) {
+      return { isValid: false, message: `Invalid phone number format: ${error.message || 'Parsing failed'}` };
+    }
+  }
   private signupData = new Map<string, {
     firstName?: string;
     lastName?: string;
@@ -117,20 +140,9 @@ export class AuthService {
 
       // Validate phoneNumber if provided
       if (signupInfo.phoneNumber !== undefined) {
-        if (signupInfo.phoneNumber.trim() === '') {
-          return { success: false, message: 'Please enter your phone number' };
-        }
-
-        // Validate phone number format (only numbers, +, -, spaces, and parentheses)
-        const phoneRegex = /^[0-9+\s\-()]+$/;
-        if (!phoneRegex.test(signupInfo.phoneNumber)) {
-          return { success: false, message: 'Please enter a valid phone number' };
-        }
-
-        // Check exact length (exactly 10 digits)
-        const digitsOnly = signupInfo.phoneNumber.replace(/[^0-9]/g, '');
-        if (digitsOnly.length !== 10) {
-          return { success: false, message: 'Phone number must be exactly 10 digits' };
+        const phoneValidation = this.validatePhoneNumberStructurally(signupInfo.phoneNumber);
+        if (!phoneValidation.isValid) {
+          return { success: false, message: phoneValidation.message };
         }
       }
 
@@ -295,26 +307,81 @@ export class AuthService {
     const username = emailParts[0];
     const domain = emailParts[1];
 
-    if (username.length < 8) {
-      return { success: false, message: 'Email username (before @) must be at least 8 characters long' };
+    // Check if user exists first to allow existing/testing/unauthorized accounts to login
+    let existingUser: any = null;
+    try {
+      existingUser = await this.usersService.findOne(email);
+    } catch (err) {
+      console.warn(`[AuthService] Error checking user existence:`, err);
     }
 
-    if (!/[a-z]/.test(username)) {
-      return { success: false, message: 'Email username must include at least one alphabetical character (a-z)' };
-    }
+    if (!existingUser) {
+      const tempEmailDomains = [
+        'mailinator.com',
+        '10minutemail.com',
+        'tempmail.com',
+        'temp-mail.org',
+        'guerrillamail.com',
+        'sharklasers.com',
+        'yopmail.com',
+        'dispostable.com',
+        'getairmail.com',
+        'throwawaymail.com',
+        'tempmailaddress.com',
+        'maildrop.cc',
+        'mintemail.com',
+        'generator.email',
+        'fakeinbox.com',
+        'burnermail.io',
+        'trashmail.com',
+        'receivesms.cc',
+        'tempmail.dev',
+        'emailfake.com',
+        'disposable.com',
+        'afterdo.com',
+        'binkmail.com',
+        'safetymail.info',
+        'guerrillamailblock.com',
+        'guerrillamail.net',
+        'guerrillamail.org',
+        'guerrillamail.biz',
+        'grr.la',
+        'pokemail.net'
+      ];
 
-    if (/[A-Z]/.test(username)) {
-      return { success: false, message: 'Email username must not contain capital letters' };
-    }
+      const domainLower = domain.toLowerCase();
+      const isTempEmail = tempEmailDomains.some(d => domainLower === d || domainLower.endsWith('.' + d)) ||
+                          domainLower.includes('tempmail') ||
+                          domainLower.includes('temp-mail') ||
+                          domainLower.includes('disposable') ||
+                          domainLower.includes('throwaway') ||
+                          domainLower.includes('10minutemail') ||
+                          domainLower.includes('fakeinbox') ||
+                          domainLower.includes('yopmail');
 
-    const emailRegex = /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
-    if (!emailRegex.test(email.toLowerCase())) {
-      return { success: false, message: 'Please enter a valid email address (e.g., username@example.com)' };
+      if (isTempEmail) {
+        return { success: false, message: 'Temporary or disposable email addresses are not allowed' };
+      }
+
+      if (username.length < 8) {
+        return { success: false, message: 'Email username (before @) must be at least 8 characters long' };
+      }
+
+      if (!/[a-z]/.test(username)) {
+        return { success: false, message: 'Email username must include at least one alphabetical character (a-z)' };
+      }
+
+      if (/[A-Z]/.test(username)) {
+        return { success: false, message: 'Email username must not contain capital letters' };
+      }
+
+      const emailRegex = /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+      if (!emailRegex.test(email.toLowerCase())) {
+        return { success: false, message: 'Please enter a valid email address (e.g., username@example.com)' };
+      }
     }
 
     try {
-      // Check if user exists
-      const existingUser = await this.usersService.findOne(email);
 
       // Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -706,16 +773,9 @@ export class AuthService {
     }
 
     // Validate phoneNumber
-    if (!phoneNumber || phoneNumber.trim() === '') {
-      return { success: false, message: 'Please enter your phone number' };
-    }
-    const phoneRegex = /^[0-9+\s\-()]+$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      return { success: false, message: 'Please enter a valid phone number' };
-    }
-    const digitsOnly = phoneNumber.replace(/[^0-9]/g, '');
-    if (digitsOnly.length !== 10) {
-      return { success: false, message: 'Phone number must be exactly 10 digits' };
+    const phoneValidation = this.validatePhoneNumberStructurally(phoneNumber);
+    if (!phoneValidation.isValid) {
+      return { success: false, message: phoneValidation.message };
     }
 
     // Validate dateOfBirth
