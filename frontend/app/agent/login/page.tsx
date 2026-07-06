@@ -145,7 +145,7 @@ function AgentLoginContent() {
             <div className="relative z-10 w-full max-w-md">
                 {/* Logo & Header */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-4 mb-6 group">
+                    <Link href="/" className="inline-flex items-center justify-center mb-6 group">
                         <div className="flex items-center gap-2 group-hover:scale-105 transition-all duration-300">
                             {/* Vidyaloans Logo */}
                             <div className="w-12 h-12 rounded-2xl bg-white border border-[#6605c7]/10 flex items-center justify-center shadow-sm">
@@ -164,9 +164,8 @@ function AgentLoginContent() {
                                 <span className="material-symbols-outlined text-[#6605c7] text-2xl">support_agent</span>
                             </div>
                         </div>
-                        <span className="font-extrabold text-3xl font-['Cabinet_Grotesk'] tracking-tight text-gray-900">Agent Portal</span>
                     </Link>
-                    <h1 className="text-4xl font-extrabold text-gray-900 font-['Cabinet_Grotesk'] tracking-tight mb-2">
+                    <h1 className="text-4xl font-extrabold text-gray-900 font-display tracking-tight mb-2">
                         {step === "email" ? "Agent Access" : "Verify Identity"}
                     </h1>
                     <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
