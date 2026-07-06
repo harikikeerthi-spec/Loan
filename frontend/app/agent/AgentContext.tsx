@@ -100,6 +100,8 @@ interface AgentContextType {
     setLoading: (loading: boolean) => void;
     stats: any;
     setStats: (stats: any) => void;
+    agentProfile: any;
+    setAgentProfile: (profile: any) => void;
     pipeline: PipelineCounts;
     activityFeed: ActivityFeedItem[];
     actionItems: FollowUpTask[];
@@ -179,6 +181,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     const { user, logout, token } = useAuth();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
+    const [agentProfile, setAgentProfile] = useState<any>(null);
     const [pipeline, setPipeline] = useState<PipelineCounts>({ leads: 0, submitted: 0, bank_review: 0, approved: 0, disbursed: 0 });
     const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
     const [actionItems, setActionItems] = useState<FollowUpTask[]>([]);
@@ -623,7 +626,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [statsRes, pipelineRes, feedRes, actionRes, appsRes, subAgentsRes, trainingRes, tasksRes] = await Promise.allSettled([
+            const [statsRes, pipelineRes, feedRes, actionRes, appsRes, subAgentsRes, trainingRes, tasksRes, profileRes] = await Promise.allSettled([
                 agentApi.getStats(),
                 agentApi.getPipeline(),
                 agentApi.getActivityFeed(),
@@ -632,6 +635,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                 agentApi.getSubAgents(),
                 agentApi.getTrainingModules(),
                 agentApi.getTasks(),
+                agentApi.getMe(),
             ]);
 
             // Stats
@@ -711,6 +715,11 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                     isCompleted: t.status === 'completed'
                 }));
                 if (mappedTasks.length > 0) setTasks(mappedTasks);
+            }
+
+            // Agent Profile
+            if (profileRes && profileRes.status === "fulfilled" && (profileRes.value as any)?.success) {
+                setAgentProfile((profileRes.value as any).data);
             }
 
             // Applications list
@@ -1085,6 +1094,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                 user, logout, token,
                 loading, setLoading,
                 stats, setStats,
+                agentProfile, setAgentProfile,
                 pipeline,
                 activityFeed,
                 actionItems,
