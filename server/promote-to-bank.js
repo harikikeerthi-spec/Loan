@@ -3,7 +3,7 @@ const { Client } = require('pg');
 require('dotenv').config();
 
 async function promoteToBank() {
-    const email = 'shannukalneedi@gmail.com';
+    const email = 'pkfc0406@gmail.com';
     const client = new Client({ connectionString: process.env.DIRECT_URL });
     await client.connect();
     

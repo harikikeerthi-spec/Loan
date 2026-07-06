@@ -1754,8 +1754,8 @@ export default function OnboardingPage() {
         // 2. Predefined fallback mapping for test users in DB
         const bankRepMap: Record<string, string> = {
             "hdfc credila": "keerthichinnu0728@gmail.com",
-            "auxilo finserve": "shannukalneedi@gmail.com",
-            "idfc first bank": "shannukalneedi@gmail.com",
+            "auxilo finserve": "pkfc0406@gmail.com",
+            "idfc first bank": "pkfc0406@gmail.com",
             "avanse financial": "keerthichinnu0728@gmail.com",
             "poonawalla fincorp": "keerthichinnu0728@gmail.com",
         };
