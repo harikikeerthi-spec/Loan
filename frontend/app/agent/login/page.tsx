@@ -145,9 +145,24 @@ function AgentLoginContent() {
             <div className="relative z-10 w-full max-w-md">
                 {/* Logo & Header */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-3 mb-6 group">
-                        <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center border border-[#6605c7]/20 group-hover:scale-105 transition-all duration-300">
-                            <span className="material-symbols-outlined text-[#6605c7] text-3xl">handshake</span>
+                    <Link href="/" className="inline-flex items-center gap-4 mb-6 group">
+                        <div className="flex items-center gap-2 group-hover:scale-105 transition-all duration-300">
+                            {/* Vidyaloans Logo */}
+                            <div className="w-12 h-12 rounded-2xl bg-white border border-[#6605c7]/10 flex items-center justify-center shadow-sm">
+                                <img
+                                    src="/images/vidyaloans-logo-transparent.png"
+                                    alt="VidyaLoans Logo"
+                                    className="w-9 h-9 object-contain"
+                                />
+                            </div>
+                            
+                            {/* Handshake connector */}
+                            <span className="material-symbols-outlined text-[#6605c7]/50 text-xl font-light">handshake</span>
+                            
+                            {/* Support Agent (Partner) Icon */}
+                            <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center border border-[#6605c7]/20">
+                                <span className="material-symbols-outlined text-[#6605c7] text-2xl">support_agent</span>
+                            </div>
                         </div>
                         <span className="font-extrabold text-3xl font-['Cabinet_Grotesk'] tracking-tight text-gray-900">Agent Portal</span>
                     </Link>
