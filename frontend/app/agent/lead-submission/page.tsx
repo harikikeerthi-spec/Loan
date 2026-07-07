@@ -148,22 +148,22 @@ export default function AgentLeadSubmission() {
         <div className="animate-fade-in-up space-y-12 relative z-10">
             
             {/* Eligibility checker widget */}
-            <section className="p-8 rounded-[2.5rem] bg-gradient-to-br from-[#0f172a] to-[#1e293b] text-white shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-10 opacity-10">
+            <section className="p-8 rounded-[2.5rem] bg-white border border-[#6605c7]/10 shadow-2xl shadow-[#6605c7]/5 text-gray-900 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-10 opacity-[0.03] text-[#6605c7] pointer-events-none">
                     <span className="material-symbols-outlined text-[10rem]">verified</span>
                 </div>
                 
                 <div className="relative z-10 max-w-2xl space-y-6">
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Tool Suite</span>
-                        <h3 className="text-2xl font-black font-display tracking-tight mt-1">💡 Pre-Submission Eligibility Checker</h3>
-                        <p className="text-slate-400 text-xs mt-1">Verify co-applicant requirements and matching banks before completing final leads creation.</p>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7]">Tool Suite</span>
+                        <h3 className="text-2xl font-black font-display tracking-tight mt-1 text-gray-900">💡 Pre-Submission Eligibility Checker</h3>
+                        <p className="text-gray-500 text-xs mt-1">Verify co-applicant requirements and matching banks before completing final leads creation.</p>
                     </div>
 
                     <form onSubmit={handleRunEligibility} className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <div className="space-y-2">
-                            <label className="block text-[10px] uppercase font-bold text-slate-400">Course Type</label>
-                            <select value={eligCheck.course} onChange={(e) => setEligCheck({ ...eligCheck, course: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none">
+                            <label className="block text-[10px] uppercase font-bold text-gray-400">Course Type</label>
+                            <select value={eligCheck.course} onChange={(e) => setEligCheck({ ...eligCheck, course: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 focus:bg-white transition-all">
                                 <option>B.Tech</option>
                                 <option>MBBS</option>
                                 <option>MBA</option>
@@ -171,18 +171,18 @@ export default function AgentLeadSubmission() {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[10px] uppercase font-bold text-slate-400">College / Uni</label>
-                            <input type="text" value={eligCheck.college} onChange={(e) => setEligCheck({ ...eligCheck, college: e.target.value })} placeholder="IIT Bombay" className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none" />
+                            <label className="block text-[10px] uppercase font-bold text-gray-400">College / Uni</label>
+                            <input type="text" value={eligCheck.college} onChange={(e) => setEligCheck({ ...eligCheck, college: e.target.value })} placeholder="IIT Bombay" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 focus:bg-white transition-all" />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[10px] uppercase font-bold text-slate-400">Loan Amount (₹)</label>
-                            <input type="number" value={eligCheck.amount} onChange={(e) => setEligCheck({ ...eligCheck, amount: e.target.value })} placeholder="1200000" className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none" />
+                            <label className="block text-[10px] uppercase font-bold text-gray-400">Loan Amount (₹)</label>
+                            <input type="number" value={eligCheck.amount} onChange={(e) => setEligCheck({ ...eligCheck, amount: e.target.value })} placeholder="1200000" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 focus:bg-white transition-all" />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[10px] uppercase font-bold text-slate-400">Co-App Income (₹/yr)</label>
-                            <input type="number" value={eligCheck.income} onChange={(e) => setEligCheck({ ...eligCheck, income: e.target.value })} placeholder="600000" className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none" />
+                            <label className="block text-[10px] uppercase font-bold text-gray-400">Co-App Income (₹/yr)</label>
+                            <input type="number" value={eligCheck.income} onChange={(e) => setEligCheck({ ...eligCheck, income: e.target.value })} placeholder="600000" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 focus:bg-white transition-all" />
                         </div>
-                        <button type="submit" disabled={eligLoading} className="sm:col-span-4 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 rounded-xl text-[10px] font-black uppercase tracking-wider text-white transition-all flex items-center justify-center gap-2">
+                        <button type="submit" disabled={eligLoading} className="sm:col-span-4 py-3.5 bg-[#6605c7] hover:bg-[#6605c7]/95 disabled:opacity-60 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2 shadow-xl shadow-[#6605c7]/20">
                             {eligLoading ? (
                                 <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Evaluating...</>
                             ) : "Evaluate Approval Probability"}
