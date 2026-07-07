@@ -108,8 +108,41 @@ export default function AgentCalendar() {
                     </div>
                 </div>
 
-                {/* Add task scheduler form */}
-                <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm flex flex-col justify-between">
+                <div className="space-y-8 flex flex-col">
+                    {/* Admission Season Alert Center */}
+                    <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm space-y-6">
+                        <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">🚨 Admission Alert Center</h3>
+                        <p className="text-gray-400 text-xs mt-1">Real-time alerts regarding seasonal scheme updates and intake deadlines.</p>
+                        
+                        <div className="space-y-4">
+                            <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-xs space-y-1">
+                                <div className="flex justify-between font-bold text-amber-800">
+                                    <span>SBI Scholar Scheme Deadline</span>
+                                    <span className="text-[9px] font-black uppercase bg-amber-150 px-1.5 py-0.5 rounded">High Priority</span>
+                                </div>
+                                <p className="text-amber-700 text-[11px] leading-relaxed">Fall Intake submissions for Premier Institutions (List A/B) must be locked by 15-Aug-2026 to ensure on-time disbursement.</p>
+                            </div>
+
+                            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-xs space-y-1">
+                                <div className="flex justify-between font-bold text-indigo-800">
+                                    <span>Lender TAT SLA Forecast</span>
+                                    <span className="text-[9px] font-black uppercase bg-indigo-150 px-1.5 py-0.5 rounded">SLA Advisory</span>
+                                </div>
+                                <p className="text-indigo-700 text-[11px] leading-relaxed">Avanse and Auxilo processing times expected to rise by 4 days due to high seasonal load. Submit documents 10 days early.</p>
+                            </div>
+
+                            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-xs space-y-1">
+                                <div className="flex justify-between font-bold text-emerald-800">
+                                    <span>HDFC Credila ROI Cut</span>
+                                    <span className="text-[9px] font-black uppercase bg-emerald-150 px-1.5 py-0.5 rounded">Rate Update</span>
+                                </div>
+                                <p className="text-emerald-700 text-[11px] leading-relaxed">Special ROI reduction of 0.25% announced for MS in US/Canada. Valid for leads submitted before 31-Jul-2026.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Add task scheduler form */}
+                    <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm flex flex-col justify-between">
                     <div className="space-y-6">
                         <div>
                             <h3 className="font-display font-black text-xl text-gray-900 uppercase tracking-tight">+ Add New Task</h3>
@@ -162,6 +195,7 @@ export default function AgentCalendar() {
                             <button type="submit" className="w-full py-4 bg-[#6605c7] hover:bg-[#6605c7]/95 text-white font-black uppercase tracking-wider text-xs rounded-xl transition-all shadow-sm">Save Task Reminder</button>
                         </form>
                     </div>
+                </div>
                 </div>
             </div>
         </div>

@@ -19,24 +19,35 @@ export class UniversityInquiryService {
     email: string;
     mobile: string;
     universityName: string;
-    type: 'callback' | 'fasttrack';
+    type: string;
   }) {
+    const finalType = data.type === 'callback' ? 'callback' : 'fasttrack';
+    
     const { data: inquiry, error } = await this.db
       .from('UniversityInquiry')
       .insert({
-        userId: data.userId,
+        userId: (data.userId && data.userId.trim() !== '') ? data.userId : null,
         name: data.name,
         email: data.email,
         mobile: data.mobile,
         universityName: data.universityName,
-        type: data.type,
+        type: finalType,
+        updatedAt: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    await this.sendInquiryEmails(data);
+    try {
+      await this.sendInquiryEmails({
+        ...data,
+        type: finalType,
+      });
+    } catch (mailError) {
+      console.error('Failed to send inquiry emails:', mailError);
+    }
+    
     return inquiry;
   }
 

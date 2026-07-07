@@ -476,27 +476,73 @@ export class AiController {
   @Post('search-universities')
   async searchUniversities(
     @Body()
-    data: {
-      countries: string[];
-      limit?: number;
-    },
-  ): Promise<{ success: boolean; universities: University[]; totalCount: number; source: string; message?: string }> {
+    data: any,
+  ): Promise<{ success: boolean; universities: any[]; totalCount: number; source: string; message?: string }> {
     try {
-      if (!data.countries || data.countries.length === 0) {
+      // If query is provided (including empty string)
+      if (data && typeof data.query === 'string') {
+        const degree = data.degree || "Master's";
+        const country = data.country;
+        
+        // Determine search type: Indian colleges/universities for Bachelor's degree,
+        // International universities for Master's/other degrees
+        const type = (degree === "Bachelor's" || degree === 'bachelors' || degree === 'ug_university' || (country === 'India' && degree !== "Master's")) 
+          ? 'ug_university' 
+          : 'university';
+          
+        const context = {
+          country,
+          degree,
+        };
+        
+        const universities = await this.openRouterService.searchAdvice(
+          data.query,
+          type,
+          context,
+        );
+
+        // Normalize output locations for display on frontend
+        const formatted = (universities || []).map((uni: any) => ({
+          ...uni,
+          location: uni.loc || uni.location || '',
+          country: type === 'ug_university' ? 'India' : (uni.country || country || ''),
+        }));
+        
+        return {
+          success: true,
+          universities: formatted,
+          totalCount: formatted.length,
+          source: 'ai',
+        };
+      }
+
+      // Fallback: Search by country list
+      let countries = data.countries;
+      if (!countries && data.country) {
+        countries = [data.country];
+      }
+
+      if (!countries || countries.length === 0) {
         throw new BadRequestException('At least one country is required');
       }
 
       const universities = await this.universitySearchService.searchUniversitiesByCountry(
-        data.countries,
+        countries,
         data.limit || 10,
       );
 
       const validUniversities = await this.universitySearchService.validateUniversityRealness(universities);
 
+      // Normalize locations for fallback search as well
+      const formatted = (validUniversities || []).map((uni: any) => ({
+        ...uni,
+        location: uni.loc || uni.location || '',
+      }));
+
       return {
         success: true,
-        universities: validUniversities,
-        totalCount: validUniversities.length,
+        universities: formatted,
+        totalCount: formatted.length,
         source: 'ai',
       };
     } catch (error) {

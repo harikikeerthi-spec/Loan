@@ -25,7 +25,12 @@ export class FirebaseAuthService {
         // Strip surrounding quotes and trim whitespace
         const cleanProjectId = projectId.trim().replace(/^["']|["']$/g, '');
         const cleanClientEmail = clientEmail.trim().replace(/^["']|["']$/g, '');
-        const cleanPrivateKey = privateKey.trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+        
+        // Handle the case where the private key might have escaped newlines and strip surrounding quotes
+        let formattedPrivateKey = privateKey.trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+        // Self-heal key: replace remaining literal backslashes with newlines
+        formattedPrivateKey = formattedPrivateKey.replace(/\\/g, '\n');
+        const cleanPrivateKey = formattedPrivateKey;
 
         admin.initializeApp({
           credential: admin.credential.cert({

@@ -134,20 +134,41 @@ function AgentLoginContent() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 relative bg-slate-50">
+        <div className="min-h-screen flex items-center justify-center px-4 relative bg-[#fafafa] overflow-hidden font-sans">
+            {/* Background elements */}
+            <div className="absolute inset-0 bg-[radial-gradient(at_0%_0%,rgba(102,5,199,0.05)_0px,transparent_50%),radial-gradient(at_100%_0%,rgba(224,195,137,0.06)_0px,transparent_50%),radial-gradient(at_100%_100%,rgba(139,192,232,0.05)_0px,transparent_50%),radial-gradient(at_0%_100%,rgba(102,5,199,0.03)_0px,transparent_50%)] opacity-90 pointer-events-none" />
+            
+            {/* Soft decorative blur circles */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-600/5 blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-purple-600/5 blur-[120px] pointer-events-none" />
+
             <div className="relative z-10 w-full max-w-md">
                 {/* Logo & Header */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2 mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 flex items-center justify-center border border-indigo-600/20">
-                            <span className="material-symbols-outlined text-indigo-600 text-3xl">handshake</span>
+                    <Link href="/" className="inline-flex items-center justify-center mb-6 group">
+                        <div className="flex items-center gap-2 group-hover:scale-105 transition-all duration-300">
+                            {/* Vidyaloans Logo */}
+                            <div className="w-12 h-12 rounded-2xl bg-white border border-[#6605c7]/10 flex items-center justify-center shadow-sm">
+                                <img
+                                    src="/images/vidyaloans-logo-transparent.png"
+                                    alt="VidyaLoans Logo"
+                                    className="w-9 h-9 object-contain"
+                                />
+                            </div>
+                            
+                            {/* Handshake connector */}
+                            <span className="material-symbols-outlined text-[#6605c7]/50 text-xl font-light">handshake</span>
+                            
+                            {/* Support Agent (Partner) Icon */}
+                            <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center border border-[#6605c7]/20">
+                                <span className="material-symbols-outlined text-[#6605c7] text-2xl">support_agent</span>
+                            </div>
                         </div>
-                        <span className="font-bold text-3xl font-display text-gray-900">Agent Portal</span>
                     </Link>
-                    <h1 className="text-3xl font-bold text-gray-900 font-display mb-2">
+                    <h1 className="text-4xl font-extrabold text-gray-900 font-display tracking-tight mb-2">
                         {step === "email" ? "Agent Access" : "Verify Identity"}
                     </h1>
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
                         {step === "email"
                             ? "Please enter your agent email to continue"
                             : `A secure code has been sent to ${email}`}
@@ -155,7 +176,7 @@ function AgentLoginContent() {
                 </div>
 
                 {/* Login Card */}
-                <div className="bg-white/80 backdrop-blur-2xl border border-white/50 rounded-[2.5rem] p-10 shadow-2xl shadow-indigo-500/10 border-t-4 border-t-indigo-600">
+                <div className="bg-white/90 backdrop-blur-xl border border-[#6605c7]/10 rounded-[2.5rem] p-10 shadow-2xl shadow-[#6605c7]/5">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 ml-1">Agent Email</label>
@@ -167,14 +188,14 @@ function AgentLoginContent() {
                                     onChange={(e) => setEmail(e.target.value)}
                                     disabled={step === "otp" || loading}
                                     placeholder="agent@vidyaloans.com"
-                                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-indigo-600/5 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed font-medium"
+                                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed font-medium"
                                     required
                                 />
                                 {step === "otp" && (
                                     <button
                                         type="button"
                                         onClick={() => { setStep("email"); setOtp(["", "", "", "", "", ""]); setError(""); setDevOtp(null); }}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-600 hover:underline"
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#6605c7] hover:underline"
                                     >
                                         Edit
                                     </button>
@@ -196,7 +217,7 @@ function AgentLoginContent() {
                                             value={digit}
                                             onChange={(e) => handleOtpChange(i, e.target.value)}
                                             onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                            className="w-12 h-16 text-center text-2xl font-bold bg-gray-50 border border-gray-100 rounded-2xl text-gray-900 focus:outline-none focus:ring-4 focus:ring-indigo-600/5 focus:bg-white transition-all"
+                                            className="w-12 h-16 text-center text-2xl font-bold bg-gray-50 border border-gray-100 rounded-2xl text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 focus:bg-white transition-all"
                                         />
                                     ))}
                                 </div>
@@ -205,7 +226,7 @@ function AgentLoginContent() {
                                     {resendDisabled ? (
                                         <span className="text-xs font-bold text-gray-400">Resend in {countdown}s</span>
                                     ) : (
-                                        <button type="button" onClick={sendOtp} className="text-xs text-indigo-600 hover:underline font-black uppercase tracking-wider">
+                                        <button type="button" onClick={sendOtp} className="text-xs text-[#6605c7] hover:underline font-black uppercase tracking-wider">
                                             Resend Now
                                         </button>
                                     )}
@@ -240,7 +261,7 @@ function AgentLoginContent() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-5 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-3 shadow-xl shadow-indigo-500/20"
+                            className="w-full py-5 bg-[#6605c7] text-white font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-[#6605c7]/90 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-3 shadow-xl shadow-[#6605c7]/20"
                         >
                             {loading ? (
                                 <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>

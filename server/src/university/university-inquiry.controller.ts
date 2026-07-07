@@ -12,7 +12,7 @@ export class UniversityInquiryController {
         email: string;
         mobile: string;
         universityName: string;
-        type: 'callback' | 'fasttrack';
+        type: string;
     }) {
         return this.inquiryService.createInquiry(body);
     }

@@ -1359,4 +1359,102 @@ export class AgentService {
       isOverdue
     };
   }
+
+  async createTask(agentId: string, data: any) {
+    const fs = require('fs');
+    const path = this.getTasksFilePath();
+    let allData: any[] = [];
+    if (fs.existsSync(path)) {
+      try {
+        allData = JSON.parse(fs.readFileSync(path, 'utf8'));
+      } catch (e) {}
+    }
+    
+    this.readTasks(agentId);
+    if (fs.existsSync(path)) {
+      try {
+        allData = JSON.parse(fs.readFileSync(path, 'utf8'));
+      } catch (e) {}
+    }
+
+    const newTask = {
+      id: `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      agentId,
+      title: data.notes || `${data.type} follow-up`,
+      description: data.notes || '',
+      dueDate: data.dateTime || new Date().toISOString(),
+      status: 'pending',
+      category: data.type || 'follow_up',
+      reminder: data.reminder || '15 min before',
+      studentId: data.studentId || ''
+    };
+
+    allData.push(newTask);
+    fs.writeFileSync(path, JSON.stringify(allData, null, 2), 'utf8');
+    return { success: true, data: newTask };
+  }
+
+  async completeTask(agentId: string, taskId: string, completed: boolean) {
+    const fs = require('fs');
+    const path = this.getTasksFilePath();
+    if (!fs.existsSync(path)) throw new NotFoundException('Tasks file not found');
+
+    let allData: any[] = [];
+    try {
+      allData = JSON.parse(fs.readFileSync(path, 'utf8'));
+    } catch (e) {}
+
+    let found = false;
+    allData = allData.map(t => {
+      if (t.id === taskId && t.agentId === agentId) {
+        found = true;
+        return {
+          ...t,
+          status: completed ? 'completed' : 'pending'
+        };
+      }
+      return t;
+    });
+
+    if (!found) throw new NotFoundException('Task not found');
+    fs.writeFileSync(path, JSON.stringify(allData, null, 2), 'utf8');
+    return { success: true };
+  }
+
+  async createBtLead(agentId: string, data: any) {
+    const fs = require('fs');
+    const path = this.getBtLeadsFilePath();
+    let list: any[] = [];
+    if (fs.existsSync(path)) {
+      try {
+        list = JSON.parse(fs.readFileSync(path, 'utf8'));
+      } catch (e) {}
+    }
+
+    await this.getBtLeads(agentId);
+    if (fs.existsSync(path)) {
+      try {
+        list = JSON.parse(fs.readFileSync(path, 'utf8'));
+      } catch (e) {}
+    }
+
+    const savings = parseFloat(data.estimatedSavings) || 0;
+    const newBtLead = {
+      id: `bt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      agentId,
+      studentName: data.studentName,
+      currentBank: data.currentBank,
+      targetBank: data.targetBank,
+      loanAmount: parseFloat(data.loanAmount) || 0,
+      currentRoi: parseFloat(data.currentRoi) || 0,
+      targetRoi: parseFloat(data.targetRoi) || 0,
+      estimatedSavings: savings,
+      status: "UNDER_REVIEW",
+      createdAt: new Date().toISOString()
+    };
+
+    list.push(newBtLead);
+    fs.writeFileSync(path, JSON.stringify(list, null, 2), 'utf8');
+    return { success: true, data: newBtLead };
+  }
 }

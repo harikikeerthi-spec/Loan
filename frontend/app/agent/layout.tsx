@@ -12,7 +12,8 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         logout,
         toast,
         sidebarCollapsed, setSidebarCollapsed,
-        sidebarOpen, setSidebarOpen
+        sidebarOpen, setSidebarOpen,
+        agentProfile
     } = useAgent();
 
     // Side navigation bar definition
@@ -23,11 +24,17 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         { section: "documents", icon: "folder_shared", label: "Documents" },
         { section: "calendar", icon: "calendar_month", label: "Calendar" },
         { section: "commissions", icon: "account_balance_wallet", label: "Commissions" },
+        { section: "profile", icon: "manage_accounts", label: "Profile & KYC" },
         { section: "analytics", icon: "monitoring", label: "Performance" },
         { section: "sub-agents", icon: "share_reviews", label: "Sub-Agents" },
         { section: "training", icon: "school", label: "LMS & Training" },
+        { section: "alumni", icon: "school", label: "Alumni Referrals" },
         { section: "chat-staff", icon: "support_agent", label: "Staff RM Line" },
         { section: "chat-student", icon: "forum", label: "Student Line" },
+        { section: "qr-code", icon: "qr_code_2", label: "QR Lead Capture" },
+        { section: "tracking-links", icon: "link", label: "Tracking Links" },
+        { section: "whatsapp-bot", icon: "chat_bubble", label: "WhatsApp Bot" },
+        { section: "balance-transfer", icon: "swap_horiz", label: "Balance Transfer" },
     ];
 
     // Determine current section heading name
@@ -84,8 +91,9 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                             return (
                                 <React.Fragment key={item.section}>
                                     {idx === 3 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Backoffice</p>}
-                                    {idx === 6 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Grow Network</p>}
-                                    {idx === 9 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Live Support</p>}
+                                    {idx === 7 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Grow Network</p>}
+                                    {idx === 11 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Live Support</p>}
+                                    {idx === 13 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Smart Tools</p>}
                                     
                                     <Link 
                                         href={`/agent/${item.section}`} 
@@ -106,11 +114,11 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                         <div className={`${sidebarCollapsed ? "p-1.5 rounded-full mb-2" : "p-3 rounded-[1.5rem] mb-3"} bg-white border border-[#6605c7]/10 group hover:border-[#6605c7]/30 transition-all duration-500 flex justify-center`}>
                             <div className="flex items-center gap-3 w-full justify-center">
                                 <div className="w-10 h-10 rounded-full border border-gray-100 shadow-sm overflow-hidden bg-gradient-to-br from-[#6605c7]/10 to-[#6605c7]/5 flex-shrink-0">
-                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=KrishnaAgency`} alt="Agent" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${agentProfile?.businessName || "KrishnaAgency"}`} alt="Agent" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                 </div>
                                 {!sidebarCollapsed && (
                                     <div className="min-w-0 flex-1 flex flex-col justify-center">
-                                        <p className="text-xs font-black text-gray-900 truncate leading-none mb-1">Krishna Agency</p>
+                                        <p className="text-xs font-black text-gray-900 truncate leading-none mb-1">{agentProfile?.businessName || "VidyaLoan Agency"}</p>
                                         <div className="flex items-center gap-1">
                                             <div className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
                                             <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest leading-none">Master DSA</p>
@@ -153,7 +161,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                 <h1 className="text-3xl font-black font-display text-gray-900 capitalize tracking-tighter leading-none mb-1">
                                     {sectionTitle}
                                 </h1>
-                                <p className="text-[10px] font-bold text-[#6605c7]/40 uppercase tracking-[0.2em]">Krishna Agency | June 2026</p>
+                                <p className="text-[10px] font-bold text-[#6605c7]/40 uppercase tracking-[0.2em]">{agentProfile?.businessName || "VidyaLoan Agency"} | June 2026</p>
                             </div>
                         </div>
 
