@@ -28,7 +28,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         { section: "analytics", icon: "monitoring", label: "Performance" },
         { section: "sub-agents", icon: "share_reviews", label: "Sub-Agents" },
         { section: "training", icon: "school", label: "LMS & Training" },
-        { section: "alumni", icon: "school", label: "Alumni Referrals" },
+        { section: "alumni", icon: "diversity_3", label: "Alumni Referrals" },
         { section: "chat-staff", icon: "support_agent", label: "Staff RM Line" },
         { section: "chat-student", icon: "forum", label: "Student Line" },
         { section: "qr-code", icon: "qr_code_2", label: "QR Lead Capture" },
