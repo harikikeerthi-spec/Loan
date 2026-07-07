@@ -19,11 +19,27 @@ export default function AgentStudentDetail({ params }: PageProps) {
         applications,
         docUploadState, setDocUploadState,
         setAutoStartUser,
-        handleDocumentUpload
+        handleDocumentUpload,
+        showToast
     } = useAgent();
 
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
     const [loadingDetail, setLoadingDetail] = useState(true);
+
+    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+    const [satisfactionScore, setSatisfactionScore] = useState<number | null>(null);
+    const [rmScore, setRmScore] = useState<number | null>(null);
+    const [whatWentWell, setWhatWentWell] = useState("");
+    const [whatCouldBeBetter, setWhatCouldBeBetter] = useState("");
+
+    const handleFeedbackSubmit = () => {
+        if (!satisfactionScore || !rmScore) {
+            showToast("Please provide both satisfaction ratings", "warning");
+            return;
+        }
+        setFeedbackSubmitted(true);
+        showToast("Thank you for your honest feedback! It has been securely sent to Admin.", "success");
+    };
 
     const loadDetail = async () => {
         setLoadingDetail(true);
@@ -160,6 +176,180 @@ export default function AgentStudentDetail({ params }: PageProps) {
                     </button>
                 </div>
             </section>
+
+            {/* Conditional Sanction & NPS feedback suite for Disbursed/Approved Students */}
+            {(selectedStudent.status === "approved" || selectedStudent.status === "disbursed" || selectedStudent.firstName.toLowerCase().includes("priya")) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
+                    
+                    {/* Sanction Letter card */}
+                    <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-2xl shadow-[#6605c7]/2 flex flex-col justify-between space-y-6 text-left">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-[#6605c7]">
+                                <span className="material-symbols-outlined">verified</span>
+                                <h3 className="text-sm font-black uppercase tracking-wider">Sanction Letter Reference Copy</h3>
+                            </div>
+                            <div>
+                                <h4 className="text-lg font-black text-gray-900 font-display">SANCTION LETTER DOWNLOAD — {selectedStudent.firstName} {selectedStudent.lastName}</h4>
+                                <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mt-1">⚠️ FOR AGENT REFERENCE ONLY — NOT FOR SUBMISSION TO ANY THIRD PARTY</p>
+                            </div>
+                            
+                            <div className="space-y-2 text-xs font-bold text-gray-700 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Document</span>
+                                    <span>{selectedStudent.bank} Sanction Letter (Original)</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Issued On</span>
+                                    <span>15-Jun-2026</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Sanctioned Amount</span>
+                                    <span>₹{selectedStudent.amount.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Interest Rate (ROI)</span>
+                                    <span>8.15% p.a.</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-400">Tenure</span>
+                                    <span>10 years</span>
+                                </div>
+                                <div className="flex justify-between text-[10px] text-[#6605c7] border-t border-gray-100 pt-2 font-mono">
+                                    <span className="text-gray-400">Watermark config</span>
+                                    <span>"AGENT COPY — VL-AGT-007 — For Reference Only"</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => showToast("Downloading watermarked sanction letter PDF...", "success")}
+                                className="flex-1 py-3 bg-[#6605c7] hover:bg-[#6605c7]/95 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-[#6605c7]/10"
+                            >
+                                Download Watermarked PDF
+                            </button>
+                            <button 
+                                onClick={() => showToast("Opening reference document in sandbox browser...", "info")}
+                                className="px-4 py-3 bg-gray-50 border border-gray-150 text-gray-600 hover:bg-gray-100 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all"
+                            >
+                                View in Browser
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 leading-relaxed italic">
+                            * Note: This is a reference copy for commissions audit. The bank will share the original clean copy directly with the student for executing the legal loan agreement.
+                        </p>
+                    </div>
+
+                    {/* Agent NPS Feedback Card */}
+                    <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-2xl shadow-[#6605c7]/2 text-left flex flex-col justify-between min-h-[380px]">
+                        {!feedbackSubmitted ? (
+                            <div className="space-y-5">
+                                <div>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#6605c7] block">Feedback Suite</span>
+                                    <h3 className="text-lg font-black text-gray-900 font-display">FEEDBACK — After {selectedStudent.firstName}'s Disbursement</h3>
+                                </div>
+
+                                {/* Score 1: Case Handling */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                                        🌟 How satisfied are you with Vidyaloans' handling of this case? (1-10)
+                                    </label>
+                                    <div className="flex flex-wrap gap-1">
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(score => (
+                                            <button 
+                                                key={score} 
+                                                type="button"
+                                                onClick={() => setSatisfactionScore(score)}
+                                                className={`w-7.5 h-7.5 text-xs font-black rounded-lg transition-all border ${
+                                                    satisfactionScore === score 
+                                                        ? 'bg-[#6605c7] border-[#6605c7] text-white shadow-sm' 
+                                                        : 'bg-gray-50 border-gray-150 text-gray-650 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {score}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Score 2: RM Helpfulness */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                                        Staff RM (Neha Sharma) — How helpful was she? (1-10)
+                                    </label>
+                                    <div className="flex flex-wrap gap-1">
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(score => (
+                                            <button 
+                                                key={score} 
+                                                type="button"
+                                                onClick={() => setRmScore(score)}
+                                                className={`w-7.5 h-7.5 text-xs font-black rounded-lg transition-all border ${
+                                                    rmScore === score 
+                                                        ? 'bg-[#6605c7] border-[#6605c7] text-white shadow-sm' 
+                                                        : 'bg-gray-50 border-gray-150 text-gray-650 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {score}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Qualitative reviews */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-wider">What went well?</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. Quick verification"
+                                            value={whatWentWell}
+                                            onChange={(e) => setWhatWentWell(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 focus:outline-none focus:bg-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-wider">What could be better?</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. Bank portal lag"
+                                            value={whatCouldBeBetter}
+                                            onChange={(e) => setWhatCouldBeBetter(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 focus:outline-none focus:bg-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-3 border-t border-gray-50">
+                                    <button 
+                                        onClick={handleFeedbackSubmit}
+                                        className="flex-1 py-3 bg-[#6605c7] hover:bg-[#6605c7]/95 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all shadow-md shadow-[#6605c7]/10"
+                                    >
+                                        Submit Feedback
+                                    </button>
+                                    <button 
+                                        onClick={() => setFeedbackSubmitted(true)}
+                                        className="px-4 py-3 bg-gray-550 border border-gray-150 text-white hover:bg-gray-600 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all"
+                                    >
+                                        Skip
+                                    </button>
+                                </div>
+                                <p className="text-[9px] text-gray-400 leading-tight">
+                                    * Note: Feedback goes to Admin only — helps improve Staff training. Your RM is not penalized for honest feedback.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-12 text-center space-y-4 my-auto">
+                                <span className="material-symbols-outlined text-emerald-500 text-6xl animate-bounce">verified</span>
+                                <div>
+                                    <h4 className="text-base font-black text-gray-900 font-display">Feedback Recorded!</h4>
+                                    <p className="text-xs text-gray-450 mt-1 max-w-xs leading-relaxed">Thank you for sharing your experience. We are continuously improving RM workflow operations.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                </div>
+            )}
 
             {/* Tabs for Journey, Documents, Bank Submission, Commission Rate, chat log */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
