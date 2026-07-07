@@ -16,15 +16,15 @@ export class OpenRouterService {
     ];
     
     private readonly VISION_FALLBACK_MODELS = [
+        'google/gemini-2.5-flash',
+        'google/gemini-2.0-flash-001',
         'openai/gpt-4o-mini',
         'meta-llama/llama-3.2-11b-vision-instruct:free',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'google/gemma-2-9b-it:free',
     ];
 
     /** Create an AbortSignal that auto-aborts after the configured timeout. */
-    private createTimeoutSignal(): AbortSignal {
-        return AbortSignal.timeout(this.REQUEST_TIMEOUT_MS);
+    private createTimeoutSignal(customTimeoutMs?: number): AbortSignal {
+        return AbortSignal.timeout(customTimeoutMs || this.REQUEST_TIMEOUT_MS);
     }
 
     async chat(prompt: string, model: string = 'openai/gpt-4o-mini'): Promise<string> {
@@ -242,7 +242,7 @@ export class OpenRouterService {
         return ((res && (res.universities || res.courses)) || []) as any[];
     }
 
-    async chatWithVision(prompt: string, imageUrl: string, model: string = 'openai/gpt-4o-mini'): Promise<string> {
+    async chatWithVision(prompt: string, imageUrl: string, model: string = 'google/gemini-2.5-flash'): Promise<string> {
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
             throw new Error('OPENROUTER_API_KEY is not configured');
         }
@@ -290,7 +290,7 @@ export class OpenRouterService {
                         'X-Title': 'VidyaLoan',
                     },
                     body: JSON.stringify(requestBody),
-                    signal: this.createTimeoutSignal(),
+                    signal: this.createTimeoutSignal(180_000), // 180 seconds timeout for vision/PDF tasks
                 });
 
                 if (!response.ok) {

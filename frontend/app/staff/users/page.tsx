@@ -120,13 +120,15 @@ export default function UserDirectoryPage() {
         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">STAFF DASHBOARD</p>
-                    <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
-                        User Directory
+                    <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">
                         <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[11px] font-semibold text-indigo-700">
                             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                             MANAGE ALL USERS
                         </span>
+                    </p>
+                    <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
+                        User Directory
+
                     </h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">

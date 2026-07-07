@@ -2234,4 +2234,150 @@ export class BankWorkflowService {
       funnel: funnelStages,
     };
   }
+
+  /**
+   * Get bank priorities sorted by priority
+   */
+  async getBankPriorities() {
+    const { data, error } = await this.db.client
+      .from('BankPriority')
+      .select('*')
+      .order('priority', { ascending: true });
+
+    if (error) throw error;
+    return { success: true, data: data || [] };
+  }
+
+  /**
+   * Update or overwrite bank priorities
+   */
+  async updateBankPriorities(priorities: { priority: number; bankName: string; status: string }[]) {
+    // 1. Delete all existing priorities
+    const { error: deleteError } = await this.db.client
+      .from('BankPriority')
+      .delete()
+      .neq('id', 'dummy-id-to-delete-all'); // delete all records
+
+    if (deleteError) throw deleteError;
+
+    // 2. Insert new priorities
+    const toInsert = priorities.map((p) => ({
+      priority: p.priority,
+      bankName: p.bankName,
+      status: p.status || 'Active',
+      updatedAt: new Date().toISOString(),
+    }));
+
+    const { data, error: insertError } = await this.db.client
+      .from('BankPriority')
+      .insert(toInsert)
+      .select();
+
+    if (insertError) throw insertError;
+    return { success: true, data };
+  }
+
+  /**
+   * Share application with multiple banks simultaneously (ROUTED_MULTIPARTY)
+   */
+  async submitApplicationToMultipleBanks(
+    applicationId: string,
+    banks: { bankId: string; bankName: string }[],
+    submittedBy: string,
+  ) {
+    if (!banks || banks.length === 0) {
+      throw new BadRequestException('Select at least one bank for distribution');
+    }
+
+    // Get application
+    const { data: application, error: appError } = await this.db.client
+      .from('LoanApplication')
+      .select('*')
+      .eq('id', applicationId)
+      .single();
+
+    if (appError || !application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    const createdSubmissions: any[] = [];
+
+    for (const bank of banks) {
+      const { bankId, bankName } = bank;
+
+      // Check if already submitted to this bank
+      const { data: existing } = await this.db.client
+        .from('BankSubmission')
+        .select('id')
+        .eq('applicationId', applicationId)
+        .eq('bankId', bankId)
+        .single();
+
+      if (existing) {
+        continue;
+      }
+
+      // Create bank submission record
+      const { data: submission, error: submitError } = await this.db.client
+        .from('BankSubmission')
+        .insert({
+          applicationId,
+          bankId,
+          bankName,
+          submittedBy,
+          workflowStatus: 'SUBMITTED_TO_BANK',
+          currentStage: 'SUBMITTED_TO_BANK',
+          statusHistory: [
+            {
+              fromStatus: null,
+              toStatus: 'SUBMITTED_TO_BANK',
+              changedAt: new Date().toISOString(),
+              changedBy: submittedBy,
+              reason: 'Application shared with bank via multiparty routing',
+            },
+          ],
+        })
+        .select()
+        .single();
+
+      if (submitError) {
+        throw submitError;
+      }
+
+      // Record in workflow history
+      await this.recordWorkflowHistory(submission.id, applicationId, null, 'SUBMITTED_TO_BANK', submittedBy, 'Application shared with bank via multiparty routing');
+
+      // Emit event
+      this.eventEmitter.emit('bank.submission.created', {
+        submissionId: submission.id,
+        applicationId,
+        bankId,
+        bankName,
+      });
+
+      createdSubmissions.push(submission);
+    }
+
+    // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list
+    const bankNamesStr = banks.map(b => b.bankName).join(', ');
+    const updatePayload: any = {
+      status: 'ROUTED_MULTIPARTY',
+      bankWorkflowStatus: 'SUBMITTED_TO_BANK',
+      bankWorkflowStage: 'SUBMITTED_TO_BANK',
+      submittedToBankAt: new Date().toISOString(),
+      bank: bankNamesStr,
+    };
+
+    if (createdSubmissions.length > 0) {
+      updatePayload.bankSubmissionId = createdSubmissions[0].id;
+    }
+
+    await this.db.client
+      .from('LoanApplication')
+      .update(updatePayload)
+      .eq('id', applicationId);
+
+    return { success: true, count: createdSubmissions.length, submissions: createdSubmissions };
+  }
 }
+

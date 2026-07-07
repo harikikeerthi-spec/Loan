@@ -67,10 +67,10 @@ export default function PerformanceAnalyticsPage() {
                 <div>
                     <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
                         Analytical Insights
-                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-violet-50 border border-violet-200 text-[11px] font-semibold text-violet-700">
+                        {/* <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-violet-50 border border-violet-200 text-[11px] font-semibold text-violet-700">
                             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
                             PERFORMANCE
-                        </span>
+                        </span> */}
                     </h2>
                     <p className="text-slate-500 text-[13px] mt-1 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

@@ -83,7 +83,7 @@ export default function SOPWriterPage() {
         <div className="min-h-screen bg-transparent">
             {/* Navbar is in layout */}
 
-            <main className="pt-24 pb-20 px-4 md:px-6 relative">
+            <main className="pt-28 pb-20 px-4 md:px-6 relative">
                 <div className="max-w-7xl mx-auto relative z-10">
                     {/* Header */}
                     <div className="max-w-3xl mb-12">
@@ -95,7 +95,7 @@ export default function SOPWriterPage() {
                             Statement of Purpose Generator
                         </h1>
                         <p className="text-[13px] text-gray-500 max-w-2xl leading-relaxed">
-                            Generate professional, high-impact Statements of Purpose for your university applications. 
+                            Generate professional, high-impact Statements of Purpose for your university applications.
                             Our AI analyzes top-tier admissions criteria to help you stand out.
                         </p>
                     </div>

@@ -9,7 +9,7 @@ import { authApi } from "@/lib/api";
 function StaffLoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { login } = useAuth();
+    const { login, isAuthenticated, isStaff, isLoading } = useAuth();
 
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -21,6 +21,13 @@ function StaffLoginContent() {
     const [devOtp, setDevOtp] = useState<string | null>(null);
 
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+    // Already logged in — redirect without a page reload
+    useEffect(() => {
+        if (isLoading || !isAuthenticated || !isStaff) return;
+        const redirectTo = searchParams.get("redirect");
+        router.replace(redirectTo ? decodeURIComponent(redirectTo) : "/staff/dashboard");
+    }, [isAuthenticated, isStaff, isLoading, router, searchParams]);
 
     useEffect(() => {
         if (countdown > 0) {
@@ -88,8 +95,10 @@ function StaffLoginContent() {
                 success: boolean;
                 access_token: string;
                 role: string;
+                userId?: string;
                 firstName?: string;
                 lastName?: string;
+                refresh_token?: string;
             };
 
             if (data.success === false || !data.access_token) {
@@ -101,11 +110,12 @@ function StaffLoginContent() {
             }
 
             login(data.access_token, {
+                id: data.userId,
                 email: email.trim(),
                 firstName: data.firstName,
                 lastName: data.lastName,
                 role: data.role as any,
-                refresh_token: (data as any).refresh_token
+                refresh_token: data.refresh_token,
             });
 
             const redirectTo = searchParams.get("redirect");

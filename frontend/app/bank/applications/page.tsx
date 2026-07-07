@@ -689,27 +689,27 @@ export default function ApplicationManagement() {
                                             );
                                         }
                                     },
-                                    {
-                                        header: "Tags",
-                                        accessorKey: "tags",
-                                        sortable: false,
-                                        cell: (row: any) => {
-                                            const tagsList = row.tags ? row.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [];
-                                            return (
-                                                <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                                    {tagsList.length > 0 ? (
-                                                        tagsList.map((tag: string) => (
-                                                            <span key={tag} className="text-[10.5px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200">
-                                                                {tag}
-                                                            </span>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-gray-300 text-[10px] italic">—</span>
-                                                    )}
-                                                </div>
-                                            );
-                                        }
-                                    },
+                                    // {
+                                    //     header: "Tags",
+                                    //     accessorKey: "tags",
+                                    //     sortable: false,
+                                    //     cell: (row: any) => {
+                                    //         const tagsList = row.tags ? row.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [];
+                                    //         return (
+                                    //             <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                    //                 {tagsList.length > 0 ? (
+                                    //                     tagsList.map((tag: string) => (
+                                    //                         <span key={tag} className="text-[10.5px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200">
+                                    //                             {tag}
+                                    //                         </span>
+                                    //                     ))
+                                    //                 ) : (
+                                    //                     <span className="text-gray-300 text-[10px] italic">—</span>
+                                    //                 )}
+                                    //             </div>
+                                    //         );
+                                    //     }
+                                    // },
                                     {
                                         header: "Audit Verdict",
                                         accessorKey: "status",

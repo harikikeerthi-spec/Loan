@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 
@@ -20,7 +20,8 @@ export default function EmiCalculatorPage() {
 
         const schedule = [];
         let balance = principal;
-        for (let i = 1; i <= 6; i++) {
+        const targetMonths = Math.min(12, months);
+        for (let i = 1; i <= targetMonths; i++) {
             const interest = balance * monthlyRate;
             const subPrincipal = emiValue - interest;
             balance = balance - subPrincipal;
@@ -70,9 +71,29 @@ export default function EmiCalculatorPage() {
         maintainAspectRatio: false,
     };
 
+    const downloadSchedule = () => {
+        const headers = ["Month", "Principal Payment (INR)", "Interest Payment (INR)", "Remaining Balance (INR)"];
+        const rows = amortization.map((row) => [
+            row.month,
+            Math.round(row.principal),
+            Math.round(row.interest),
+            Math.round(row.balance)
+        ]);
+        const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `EMI_Amortization_Schedule_${principal}_INR.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="min-h-screen bg-transparent">
-            <div className="pt-24 pb-20 px-6 relative z-10">
+            <div className="pt-28 pb-20 px-6 relative z-10">
                 <div className="max-w-6xl mx-auto">
                     {/* Header Section */}
                     <div className="mb-12">
@@ -188,11 +209,14 @@ export default function EmiCalculatorPage() {
                             </div>
 
                             <div className="space-y-3">
-                                <button className="w-full py-3.5 bg-[#6605c7] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#5504a6] shadow-lg shadow-purple-500/20 transition-all">
+                                <button
+                                    onClick={downloadSchedule}
+                                    className="w-full py-3.5 bg-[#6605c7] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#5504a6] shadow-lg shadow-purple-500/20 transition-all"
+                                >
                                     Download Schedule
                                 </button>
                                 <button className="w-full py-3.5 bg-white border border-gray-100 text-gray-900 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-gray-50 transition-all">
-                                    Check Eligibility
+                                    <a href="/loan-eligibility">Check Eligibility</a>
                                 </button>
                             </div>
                         </div>

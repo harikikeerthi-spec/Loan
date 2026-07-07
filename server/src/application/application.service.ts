@@ -5,6 +5,11 @@ import { DocumentVerificationService } from '../ai/services/document-verificatio
 import { ApplicationReviewService } from '../ai/services/application-review.service';
 import { EmailService } from '../auth/email.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EvvEngineService } from './evv-engine';
+import { BankWorkflowService } from '../bank/bank-workflow.service';
+import { S3Service } from '../document/s3.service';
+import * as path from 'path';
+import * as fs from 'fs';
 
 const APPLICATION_STAGES = {
   application_submitted: { order: 1, label: 'Application Submitted', progress: 10 },
@@ -70,6 +75,9 @@ export class ApplicationService {
     private applicationReviewService: ApplicationReviewService,
     private emailService: EmailService,
     private eventEmitter: EventEmitter2,
+    private s3Service: S3Service,
+    private evvEngine: EvvEngineService,
+    private workflowService: BankWorkflowService,
   ) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
@@ -420,13 +428,16 @@ export class ApplicationService {
       const [
         { data: bankDecisions },
         { data: queries },
-        { data: bankQueries }
+        { data: bankQueries },
+        { data: bankSubmissions }
       ] = await Promise.all([
         this.db.from('BankDecision').select('*').eq('applicationId', applicationId),
         this.db.from('queries').select('*').eq('applicationId', applicationId),
-        this.db.from('BankQuery').select('*').eq('applicationId', applicationId)
+        this.db.from('BankQuery').select('*').eq('applicationId', applicationId),
+        this.db.from('BankSubmission').select('*').eq('applicationId', applicationId)
       ]);
       application.BankDecision = bankDecisions || [];
+      application.bankSubmissions = bankSubmissions || [];
       
       const allQueries = [...(queries || [])];
       if (bankQueries && bankQueries.length > 0) {
@@ -449,6 +460,7 @@ export class ApplicationService {
       console.error('Failed to load bank decisions and queries for application:', e);
       application.BankDecision = [];
       application.queries = [];
+      application.bankSubmissions = [];
     }
 
     return application;
@@ -1631,5 +1643,208 @@ export class ApplicationService {
       .eq('applicationId', applicationId)
       .order('disbursedAt', { ascending: false });
     return { data: data || [], error };
+  }
+
+  async processBankStatementEvv(
+    applicationId: string,
+    file: Express.Multer.File,
+    adminId: string,
+    adminName: string
+  ) {
+    console.log(`[EVV Pipeline] Processing statement for application ${applicationId} by admin ${adminName}`);
+
+    // 1. Fetch application details
+    const application = await this.getApplicationById(applicationId);
+    if (!application) throw new NotFoundException('Application not found');
+    const userId = application.userId;
+
+    // 2. Upload statement to S3 (or local fallback)
+    const fileExt = path.extname(file.originalname);
+    const s3Key = `vault/${userId}/bank_statement${fileExt}`;
+    
+    try {
+      await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
+      console.log(`[EVV Pipeline] Uploaded statement to S3: ${s3Key}`);
+    } catch (s3Error: any) {
+      console.warn(`[EVV Pipeline] AWS S3 Upload failed, saving local: ${s3Error.message}`);
+      try {
+        const localDir = path.join(process.cwd(), 'uploads', userId, 'bank_statement');
+        await fs.promises.mkdir(localDir, { recursive: true });
+        await fs.promises.writeFile(path.join(localDir, `file${fileExt}`), file.buffer);
+      } catch (localWriteError: any) {
+        console.error('[EVV Pipeline] Local fallback failed:', localWriteError.message);
+      }
+    }
+
+    // 3. Upsert document record in ApplicationDocument
+    const docData = {
+      applicationId,
+      docType: 'bank_statement',
+      docName: 'Bank Statements (6 months)',
+      fileName: file.originalname,
+      filePath: s3Key,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      status: 'uploaded',
+      uploadedAt: new Date().toISOString()
+    };
+
+    const { data: existingDoc } = await this.db
+      .from('ApplicationDocument')
+      .select('id')
+      .eq('applicationId', applicationId)
+      .eq('docType', 'bank_statement')
+      .maybeSingle();
+
+    if (existingDoc) {
+      const { error } = await this.db
+        .from('ApplicationDocument')
+        .update({ ...docData, status: 'uploaded' })
+        .eq('id', existingDoc.id);
+      if (error) throw new BadRequestException(`Failed to update statement document: ${error.message}`);
+    } else {
+      const { error } = await this.db
+        .from('ApplicationDocument')
+        .insert({
+          id: 'app-doc-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          ...docData,
+          isRequired: true
+        });
+      if (error) throw new BadRequestException(`Failed to insert statement document: ${error.message}`);
+    }
+
+    // 4. Mark application as PROCESSING so frontend can poll
+    await this.db
+      .from('LoanApplication')
+      .update({ evvStatus: 'PROCESSING', evvOverall: null, evvMonthlyBreakdown: [] })
+      .eq('id', applicationId);
+
+    // 5. Run EVV computation in the background (fire-and-forget) — do not await
+    //    This prevents HTTP request timeouts for large bank statement PDFs
+    this.computeEvvInBackground(applicationId, file, adminId, adminName, application, s3Key).catch(err => {
+      console.error(`[EVV Pipeline] Background computation error: ${err.message}`);
+    });
+
+    // 6. Respond immediately so the HTTP request does not time out
+    return {
+      success: true,
+      status: 'PROCESSING',
+      message: 'Bank statement uploaded. EVV calculation is running in the background. Please refresh in a minute.',
+    };
+  }
+
+  private async computeEvvInBackground(
+    applicationId: string,
+    file: Express.Multer.File,
+    adminId: string,
+    adminName: string,
+    application: any,
+    s3Key: string
+  ) {
+    let evvOverall = 0;
+    let evvMonthlyBreakdown: any = [];
+    let evvStatus: 'COMPUTED' | 'FAILED' | 'MANUAL_REVIEW' = 'COMPUTED';
+    let errorMessage = '';
+
+    try {
+      console.log(`[EVV Background] Starting AI extraction for application ${applicationId}`);
+      const transactions = await this.evvEngine.extractTransactions(file.buffer, file.mimetype);
+      
+      if (!transactions || transactions.length === 0) {
+        console.warn(`[EVV Background] Parser failed to extract transactions for application ${applicationId}`);
+        evvStatus = 'MANUAL_REVIEW';
+        errorMessage = 'Unable to extract transaction text patterns from this statement format.';
+      } else {
+        const evvResults = this.evvEngine.computeEvv(transactions);
+        evvOverall = evvResults.overall_evv;
+        evvMonthlyBreakdown = evvResults.monthly_evv;
+        evvStatus = evvResults.status;
+        console.log(`[EVV Background] Computed EVV for ${applicationId}: ₹${evvOverall} (${evvStatus})`);
+      }
+    } catch (err: any) {
+      console.error(`[EVV Background] Calculation exception: ${err.message}`);
+      evvStatus = 'MANUAL_REVIEW';
+      errorMessage = err.message?.includes('timeout') || err.message?.includes('aborted')
+        ? 'AI processing timed out — the bank statement may be too large or complex. Please try a smaller/clearer PDF.'
+        : err.message || 'Error occurred during AI statement scanning.';
+    }
+
+    // Update database with results
+    const updateData: any = {
+      evvOverall,
+      evvMonthlyBreakdown,
+      evvStatus
+    };
+
+    if (evvStatus === 'MANUAL_REVIEW' || evvStatus === 'FAILED') {
+      updateData.remarks = `EVV Calculation: Manual Review Required — ${errorMessage}`;
+    }
+
+    const { error: updateError } = await this.db
+      .from('LoanApplication')
+      .update(updateData)
+      .eq('id', applicationId);
+
+    if (updateError) {
+      console.error(`[EVV Background] Failed to update LoanApplication with EVV: ${updateError.message}`);
+    }
+
+    // Log notes & status history
+    const auditNotes = evvStatus === 'COMPUTED'
+      ? `EVV Calculation completed. Overall balance: ₹${evvOverall.toLocaleString('en-IN')}. Monthly breakdowns saved.`
+      : `EVV Calculation: Manual Review Required — ${errorMessage}`;
+
+    await this.db.from('ApplicationNote').insert({
+      id: 'note-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      applicationId,
+      authorId: adminId,
+      authorName: 'EVV Engine',
+      content: auditNotes,
+      type: 'general',
+      isInternal: true
+    });
+
+    await this.createStatusHistory(applicationId, {
+      fromStatus: application.status,
+      toStatus: application.status,
+      changedBy: adminId,
+      changedByName: adminName,
+      notes: auditNotes,
+      isAutomatic: true
+    });
+
+    // Auto-sharing routing rules
+    let autoShared = false;
+    if (evvStatus === 'COMPUTED' && evvOverall > 5000) {
+      try {
+        console.log(`[EVV Background] Auto-sharing application ${applicationId} to partner banks (EVV = ₹${evvOverall})`);
+        await this.workflowService.submitApplicationToBank(
+          applicationId,
+          application.bank ? application.bank.toLowerCase().replace(/\s+/g, '') : 'auxilo',
+          application.bank || 'Auxilo Finserve',
+          'System Automation'
+        );
+        autoShared = true;
+        await this.db
+          .from('LoanApplication')
+          .update({ evvStatus: 'ROUTED_TO_BANK' })
+          .eq('id', applicationId);
+      } catch (shareError: any) {
+        console.error(`[EVV Background] Auto-share failed: ${shareError.message}`);
+      }
+    }
+
+    // Emit real-time dashboard activity
+    this.eventEmitter.emit('dashboard.activity', {
+      type: 'verification',
+      msg: `EVV analyzed for Student #${application.applicationNumber || application.id.slice(-4)}. Overall: ₹${evvOverall.toLocaleString('en-IN')}. Status: ${evvStatus}.`,
+      icon: evvStatus === 'COMPUTED' ? 'payments' : 'warning',
+      color: evvStatus === 'COMPUTED' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-amber-50 text-amber-700 border-amber-100',
+      actorName: 'EVV Engine',
+      actorEmail: 'evv@vidyaloan.in',
+      createdAt: new Date().toISOString()
+    });
+
+    console.log(`[EVV Background] Completed for application ${applicationId}: status=${evvStatus}, overall=₹${evvOverall}`);
   }
 }

@@ -13,20 +13,18 @@ interface ShareWithBankModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  isMultiBank?: boolean;
+  targetBank?: string;
 }
 
 // Bank names must exactly match the key→name map in BankNotificationsPanel.isNotificationForThisBank
 // so that per-bank notification filtering works correctly.
 const BANKS = [
-  { id: "auxilo",     name: "Auxilo Finserve" },
-  { id: "avanse",     name: "Avanse Financial" },
-  { id: "credila",    name: "HDFC Credila" },
-  { id: "idfc",       name: "IDFC FIRST Bank" },
+  { id: "auxilo", name: "Auxilo Finserve" },
+  { id: "avanse", name: "Avanse Financial" },
+  { id: "credila", name: "HDFC Credila" },
+  { id: "idfc", name: "IDFC FIRST Bank" },
   { id: "poonawalla", name: "Poonawalla Fincorp" },
-  { id: "sbi",        name: "State Bank of India" },
-  { id: "hdfc",       name: "HDFC Bank" },
-  { id: "icici",      name: "ICICI Bank" },
-  { id: "axis",       name: "Axis Bank" },
 ];
 
 export default function ShareWithBankModal({
@@ -37,19 +35,75 @@ export default function ShareWithBankModal({
   isOpen,
   onClose,
   onSuccess,
+  isMultiBank = false,
+  targetBank = "",
 }: ShareWithBankModalProps) {
   const { user } = useAuth();
   const [selectedBank, setSelectedBank] = useState("");
+  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [submissionId, setSubmissionId] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [priorities, setPriorities] = useState<{ priority: number; bankName: string }[]>([]);
+
+  const targetBankStr = targetBank || "";
+  const targetBanksList = targetBankStr && targetBankStr.toLowerCase().replace(/\s+/g, '') !== 'anybank'
+    ? targetBankStr.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  const filteredBanks = targetBanksList.length > 0
+    ? BANKS.filter(bank =>
+      targetBanksList.some((name: string) =>
+        name.includes(bank.id) ||
+        bank.name.toLowerCase().includes(name) ||
+        name.includes(bank.name.toLowerCase())
+      )
+    )
+    : BANKS;
 
   const selectedBankName = BANKS.find((b) => b.id === selectedBank)?.name || "";
 
+  // Fetch priorities and preselect top 3 active ones
+  React.useEffect(() => {
+    if (isOpen && isMultiBank) {
+      const fetchPriorities = async () => {
+        try {
+          const res = await apiFetch("/api/bank/workflow/priorities") as any;
+          if (res?.success && res.data) {
+            const activePriorities = res.data.filter((p: any) => p.status === 'Active');
+            setPriorities(activePriorities);
+
+            const top3BankNames = activePriorities.slice(0, 3).map((p: any) => p.bankName.toLowerCase());
+            const preselectedIds: string[] = [];
+
+            BANKS.forEach(bank => {
+              const matches = top3BankNames.some((name: string) =>
+                name.includes(bank.id) ||
+                bank.name.toLowerCase().includes(name) ||
+                name.includes(bank.name.toLowerCase())
+              );
+              if (matches) {
+                preselectedIds.push(bank.id);
+              }
+            });
+            setSelectedBanks(preselectedIds);
+          }
+        } catch (err) {
+          console.error("Failed to fetch bank priorities:", err);
+        }
+      };
+      fetchPriorities();
+    }
+  }, [isOpen, isMultiBank]);
+
   const handleShare = useCallback(async () => {
-    if (!selectedBank) {
+    if (isMultiBank && selectedBanks.length === 0) {
+      setError("Please select at least one bank");
+      return;
+    }
+    if (!isMultiBank && !selectedBank) {
       setError("Please select a bank");
       return;
     }
@@ -58,48 +112,67 @@ export default function ShareWithBankModal({
     setError("");
 
     try {
-      // 1. Update the application's bank field and status
-      await adminApi.updateApplication(applicationId, { bank: selectedBankName });
-      await adminApi.updateApplicationStatus(applicationId, {
-        status: "processing",
-        stage: "bank_review",
-        progress: 70,
-        remarks: remarks || `Application routed to ${selectedBankName}`,
-      });
+      const staffName = user
+        ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
+        : "Staff";
 
-      // 2. Call the bank workflow submit endpoint so the server emits
-      //    `bank.submission.created` → NotificationService creates a DB notification
-      //    → ChatGateway broadcasts `notification_received` to room_bank via Socket.io.
-      //    This is what makes the bank portal notification bell ring in real-time.
-      let realSubmissionId = "";
-      try {
-        const staffName = user
-          ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
-          : "Staff";
+      if (isMultiBank) {
+        const selectedBanksList = BANKS.filter(b => selectedBanks.includes(b.id)).map(b => ({
+          bankId: b.id,
+          bankName: b.name
+        }));
 
-        const workflowRes: any = await apiFetch("/api/bank/workflow/submit", {
+        const res: any = await apiFetch("/api/bank/workflow/submit-multiple", {
           method: "POST",
           body: JSON.stringify({
             applicationId,
-            bankId: selectedBank,
-            bankName: selectedBankName,
-            submittedBy: staffName,
-          }),
+            banks: selectedBanksList,
+            submittedBy: staffName
+          })
         });
 
-        if (workflowRes?.data?.id) {
-          realSubmissionId = workflowRes.data.id;
+        if (res?.submissions?.[0]?.id) {
+          setSubmissionId(res.submissions[0].id);
+        } else {
+          setSubmissionId(`MULT-${applicationId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`);
         }
-      } catch (workflowErr: any) {
-        // Don't block success UX if workflow already created (duplicate) or minor error
-        console.warn("[ShareWithBankModal] Workflow submit warning:", workflowErr?.message);
+      } else {
+        // 1. Update the application's bank field and status
+        await adminApi.updateApplication(applicationId, { bank: selectedBankName });
+        await adminApi.updateApplicationStatus(applicationId, {
+          status: "processing",
+          stage: "bank_review",
+          progress: 70,
+          remarks: remarks || `Application routed to ${selectedBankName}`,
+        });
+
+        // 2. Call the bank workflow submit endpoint
+        let realSubmissionId = "";
+        try {
+          const workflowRes: any = await apiFetch("/api/bank/workflow/submit", {
+            method: "POST",
+            body: JSON.stringify({
+              applicationId,
+              bankId: selectedBank,
+              bankName: selectedBankName,
+              submittedBy: staffName,
+            }),
+          });
+
+          if (workflowRes?.data?.id) {
+            realSubmissionId = workflowRes.data.id;
+          }
+        } catch (workflowErr: any) {
+          console.warn("[ShareWithBankModal] Workflow submit warning:", workflowErr?.message);
+        }
+
+        // 3. Show success state
+        const submissionRef =
+          realSubmissionId ||
+          `SUB-${applicationId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+        setSubmissionId(submissionRef);
       }
 
-      // 3. Show success state
-      const submissionRef =
-        realSubmissionId ||
-        `SUB-${applicationId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-      setSubmissionId(submissionRef);
       setSuccess(true);
 
       // Auto-close after 2.5 seconds and notify parent
@@ -112,12 +185,13 @@ export default function ShareWithBankModal({
     } finally {
       setLoading(false);
     }
-  }, [selectedBank, selectedBankName, applicationId, remarks, onClose, onSuccess, user]);
+  }, [isMultiBank, selectedBanks, selectedBank, selectedBankName, applicationId, remarks, onClose, onSuccess, user]);
 
   // Reset state when modal opens/closes
   const handleClose = () => {
     if (!loading) {
       setSelectedBank("");
+      setSelectedBanks([]);
       setError("");
       setSuccess(false);
       setSubmissionId("");
@@ -144,7 +218,7 @@ export default function ShareWithBankModal({
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <h2 className="text-xl font-black text-slate-900">
-                {success ? "✓ Shared!" : "Share with Bank"}
+                {success ? "✓ Shared!" : (isMultiBank ? "Route Application (Multiparty)" : "Share with Bank")}
               </h2>
               {!success && (
                 <button
@@ -191,23 +265,55 @@ export default function ShareWithBankModal({
                   {/* Bank Selection */}
                   <div className="mb-6">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-3">
-                      Select Bank
+                      Select {isMultiBank ? "Target Banks" : "Bank"}
                     </label>
-                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                      {BANKS.map((bank) => (
-                        <button
-                          key={bank.id}
-                          onClick={() => setSelectedBank(bank.id)}
-                          className={`p-3 rounded-lg border-2 text-left transition-all text-xs font-bold uppercase ${
-                            selectedBank === bank.id
+
+                    {isMultiBank ? (
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        {filteredBanks.map((bank) => {
+                          const isChecked = selectedBanks.includes(bank.id);
+                          return (
+                            <button
+                              key={bank.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedBanks(prev =>
+                                  prev.includes(bank.id)
+                                    ? prev.filter(id => id !== bank.id)
+                                    : [...prev, bank.id]
+                                );
+                              }}
+                              className={`p-3 rounded-lg border-2 text-left transition-all text-xs font-bold uppercase flex items-center justify-between ${isChecked
+                                ? "border-[#6605c7] bg-purple-50 text-purple-900"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                                }`}
+                            >
+                              <span>{bank.name}</span>
+                              {isChecked ? (
+                                <span className="material-symbols-outlined text-[16px] text-[#6605c7]">check_circle</span>
+                              ) : (
+                                <span className="w-4 h-4 rounded-full border border-slate-300 bg-white shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        {filteredBanks.map((bank) => (
+                          <button
+                            key={bank.id}
+                            onClick={() => setSelectedBank(bank.id)}
+                            className={`p-3 rounded-lg border-2 text-left transition-all text-xs font-bold uppercase ${selectedBank === bank.id
                               ? "border-[#6605c7] bg-purple-50 text-purple-900"
                               : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                          }`}
-                        >
-                          {bank.name}
-                        </button>
-                      ))}
-                    </div>
+                              }`}
+                          >
+                            {bank.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Remarks Input */}
@@ -246,7 +352,7 @@ export default function ShareWithBankModal({
                     </button>
                     <button
                       onClick={handleShare}
-                      disabled={!selectedBank || loading}
+                      disabled={(isMultiBank ? selectedBanks.length === 0 : !selectedBank) || loading}
                       className="flex-1 px-4 py-3 text-white font-bold uppercase text-xs rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                       style={{ background: "linear-gradient(135deg, #6605c7, #8b24e5)" }}
                     >
@@ -260,7 +366,7 @@ export default function ShareWithBankModal({
                           <span className="material-symbols-outlined text-sm">
                             send
                           </span>
-                          Send to Bank
+                          {isMultiBank ? "Route Application" : "Send to Bank"}
                         </>
                       )}
                     </button>
@@ -288,12 +394,14 @@ export default function ShareWithBankModal({
                   </h3>
                   <p className="text-sm text-slate-600 mb-4">
                     Application #{applicationNumber} has been successfully sent to{" "}
-                    <span className="font-bold" style={{ color: "#6605c7" }}>{selectedBankName}</span>.
+                    <span className="font-bold" style={{ color: "#6605c7" }}>
+                      {isMultiBank ? `${selectedBanks.length} partner banks` : selectedBankName}
+                    </span>.
                   </p>
                   <div className="bg-purple-50 rounded-xl p-3 border border-purple-100">
                     <p className="text-xs text-purple-700 font-semibold flex items-center justify-center gap-1.5">
                       <span className="material-symbols-outlined text-[14px]">notifications_active</span>
-                      The bank has been notified in real-time.
+                      The bank portals have been updated in real-time.
                     </p>
                   </div>
                   <p className="text-xs text-slate-400 font-mono mt-3">
@@ -308,3 +416,4 @@ export default function ShareWithBankModal({
     </AnimatePresence>
   );
 }
+

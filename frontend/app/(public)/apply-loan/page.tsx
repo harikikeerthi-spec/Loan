@@ -323,7 +323,7 @@ export default function ApplyLoanPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 group">
                         <Link href="/dashboard#applications" className="px-8 py-5 bg-[#6605c7] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#7a0de8] hover:shadow-2xl hover:shadow-[#6605c7]/30 transition-all flex items-center justify-center gap-3">
                             <span className="material-symbols-outlined text-lg">dashboard_customize</span>
-                            Control Center
+                            Dashboard
                         </Link>
                         <Link href="/" className="px-8 py-5 bg-white text-gray-900 text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3">
                             <span className="material-symbols-outlined text-lg">home</span>
@@ -511,33 +511,33 @@ export default function ApplyLoanPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                     <DatePicker
-                                         label="Date of Birth"
-                                         value={formData.dateOfBirth}
-                                         onChange={(v) => update("dateOfBirth", v)}
-                                         error={stepErrors.dateOfBirth}
-                                         required
-                                     />
-                                     <InputField
-                                         label="Residential Pincode"
-                                         icon="pin_drop"
-                                         value={formData.pincode}
-                                         onChange={(v) => {
-                                             const numericVal = v.replace(/\D/g, "").slice(0, 6);
-                                             update("pincode", numericVal);
-                                             if (numericVal.length === 6) {
-                                                 resolvePincode(numericVal);
-                                             }
-                                         }}
-                                         placeholder="e.g. 400001"
-                                         error={stepErrors.pincode}
-                                         required
-                                     />
-                                 </div>
+                                    <DatePicker
+                                        label="Date of Birth"
+                                        value={formData.dateOfBirth}
+                                        onChange={(v) => update("dateOfBirth", v)}
+                                        error={stepErrors.dateOfBirth}
+                                        required
+                                    />
+                                    <InputField
+                                        label="Residential Pincode"
+                                        icon="pin_drop"
+                                        value={formData.pincode}
+                                        onChange={(v) => {
+                                            const numericVal = v.replace(/\D/g, "").slice(0, 6);
+                                            update("pincode", numericVal);
+                                            if (numericVal.length === 6) {
+                                                resolvePincode(numericVal);
+                                            }
+                                        }}
+                                        placeholder="e.g. 400001"
+                                        error={stepErrors.pincode}
+                                        required
+                                    />
+                                </div>
 
-                                 <div className="grid grid-cols-1 gap-8">
-                                     <InputField label="Residential Address" icon="location_on" value={formData.address} onChange={(v) => update("address", v)} placeholder="e.g. Flat No, Street, Locality, City, State" error={stepErrors.address} required />
-                                 </div>
+                                <div className="grid grid-cols-1 gap-8">
+                                    <InputField label="Residential Address" icon="location_on" value={formData.address} onChange={(v) => update("address", v)} placeholder="e.g. Flat No, Street, Locality, City, State" error={stepErrors.address} required />
+                                </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <SelectField label="Co-Applicant Identity" icon="family_history" value={formData.coApplicant} onChange={(v) => update("coApplicant", v)}
@@ -578,7 +578,7 @@ export default function ApplyLoanPage() {
                                         <span className="material-symbols-outlined text-4xl">rate_review</span>
                                     </div>
                                     <h2 className="text-3xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Validate Your File</h2>
-                                    <p className="text-gray-500 text-sm font-medium">Verify all details before electronic submission</p>
+                                    <p className="text-gray-500 text-sm font-medium">Verify all details before submission</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">

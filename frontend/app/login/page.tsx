@@ -27,7 +27,7 @@ interface LoginResponse {
 function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { login } = useAuth();
+    const { login, isAuthenticated, isLoading } = useAuth();
 
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -39,6 +39,13 @@ function LoginContent() {
     const [referralCode, setReferralCode] = useState<string | null>(null);
 
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+    // Already logged in — redirect without a page reload
+    useEffect(() => {
+        if (isLoading || !isAuthenticated) return;
+        const redirectTo = searchParams.get("redirect");
+        router.replace(redirectTo ? decodeURIComponent(redirectTo) : "/dashboard");
+    }, [isAuthenticated, isLoading, router, searchParams]);
 
     // Capture referral code from URL on mount
     useEffect(() => {

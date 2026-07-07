@@ -507,7 +507,7 @@ export class DocumentVerificationService {
                 'openai/gpt-oss-120b:free',
                 'nvidia/nemotron-3-super:free',
                 'anthropic/claude-3-opus',
-                'google/gemini-2.0-flash-001',
+                'google/gemini-2.5-flash',
                 'openai/gpt-4-vision',
             ];
 

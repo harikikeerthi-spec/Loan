@@ -27,7 +27,7 @@ Respond ONLY with JSON:
 {"isValid":true,"confidence":0-100,"extracted_data":{...},"reason":"..."}`;
 
   const body = JSON.stringify({
-    model: 'google/gemini-2.0-flash-001',
+    model: 'google/gemini-2.5-flash',
     messages: [{
       role: 'user',
       content: [

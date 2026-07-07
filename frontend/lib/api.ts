@@ -200,14 +200,22 @@ export function getToken(): string | null {
     return localStorage.getItem("accessToken");
 }
 
-function authHeaders(url?: string): HeadersInit {
-    // Exclude Authorization header for public endpoints to avoid gateway/proxy 401s from stale local tokens
-    const isPublic = url && (
+function isPublicAuthUrl(url?: string): boolean {
+    if (!url) return false;
+    return (
         url.includes('/auth/send-otp') ||
         url.includes('/auth/verify-otp') ||
         url.includes('/auth/firebase') ||
-        url.includes('/auth/check-user/')
+        url.includes('/auth/check-user/') ||
+        url.includes('/auth/refresh') ||
+        url.includes('/auth/logout') ||
+        url.includes('/auth/dashboard')
     );
+}
+
+function authHeaders(url?: string): HeadersInit {
+    // Exclude Authorization header for public endpoints to avoid gateway/proxy 401s from stale local tokens
+    const isPublic = isPublicAuthUrl(url);
 
     const token = isPublic ? null : getToken();
     const headers: Record<string, string> = token
@@ -233,10 +241,66 @@ function authHeaders(url?: string): HeadersInit {
     return headers;
 }
 
+/** Attempt a silent token refresh — only called when an API request returns 401 */
+async function tryRefreshAccessToken(): Promise<string | null> {
+    if (typeof window === "undefined") return null;
+
+    const portal = getPortalFromPathname(window.location.pathname);
+    const keys = getStorageKeys(portal);
+    const refreshToken =
+        localStorage.getItem(keys.refreshToken) ||
+        localStorage.getItem("adminRefreshToken") ||
+        localStorage.getItem("staffRefreshToken") ||
+        localStorage.getItem("refreshToken");
+
+    if (!refreshToken) return null;
+
+    try {
+        const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+
+        if (!refreshRes.ok) return null;
+
+        const data = await refreshRes.json();
+        const newToken = data.access_token || data.accessToken;
+        if (!newToken) return null;
+
+        localStorage.setItem(keys.token, newToken);
+        if (data.refresh_token) {
+            localStorage.setItem(keys.refreshToken, data.refresh_token);
+        }
+        notifyTokenChange(newToken);
+        return newToken;
+    } catch {
+        return null;
+    }
+}
+
+function notifySessionExpired() {
+    if (typeof window === "undefined") return;
+
+    const portal = getPortalFromPathname(window.location.pathname);
+    const { loginPath } = getStorageKeys(portal);
+    if (window.location.pathname.startsWith(loginPath)) return;
+
+    clearAllPortalAuthStorage();
+    notifyTokenChange(null);
+    window.dispatchEvent(
+        new CustomEvent("auth:session-expired", { detail: { loginPath } })
+    );
+}
+
 /**
- * Enhanced fetch wrapper that handles automatic token refresh on 401 "Token has expired"
+ * Enhanced fetch wrapper — refreshes the access token only when a request fails with 401
  */
-export async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(
+    url: string,
+    options: RequestInit = {},
+    retried = false
+): Promise<T> {
     const res = await fetch(url, {
         ...options,
         headers: {
@@ -245,53 +309,28 @@ export async function apiFetch<T>(url: string, options: RequestInit = {}): Promi
         },
     });
 
-    if (res.status === 401) {
-        const clone = res.clone();
-        try {
-            const body = await clone.json();
-            if (body.message === 'Token has expired') {
-                const portal = getPortalFromPathname(typeof window !== "undefined" ? window.location.pathname : "");
-                const keys = getStorageKeys(portal);
-                const refreshToken = localStorage.getItem(keys.refreshToken) || localStorage.getItem("refreshToken");
-
-                if (refreshToken) {
-                    console.log("[API] Token expired, attempting silent refresh...");
-                    const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ refresh_token: refreshToken }),
-                    });
-
-                    if (refreshRes.ok) {
-                        const data = await refreshRes.json();
-                        const newToken = data.access_token || data.accessToken;
-                        if (newToken) {
-                            console.log("[API] Refresh successful, retrying original request.");
-                            localStorage.setItem(keys.token, newToken);
-                            notifyTokenChange(newToken);
-                            // Retry with new token
-                            return fetch(url, {
-                                ...options,
-                                headers: {
-                                    ...options.headers,
-                                    'Authorization': `Bearer ${newToken}`,
-                                    'Content-Type': 'application/json'
-                                },
-                            }).then((r) => handleResponse<T>(r));
-                        }
-                    }
-                    console.warn("[API] Silent refresh failed or returned no token.");
-                }
-            }
-        } catch (e) {
-            // Not JSON or other error, fall through to handleResponse
+    if (res.status === 401 && !retried && !isPublicAuthUrl(url)) {
+        const newToken = await tryRefreshAccessToken();
+        if (newToken) {
+            return apiFetch<T>(
+                url,
+                {
+                    ...options,
+                    headers: {
+                        ...options.headers,
+                        Authorization: `Bearer ${newToken}`,
+                        "Content-Type": "application/json",
+                    },
+                },
+                true
+            );
         }
     }
 
-    return handleResponse(res);
+    return handleResponse<T>(res, url, retried);
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponse<T>(res: Response, url?: string, alreadyRetried = false): Promise<T> {
     const contentType = res.headers.get("content-type");
     let body: any;
 
@@ -317,17 +356,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
             err = { message: body || res.statusText };
         }
 
-        // Handle Token Expiration and Unauthorized globally
-        if (res.status === 401) {
-            if (typeof window !== "undefined") {
-                clearAllPortalAuthStorage();
-                const portal = getPortalFromPathname(window.location.pathname);
-                const { loginPath } = getStorageKeys(portal);
-                // Avoid infinite redirect loops if already on login
-                if (!window.location.pathname.startsWith(loginPath)) {
-                    window.location.href = `${loginPath}?expired=true`;
-                }
-            }
+        // Session expired — soft redirect via AuthContext (no full page reload)
+        if (res.status === 401 && !isPublicAuthUrl(url) && !alreadyRetried) {
+            notifySessionExpired();
         }
 
         throw new Error(err.message || "API request failed");
@@ -398,11 +429,18 @@ export const authApi = {
             body: JSON.stringify({ idToken }),
         }),
 
-    refresh: (refreshToken: string) =>
-        apiFetch(HttpApiPaths.auth.refresh(), {
+    refresh: async (refreshToken: string) => {
+        const res = await fetch(HttpApiPaths.auth.refresh(), {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh_token: refreshToken }),
-        }),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+            throw new Error(body.message || "Token refresh failed");
+        }
+        return body;
+    },
 
     logout: (email: string) =>
         apiFetch(HttpApiPaths.auth.logout(), {

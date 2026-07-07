@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffLayout } from "@/app/staff/layout";
 import { adminApi, referenceApi, staffProfileApi, apiFetch } from "@/lib/api";
 import Link from "next/link";
 import SendEmailModal from "@/components/staff/SendEmailModal";
+import ShareWithBankModal from "@/components/staff/ShareWithBankModal";
+import { useDialog } from "@/contexts/DialogContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 const IST_OFFSET = 5.5 * 60 * 60 * 1000;
 
@@ -117,6 +120,17 @@ const getApplicationDisplayProgress = (app: any): number => {
     return app.progress ?? 10;
 };
 
+const renderBankLogo = (name: string, sizeClass: string = "h-11") => {
+    const b = name.toLowerCase();
+    if (b.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC" className={`${sizeClass} object-contain`} title="IDFC FIRST Bank" />;
+    if (b.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className={`${sizeClass} object-contain`} title="Avanse Financial" />;
+    if (b.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className={`${sizeClass} object-contain`} title="Auxilo Finserve" />;
+    if (b.includes('credila') || b.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className={`${sizeClass} object-contain`} title="HDFC Credila" />;
+    if (b.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className={`${sizeClass} object-contain`} title="Poonawalla Fincorp" />;
+    if (b.includes('incred')) return <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[9px] font-black border border-purple-200" title="InCred">InCred</span>;
+    return <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[9px] font-black border border-slate-200" title={name}>{name}</span>;
+};
+
 const getApplicationStageLabel = (app: any, progress: number): string => {
     if (app.currentStage) return app.currentStage;
 
@@ -150,6 +164,7 @@ export default function IncomingQueuePage() {
     const router = useRouter();
     const { user, token } = useAuth();
     const { onlineEmails, fetchBadgeStats } = useStaffLayout();
+    const { confirm: dialogConfirm } = useDialog();
 
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -166,11 +181,19 @@ export default function IncomingQueuePage() {
     const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
     const [activeContactPopup, setActiveContactPopup] = useState<{ id: string; type: 'email' | 'phone' } | null>(null);
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+    const [editingTargetBankRowId, setEditingTargetBankRowId] = useState<string | null>(null);
+    const [tempSelectedBanks, setTempSelectedBanks] = useState<string[]>([]);
+    const [activeDockApp, setActiveDockApp] = useState<any | null>(null);
 
     // Email Modal
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const [emailModalRecipient, setEmailModalRecipient] = useState("");
     const [emailModalRecipientName, setEmailModalRecipientName] = useState("");
+
+    // Share / Route with Bank Modal
+    const [selectedAppForShare, setSelectedAppForShare] = useState<any | null>(null);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isMultiBankShare, setIsMultiBankShare] = useState(false);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -226,9 +249,13 @@ export default function IncomingQueuePage() {
     const getBankDisplayName = (bank: any) =>
         bank?.name || bank?.bankName || bank?.displayName || bank?.title || bank?.label || bank?.id || "";
 
-    const bankOptions = availableBanks
-        .map(getBankDisplayName)
-        .filter((name: string, index: number, list: string[]) => name && list.indexOf(name) === index);
+    const bankOptions = [
+        "Auxilo Finserve",
+        "Avanse Financial",
+        "HDFC Credila",
+        "IDFC FIRST Bank",
+        "Poonawalla Fincorp",
+    ];
 
     const logActivity = async (type: string, msg: string, icon: string, color: string) => {
         try {
@@ -284,7 +311,7 @@ export default function IncomingQueuePage() {
             await logActivity("share", `Sent application to ${selectedBank}`, "send", "text-indigo-600 bg-indigo-50");
             setActiveMenuId(null);
             setMenuPosition(null);
-            
+
             // Reload local list and trigger sidebar layout counts update
             await loadData();
             await fetchBadgeStats();
@@ -305,6 +332,7 @@ export default function IncomingQueuePage() {
         verified: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
         rejected: 'bg-rose-50 text-rose-600 border border-rose-200',
         disbursed: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+        routed_multiparty: 'bg-purple-50 text-purple-700 border border-purple-200',
     };
 
     const totalPages = Math.max(1, Math.ceil(totalItems / applicationsPerPage));
@@ -315,13 +343,15 @@ export default function IncomingQueuePage() {
         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">STAFF DASHBOARD</p>
-                    <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
-                        Incoming Queue
+                    <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">
                         <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-sans font-semibold text-blue-700 ml-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                             AWAITING DISTRIBUTION
                         </span>
+                    </p>
+                    <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
+                        Incoming Queue
+
                     </h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -391,9 +421,9 @@ export default function IncomingQueuePage() {
                                                             expand_more
                                                         </span>
                                                     </button>
-                                                    
+
                                                     {isExpanded && (
-                                                        <div 
+                                                        <div
                                                             onClick={() => {
                                                                 const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
                                                                 if (uid) {
@@ -529,17 +559,109 @@ export default function IncomingQueuePage() {
                                             </td>
                                             <td className="px-6 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors min-w-[240px] w-[260px]">
                                                 <div className="flex flex-col justify-center min-h-[60px] gap-1">
-                                                    <div className="flex items-center">
-                                                        {(() => {
-                                                            const bName = (item.bank || item.targetBank || '').toLowerCase();
-                                                            if (bName.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC FIRST Bank" className="h-12 max-w-[190px] w-auto object-contain" />;
-                                                            if (bName.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className="h-14 max-w-[190px] w-auto object-contain" />;
-                                                            if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-24 max-w-[240px] w-auto object-contain" />;
-                                                            if (bName.includes('credila') || bName.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className="h-11 max-w-[190px] w-auto object-contain" />;
-                                                            if (bName.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className="h-[52px] max-w-[190px] w-auto object-contain" />;
-                                                            return <div className="text-[#0d1b2a] font-black text-[14px] uppercase truncate max-w-[200px]">{item.bank || item.targetBank || '—'}</div>;
-                                                        })()}
-                                                    </div>
+                                                    {editingTargetBankRowId === rowId ? (
+                                                        <div className="relative z-30 bg-white border border-slate-200 rounded-xl p-3 shadow-xl max-w-[280px]" onClick={(e) => e.stopPropagation()}>
+                                                            <div className="text-[10px] font-black uppercase text-slate-400 mb-2">Select Target Banks</div>
+                                                            <div className="max-h-36 overflow-y-auto space-y-1.5 mb-3 custom-scrollbar">
+                                                                {bankOptions.map((bankName: string) => {
+                                                                    const isChecked = tempSelectedBanks.includes(bankName);
+                                                                    return (
+                                                                        <label key={bankName} className="flex items-center gap-2 cursor-pointer py-1 px-1.5 rounded hover:bg-slate-50 text-[11px] font-bold text-slate-700">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isChecked}
+                                                                                onChange={() => {
+                                                                                    setTempSelectedBanks(prev =>
+                                                                                        prev.includes(bankName)
+                                                                                            ? prev.filter(b => b !== bankName)
+                                                                                            : [...prev, bankName]
+                                                                                    );
+                                                                                }}
+                                                                                className="rounded text-[#6605c7] focus:ring-[#6605c7] h-3.5 w-3.5"
+                                                                            />
+                                                                            <span>{bankName}</span>
+                                                                        </label>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            <div className="flex gap-2 justify-end">
+                                                                <button
+                                                                    onClick={() => setEditingTargetBankRowId(null)}
+                                                                    className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        try {
+                                                                            const updateVal = tempSelectedBanks.length > 0 ? tempSelectedBanks.join(', ') : 'ANY BANK';
+                                                                            await adminApi.updateApplication(item.id || item._id, { bank: updateVal });
+                                                                            // Update local state item bank
+                                                                            setData(prevData =>
+                                                                                prevData.map(d =>
+                                                                                    (d.id || d._id) === (item.id || item._id)
+                                                                                        ? { ...d, bank: updateVal }
+                                                                                        : d
+                                                                                )
+                                                                            );
+                                                                            setEditingTargetBankRowId(null);
+                                                                        } catch (err) {
+                                                                            alert("Failed to update target banks");
+                                                                        }
+                                                                    }}
+                                                                    className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white bg-[#6605c7] hover:bg-purple-800 rounded-lg transition-colors"
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-between group/cell w-full">
+                                                            <div className="flex items-center">
+                                                                {(() => {
+                                                                    const bStr = item.bank || item.targetBank || '';
+                                                                    if (!bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank') {
+                                                                        return <span className="text-[12px] font-bold text-slate-400 uppercase">Any Bank</span>;
+                                                                    }
+                                                                    if (bStr.includes(',') || (item.status || '').toLowerCase() === 'routed_multiparty') {
+                                                                        const banksList = bStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+                                                                        return (
+                                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                                {banksList.map((bankName: string, index: number) => (
+                                                                                    <div key={index} className="h-9 px-2 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
+                                                                                        {renderBankLogo(bankName, "h-7 max-w-[80px]")}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    const bName = bStr.toLowerCase();
+                                                                    if (bName.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC FIRST Bank" className="h-12 max-w-[190px] w-auto object-contain" />;
+                                                                    if (bName.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className="h-14 max-w-[190px] w-auto object-contain" />;
+                                                                    if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-24 max-w-[240px] w-auto object-contain" />;
+                                                                    if (bName.includes('credila') || bName.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className="h-11 max-w-[190px] w-auto object-contain" />;
+                                                                    if (bName.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className="h-[52px] max-w-[190px] w-auto object-contain" />;
+
+                                                                    return <div className="text-[#0d1b2a] font-black text-[14px] uppercase truncate max-w-[200px]">{item.bank || item.targetBank || '—'}</div>;
+                                                                })()}
+                                                            </div>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const bStr = item.bank || item.targetBank || '';
+                                                                    const currentBanks = (!bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank')
+                                                                        ? []
+                                                                        : bStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+                                                                    setTempSelectedBanks(currentBanks);
+                                                                    setEditingTargetBankRowId(rowId);
+                                                                }}
+                                                                className="opacity-0 group-hover/cell:opacity-100 text-slate-400 hover:text-[#6605c7] p-1.5 hover:bg-slate-100 rounded-lg transition-all ml-2 shrink-0 animate-in fade-in"
+                                                                title="Edit Target Banks"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 160 }}>
@@ -564,87 +686,16 @@ export default function IncomingQueuePage() {
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-center border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                <div className="relative inline-block text-left">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                                                            if (activeMenuId === rowId) {
-                                                                setActiveMenuId(null);
-                                                                setMenuPosition(null);
-                                                            } else {
-                                                                setActiveMenuId(rowId);
-                                                                setMenuPosition({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
-                                                            }
-                                                        }}
-                                                        className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-all shadow-sm mx-auto"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
-                                                    </button>
-
-                                                    {activeMenuId === rowId && menuPosition && (
-                                                        <>
-                                                            <div className="fixed inset-0 z-40" onClick={() => { setActiveMenuId(null); setMenuPosition(null); }} />
-                                                            <div
-                                                                className="fixed w-56 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 py-3 animate-in fade-in zoom-in-95 duration-200 font-sans"
-                                                                style={{ top: menuPosition.top, right: menuPosition.right }}
-                                                            >
-                                                                <button
-                                                                    onClick={() => { router.push(`/staff/applications/${rowId}`); setActiveMenuId(null); setMenuPosition(null); }}
-                                                                    className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-[18px] text-indigo-500">visibility</span>
-                                                                    View Application
-                                                                </button>
-
-                                                                <button
-                                                                    onClick={() => { setSearchQuery(item.email || item.student?.email); setActiveMenuId(null); setMenuPosition(null); }}
-                                                                    className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-[18px] text-emerald-500">list_alt</span>
-                                                                    All Applications
-                                                                </button>
-                                                                
-                                                                {(() => {
-                                                                    const fallbackBanks = [item.bank || item.targetBank].filter(Boolean);
-                                                                    const options = bankOptions.length ? bankOptions : fallbackBanks;
-                                                                    const selectedBank = sendToBankSelection[rowId] || item.bank || item.targetBank || options[0] || "";
-                                                                    const isSending = sendToBankLoadingId === rowId;
-
-                                                                    return (
-                                                                        <div className="mx-3 mt-2 pt-3 border-t border-slate-100">
-                                                                            <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 px-2 mb-2">
-                                                                                Send to Bank
-                                                                            </label>
-                                                                            <select
-                                                                                value={selectedBank}
-                                                                                onClick={(e) => e.stopPropagation()}
-                                                                                onChange={(e) => setSendToBankSelection(prev => ({ ...prev, [rowId]: e.target.value }))}
-                                                                                className="w-full mb-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                                                                            >
-                                                                                {!selectedBank && <option value="">Select bank</option>}
-                                                                                {options.map((bankName: string) => (
-                                                                                    <option key={bankName} value={bankName}>{bankName}</option>
-                                                                                ))}
-                                                                            </select>
-                                                                            <button
-                                                                                onClick={() => handleSendApplicationToBank(item, selectedBank)}
-                                                                                disabled={isSending || !selectedBank}
-                                                                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                                                                            >
-                                                                                {isSending ? (
-                                                                                    <span className="w-4 h-4 border-2 border-indigo-300 border-t-white rounded-full animate-spin" />
-                                                                                ) : (
-                                                                                    <span className="material-symbols-outlined text-[16px]">send</span>
-                                                                                )}
-                                                                                Send to Bank
-                                                                            </button>
-                                                                        </div>
-                                                                    );
-                                                                })()}
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveDockApp(item);
+                                                    }}
+                                                    className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-all shadow-sm mx-auto"
+                                                    title="Open Action Dock"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                </button>
                                             </td>
                                         </tr>
                                     );
@@ -696,6 +747,186 @@ export default function IncomingQueuePage() {
                 recipientEmail={emailModalRecipient}
                 recipientName={emailModalRecipientName}
             />
+
+            {selectedAppForShare && (
+                <ShareWithBankModal
+                    applicationId={selectedAppForShare.id || selectedAppForShare._id}
+                    applicationNumber={selectedAppForShare.applicationNumber || `APP-${(selectedAppForShare.id || selectedAppForShare._id || 'UNKNOWN').slice(-6)}`}
+                    studentName={`${selectedAppForShare.firstName || selectedAppForShare.student?.firstName || ''} ${selectedAppForShare.lastName || selectedAppForShare.student?.lastName || ''}`}
+                    loanAmount={Number(selectedAppForShare.amount || selectedAppForShare.loanAmount || selectedAppForShare.student?.loanAmount || 0)}
+                    isOpen={isShareModalOpen}
+                    onClose={() => {
+                        setIsShareModalOpen(false);
+                        setSelectedAppForShare(null);
+                    }}
+                    isMultiBank={isMultiBankShare}
+                    targetBank={selectedAppForShare.bank || selectedAppForShare.targetBank}
+                    onSuccess={() => {
+                        loadData();
+                        fetchBadgeStats();
+                    }}
+                />
+            )}
+
+            <AnimatePresence>
+                {activeDockApp && (
+                    <motion.div
+                        initial={{ y: 120, x: "-50%", opacity: 0 }}
+                        animate={{ y: 0, x: "-50%", opacity: 1 }}
+                        exit={{ y: 120, x: "-50%", opacity: 0 }}
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                        className="fixed bottom-8 left-1/2 z-50 w-full max-w-5xl bg-white/95 backdrop-blur-md border border-slate-100 rounded-[28px] shadow-[0_24px_60px_rgba(15,23,42,0.12)] px-8 py-5 flex items-center justify-between gap-8 font-sans"
+                    >
+                        {/* Info Section */}
+                        <div className="shrink-0">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] block">Processing Lead</span>
+                            <h4 className="text-[16px] font-black text-slate-800 tracking-tight mt-0.5">
+                                {activeDockApp.firstName || activeDockApp.student?.firstName || '—'} {activeDockApp.lastName || activeDockApp.student?.lastName || ''}
+                            </h4>
+                            <span className="text-[10px] font-bold text-slate-400 block mt-0.5">
+                                {activeDockApp.applicationNumber || `APP-${(activeDockApp.id || activeDockApp._id || 'UNKNOWN').slice(-6)}`}
+                            </span>
+                        </div>
+
+                        {/* View Profile */}
+                        <button
+                            onClick={() => router.push(`/staff/applications/${activeDockApp.id || activeDockApp._id}`)}
+                            className="shrink-0 h-11 px-5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-wider text-slate-700 transition-all flex items-center gap-2 active:scale-95"
+                        >
+                            <span className="material-symbols-outlined text-[16px] text-slate-500">visibility</span>
+                            View Profile
+                        </button>
+
+                        {/* Select Target Banks: Pills style */}
+                        <div className="flex-1 flex flex-col gap-1 min-w-0">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Select Target Banks</span>
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                                {bankOptions.map((bankName: string) => {
+                                    const currentBanks = activeDockApp.bank ? activeDockApp.bank.split(', ').filter(Boolean) : [];
+                                    const isChecked = currentBanks.includes(bankName);
+                                    return (
+                                        <button
+                                            key={bankName}
+                                            onClick={async () => {
+                                                const updated = isChecked
+                                                    ? currentBanks.filter((b: string) => b !== bankName)
+                                                    : [...currentBanks, bankName];
+                                                const updateVal = updated.length > 0 ? updated.join(', ') : 'ANY BANK';
+                                                try {
+                                                    await adminApi.updateApplication(activeDockApp.id || activeDockApp._id, { bank: updateVal });
+                                                    // Update locally in dataset
+                                                    setData((prev: any[]) => prev.map(d => (d.id || d._id) === (activeDockApp.id || activeDockApp._id) ? { ...d, bank: updateVal } : d));
+                                                    // Update currently active dock app state
+                                                    setActiveDockApp((prev: any) => prev ? { ...prev, bank: updateVal } : null);
+                                                } catch (err) {
+                                                    alert("Failed to update target banks");
+                                                }
+                                            }}
+                                            className={`h-7 px-3.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border ${
+                                                isChecked
+                                                    ? 'bg-[#6605c7] text-white border-[#6605c7] shadow-sm shadow-purple-600/10'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            {bankName.replace(" Finserve", "").replace(" Financial", "").replace(" FIRST Bank", "").replace(" Fincorp", "").replace("HDFC ", "")}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Route / Send Bank button */}
+                        <div className="shrink-0 flex items-center gap-3">
+                            {(() => {
+                                const bStr = activeDockApp.bank || activeDockApp.targetBank || '';
+                                const isAnyBank = !bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank';
+
+                                if (isAnyBank) {
+                                    return (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedAppForShare(activeDockApp);
+                                                setIsMultiBankShare(true);
+                                                setIsShareModalOpen(true);
+                                            }}
+                                            className="h-11 px-5 bg-[#6605c7] hover:bg-purple-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-purple-600/10 active:scale-95 animate-pulse"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">fork_right</span>
+                                            Route Application
+                                        </button>
+                                    );
+                                }
+
+                                const targetBanksList = bStr.split(', ').map((s: string) => s.trim()).filter(Boolean);
+                                const selectedBank = sendToBankSelection[activeDockApp.id || activeDockApp._id] || targetBanksList[0] || "";
+                                const isSending = sendToBankLoadingId === (activeDockApp.id || activeDockApp._id);
+
+                                return (
+                                    <div className="flex items-center gap-2">
+                                        {targetBanksList.length > 1 && (
+                                            <select
+                                                value={selectedBank}
+                                                onChange={(e) => setSendToBankSelection(prev => ({ ...prev, [activeDockApp.id || activeDockApp._id]: e.target.value }))}
+                                                className="h-11 px-3 rounded-2xl border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                                            >
+                                                {targetBanksList.map((bankName: string) => (
+                                                    <option key={bankName} value={bankName}>{bankName}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                        <button
+                                            onClick={() => handleSendApplicationToBank(activeDockApp, selectedBank)}
+                                            disabled={isSending || !selectedBank}
+                                            className="h-11 px-6 bg-[#6605c7] hover:bg-purple-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-lg shadow-purple-600/10 active:scale-95"
+                                        >
+                                            {isSending ? (
+                                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            ) : (
+                                                <span className="material-symbols-outlined text-[16px]">send</span>
+                                            )}
+                                            {targetBanksList.length > 1 ? "Send" : `Send to ${selectedBank.split(' ')[0]}`}
+                                        </button>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Rejection Control (Far right red trash/cancel icon button) */}
+                            <button
+                                onClick={async () => {
+                                    const studentName = `${activeDockApp.firstName || activeDockApp.student?.firstName || ''} ${activeDockApp.lastName || activeDockApp.student?.lastName || ''}`.trim() || "this student";
+                                    const confirmed = await dialogConfirm(
+                                        `Are you sure you want to reject ${studentName}'s application?`,
+                                        "Reject Application"
+                                    );
+                                    if (confirmed) {
+                                        try {
+                                            await adminApi.updateApplication(activeDockApp.id || activeDockApp._id, { status: 'rejected' });
+                                            loadData();
+                                            logActivity('verification', `Application #${activeDockApp.applicationNumber || activeDockApp.id?.slice(-4)} rejected`, 'cancel', 'bg-rose-50 text-rose-700 border-rose-100');
+                                            setActiveDockApp(null);
+                                        } catch (err) {
+                                            alert("Failed to reject application");
+                                        }
+                                    }
+                                }}
+                                className="w-11 h-11 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-600 hover:text-rose-700 transition-all flex items-center justify-center shrink-0 active:scale-95"
+                                title="Reject Lead"
+                            >
+                                <span className="material-symbols-outlined text-[20px]">cancel</span>
+                            </button>
+
+                            {/* Close Capsule Button */}
+                            <button
+                                onClick={() => setActiveDockApp(null)}
+                                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all flex items-center justify-center shrink-0"
+                                title="Close"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

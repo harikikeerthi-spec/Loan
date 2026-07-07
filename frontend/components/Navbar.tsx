@@ -190,7 +190,7 @@ export default function Navbar() {
                                                     <div className="text-[10px] text-gray-500 leading-tight mt-0.5">Exclusive offline community</div>
                                                 </div>
                                             </Link>
-                                            <NavItem href="/community" icon="groups" title="Community Hub" desc="Mentors, events & stories" color="text-purple-500" />
+                                            {/* <NavItem href="/community" icon="groups" title="Community Hub" desc="Mentors, events & stories" color="text-purple-500" /> */}
                                             <NavItem href="/blog" icon="article" title="Blogs" desc="Latest news and guides" color="text-blue-500" />
                                             {/* <NavItem href="/referral" icon="redeem" title="Refer & Earn" desc="Invite friends, get rewards" color="text-[#6605c7]" /> */}
                                         </div>

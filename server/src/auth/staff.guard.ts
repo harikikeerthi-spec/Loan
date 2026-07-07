@@ -35,11 +35,24 @@ export class StaffGuard implements CanActivate {
         }
 
         try {
-            // Verify JWT token
+            // Verify JWT token signature and expiry
             const payload = await this.jwtService.verifyAsync(token);
-            console.log('[StaffGuard] Token verified. Payload:', { email: payload.email, role: payload.role });
 
-            // Get user from database
+            const allowedRoles = ['staff', 'admin', 'super_admin', 'bank', 'partner_bank', 'support'];
+
+            // Fast path: role is embedded in the JWT payload — no DB lookup needed
+            if (payload.role && allowedRoles.includes(payload.role)) {
+                request.user = {
+                    id: payload.sub || payload.id,
+                    email: payload.email,
+                    role: payload.role,
+                    firstName: payload.firstName,
+                    lastName: payload.lastName,
+                };
+                return true;
+            }
+
+            // Slow path: role not in payload, fetch from DB
             const user = await this.usersService.findOne(payload.email);
 
             if (!user) {
@@ -47,20 +60,14 @@ export class StaffGuard implements CanActivate {
                 throw new UnauthorizedException('User not found');
             }
 
-            // Check if user is staff, admin, super_admin, bank, or support
-            const allowedRoles = ['staff', 'admin', 'super_admin', 'bank', 'partner_bank', 'support'];
             if (!allowedRoles.includes(user.role)) {
                 console.warn(`[StaffGuard] Access denied for role: ${user.role}. User: ${user.email}`);
                 throw new ForbiddenException('Access denied. Elevated privileges required.');
             }
 
-            // Attach user to request for use in controllers
             request.user = user;
-            console.log(`[StaffGuard] Access granted to ${user.email} (${user.role})`);
-
             return true;
         } catch (error) {
-            console.error('[StaffGuard] Error:', error.message || error);
             if (error instanceof ForbiddenException || error instanceof UnauthorizedException) {
                 throw error;
             }
@@ -74,6 +81,7 @@ export class StaffGuard implements CanActivate {
                 });
             }
 
+            console.error('[StaffGuard] Token verification failed:', error.message || error);
             throw new UnauthorizedException('Invalid token');
         }
     }
