@@ -271,6 +271,11 @@ model LoanApplication {
   collateralValue   Float?
   collateralDetails String?
 
+  // EVV Maintained Balance Fields
+  evvOverall           Float?
+  evvMonthlyBreakdown  Json?
+  evvStatus            String?
+
   // Timestamps
   submittedAt           DateTime?
   estimatedCompletionAt DateTime?
@@ -732,6 +737,18 @@ model Bank {
   @@index([type])
   @@index([isPopular])
 }
+
+model BankPriority {
+  id        String   @id @default(uuid())
+  priority  Int      @unique
+  bankName  String   @unique
+  status    String   @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("BankPriority")
+}
+
 
 model Country {
   id                 String   @id @default(uuid())

@@ -1147,4 +1147,70 @@ export class BankWorkflowController {
       });
     }
   }
+
+  /**
+   * Get all bank priorities sorted by priority sequence
+   * GET /api/bank/workflow/priorities
+   */
+  @Get('priorities')
+  async getBankPriorities(@Res() res: Response) {
+    try {
+      const result = await this.workflowService.getBankPriorities();
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Update bank priorities list
+   * PUT /api/bank/workflow/priorities
+   */
+  @Put('priorities')
+  async updateBankPriorities(
+    @Body() body: { priorities: { priority: number; bankName: string; status: string }[] },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.updateBankPriorities(body.priorities);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Submit application to multiple banks
+   * POST /api/bank/workflow/submit-multiple
+   */
+  @Post('submit-multiple')
+  async submitApplicationToMultipleBanks(
+    @Body() body: {
+      applicationId: string;
+      banks: { bankId: string; bankName: string }[];
+      submittedBy: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.submitApplicationToMultipleBanks(
+        body.applicationId,
+        body.banks,
+        body.submittedBy,
+      );
+      return res.status(201).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
 }
+

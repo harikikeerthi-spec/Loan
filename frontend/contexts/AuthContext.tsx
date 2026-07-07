@@ -7,7 +7,7 @@ import React, {
     useEffect,
     useCallback,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { authApi, subscribeToTokenChange, notifyTokenChange } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -176,20 +176,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const pathname = usePathname();
+    const router = useRouter();
     const portal = getPortalFromPathname(pathname);
 
     // Subscribe to token updates from apiFetch (silent refreshes)
     useEffect(() => {
         const unsubscribe = subscribeToTokenChange((newToken) => {
-            console.log("[AuthContext] Token refreshed silently, updating context state.");
             setToken(newToken);
         });
         return unsubscribe;
     }, []);
 
-    // Initialise from portal-specific localStorage on mount and route scope change
+    // Handle session expiry without a full page reload
     useEffect(() => {
-        setIsLoading(true);
+        const onSessionExpired = (event: Event) => {
+            const loginPath = (event as CustomEvent<{ loginPath: string }>).detail?.loginPath || "/login";
+            setUser(null);
+            setToken(null);
+            router.replace(`${loginPath}?expired=true`);
+        };
+
+        window.addEventListener("auth:session-expired", onSessionExpired);
+        return () => window.removeEventListener("auth:session-expired", onSessionExpired);
+    }, [router]);
+
+    // Restore session from localStorage — trust cached tokens, no refresh on load
+    useEffect(() => {
         const keys = getStorageKeys(portal);
         const storedUser = getStoredUser(portal);
         const storedToken = getStoredToken(portal);
@@ -197,19 +209,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedUser && storedToken) {
             setUser(storedUser);
             setToken(storedToken);
-            
-            // Trigger a background refresh of user details to ensure profile data is up to date
-            setTimeout(() => refreshUser(), 100);
         } else if (storedToken && !storedUser) {
-            // Token exists but no user object — try to reconstruct from stored email
             const email = localStorage.getItem(keys.email);
             const userId = localStorage.getItem(keys.userId);
             if (email) {
-                const partialUser = { id: userId || "", email };
-                setUser(partialUser);
+                setUser({ id: userId || "", email });
                 setToken(storedToken);
-                // Trigger full refresh since we only have partial data
-                setTimeout(() => refreshUser(), 100);
+            } else {
+                setUser(null);
+                setToken(null);
             }
         } else {
             setUser(null);
@@ -307,11 +315,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = (await authApi.refresh(storedRefreshToken)) as {
                 access_token?: string;
                 accessToken?: string;
+                refresh_token?: string;
             };
             const newToken = data.access_token ?? data.accessToken;
             if (!newToken) return false;
 
             localStorage.setItem(keys.token, newToken);
+            if (data.refresh_token) {
+                localStorage.setItem(keys.refreshToken, data.refresh_token);
+            }
+            notifyTokenChange(newToken);
             setToken(newToken);
             return true;
         } catch {

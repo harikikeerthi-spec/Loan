@@ -115,7 +115,7 @@ Respond ONLY with valid JSON:
 
   return new Promise((resolve, reject) => {
     const requestBody = {
-      model: 'google/gemini-2.0-flash-001',
+      model: 'google/gemini-2.5-flash',
       messages,
       max_tokens: 800  // Reduced from 2000 to 800 to work with limited credits
     };

@@ -35,7 +35,7 @@ export default function CompareLoansPage() {
     const selectedData = LOAN_DATA.filter(l => selected.includes(l.id));
 
     return (
-        <main className="relative z-10 pt-24 pb-20 bg-transparent min-h-screen">
+        <main className="relative z-10 pt-28 pb-20 bg-transparent min-h-screen">
             <section className="max-w-6xl mx-auto px-6">
                 <div className="mb-12">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#6605c7]/[0.05] rounded-lg text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-4 border border-[#6605c7]/[0.1]">

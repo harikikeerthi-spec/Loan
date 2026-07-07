@@ -149,7 +149,7 @@ const NotificationsPanel = ({
       second: '2-digit',
       hour12: true,
       timeZone: 'Asia/Kolkata'
-    }) + ' IST';
+    });
 
     const now = timeRef;
     const diffMs = now.getTime() - date.getTime();
@@ -376,7 +376,7 @@ const NotificationsPanel = ({
         const titleLower = notification.title?.toLowerCase() || '';
         const bodyLower = notification.body?.toLowerCase() || '';
 
-        const isBankDecisionOrQuery = 
+        const isBankDecisionOrQuery =
           [
             'query_raised',
             'application_approved',

@@ -1184,6 +1184,16 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     return null;
   };
 
+  const getLogoForBank = (name: string) => {
+    const bName = name.toLowerCase();
+    if (bName.includes("idfc")) return "/images/lenders/idfc-first-bank.jpg";
+    if (bName.includes("avanse")) return "/images/lenders/avanse.jpg";
+    if (bName.includes("auxilo")) return "/images/lenders/auxilo.png";
+    if (bName.includes("credila") || bName.includes("hdfc")) return "/images/lenders/hdfc-credila.png";
+    if (bName.includes("poonawalla")) return "/images/lenders/poonawalla.png";
+    return null;
+  };
+
   const getComparableValue = (value: unknown) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const normalizeConfidence = (value: unknown) => {
     const numericValue = Number(value);
@@ -1668,26 +1678,36 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
               </div>
 
               {/* Bank Routing Banner */}
-              {/* {application.status === "submitted" && (
-                <div className="bg-gradient-to-r from-blue-900/90 to-indigo-950/90 backdrop-blur-md rounded-3xl p-8 border border-indigo-800/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-indigo-950/10 animate-in slide-in-from-top-6 duration-500">
+              {application.status === "submitted" && (
+                <div className="bg-gradient-to-r from-[#0d1b2a]/95 to-[#1b263b]/95 backdrop-blur-md rounded-3xl p-8 border border-slate-700/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-[#0d1b2a]/10 animate-in slide-in-from-top-6 duration-500 font-sans">
                   <div className="flex items-center gap-5">
                     <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-inner">
-                      <span className="material-symbols-outlined text-[28px] animate-pulse">rocket_launch</span>
+                      <span className="material-symbols-outlined text-[28px] animate-pulse">
+                        {application.targetBank === "ANY BANK" ? "fork_right" : "rocket_launch"}
+                      </span>
                     </div>
                     <div>
-                      <h3 className="text-[18px] font-bold text-white tracking-tight">Ready for Bank Submission</h3>
-                      <p className="text-[13px] text-indigo-200/80 mt-0.5 font-medium">All initial documents have been submitted. Review document statuses and route this application to a partner bank.</p>
+                      <h3 className="text-[18px] font-bold text-white tracking-tight">
+                        {application.targetBank === "ANY BANK" ? "Ready for Multiparty Routing" : "Ready for Bank Submission"}
+                      </h3>
+                      <p className="text-[13px] text-indigo-200/80 mt-0.5 font-medium">
+                        {application.targetBank === "ANY BANK" 
+                          ? "This application targets ANY BANK. Review verified documents and route to priority partner banks simultaneously." 
+                          : `All initial documents have been submitted. Review document statuses and route this application to ${application.targetBank || "selected bank"}.`}
+                      </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setIsShareModalOpen(true)}
-                    className="flex items-center gap-2.5 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-indigo-600/30 shrink-0"
+                    className="flex items-center gap-2.5 px-6 py-3.5 bg-[#6605c7] hover:bg-purple-700 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-purple-600/30 shrink-0"
                   >
-                    <span className="material-symbols-outlined text-[18px]">send</span>
-                    Send to Bank
+                    <span className="material-symbols-outlined text-[18px]">
+                      {application.targetBank === "ANY BANK" ? "fork_right" : "send"}
+                    </span>
+                    {application.targetBank === "ANY BANK" ? "Route Application" : "Send to Bank"}
                   </button>
                 </div>
-              )} */}
+              )}
 
               {/* Main Info Card - Glassmorphism & Rich Styling */}
               <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative overflow-hidden group">
@@ -1696,13 +1716,30 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8 relative z-10">
                   <div className="flex flex-col md:flex-row gap-6 min-w-0 flex-1">
                     {/* Bank Logo Area */}
-                    <div className="w-24 h-16 bg-white rounded-2xl flex items-center justify-center p-3 shrink-0 shadow-sm border border-slate-50 group-hover:shadow-md transition-all duration-500">
-                      {getBankLogo() ? (
-                        <img src={getBankLogo()!} alt="Bank" className="max-h-full max-w-full object-contain" />
-                      ) : (
-                        <span className="material-symbols-outlined text-slate-300 text-[32px]">account_balance</span>
-                      )}
-                    </div>
+                    {application.status === 'ROUTED_MULTIPARTY' && application.bankSubmissions?.length > 0 ? (
+                      <div className="flex -space-x-3 hover:space-x-1 transition-all duration-500 shrink-0 items-center">
+                        {application.bankSubmissions.map((sub: any, idx: number) => {
+                          const logo = getLogoForBank(sub.bankName);
+                          return (
+                            <div key={sub.id || idx} className="w-16 h-16 bg-white rounded-full flex items-center justify-center p-2.5 border-2 border-white shadow-md hover:-translate-y-1 transition-all" title={sub.bankName}>
+                              {logo ? (
+                                <img src={logo} alt={sub.bankName} className="max-h-full max-w-full object-contain" />
+                              ) : (
+                                <span className="text-[10px] font-black text-purple-700">{sub.bankName.slice(0, 3).toUpperCase()}</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="w-24 h-16 bg-white rounded-2xl flex items-center justify-center p-3 shrink-0 shadow-sm border border-slate-50 group-hover:shadow-md transition-all duration-500">
+                        {getBankLogo() ? (
+                          <img src={getBankLogo()!} alt="Bank" className="max-h-full max-w-full object-contain" />
+                        ) : (
+                          <span className="material-symbols-outlined text-slate-300 text-[32px]">account_balance</span>
+                        )}
+                      </div>
+                    )}
 
                     <div className="space-y-6 flex-1 min-w-0">
                       <div>
@@ -1714,10 +1751,26 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                           >
                             UNIVERSITY OF {(application.universityName || application.college || "TORONTO").toUpperCase()}
                           </p>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm ${['PENDING', 'UNDER REVIEW', 'IN PROGRESS'].includes(status)
-                            ? 'bg-amber-50 text-amber-600 border-amber-100/50'
-                            : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm ${
+                            status === 'ROUTED_MULTIPARTY'
+                              ? 'bg-purple-50 text-purple-600 border-purple-100/50'
+                              : ['PENDING', 'UNDER REVIEW', 'IN PROGRESS', 'SUBMITTED'].includes(status)
+                                ? 'bg-amber-50 text-amber-600 border-amber-100/50'
+                                : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
                             }`}>{status}</span>
+                          {application.evvOverall !== undefined && application.evvOverall !== null && (
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm flex items-center gap-1.5 ${application.evvStatus === 'ROUTED_TO_BANK'
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
+                              : application.evvStatus === 'MANUAL_REVIEW'
+                                ? 'bg-amber-50 text-amber-600 border-amber-100/50'
+                                : 'bg-indigo-50 text-indigo-600 border-indigo-100/50'
+                              }`}>
+                              <span className="material-symbols-outlined text-[14px]">payments</span>
+                              EVV: ₹{Number(application.evvOverall).toLocaleString('en-IN')}
+                              {application.evvStatus === 'ROUTED_TO_BANK' && ' | Auto-Shared'}
+                              {application.evvStatus === 'MANUAL_REVIEW' && ' | Review Req.'}
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                           <h3
@@ -1873,7 +1926,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                   <div className="flex items-center gap-10">
                     {[
                       { id: "requirements", label: "REQUIREMENTS", icon: "task_alt" },
-                      // { id: "records", label: "STUDENT RECORDS", icon: "folder_shared" },
+                      { id: "evv", label: "EVV ANALYSIS", icon: "payments" },
                       { id: "notes", label: "INTERNAL NOTES", icon: "sticky_note_2" },
                     ].map(tab => (
                       <button
@@ -1942,6 +1995,13 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         passportName={passportName ? String(passportName) : null}
                         aadhaarName={aadhaarName ? String(aadhaarName) : null}
                         getComparableValue={getComparableValue}
+                      />
+                    )}
+
+                    {activeTab === "evv" && (
+                      <EvvAnalysisTab
+                        application={application}
+                        onApplicationUpdated={onApplicationUpdated}
                       />
                     )}
 
@@ -2297,6 +2357,107 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Multiparty Routing Tracker */}
+              {application.status === 'ROUTED_MULTIPARTY' && application.bankSubmissions && application.bankSubmissions.length > 0 && (
+                <div className="bg-white/80 backdrop-blur-sm rounded-[32px] p-8 border border-slate-200/60 shadow-sm space-y-6 font-sans">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-[24px] text-purple-600">split_scene</span>
+                      <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Multiparty Routing Tracker</h3>
+                    </div>
+                    <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                      {application.bankSubmissions.length} active routes
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {application.bankSubmissions.map((sub: any) => {
+                      const logo = getLogoForBank(sub.bankName);
+                      const workflowStatus = sub.workflowStatus || "SUBMITTED_TO_BANK";
+                      const lanNumber = sub.lanNumber || null;
+
+                      let currentStep = 1;
+                      if (workflowStatus === 'DISBURSED') currentStep = 4;
+                      else if (['SANCTIONED', 'CONDITIONAL_SANCTION', 'COUNTER_OFFER', 'PROCESSING_FEE', 'DISBURSEMENT_PENDING'].includes(workflowStatus)) currentStep = 3;
+                      else if (['FILE_LOGGED', 'UNDER_REVIEW', 'QUERY_RAISED'].includes(workflowStatus)) currentStep = 2;
+                      else if (workflowStatus === 'REJECTED') currentStep = 0;
+
+                      return (
+                        <div key={sub.id} className="border border-slate-200 bg-slate-50/20 rounded-2xl p-5 hover:bg-slate-50 transition-all flex flex-col gap-4 relative overflow-hidden group">
+                          {workflowStatus === 'REJECTED' && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500" />
+                          )}
+                          {currentStep === 4 && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />
+                          )}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-10 h-10 bg-white border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0 shadow-sm">
+                                {logo ? (
+                                  <img src={logo} alt={sub.bankName} className="max-h-full max-w-full object-contain" />
+                                ) : (
+                                  <span className="material-symbols-outlined text-slate-400 text-lg">account_balance</span>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-[14px] font-extrabold text-slate-800 truncate">{sub.bankName}</h4>
+                                <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                  {lanNumber ? `LAN: ${lanNumber}` : "No LAN Logged"}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border shrink-0 tracking-wider ${
+                              workflowStatus === 'REJECTED' 
+                                ? 'bg-red-50 text-red-700 border-red-100'
+                                : currentStep === 4 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                  : workflowStatus === 'QUERY_RAISED'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                            }`}>
+                              {workflowStatus.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+
+                          <div className="mt-2 space-y-2">
+                            <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                              <span>Sanction Status</span>
+                              <span className="text-indigo-600 font-extrabold">Step {currentStep}/4</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {[1, 2, 3, 4].map((step) => {
+                                const isCompleted = step <= currentStep;
+                                const isActive = step === currentStep;
+                                const isRejected = workflowStatus === 'REJECTED';
+                                return (
+                                  <div 
+                                    key={step} 
+                                    className={`h-1.5 rounded-full flex-1 transition-all ${
+                                      isRejected 
+                                        ? 'bg-red-200' 
+                                        : isCompleted 
+                                          ? 'bg-indigo-600' 
+                                          : 'bg-slate-200'
+                                    } ${isActive ? 'animate-pulse' : ''}`}
+                                    title={`Step ${step}`}
+                                  />
+                                );
+                              })}
+                            </div>
+                            <div className="flex justify-between text-[8px] text-slate-400 font-bold uppercase tracking-wider">
+                              <span>Submitted</span>
+                              <span>Review</span>
+                              <span>Sanction</span>
+                              <span>Disbursed</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Main Content Layout */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -2968,6 +3129,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
         loanAmount={Number(application.amount || application.loanAmount || application.student?.loanAmount || 0)}
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
+        isMultiBank={application.targetBank === "ANY BANK"}
+        targetBank={application.bank || application.targetBank}
         onSuccess={() => {
           if (onApplicationUpdated) {
             onApplicationUpdated();
@@ -3999,6 +4162,307 @@ const SideBySideComparisonModal = ({
         </div>
 
       </div>
+    </div>
+  );
+};
+
+interface EvvMonthBreakdown {
+  month: string;
+  evv: number;
+}
+
+const EvvAnalysisTab = ({
+  application,
+  onApplicationUpdated,
+}: {
+  application: any;
+  onApplicationUpdated?: () => void;
+}) => {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(application.evvStatus === "PROCESSING");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { alert: dialogAlert } = useDialog();
+
+  // Poll every 5 seconds when EVV status is PROCESSING
+  React.useEffect(() => {
+    if (!isPolling) return;
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("staffAccessToken") || localStorage.getItem("adminAccessToken") || localStorage.getItem("accessToken");
+        const res = await fetch(`/api/applications/${application.id || application._id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const updated = data.application || data.data || data;
+          if (updated?.evvStatus && updated.evvStatus !== "PROCESSING") {
+            setIsPolling(false);
+            onApplicationUpdated?.();
+          }
+        }
+      } catch {}
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isPolling, application.id, application._id, onApplicationUpdated]);
+
+  // Start polling if status becomes PROCESSING externally
+  React.useEffect(() => {
+    if (application.evvStatus === "PROCESSING") {
+      setIsPolling(true);
+    } else {
+      setIsPolling(false);
+    }
+  }, [application.evvStatus]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const token = localStorage.getItem("staffAccessToken") || localStorage.getItem("adminAccessToken") || localStorage.getItem("accessToken");
+      const res = await fetch(`/api/applications/${application.id || application._id}/upload-statement`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Upload failed");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        if (data.status === "PROCESSING") {
+          // Background processing — start polling
+          setIsPolling(true);
+          onApplicationUpdated?.();
+        } else {
+          onApplicationUpdated?.();
+          await dialogAlert(
+            `Statement uploaded and EVV calculated. Overall Maintained Balance: ₹${(data.overall_evv || 0).toLocaleString("en-IN")}`,
+            "Calculation Success",
+            "success"
+          );
+        }
+      } else {
+        throw new Error(data.error || "Failed to process statement");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to parse bank statement");
+      await dialogAlert(err.message || "Failed to parse bank statement", "Upload Failed", "error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const triggerUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Resolve breakdown if stored as string or JSON object
+  let breakdown: EvvMonthBreakdown[] = [];
+  try {
+    const rawBreakdown = application.evvMonthlyBreakdown;
+    if (rawBreakdown) {
+      breakdown = typeof rawBreakdown === "string" ? JSON.parse(rawBreakdown) : rawBreakdown;
+    }
+  } catch (e) {
+    console.error("Failed to parse monthly breakdown JSON", e);
+  }
+
+  const evvOverall = application.evvOverall || 0;
+  const evvStatus = application.evvStatus || "";
+
+  // Get max balance for bar chart percentage calculations
+  const maxEvv = breakdown.reduce((max, item) => (item.evv > max ? item.evv : max), 10000);
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Upload & Summary Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        {/* Left: Upload Dropzone Card */}
+        <div className="md:col-span-5 bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between min-h-[300px]">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept=".pdf,.jpg,.jpeg,.png"
+          />
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
+              </div>
+              <div>
+                <h4 className="text-[16px] font-extrabold text-slate-800 uppercase tracking-wider">Bank Statement</h4>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Analyze transaction balances</p>
+              </div>
+            </div>
+            <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
+              Upload the applicant's official 6-month bank statement (PDF/Image). The calculation engine will extract all transaction histories and run a 5-day snapshot audit to evaluate the Monthly Average Balance (MAB) patterns.
+            </p>
+          </div>
+
+          <div>
+            {uploading ? (
+              <div className="w-full py-4 bg-slate-50 text-slate-500 rounded-2xl flex items-center justify-center gap-3 border border-slate-100">
+                <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <span className="text-[11px] font-black uppercase tracking-widest">Uploading Statement...</span>
+              </div>
+            ) : isPolling ? (
+              <div className="w-full py-4 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center gap-3 border border-indigo-100">
+                <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <span className="text-[11px] font-black uppercase tracking-widest">AI Analyzing... Auto-refreshing</span>
+              </div>
+            ) : (
+              <button
+                onClick={triggerUpload}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
+                {evvStatus ? "Re-upload Statement" : "Upload Statement"}
+              </button>
+            )}
+            {error && (
+              <p className="mt-3 text-[11px] font-semibold text-rose-500 text-center">{error}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Right: EVV Status Panel */}
+        <div className="md:col-span-7 bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm flex flex-col justify-between min-h-[300px]">
+          <div>
+            <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-6">EVV Engine Audit Results</h4>
+            
+            {!evvStatus || evvStatus === "" ? (
+              <div className="h-[150px] flex flex-col items-center justify-center text-center">
+                <span className="material-symbols-outlined text-[48px] text-slate-300 mb-3">analytics</span>
+                <p className="text-[14px] font-extrabold text-slate-600 uppercase tracking-wider">No Statement Audited</p>
+                <p className="text-[11px] text-slate-400 mt-1">Upload a statement to compute the maintained balance metrics.</p>
+              </div>
+            ) : evvStatus === "PROCESSING" ? (
+              <div className="bg-indigo-50 border border-indigo-200/50 rounded-3xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-7 h-7 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h5 className="text-[14px] font-extrabold text-indigo-800 uppercase tracking-wider">Analyzing Statement...</h5>
+                    <p className="text-[12px] text-indigo-700 leading-relaxed mt-2 font-medium">
+                      The AI engine is scanning your bank statement and extracting transactions. This may take 1–2 minutes for large PDFs. This page will refresh automatically when done.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : evvStatus === "MANUAL_REVIEW" || evvStatus === "FAILED" ? (
+              <div className="bg-amber-50 border border-amber-200/50 rounded-3xl p-6">
+                <div className="flex items-start gap-4">
+                  <span className="material-symbols-outlined text-[28px] text-amber-600 mt-0.5">warning</span>
+                  <div>
+                    <h5 className="text-[14px] font-extrabold text-amber-800 uppercase tracking-wider">Manual Review Required</h5>
+                    <p className="text-[12px] text-amber-700 leading-relaxed mt-2 font-medium">
+                      The parser could not fully automate parsing on this statement. Details: {application.remarks || "No additional error details available."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Large Maintained Balance Figure */}
+                <div className="flex items-baseline gap-4">
+                  <span className="text-[40px] font-black text-slate-900 tabular-nums">
+                    ₹{evvOverall.toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                    Overall EVV Balance
+                  </span>
+                </div>
+
+                {/* Routing status info */}
+                <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl w-fit">
+                  <span className="material-symbols-outlined text-[20px] text-emerald-600">verified_user</span>
+                  <div className="text-[11px] font-black uppercase tracking-widest text-emerald-700">
+                    {evvStatus === "ROUTED_TO_BANK" 
+                      ? "Leads Routed: Automatically Shared with Partner Bank" 
+                      : "Audit Complete: Maintained Balance Verified"}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {evvStatus === "COMPUTED" || evvStatus === "ROUTED_TO_BANK" ? (
+            <div className="border-t border-slate-100 pt-6 flex items-center justify-between">
+              <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                Rule Check: Overall Balance &gt; ₹5,000
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">
+                  Passed Auto-Share
+                </span>
+              </div>
+            </div>
+          ) : evvStatus && (
+            <div className="border-t border-slate-100 pt-6 text-[11px] font-black uppercase tracking-widest text-slate-400">
+              Manual fallback mode active. Please inspect the statement and manually route to banks.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Monthly average balance table and visualizer */}
+      {breakdown.length > 0 && (
+        <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm">
+          <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-6">Monthly average balance breakdown (5-day snapshot loop)</h4>
+          
+          <div className="space-y-6">
+            {breakdown.map((item, idx) => {
+              const percentage = Math.max(5, Math.min(100, (item.evv / maxEvv) * 100));
+              
+              // Format date from "2026-01" to "Jan 2026"
+              let dateStr = item.month;
+              try {
+                const [year, month] = item.month.split("-");
+                const dateObj = new Date(parseInt(year), parseInt(month) - 1, 1);
+                dateStr = dateObj.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+              } catch (e) {
+                // Keep default
+              }
+
+              return (
+                <div key={idx} className="flex items-center gap-6">
+                  {/* Month column */}
+                  <div className="w-28 text-[12px] font-extrabold text-slate-800 uppercase tracking-wider flex-shrink-0">
+                    {dateStr}
+                  </div>
+
+                  {/* Horizontal visual bar */}
+                  <div className="flex-1 bg-slate-50 h-5 rounded-full overflow-hidden border border-slate-100/50 relative">
+                    <div 
+                      className="bg-indigo-600/80 h-full rounded-full transition-all duration-1000"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+
+                  {/* Value column */}
+                  <div className="w-28 text-right text-[13px] font-black text-slate-800 tabular-nums flex-shrink-0">
+                    ₹{item.evv.toLocaleString("en-IN")}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

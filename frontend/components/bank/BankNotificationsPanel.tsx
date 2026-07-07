@@ -125,7 +125,7 @@ const formatTime = (timestamp: string, referenceDate: Date = new Date()) => {
     second: '2-digit',
     hour12: true,
     timeZone: 'Asia/Kolkata'
-  }) + ' IST';
+  });
 
   const diffMs = referenceDate.getTime() - date.getTime();
   let relative = "";

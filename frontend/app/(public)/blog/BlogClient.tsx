@@ -51,7 +51,7 @@ export default function BlogClient() {
     };
 
     return (
-        <div className="pt-24 pb-20 bg-transparent">
+        <div className="pt-28 pb-20 bg-transparent">
             {/* Hero */}
             <div className="bg-[#1a1626] text-white py-16 px-6 mb-12 relative overflow-hidden rounded-xl mx-6 shadow-2xl">
                 <div className="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>

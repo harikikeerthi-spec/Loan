@@ -3119,6 +3119,7 @@ export default function OnboardingPage() {
         disbursed: "bg-purple-100 text-purple-700 border-purple-200",
         cancelled: "bg-gray-100 text-gray-600 border-gray-200",
         draft: "bg-gray-100 text-gray-500 border-gray-200",
+        routed_multiparty: "bg-purple-100 text-purple-700 border-purple-200",
     };
 
     const pendingCount = Number(stats.apps?.statusStats?.pending || 0) + Number(stats.apps?.statusStats?.processing || 0);

@@ -35,12 +35,24 @@ export class UserGuard implements CanActivate {
 
         try {
             const payload = await this.jwtService.verifyAsync(token);
-            const user = await this.usersService.findOne(payload.email);
 
+            // Fast path: email is in JWT payload — no DB lookup needed for basic user routes
+            if (payload.email) {
+                request.user = {
+                    id: payload.sub || payload.id,
+                    email: payload.email,
+                    role: payload.role,
+                    firstName: payload.firstName,
+                    lastName: payload.lastName,
+                };
+                return true;
+            }
+
+            // Slow path: no email in payload, fetch from DB
+            const user = await this.usersService.findOne(payload.email);
             if (!user) {
                 throw new UnauthorizedException('User not found');
             }
-
             request.user = user;
             return true;
         } catch (error) {

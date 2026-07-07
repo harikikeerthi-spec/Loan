@@ -118,6 +118,17 @@ const getApplicationDisplayProgress = (app: any): number => {
     return app.progress ?? 10;
 };
 
+const renderBankLogo = (name: string, sizeClass: string = "h-11") => {
+    const b = name.toLowerCase();
+    if (b.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC" className={`${sizeClass} object-contain`} title="IDFC FIRST Bank" />;
+    if (b.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className={`${sizeClass} object-contain`} title="Avanse Financial" />;
+    if (b.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className={`${sizeClass} object-contain`} title="Auxilo Finserve" />;
+    if (b.includes('credila') || b.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className={`${sizeClass} object-contain`} title="HDFC Credila" />;
+    if (b.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className={`${sizeClass} object-contain`} title="Poonawalla Fincorp" />;
+    if (b.includes('incred')) return <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[9px] font-black border border-purple-200" title="InCred">InCred</span>;
+    return <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[9px] font-black border border-slate-200" title={name}>{name}</span>;
+};
+
 const getApplicationStageLabel = (app: any, progress: number): string => {
     if (app.currentStage) return app.currentStage;
 
@@ -228,6 +239,7 @@ export default function ApplicationsPage() {
         verified: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
         rejected: 'bg-rose-50 text-rose-600 border border-rose-200',
         disbursed: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+        routed_multiparty: 'bg-purple-50 text-purple-700 border border-purple-200',
     };
 
     // Filter and search on client-side for pipeline applications
@@ -258,13 +270,13 @@ export default function ApplicationsPage() {
         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">STAFF DASHBOARD</p>
+                    {/* <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">STAFF DASHBOARD</p> */}
                     <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
                         Active Pipeline
-                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-sans font-semibold text-emerald-700 ml-2">
+                        {/* <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-sans font-semibold text-emerald-700 ml-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             LIVE SYSTEM
-                        </span>
+                        </span> */}
                     </h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -500,12 +512,26 @@ export default function ApplicationsPage() {
                                                 <div className="flex flex-col justify-center min-h-[60px] gap-1">
                                                     <div className="flex items-center">
                                                         {(() => {
-                                                            const bName = (item.bank || item.targetBank || '').toLowerCase();
+                                                            const bStr = item.bank || item.targetBank || '';
+                                                            if (bStr.includes(',') || (item.status || '').toLowerCase() === 'routed_multiparty') {
+                                                                const banksList = bStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+                                                                return (
+                                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                                        {banksList.map((bankName: string, index: number) => (
+                                                                            <div key={index} className="h-9 px-2 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
+                                                                                {renderBankLogo(bankName, "h-7 max-w-[80px]")}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            const bName = bStr.toLowerCase();
                                                             if (bName.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC FIRST Bank" className="h-12 max-w-[190px] w-auto object-contain" />;
                                                             if (bName.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className="h-14 max-w-[190px] w-auto object-contain" />;
                                                             if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-24 max-w-[240px] w-auto object-contain" />;
                                                             if (bName.includes('credila') || bName.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className="h-11 max-w-[190px] w-auto object-contain" />;
                                                             if (bName.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className="h-[52px] max-w-[190px] w-auto object-contain" />;
+                                                            if (bName.includes('incred')) return <span className="px-3 py-1.5 rounded-lg bg-purple-100 text-purple-800 text-[12px] font-black border border-purple-200">InCred</span>;
                                                             return <div className="text-[#0d1b2a] font-black text-[14px] uppercase truncate max-w-[200px]">{item.bank || item.targetBank || '—'}</div>;
                                                         })()}
                                                     </div>

@@ -669,4 +669,33 @@ export class ApplicationController {
         return this.applicationService.deleteDocument(documentId, req.user.id);
     }
 
+    /**
+     * Upload bank statement for EVV calculation
+     * POST /applications/:id/upload-statement
+     */
+    @Post(':id/upload-statement')
+    @UseGuards(StaffGuard)
+    @UseInterceptors(FileInterceptor('file', {
+        limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit
+        fileFilter: (req, file, cb) => {
+            if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
+                cb(null, true);
+            } else {
+                cb(new BadRequestException('Unsupported file type. Allowed: jpg, jpeg, png, pdf'), false);
+            }
+        }
+    }))
+    async uploadBankStatement(
+        @Request() req,
+        @Param('id') applicationId: string,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        if (!file) {
+            throw new BadRequestException('File is required');
+        }
+        const adminId = req.user.id;
+        const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+        return this.applicationService.processBankStatementEvv(applicationId, file, adminId, adminName);
+    }
+
 }
