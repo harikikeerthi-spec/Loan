@@ -462,37 +462,80 @@ export default function AgentProfilePage() {
 
                 {activeTab === "agreements" && (
                     <div className="space-y-6 text-left">
-                        <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">Legal Agreements & Covenants</h3>
-                        <p className="text-xs text-gray-450">Signed contracts governing your partnership with VidyaLoan DSA Network.</p>
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] block">Legal & Compliance</span>
+                            <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">Legal Agreements & Covenants</h3>
+                            <p className="text-xs text-gray-450">Signed contracts governing your partnership with VidyaLoan DSA Network.</p>
+                        </div>
 
-                        <div className="space-y-4">
-                            {agreements.length > 0 ? agreements.map((agr, idx) => (
-                                <div key={agr.id || idx} className="p-6 bg-gray-50 border border-gray-100 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-xs">
-                                    <div className="space-y-1">
-                                        <p className="font-bold text-gray-800 text-sm">{agr.name}</p>
-                                        <p className="text-[10px] text-gray-450">
-                                            {agr.signed 
-                                                ? `Signed electronically on ${new Date(agr.signedAt).toLocaleDateString()} | Verified` 
-                                                : "Pending Signature"}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded text-[9px] font-black uppercase tracking-wider">
-                                            Active
-                                        </span>
-                                        <button 
-                                            onClick={() => showToast(`DSA Agreement ${agr.id} download starting...`, "success")} 
-                                            className="px-4 py-2 bg-white hover:bg-gray-150 border border-gray-150 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
-                                        >
-                                            Download PDF
-                                        </button>
-                                    </div>
-                                </div>
-                            )) : (
-                                <p className="text-xs text-gray-450 py-6 text-center bg-gray-50 rounded-xl border border-gray-100">
-                                    No legal agreements have been loaded yet.
-                                </p>
-                            )}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50 text-gray-400 border-b border-gray-100 font-black uppercase tracking-wider text-[9px]">
+                                        <th className="p-4">Document</th>
+                                        <th className="p-4">Date Signed</th>
+                                        <th className="p-4">Expiry</th>
+                                        <th className="p-4 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 font-bold text-gray-700">
+                                    {agreements.length > 0 ? agreements.map((doc: any, idx: number) => (
+                                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                            <td className="p-4 text-gray-900 font-black">{doc.name}</td>
+                                            <td className="p-4 text-gray-500 font-normal">{doc.signed ? new Date(doc.signedAt).toLocaleDateString() : "Pending"}</td>
+                                            <td className="p-4">
+                                                <span className={`px-2.5 py-0.5 rounded text-[8px] font-black uppercase ${
+                                                    doc.warning ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-gray-50 text-gray-450 border border-gray-100"
+                                                }`}>
+                                                    {doc.expiry || "Active"}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                <button 
+                                                    onClick={() => showToast(`Starting download for ${doc.name}...`, "success")}
+                                                    className="px-3.5 py-1.5 bg-[#6605c7]/5 hover:bg-[#6605c7] hover:text-white text-[#6605c7] rounded-xl text-[9px] font-black uppercase tracking-wider transition-all"
+                                                >
+                                                    Download
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        [
+                                            { name: "Agent Agreement (Standard)", signed: "15-Jan-2025", expiry: "31-Dec-2026", action: "Download", warning: true },
+                                            { name: "Commission Policy Document", signed: "01-Jun-2026", expiry: "Ongoing", action: "Download" },
+                                            { name: "Code of Conduct", signed: "15-Jan-2025", expiry: "Lifetime", action: "Download" },
+                                            { name: "Data Privacy & NDA", signed: "15-Jan-2025", expiry: "Lifetime", action: "Download" },
+                                            { name: "TDS Consent Form", signed: "01-Apr-2025", expiry: "Annual", action: "Download" },
+                                            { name: "Form 16A (2025–26)", signed: "01-Jun-2026", expiry: "—", action: "Download" }
+                                        ].map((doc, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                                <td className="p-4 text-gray-900 font-black">{doc.name}</td>
+                                                <td className="p-4 text-gray-500 font-normal">{doc.signed}</td>
+                                                <td className="p-4">
+                                                    <span className={`px-2.5 py-0.5 rounded text-[8px] font-black uppercase ${
+                                                        doc.warning ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-gray-50 text-gray-450 border border-gray-100"
+                                                    }`}>
+                                                        {doc.expiry}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <button 
+                                                        onClick={() => showToast(`Starting download for ${doc.name}...`, "success")}
+                                                        className="px-3.5 py-1.5 bg-[#6605c7]/5 hover:bg-[#6605c7] hover:text-white text-[#6605c7] rounded-xl text-[9px] font-black uppercase tracking-wider transition-all"
+                                                    >
+                                                        Download
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100 text-amber-800 text-xs font-bold leading-relaxed flex items-center gap-2">
+                            <span className="material-symbols-outlined text-base">warning</span>
+                            <span>⚠️ Agent Agreement expires in 6 months — renewal will be initiated by Admin 30 days before expiry.</span>
                         </div>
                     </div>
                 )}

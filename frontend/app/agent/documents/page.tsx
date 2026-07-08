@@ -35,7 +35,7 @@ export default function AgentDocuments() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [sharing, setSharing] = useState(false);
 
-    const [activeTab, setActiveTab] = useState<"student" | "legal">("student");
+
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -250,31 +250,8 @@ export default function AgentDocuments() {
                 accept=".pdf,.jpg,.jpeg,.png"
             />
 
-            {/* Tab Navigation header */}
-            <div className="flex gap-6 border-b border-gray-100 pb-3">
-                <button 
-                    onClick={() => setActiveTab("student")}
-                    className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
-                        activeTab === "student" 
-                            ? "border-[#6605c7] text-[#6605c7]" 
-                            : "border-transparent text-gray-400 hover:text-gray-600"
-                    }`}
-                >
-                    Student Document Checklist
-                </button>
-                <button 
-                    onClick={() => setActiveTab("legal")}
-                    className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
-                        activeTab === "legal" 
-                            ? "border-[#6605c7] text-[#6605c7]" 
-                            : "border-transparent text-gray-400 hover:text-gray-600"
-                    }`}
-                >
-                    My Agreements & Legal MOUs
-                </button>
-            </div>
-
-            {activeTab === "student" && (
+            {/* Student Documents Content */}
+            <div className="w-full">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">
                         
@@ -475,64 +452,7 @@ export default function AgentDocuments() {
                         </div>
                     </div>
                 </div>
-            )}
-
-            {activeTab === "legal" && (
-                <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-2xl shadow-[#6605c7]/2 space-y-6">
-                    <div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] block">Legal & Compliance</span>
-                        <h3 className="text-xl font-black font-display tracking-tight mt-0.5 text-gray-900">My Documents — Agreements & Legal</h3>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50 text-gray-400 border-b border-gray-100 font-black uppercase tracking-wider text-[9px]">
-                                    <th className="p-4">Document</th>
-                                    <th className="p-4">Date Signed</th>
-                                    <th className="p-4">Expiry</th>
-                                    <th className="p-4 text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50 font-bold text-gray-700">
-                                {[
-                                    { name: "Agent Agreement (Standard)", signed: "15-Jan-2025", expiry: "31-Dec-2026", action: "Download", warning: true },
-                                    { name: "Commission Policy Document", signed: "01-Jun-2026", expiry: "Ongoing", action: "Download" },
-                                    { name: "Code of Conduct", signed: "15-Jan-2025", expiry: "Lifetime", action: "Download" },
-                                    { name: "Data Privacy & NDA", signed: "15-Jan-2025", expiry: "Lifetime", action: "Download" },
-                                    { name: "TDS Consent Form", signed: "01-Apr-2025", expiry: "Annual", action: "Download" },
-                                    { name: "Form 16A (2025–26)", signed: "01-Jun-2026", expiry: "—", action: "Download" }
-                                ].map((doc, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                        <td className="p-4 text-gray-900 font-black">{doc.name}</td>
-                                        <td className="p-4 text-gray-500 font-normal">{doc.signed}</td>
-                                        <td className="p-4">
-                                            <span className={`px-2.5 py-0.5 rounded text-[8px] font-black uppercase ${
-                                                doc.warning ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-gray-50 text-gray-450 border border-gray-100"
-                                            }`}>
-                                                {doc.expiry}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <button 
-                                                onClick={() => showToast(`Starting download for ${doc.name}...`, "success")}
-                                                className="px-3.5 py-1.5 bg-[#6605c7]/5 hover:bg-[#6605c7] hover:text-white text-[#6605c7] rounded-xl text-[9px] font-black uppercase tracking-wider transition-all"
-                                            >
-                                                Download
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="p-4.5 rounded-2xl bg-amber-50/50 border border-amber-100 text-amber-800 text-xs font-bold leading-relaxed flex items-center gap-2">
-                        <span className="material-symbols-outlined text-base">warning</span>
-                        <span>⚠️ Agent Agreement expires in 6 months — renewal will be initiated by Admin 30 days before expiry.</span>
-                    </div>
-                </div>
-            )}
+            </div>
         </div>
     );
 }
