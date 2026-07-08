@@ -668,6 +668,10 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     }
 
     const startBankChat = async (bankInfo: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string }) => {
+        if (role === 'agent') {
+            console.warn("Agents are not allowed to chat with banks directly.");
+            return;
+        }
         try {
             const res = await fetch(HttpApiPaths.chat.bankStart(), {
                 method: 'POST',
@@ -702,10 +706,10 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
     // Handle initialBank from props
     useEffect(() => {
-        if (initialBank && token) {
+        if (initialBank && token && role !== 'agent') {
             startBankChat(initialBank);
         }
-    }, [initialBank, token]);
+    }, [initialBank, token, role]);
 
     // Fetch student documents for the active conversation
     const openStudentDocuments = async () => {
@@ -929,7 +933,12 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             if (initialBank?.applicationId && c.metadata?.applicationId !== initialBank.applicationId) return false;
             return true;
         }
-        if (role !== 'staff') return true; // agent: no extra filter
+        if (role === 'agent') {
+            // Agents are not allowed to chat with banks directly, so hide bank conversations
+            if (c.metadata?.type === 'bank') return false;
+            return true;
+        }
+        if (role !== 'staff') return true; // other roles
         if (chatTypeFilter === 'bank') return c.metadata?.type === 'bank';
         if (chatTypeFilter === 'student') return c.metadata?.type !== 'bank';
         return true; // 'all'
@@ -937,6 +946,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
     const filteredUsers = allUsers.filter(u =>
         u.role !== 'admin' && u.role !== 'staff' && u.role !== 'agent' &&
+        (role !== 'agent' || u.role !== 'bank') &&
         (`${u.firstName} ${u.lastName} ${u.email} ${u.phoneNumber}`).toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -1496,8 +1506,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                 <div className="w-24 h-24 rounded-3xl bg-[#F2F0FF] text-[#5A42E4] flex items-center justify-center mx-auto mb-6 border border-[#5A42E4]/10 relative shadow-sm">
                                     <span className="material-symbols-outlined text-4xl">chat</span>
                                 </div>
-                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">Staff Communication Portal</h3>
-                                <p className="text-[#4A525A] text-sm max-w-sm mx-auto font-medium">Select a student or bank conversation from the left sidebar to start messaging in real-time.</p>
+                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">{role === 'agent' ? "Student & Staff Portal" : "Staff Communication Portal"}</h3>
+                                <p className="text-[#4A525A] text-sm max-w-sm mx-auto font-medium">Select a student or {role !== 'agent' && 'bank '}conversation from the left sidebar to start messaging in real-time.</p>
                             </div>
                         </div>
                     )}
