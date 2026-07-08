@@ -87,6 +87,7 @@ interface ChatInterfaceProps {
     role: 'staff' | 'bank' | 'agent'; // What dashboard is this embedded in
     initialUser?: any;
     initialBank?: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null;
+    initialConversationId?: string | null;
     portalTitle?: string;
     className?: string;
     hideSidebar?: boolean;
@@ -103,7 +104,7 @@ interface StudentDocument {
     uploadedAt?: string;
 }
 
-export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, initialBank, initialConversationId = null, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
     const { token, user } = useAuth();
     const isMessageFromMe = (msg: Message) => {
         const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
@@ -179,6 +180,13 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     useEffect(() => {
         activeConversationRef.current = activeConversation;
     }, [activeConversation]);
+
+    // Handle initialConversationId from props
+    useEffect(() => {
+        if (initialConversationId) {
+            setActiveConversation(initialConversationId);
+        }
+    }, [initialConversationId]);
 
     useEffect(() => {
         setPendingFile(null);
@@ -934,8 +942,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             return true;
         }
         if (role === 'agent') {
-            // Agents are not allowed to chat with banks directly, so hide bank conversations
-            if (c.metadata?.type === 'bank') return false;
+            // Agents are not allowed to chat with banks directly, and staff chats belong to the dedicated Staff RM Line
+            if (c.metadata?.type === 'bank' || c.metadata?.type === 'staff') return false;
             return true;
         }
         if (role !== 'staff') return true; // other roles
