@@ -6,7 +6,7 @@ import { useAgent } from "../AgentContext";
 
 export default function AgentChatStaff() {
     const { token } = useAgent();
-    const [conversationId, setConversationId] = useState<string | null>(null);
+    const [conversation, setConversation] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -22,7 +22,7 @@ export default function AgentChatStaff() {
                 });
                 const data = await res.json();
                 if (data.success && data.conversation) {
-                    setConversationId(data.conversation.id);
+                    setConversation(data.conversation);
                 }
             } catch (err) {
                 console.error("Failed to connect to Staff RM", err);
@@ -53,7 +53,7 @@ export default function AgentChatStaff() {
             
             <ChatInterface 
                 role="agent" 
-                initialConversationId={conversationId} 
+                initialConversation={conversation} 
                 hideSidebar={true} 
                 portalTitle="Staff RM Support" 
                 className="flex h-[600px] border border-[#6605c7]/10 rounded-[2.5rem] overflow-hidden bg-[#FFFFFF] shadow-[0_24px_80px_rgba(102,5,199,0.04)] mt-4 animate-fade-in"

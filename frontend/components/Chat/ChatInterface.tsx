@@ -87,7 +87,7 @@ interface ChatInterfaceProps {
     role: 'staff' | 'bank' | 'agent'; // What dashboard is this embedded in
     initialUser?: any;
     initialBank?: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null;
-    initialConversationId?: string | null;
+    initialConversation?: Conversation | null;
     portalTitle?: string;
     className?: string;
     hideSidebar?: boolean;
@@ -104,7 +104,7 @@ interface StudentDocument {
     uploadedAt?: string;
 }
 
-export default function ChatInterface({ role, initialUser, initialBank, initialConversationId = null, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, initialBank, initialConversation = null, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
     const { token, user } = useAuth();
     const isMessageFromMe = (msg: Message) => {
         const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
@@ -181,12 +181,16 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
         activeConversationRef.current = activeConversation;
     }, [activeConversation]);
 
-    // Handle initialConversationId from props
+    // Handle initialConversation from props
     useEffect(() => {
-        if (initialConversationId) {
-            setActiveConversation(initialConversationId);
+        if (initialConversation) {
+            setConversations(prev => {
+                if (prev.find(c => c.id === initialConversation.id)) return prev;
+                return [initialConversation, ...prev];
+            });
+            setActiveConversation(initialConversation.id);
         }
-    }, [initialConversationId]);
+    }, [initialConversation]);
 
     useEffect(() => {
         setPendingFile(null);
@@ -1514,8 +1518,13 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                                 <div className="w-24 h-24 rounded-3xl bg-[#F2F0FF] text-[#5A42E4] flex items-center justify-center mx-auto mb-6 border border-[#5A42E4]/10 relative shadow-sm">
                                     <span className="material-symbols-outlined text-4xl">chat</span>
                                 </div>
-                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">{role === 'agent' ? "Student & Staff Portal" : "Staff Communication Portal"}</h3>
-                                <p className="text-[#4A525A] text-sm max-w-sm mx-auto font-medium">Select a student or {role !== 'agent' && 'bank '}conversation from the left sidebar to start messaging in real-time.</p>
+                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">{role === 'agent' ? (hideSidebar ? "Staff RM Connection" : "Student Pipeline") : "Staff Communication Portal"}</h3>
+                                <p className="text-[#4A525A] text-sm max-w-sm mx-auto font-medium">
+                                    {role === 'agent' && hideSidebar 
+                                        ? "Connecting you with your counselor. Messages will load automatically."
+                                        : `Select a student or ${role !== 'agent' ? 'bank ' : ''}conversation from the left sidebar to start messaging in real-time.`
+                                    }
+                                </p>
                             </div>
                         </div>
                     )}
