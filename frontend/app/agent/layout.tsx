@@ -120,7 +120,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                 </div>
                                 {!sidebarCollapsed && (
                                     <div className="min-w-0 flex-1 flex flex-col justify-center">
-                                        <p className="text-xs font-black text-gray-900 break-words whitespace-normal leading-tight mb-1 pr-1">{agentProfile?.businessName || "VidyaLoan Agency"}</p>
+                                        <p className="text-xs font-black text-gray-900 break-words whitespace-normal leading-tight mb-1 pr-1">{agentProfile?.firstName ? `${agentProfile.firstName} ${agentProfile.lastName || ''}` : "Agent Partner"}</p>
                                         <div className="flex items-center gap-1">
                                             <div className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
                                             <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest leading-none">Master DSA</p>
