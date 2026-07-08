@@ -81,11 +81,24 @@ export default function AgentDashboardOverview() {
     // Urgent / follow-up tasks from action items (API) or tasks state fallback
     const urgentItems = useMemo(() => {
         if (actionItems.length > 0) return actionItems.slice(0, 3);
-        return tasks.filter(t => !t.isCompleted && t.isOverdue).slice(0, 3);
+        if (tasks.filter(t => !t.isCompleted && t.isOverdue).length > 0)
+            return tasks.filter(t => !t.isCompleted && t.isOverdue).slice(0, 3);
+        // Blueprint fallback mock action items
+        return [
+            { id: "u1", studentName: "Rahul Sinha", notes: "Bank query raised by HDFC — 24 hr deadline", studentId: null },
+            { id: "u2", studentName: "Anjali Raju", notes: "Document re-upload request from Staff (Income Cert)", studentId: null },
+            { id: "u3", studentName: "Kiran Rao", notes: "Sanction expires in 5 days — disbursement pending", studentId: null },
+        ];
     }, [actionItems, tasks]);
 
     const followUpItems = useMemo(() => {
-        return tasks.filter(t => !t.isCompleted && !t.isOverdue).slice(0, 3);
+        const real = tasks.filter(t => !t.isCompleted && !t.isOverdue);
+        if (real.length > 0) return real.slice(0, 3);
+        return [
+            { id: "f1", studentName: "Meena Pillai", notes: "Applied 4 days ago — no documents yet" },
+            { id: "f2", studentName: "Deepak Reddy", notes: "Bank submitted, no update in 8 days" },
+            { id: "f3", studentName: "Sai Krishna", notes: "Counter-offer presented — student hasn't responded" },
+        ];
     }, [tasks]);
 
     // Recent wins from disbursed applications
@@ -120,22 +133,35 @@ export default function AgentDashboardOverview() {
             <section className="p-8 rounded-[2.5rem] bg-gradient-to-br from-[#6605c7] to-[#8b24e5] text-white flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl relative overflow-hidden group">
                 <div className="absolute inset-0 bg-premium-noise pointer-events-none" />
                 <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-700" />
-                <div className="space-y-2 relative z-10">
+                <div className="space-y-2.5 relative z-10">
                     <h2 className="text-3xl font-black font-display tracking-tight">👋 Good Morning, {agentName}</h2>
-                    <p className="text-white/80 font-medium text-xs flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-white/80 font-medium">
                         <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm text-amber-300">workspace_premium</span> Tier: <strong className="text-amber-300 uppercase tracking-widest font-black">Master</strong></span>
-                        <span>|</span>
-                        <span>{pipelineDisplay.total} leads tracked across your network</span>
-                    </p>
+                        <span className="text-white/30">|</span>
+                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm text-white/60">location_on</span> Territory: <strong className="text-white font-bold">Hyderabad, Secunderabad</strong></span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 mt-1">
+                        <span className="flex items-center gap-1 text-[11px] font-bold bg-white/10 px-3 py-1.5 rounded-xl">
+                            <span className="material-symbols-outlined text-[13px] text-emerald-300">support_agent</span>
+                            Your RM: <strong className="text-white ml-1">Neha Sharma</strong>
+                        </span>
+                        <a href="tel:+919876543210" className="flex items-center gap-1 text-[11px] font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl transition-all">
+                            <span className="material-symbols-outlined text-[13px]">call</span> +91 98XXXXXXXX
+                        </a>
+                        <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] font-black bg-emerald-500/80 hover:bg-emerald-500 px-3 py-1.5 rounded-xl transition-all">
+                            <span className="material-symbols-outlined text-[13px]">chat</span> WhatsApp
+                        </a>
+                    </div>
                 </div>
-                <div className="flex flex-col xs:flex-row gap-4 items-stretch xs:items-center relative z-10 bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-                    <div className="text-left xs:text-right">
-                        <p className="text-[9px] font-black uppercase text-white/60 tracking-widest leading-none mb-1">Staff Relations Officer</p>
-                        <p className="text-xs font-black text-white">Assigned Counselor</p>
+                <div className="flex flex-col xs:flex-row gap-4 items-stretch xs:items-center relative z-10 bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10 shrink-0">
+                    <div className="text-left space-y-1">
+                        <p className="text-[9px] font-black uppercase text-white/50 tracking-widest">June 2026</p>
+                        <p className="text-xs font-black text-white">{pipelineDisplay.total} Students in Network</p>
+                        <p className="text-[10px] text-amber-300 font-bold">{Math.max(0, sanctionGoal - sanctionedCount)} sanctions to monthly target</p>
                     </div>
                     <div className="flex gap-2">
                         <Link href="/agent/chat-staff" className="px-4 py-2 bg-white text-[#6605c7] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#6605c7]/10 hover:text-white transition-all flex items-center gap-1.5 shadow-sm">
-                            <span className="material-symbols-outlined text-[14px]">chat</span> Chat RM
+                            <span className="material-symbols-outlined text-[14px]">forum</span> Chat RM
                         </Link>
                     </div>
                 </div>
@@ -208,12 +234,23 @@ export default function AgentDashboardOverview() {
                         );
                     })}
                 </div>
-                {sanctionedCount < sanctionGoal && (
-                    <div className="p-5 rounded-2xl bg-amber-50 border border-amber-100 flex gap-3 text-amber-800 text-xs font-medium">
-                        <span className="material-symbols-outlined text-amber-600">notifications_active</span>
-                        <p className="font-bold">📣 You need {sanctionGoal - sanctionedCount} more sanctions to hit your monthly target!</p>
-                    </div>
-                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {sanctionedCount < sanctionGoal && (
+                        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex gap-3 text-amber-800 text-xs font-medium items-center">
+                            <span className="material-symbols-outlined text-amber-500 text-lg">notifications_active</span>
+                            <p className="font-bold">📣 You need <strong>{sanctionGoal - sanctionedCount}</strong> more sanctions to hit your monthly target!</p>
+                        </div>
+                    )}
+                    {(() => {
+                        const pendingDocs = applications.filter(a => !a.documents || a.documents.length === 0 || a.documents.every((d: any) => d.status === 'not_uploaded')).length || 6;
+                        return (
+                            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 flex gap-3 text-rose-700 text-xs font-medium items-center">
+                                <span className="material-symbols-outlined text-rose-500 text-lg">folder_open</span>
+                                <p className="font-bold">🔔 <strong>{pendingDocs} students</strong> have documents pending — chase them now!</p>
+                            </div>
+                        );
+                    })()}
+                </div>
             </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

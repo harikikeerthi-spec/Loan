@@ -160,31 +160,31 @@ export default function AgentStudentsList() {
                 <table className="w-full border-separate border-spacing-y-4">
                     <thead>
                         <tr>
-                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Student Name</th>
-                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Course & College</th>
-                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Loan Amount</th>
-                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Status</th>
-                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Bank Partner</th>
-                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Commission</th>
-                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-right border-b border-[#6605c7]/5">Actions</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Student Name</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Course & College</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Loan Amount</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Status</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Bank Partner</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-left border-b border-[#6605c7]/5">Commission</th>
+                            <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 text-right border-b border-[#6605c7]/5">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {studentsLoading && filteredApps.length === 0 ? (
                             [...Array(5)].map((_, i) => (
                                 <tr key={i} className="animate-pulse">
-                                    <td className="px-8 py-6 bg-gray-50 rounded-l-[2rem]"><div className="h-4 bg-gray-200 rounded w-3/4" /></td>
-                                    <td className="px-8 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-2/3" /></td>
-                                    <td className="px-8 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-1/2" /></td>
-                                    <td className="px-8 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-1/3" /></td>
-                                    <td className="px-8 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-1/2" /></td>
-                                    <td className="px-8 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-1/3" /></td>
-                                    <td className="px-8 py-6 bg-gray-50 rounded-r-[2rem]"><div className="h-4 bg-gray-200 rounded w-full" /></td>
+                                    <td className="px-4 py-6 bg-gray-50 rounded-l-[2rem]"><div className="h-4 bg-gray-200 rounded w-3/4" /></td>
+                                    <td className="px-4 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-2/3" /></td>
+                                    <td className="px-4 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-1/2" /></td>
+                                    <td className="px-4 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-1/3" /></td>
+                                    <td className="px-4 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-1/2" /></td>
+                                    <td className="px-4 py-6 bg-gray-50"><div className="h-4 bg-gray-200 rounded w-1/3" /></td>
+                                    <td className="px-4 py-6 bg-gray-50 rounded-r-[2rem]"><div className="h-4 bg-gray-200 rounded w-full" /></td>
                                 </tr>
                             ))
                         ) : filteredApps.length > 0 ? filteredApps.map((app, idx) => (
                             <tr key={app.id || idx} className="group hover:-translate-y-1 transition-all duration-300">
-                                <td className="px-8 py-6 bg-white group-hover:bg-[#fcfaff] rounded-l-[2rem] border-y border-l border-gray-100 group-hover:border-[#6605c7]/20 transition-all">
+                                <td className="px-4 py-6 bg-white group-hover:bg-[#fcfaff] rounded-l-[2rem] border-y border-l border-gray-100 group-hover:border-[#6605c7]/20 transition-all">
                                     <div className="flex flex-col">
                                         <button
                                             onClick={() => router.push(`/agent/students/${app.id}`)}
@@ -195,30 +195,30 @@ export default function AgentStudentsList() {
                                         <span className="text-[10px] text-gray-400 mt-0.5 font-mono">{app.applicationNumber}</span>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all text-xs">
+                                <td className="px-4 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all text-xs">
                                     <div className="flex flex-col">
                                         <span className="font-bold text-gray-800">{app.courseName || "—"}</span>
                                         <span className="text-gray-400">{app.collegeName || "—"}</span>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all font-black text-gray-900 text-sm tracking-tight font-mono">
+                                <td className="px-4 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all font-black text-gray-900 text-sm tracking-tight font-mono">
                                     ₹{app.amount.toLocaleString()}
                                 </td>
-                                <td className="px-8 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all">
+                                <td className="px-4 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all">
                                     <span className={`inline-flex px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${statusColors[app.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
                                         {app.status.replace(/_/g, " ")}
                                     </span>
                                 </td>
-                                <td className="px-8 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all text-xs font-bold text-gray-600">
+                                <td className="px-4 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all text-xs font-bold text-gray-600">
                                     {app.bank || "—"}
                                 </td>
-                                <td className="px-8 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all text-xs">
+                                <td className="px-4 py-6 bg-white group-hover:bg-[#fcfaff] border-y border-transparent group-hover:border-[#6605c7]/20 transition-all text-xs">
                                     <div className="flex flex-col">
                                         <span className="font-bold text-[#6605c7]">₹{app.projectedCommission.toLocaleString()}</span>
                                         <span className="text-[9px] text-gray-400">({app.commissionRate}% cut)</span>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6 bg-white group-hover:bg-[#fcfaff] rounded-r-[2rem] border-y border-r border-gray-100 group-hover:border-[#6605c7]/20 transition-all text-right">
+                                <td className="px-4 py-6 bg-white group-hover:bg-[#fcfaff] rounded-r-[2rem] border-y border-r border-gray-100 group-hover:border-[#6605c7]/20 transition-all text-right">
                                     <div className="flex gap-2 justify-end">
                                         <button
                                             onClick={() => { setDocUploadState({ ...docUploadState, studentId: app.id }); router.push(`/agent/students/${app.id}#documents`); }}
@@ -246,7 +246,7 @@ export default function AgentStudentsList() {
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan={7} className="px-8 py-32 text-center bg-white rounded-[2rem] border border-gray-100">
+                                <td colSpan={7} className="px-4 py-32 text-center bg-white rounded-[2rem] border border-gray-100">
                                     <div className="flex flex-col items-center justify-center opacity-30">
                                         <span className="material-symbols-outlined text-7xl mb-4">search_off</span>
                                         <p className="text-[10px] font-black uppercase tracking-[0.3em]">No leads matching criteria</p>

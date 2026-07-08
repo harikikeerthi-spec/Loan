@@ -264,32 +264,104 @@ export default function AgentAnalytics() {
                         </div>
                     </div>
 
-                    {/* Monthly Trend Report Chart */}
+                    {/* Monthly Trend 12-Month (Blueprint 8.2) */}
                     <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
-                        <h3 className="font-display font-black text-xl text-gray-900 mb-2 uppercase tracking-tight">Monthly Referral Submissions Trend</h3>
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-6">Historical lead pipeline activity for the current calendar year</p>
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <h3 className="font-display font-black text-xl text-gray-900 uppercase tracking-tight">Monthly Sanctions Trend</h3>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">12-month sanctions + commissions overview</p>
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#6605c7] bg-[#6605c7]/5 px-3 py-1.5 rounded-full">Jan–Dec 2026</span>
+                        </div>
                         
-                        <div className="h-48 flex items-end justify-between gap-4 pt-4 border-b border-gray-100">
+                        <div className="h-52 flex items-end justify-between gap-2 pb-6 border-b border-gray-100 relative">
+                            <div className="absolute left-0 bottom-6 right-0 flex flex-col justify-between h-full pointer-events-none">
+                                {[12, 9, 6, 3, 0].map(v => (
+                                    <div key={v} className="flex items-center gap-2 border-t border-gray-50">
+                                        <span className="text-[8px] text-gray-300 font-bold w-4">{v}</span>
+                                    </div>
+                                ))}
+                            </div>
                             {[
-                                { month: "Jan", count: 8, height: "16%" },
-                                { month: "Feb", count: 14, height: "28%" },
-                                { month: "Mar", count: 22, height: "44%" },
-                                { month: "Apr", count: 29, height: "58%" },
-                                { month: "May", count: 38, height: "76%" },
-                                { month: "Jun", count: 48, height: "96%" }
-                            ].map((m: any, i: number) => (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
-                                    <span className="text-[9px] font-mono font-black text-[#6605c7] opacity-0 group-hover:opacity-100 transition-opacity duration-200">{m.count} Leads</span>
-                                    <div className="w-full bg-[#6605c7]/10 hover:bg-[#6605c7] rounded-t-lg transition-all duration-300 shadow-sm" style={{ height: m.height }} />
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase pb-2">{m.month}</span>
+                                { month: "Jan", sanctions: 8, comm: 48000 },
+                                { month: "Feb", sanctions: 7, comm: 42000 },
+                                { month: "Mar", sanctions: 12, comm: 72000 },
+                                { month: "Apr", sanctions: 9, comm: 54000 },
+                                { month: "May", sanctions: 10, comm: 60000 },
+                                { month: "Jun", sanctions: 12, comm: 72000 },
+                                { month: "Jul", sanctions: 0, comm: 0 },
+                                { month: "Aug", sanctions: 0, comm: 0 },
+                                { month: "Sep", sanctions: 0, comm: 0 },
+                                { month: "Oct", sanctions: 0, comm: 0 },
+                                { month: "Nov", sanctions: 0, comm: 0 },
+                                { month: "Dec", sanctions: 0, comm: 0 },
+                            ].map((m, i) => (
+                                <div key={i} className="flex-1 flex flex-col items-center gap-1 group cursor-pointer relative">
+                                    {m.sanctions > 0 && (
+                                        <div className="absolute bottom-7 text-center opacity-0 group-hover:opacity-100 transition-opacity bg-[#6605c7] text-white text-[8px] font-black px-2 py-1 rounded-lg pointer-events-none z-10 whitespace-nowrap">
+                                            {m.sanctions} sanctions<br />₹{(m.comm / 1000).toFixed(0)}K
+                                        </div>
+                                    )}
+                                    <div 
+                                        className={`w-full rounded-t-lg transition-all duration-300 ${m.sanctions > 0 ? 'bg-[#6605c7]/20 group-hover:bg-[#6605c7]' : 'bg-gray-50 border border-gray-100'}`} 
+                                        style={{ height: m.sanctions > 0 ? `${(m.sanctions / 12) * 180}px` : '8px' }} 
+                                    />
+                                    <span className="text-[8px] font-bold text-gray-400 uppercase pt-2">{m.month}</span>
                                 </div>
                             ))}
+                        </div>
+                        <div className="flex gap-6 mt-4 text-[10px] font-bold text-gray-500">
+                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[#6605c7]/30 inline-block" /> Sanctions</span>
+                            <span className="text-amber-600">📅 Peak: March &amp; June (Admission Season)</span>
+                        </div>
+                    </div>
+
+                    {/* Top Performing Courses & Colleges (Blueprint 8.3) */}
+                    <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
+                        <h3 className="font-display font-black text-xl text-gray-900 mb-6 uppercase tracking-tight">Top Lead Sources — Course &amp; College</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50 text-gray-400 border-b border-gray-100 font-black uppercase tracking-wider text-[9px]">
+                                        <th className="p-3">Course</th>
+                                        <th className="p-3">Leads</th>
+                                        <th className="p-3">Sanctions</th>
+                                        <th className="p-3">Rate</th>
+                                        <th className="p-3">Avg Loan</th>
+                                        <th className="p-3">Commission</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 font-bold text-gray-700">
+                                    {[
+                                        { course: "B.Tech", leads: 14, sanctions: 5, rate: "36%", loan: "₹12.4L", comm: "₹43,400", top: false },
+                                        { course: "MBA (Abroad)", leads: 6, sanctions: 3, rate: "50%", loan: "₹42.0L", comm: "₹1,26,000", top: true },
+                                        { course: "MBBS", leads: 8, sanctions: 2, rate: "25%", loan: "₹8.5L", comm: "₹11,900", top: false },
+                                        { course: "M.Tech", leads: 4, sanctions: 2, rate: "50%", loan: "₹9.0L", comm: "₹12,600", top: false },
+                                    ].map((row, idx) => (
+                                        <tr key={idx} className={`transition-colors ${row.top ? 'bg-amber-50/30' : 'hover:bg-gray-50'}`}>
+                                            <td className="p-3 font-black text-gray-900 flex items-center gap-2">
+                                                {row.course}
+                                                {row.top && <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded uppercase tracking-wider">🏆 Best ROI</span>}
+                                            </td>
+                                            <td className="p-3">{row.leads}</td>
+                                            <td className="p-3">{row.sanctions}</td>
+                                            <td className="p-3 text-emerald-600 font-black">{row.rate}</td>
+                                            <td className="p-3">{row.loan}</td>
+                                            <td className="p-3 text-[#6605c7] font-black">{row.comm}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-2">
+                            <span className="material-symbols-outlined text-base">school</span>
+                            Top College: IIT Bombay (5 leads, 4 sanctioned — 80% rate!) · Focus more campus outreach events here.
                         </div>
                     </div>
 
                     {/* Bank performance TAT reports */}
                     <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
-                        <h3 className="font-display font-black text-xl text-gray-900 mb-6 uppercase tracking-tight">Bank Performance & TAT Report</h3>
+                        <h3 className="font-display font-black text-xl text-gray-900 mb-6 uppercase tracking-tight">Bank Performance &amp; TAT Report</h3>
                         
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs font-bold border-collapse">
@@ -315,6 +387,9 @@ export default function AgentAnalytics() {
                                 </tbody>
                             </table>
                         </div>
+                        <p className="text-[10px] font-bold text-indigo-700 mt-4 bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+                            💡 Best Bank for your students: Avanse (highest approval rate + fastest TAT). Consider routing more domestic B.Tech leads here.
+                        </p>
                     </div>
                 </div>
 

@@ -28,7 +28,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         { section: "analytics", icon: "monitoring", label: "Performance" },
         { section: "sub-agents", icon: "share_reviews", label: "Sub-Agents" },
         { section: "training", icon: "school", label: "LMS & Training" },
-        { section: "alumni", icon: "school", label: "Alumni Referrals" },
+        { section: "alumni", icon: "diversity_3", label: "Alumni Referrals" },
         { section: "chat-staff", icon: "support_agent", label: "Staff RM Line" },
         { section: "chat-student", icon: "forum", label: "Student Line" },
         { section: "qr-code", icon: "qr_code_2", label: "QR Lead Capture" },
@@ -65,9 +65,11 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                 <span className="material-symbols-outlined font-black text-xl">handshake</span>
                             </div>
                             {!sidebarCollapsed && (
-                                <div className="animate-fade-in">
-                                    <span className="font-display font-black text-2xl tracking-tighter text-gray-900 block leading-none">Vidya<span className="text-[#6605c7]">Agent</span></span>
-                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40">DSA Partner Hub</span>
+                                <div className="animate-fade-in overflow-hidden">
+                                    <span className="font-display font-black text-xl lg:text-2xl tracking-tighter text-gray-900 block leading-tight break-words pr-2" title={agentProfile?.businessName || "VidyaAgent"}>
+                                        {agentProfile?.businessName || <>Vidya<span className="text-[#6605c7]">Agent</span></>}
+                                    </span>
+                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 block mt-1">DSA Partner Hub</span>
                                 </div>
                             )}
                         </div>
@@ -111,22 +113,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
 
                     {/* Agent Session Info Footer */}
                     <div className={`${sidebarCollapsed ? "p-2" : "p-4"} border-t border-[#6605c7]/5 bg-[#fcfaff]/50 backdrop-blur-xl relative z-10 flex-shrink-0`}>
-                        <div className={`${sidebarCollapsed ? "p-1.5 rounded-full mb-2" : "p-3 rounded-[1.5rem] mb-3"} bg-white border border-[#6605c7]/10 group hover:border-[#6605c7]/30 transition-all duration-500 flex justify-center`}>
-                            <div className="flex items-center gap-3 w-full justify-center">
-                                <div className="w-10 h-10 rounded-full border border-gray-100 shadow-sm overflow-hidden bg-gradient-to-br from-[#6605c7]/10 to-[#6605c7]/5 flex-shrink-0">
-                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${agentProfile?.businessName || "KrishnaAgency"}`} alt="Agent" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                </div>
-                                {!sidebarCollapsed && (
-                                    <div className="min-w-0 flex-1 flex flex-col justify-center">
-                                        <p className="text-xs font-black text-gray-900 truncate leading-none mb-1">{agentProfile?.businessName || "VidyaLoan Agency"}</p>
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
-                                            <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest leading-none">Master DSA</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+
                         <button onClick={logout} className={`w-full py-2.5 rounded-[1rem] flex items-center justify-center text-red-500 hover:bg-red-50 hover:text-red-600 transition-all font-black text-[9px] tracking-widest uppercase border border-transparent hover:border-red-100 ${sidebarCollapsed ? "px-0" : "gap-2"}`} title="Terminate Session">
                             <span className="material-symbols-outlined text-base">logout</span>
                             {!sidebarCollapsed && <span>Terminate Session</span>}

@@ -412,24 +412,51 @@ export default function AgentLeadSubmission() {
                             {/* STEP 3: CO-APPLICANT (Optional) */}
                             {activeStep === 3 && (
                                 <div className="space-y-4 animate-fade-in-up">
-                                    <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 3: CO-APPLICANT (Optional)</h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 3: CO-APPLICANT</h4>
+                                        <span className="text-[8px] font-black text-gray-400 bg-gray-100 px-2 py-0.5 rounded uppercase">Optional</span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-500 font-medium -mt-2">Most banks require a salaried co-applicant (parent/spouse). Adding details improves approval chances.</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Co-App Name</label>
-                                            <input type="text" value={leadForm.coApplicantName} onChange={(e) => setLeadForm({ ...leadForm, coApplicantName: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Co-App Full Name</label>
+                                            <input type="text" value={leadForm.coApplicantName} onChange={(e) => setLeadForm({ ...leadForm, coApplicantName: e.target.value })} placeholder="e.g. Ramesh Sharma" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all" />
                                         </div>
                                         <div className="space-y-1">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">Relationship</label>
-                                            <select value={leadForm.coApplicantRelationship} onChange={(e) => setLeadForm({ ...leadForm, coApplicantRelationship: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
+                                            <select value={leadForm.coApplicantRelationship} onChange={(e) => setLeadForm({ ...leadForm, coApplicantRelationship: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all">
                                                 <option>Parent</option>
                                                 <option>Spouse</option>
                                                 <option>Sibling</option>
+                                                <option>Other</option>
                                             </select>
                                         </div>
                                         <div className="space-y-1">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">Co-App Mobile</label>
-                                            <input type="tel" value={leadForm.coApplicantMobile} onChange={(e) => setLeadForm({ ...leadForm, coApplicantMobile: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                                            <input type="tel" value={leadForm.coApplicantMobile} onChange={(e) => setLeadForm({ ...leadForm, coApplicantMobile: e.target.value })} placeholder="+91 9XXXXXXXXX" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all" />
                                         </div>
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Employment Type</label>
+                                            <select className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all">
+                                                <option>Salaried (Govt.)</option>
+                                                <option>Salaried (Private)</option>
+                                                <option>Self-Employed / Business</option>
+                                                <option>Retired Govt. Pensioner</option>
+                                                <option>NRI</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Annual Income (₹)</label>
+                                            <input type="number" placeholder="e.g. 600000" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">CIBIL Score <span className="text-gray-300">(Optional)</span></label>
+                                            <input type="number" placeholder="e.g. 720" min="300" max="900" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all" />
+                                        </div>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-medium flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm text-amber-500">info</span>
+                                        Avanse requires minimum ₹30,000/month salaried income for abroad loans (revised Jul 2026). SBI Scholar requires ₹4.5L/yr.
                                     </div>
                                 </div>
                             )}
@@ -437,20 +464,42 @@ export default function AgentLeadSubmission() {
                             {/* STEP 4: SOURCE & NOTES */}
                             {activeStep === 4 && (
                                 <div className="space-y-4 animate-fade-in-up">
-                                    <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 4: SOURCE & NOTES</h4>
+                                    <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 4: SOURCE &amp; NOTES</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">How did they find you?</label>
-                                            <select value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
-                                                <option>Referral</option>
-                                                <option>Walk-in</option>
-                                                <option>WhatsApp</option>
-                                                <option>College Event</option>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Lead Source</label>
+                                            <select value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all">
+                                                <option>Referral (Alumni)</option>
+                                                <option>Referral (Student Peer)</option>
+                                                <option>Walk-in (Office)</option>
+                                                <option>WhatsApp Inbound</option>
+                                                <option>College Event / Seminar</option>
+                                                <option>QR Code Scan</option>
+                                                <option>Social Media</option>
+                                                <option>Other</option>
                                             </select>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Internal Notes for Staff</label>
-                                            <input type="text" value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" placeholder="e.g. Needs immediate dispatch check" />
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Referred By (Name)</label>
+                                            <input type="text" placeholder="e.g. Priya Sharma (alumni)" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Urgency Level</label>
+                                            <select className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all">
+                                                <option>Normal (within 2 weeks)</option>
+                                                <option>Urgent (within 3 days)</option>
+                                                <option>Critical (immediate dispatch)</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Expected Decision Month</label>
+                                            <select className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all">
+                                                {["July 2026","August 2026","September 2026","October 2026","November 2026","December 2026"].map(m => <option key={m}>{m}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1 sm:col-span-2">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Notes for Staff</label>
+                                            <textarea rows={3} value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all resize-none" placeholder="e.g. Student is applying for IIT Bombay M.Tech. Father is Govt. employee — CIBIL 742. Needs sanction within 3 weeks before fee deadline." />
                                         </div>
                                     </div>
                                 </div>

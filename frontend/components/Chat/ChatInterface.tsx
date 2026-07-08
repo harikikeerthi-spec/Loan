@@ -87,6 +87,7 @@ interface ChatInterfaceProps {
     role: 'staff' | 'bank' | 'agent'; // What dashboard is this embedded in
     initialUser?: any;
     initialBank?: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null;
+    initialConversation?: Conversation | null;
     portalTitle?: string;
     className?: string;
     hideSidebar?: boolean;
@@ -106,7 +107,7 @@ interface StudentDocument {
     uploadedAt?: string;
 }
 
-export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className, hideSidebar = false, chatContext = 'student', initialStudentId, autoSendLead = true }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, initialBank, initialConversation = null, portalTitle, className, hideSidebar = false, chatContext = 'student', initialStudentId, autoSendLead = true }: ChatInterfaceProps) {
     const { token, user } = useAuth();
     const isMessageFromMe = (msg: Message) => {
         const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
@@ -183,6 +184,17 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     useEffect(() => {
         activeConversationRef.current = activeConversation;
     }, [activeConversation]);
+
+    // Handle initialConversation from props
+    useEffect(() => {
+        if (initialConversation) {
+            setConversations(prev => {
+                if (prev.find(c => c.id === initialConversation.id)) return prev;
+                return [initialConversation, ...prev];
+            });
+            setActiveConversation(initialConversation.id);
+        }
+    }, [initialConversation]);
 
     useEffect(() => {
         setPendingFile(null);
@@ -717,6 +729,10 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     }
 
     const startBankChat = async (bankInfo: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string }) => {
+        if (role === 'agent') {
+            console.warn("Agents are not allowed to chat with banks directly.");
+            return;
+        }
         try {
             const res = await fetch(HttpApiPaths.chat.bankStart(), {
                 method: 'POST',
@@ -751,10 +767,10 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
     // Handle initialBank from props
     useEffect(() => {
-        if (initialBank && token) {
+        if (initialBank && token && role !== 'agent') {
             startBankChat(initialBank);
         }
-    }, [initialBank, token]);
+    }, [initialBank, token, role]);
 
     // Fetch student documents for the active conversation
     const openStudentDocuments = async () => {
@@ -993,6 +1009,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
     const filteredUsers = allUsers.filter(u =>
         u.role !== 'admin' && u.role !== 'staff' && u.role !== 'agent' &&
+        (role !== 'agent' || u.role !== 'bank') &&
         (`${u.firstName} ${u.lastName} ${u.email} ${u.phoneNumber}`).toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -1192,7 +1209,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             {/* Main Chat Area */}
             <div className="flex-1 flex overflow-hidden bg-[#FFFFFF] relative">
                 {/* Chat column */}
-                <div className={`flex flex-col transition-all duration-300 ${showDocPanel ? 'flex-1' : 'w-full'}`}>
+                <div className={`flex flex-col h-full transition-all duration-300 ${showDocPanel ? 'flex-1' : 'w-full'}`}>
                     {activeConversation ? (
                         <>
                             {/* Chat Header */}
@@ -1546,14 +1563,19 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center bg-[#F8F9FC] relative overflow-hidden font-sans">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F8F9FC] font-sans">
                             <div className="absolute inset-0 bg-gradient-to-t from-[#5A42E4]/3 to-transparent"></div>
                             <div className="text-center relative z-10 animate-fade-in px-6">
                                 <div className="w-24 h-24 rounded-3xl bg-[#F2F0FF] text-[#5A42E4] flex items-center justify-center mx-auto mb-6 border border-[#5A42E4]/10 relative shadow-sm">
                                     <span className="material-symbols-outlined text-4xl">chat</span>
                                 </div>
-                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">Staff Communication Portal</h3>
-                                <p className="text-[#4A525A] text-sm max-w-sm mx-auto font-medium">Select a student or bank conversation from the left sidebar to start messaging in real-time.</p>
+                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">{portalTitle || (role === 'agent' ? (hideSidebar ? "Staff RM Connection" : "Student Pipeline") : "Staff Communication Portal")}</h3>
+                                <p className="text-[#4A525A] text-sm max-w-sm mx-auto font-medium">
+                                    {role === 'agent' && hideSidebar 
+                                        ? "Connecting you with your counselor. Messages will load automatically."
+                                        : `Select a ${portalTitle?.toLowerCase().includes('staff') ? 'counselor' : 'student'} or ${role !== 'agent' ? 'bank ' : ''}conversation from the left sidebar to start messaging in real-time.`
+                                    }
+                                </p>
                             </div>
                         </div>
                     )}

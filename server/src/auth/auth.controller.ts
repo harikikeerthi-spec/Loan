@@ -56,7 +56,26 @@ export class AuthController {
         message: 'Access Denied: Agent privileges required.',
       };
     }
-    return this.authService.sendOtpUnified(body.email);
+    
+    const result = await this.authService.sendOtpUnified(body.email);
+    
+    let businessName = `${user.firstName || 'Partner'} Agency`;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const profilePath = path.join(process.cwd(), 'scratch', 'agent_profiles.json');
+      if (fs.existsSync(profilePath)) {
+         const data = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+         if (data[user.id] && data[user.id].businessName) {
+            businessName = data[user.id].businessName;
+         }
+      }
+    } catch(e) {}
+
+    return {
+      ...result,
+      businessName
+    };
   }
 
   /**

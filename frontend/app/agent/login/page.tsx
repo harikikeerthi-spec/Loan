@@ -26,6 +26,7 @@ function AgentLoginContent() {
     const [resendDisabled, setResendDisabled] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [devOtp, setDevOtp] = useState<string | null>(null);
+    const [agencyName, setAgencyName] = useState<string | null>(null);
 
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -43,12 +44,13 @@ function AgentLoginContent() {
         setLoading(true);
         setError("");
         try {
-            const res = await authApi.requestOtp(email.trim()) as { success: boolean; otp?: string; userExists: boolean };
+            const res = await authApi.requestOtp(email.trim()) as { success: boolean; otp?: string; userExists: boolean; businessName?: string };
             if (res.otp) {
                 setDevOtp(res.otp);
             } else {
                 setDevOtp(null);
             }
+            if (res.businessName) setAgencyName(res.businessName);
             setStep("otp");
             setResendDisabled(true);
             setCountdown(60);
@@ -160,8 +162,16 @@ function AgentLoginContent() {
                             <span className="material-symbols-outlined text-[#6605c7]/50 text-xl font-light">handshake</span>
                             
                             {/* Support Agent (Partner) Icon */}
-                            <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center border border-[#6605c7]/20">
-                                <span className="material-symbols-outlined text-[#6605c7] text-2xl">support_agent</span>
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center border border-[#6605c7]/20 transition-all">
+                                    <span className="material-symbols-outlined text-[#6605c7] text-2xl">support_agent</span>
+                                </div>
+                                {agencyName && step === "otp" && (
+                                    <div className="animate-fade-in flex flex-col justify-center text-left max-w-[120px]">
+                                        <span className="text-xs font-black text-gray-900 tracking-tight leading-tight truncate">{agencyName}</span>
+                                        <span className="text-[8px] text-[#6605c7] font-black uppercase tracking-widest leading-none mt-0.5">Partner Found</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </Link>
