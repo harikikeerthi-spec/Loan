@@ -1165,7 +1165,7 @@ export default function ApplicationManagement() {
                                 </div>
 
                                 {/* Officer Assignment */}
-                                <div>
+                                {/* <div>
                                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Assign Credit Officer</label>
                                     <select
                                         value={assignedOfficer}
@@ -1178,7 +1178,7 @@ export default function ApplicationManagement() {
                                             </option>
                                         ))}
                                     </select>
-                                </div>
+                                </div> */}
 
                                 {/* Confirmation Step */}
                                 {confirmingLog && (

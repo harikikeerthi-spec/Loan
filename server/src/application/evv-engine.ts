@@ -8,9 +8,22 @@ export interface Transaction {
   balance: number;
 }
 
+export interface EvvMonthBreakdown {
+  month: string;   // "YYYY-MM"
+  points: number;  // number of valid snapshot days used
+  avg: number;     // average balance across snapshot days
+  min: number;     // minimum balance seen in snapshot days
+  max: number;     // maximum balance seen in snapshot days
+  /** Legacy alias — same as avg */
+  evv: number;
+}
+
 export interface EvvResults {
   overall_evv: number;
-  monthly_evv: Array<{ month: string; evv: number }>;
+  monthly_evv: EvvMonthBreakdown[];
+  totalSnapshots: number;
+  totalTransactions: number;
+  period: { from: string; to: string } | null;
   status: 'COMPUTED' | 'FAILED' | 'MANUAL_REVIEW';
 }
 
@@ -230,6 +243,9 @@ IMPORTANT: Respond ONLY with a valid JSON object. Do not include markdown format
       return {
         overall_evv: 0,
         monthly_evv: [],
+        totalSnapshots: 0,
+        totalTransactions: 0,
+        period: null,
         status: 'FAILED',
       };
     }
@@ -252,12 +268,30 @@ IMPORTANT: Respond ONLY with a valid JSON object. Do not include markdown format
         return {
           overall_evv: 0,
           monthly_evv: [],
+          totalSnapshots: 0,
+          totalTransactions: transactions.length,
+          period: null,
           status: 'FAILED',
         };
       }
 
-      const monthlyEvvs: Array<{ month: string; evv: number }> = [];
+      // Determine overall period from first to last transaction date
+      const firstDate = sortedTxs[0].date;
+      const lastDate = sortedTxs[sortedTxs.length - 1].date;
+
+      // Helper: format date as "DD-Mon-YYYY"
+      const formatPeriodDate = (dateStr: string) => {
+        try {
+          const d = new Date(dateStr);
+          return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+        } catch {
+          return dateStr;
+        }
+      };
+
+      const monthlyBreakdown: EvvMonthBreakdown[] = [];
       let totalEvvSum = 0;
+      let totalSnapshots = 0;
 
       // Function to find balance on a specific YYYY-MM-DD date
       const getBalanceOnDate = (targetDateStr: string): number => {
@@ -288,27 +322,48 @@ IMPORTANT: Respond ONLY with a valid JSON object. Do not include markdown format
       };
 
       for (const m of months) {
-        // We take snapshot on 5th, 10th, 15th, 20th, 25th, and 30th
+        // Take snapshot on 5th, 10th, 15th, 20th, 25th, and 30th
         const snapshotDays = [5, 10, 15, 20, 25, 30];
-        let snapshotSum = 0;
+        const snapshotBalances: number[] = [];
 
         for (const day of snapshotDays) {
           const dayStr = String(day).padStart(2, '0');
           const dateStr = `${m}-${dayStr}`;
-          const balance = getBalanceOnDate(dateStr);
-          snapshotSum += balance;
+          const bal = getBalanceOnDate(dateStr);
+          snapshotBalances.push(bal);
         }
 
-        const monthlyAvg = Math.round(snapshotSum / snapshotDays.length);
-        monthlyEvvs.push({ month: m, evv: monthlyAvg });
-        totalEvvSum += monthlyAvg;
+        const points = snapshotBalances.length;
+        const snapshotSum = snapshotBalances.reduce((s, b) => s + b, 0);
+        const avg = Math.round(snapshotSum / points);
+        const min = Math.min(...snapshotBalances);
+        const max = Math.max(...snapshotBalances);
+
+        totalSnapshots += points;
+
+        monthlyBreakdown.push({
+          month: m,
+          points,
+          avg,
+          min,
+          max,
+          evv: avg,  // legacy alias
+        });
+
+        totalEvvSum += avg;
       }
 
       const overallEvv = Math.round(totalEvvSum / months.length);
 
       return {
         overall_evv: overallEvv,
-        monthly_evv: monthlyEvvs,
+        monthly_evv: monthlyBreakdown,
+        totalSnapshots,
+        totalTransactions: transactions.length,
+        period: {
+          from: formatPeriodDate(firstDate),
+          to: formatPeriodDate(lastDate),
+        },
         status: 'COMPUTED',
       };
     } catch (err) {
@@ -316,6 +371,9 @@ IMPORTANT: Respond ONLY with a valid JSON object. Do not include markdown format
       return {
         overall_evv: 0,
         monthly_evv: [],
+        totalSnapshots: 0,
+        totalTransactions: 0,
+        period: null,
         status: 'FAILED',
       };
     }

@@ -49,7 +49,9 @@ export default function ShareWithBankModal({
   const [priorities, setPriorities] = useState<{ priority: number; bankName: string }[]>([]);
 
   const targetBankStr = targetBank || "";
-  const targetBanksList = targetBankStr && targetBankStr.toLowerCase().replace(/\s+/g, '') !== 'anybank'
+  const targetBanksList = targetBankStr && 
+    targetBankStr.toLowerCase().replace(/\s+/g, '') !== 'anybank' &&
+    targetBankStr.toLowerCase().replace(/\s+/g, '') !== 'pendingpartner'
     ? targetBankStr.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
     : [];
 
@@ -277,11 +279,17 @@ export default function ShareWithBankModal({
                               key={bank.id}
                               type="button"
                               onClick={() => {
-                                setSelectedBanks(prev =>
-                                  prev.includes(bank.id)
-                                    ? prev.filter(id => id !== bank.id)
-                                    : [...prev, bank.id]
-                                );
+                                setSelectedBanks(prev => {
+                                  if (prev.includes(bank.id)) {
+                                    return prev.filter(id => id !== bank.id);
+                                  } else {
+                                    if (prev.length >= 3) {
+                                      alert("You can select a maximum of 3 target banks.");
+                                      return prev;
+                                    }
+                                    return [...prev, bank.id];
+                                  }
+                                });
                               }}
                               className={`p-3 rounded-lg border-2 text-left transition-all text-xs font-bold uppercase flex items-center justify-between ${isChecked
                                 ? "border-[#6605c7] bg-purple-50 text-purple-900"

@@ -1339,8 +1339,13 @@ export default function OnboardingPage() {
     };
 
     const resetOnboardModal = () => {
+        const wasShared = !!shareResult;
         resetOnboardState();
-        navigateToSection('overview');
+        if (wasShared) {
+            navigateToSection('applications');
+        } else {
+            navigateToSection('overview');
+        }
     };
 
     const handleCheckEmailAndLink = async (e: React.FormEvent) => {
@@ -1476,6 +1481,46 @@ export default function OnboardingPage() {
     const handleQuickRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!quickForm.firstName || !quickForm.lastName || !quickForm.email || !quickForm.phone) return;
+
+        const firstNameTrim = quickForm.firstName.trim();
+        const lastNameTrim = quickForm.lastName.trim();
+
+        if (firstNameTrim.length < 3) {
+            alert("First name must be at least 3 characters");
+            return;
+        }
+        if (firstNameTrim.length > 30) {
+            alert("First name must not exceed 30 characters");
+            return;
+        }
+        if (/[^A-Za-z]/.test(firstNameTrim)) {
+            alert("First name must contain only letters");
+            return;
+        }
+
+        if (lastNameTrim.length < 1) {
+            alert("Last name must be at least 1 character");
+            return;
+        }
+        if (lastNameTrim.length > 30) {
+            alert("Last name must not exceed 30 characters");
+            return;
+        }
+        if (/[^A-Za-z]/.test(lastNameTrim)) {
+            alert("Last name must contain only letters");
+            return;
+        }
+
+        if (!isPhoneValid(quickForm.phone)) {
+            alert("Please enter a valid 10-digit Indian mobile number");
+            return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quickForm.email)) {
+            alert("Please enter a valid email format");
+            return;
+        }
+
         setCreateLoading(true);
         try {
             const res: any = await adminApi.createUser({
@@ -3497,14 +3542,14 @@ export default function OnboardingPage() {
                                                             required
                                                             type="text"
                                                             value={quickForm.firstName}
-                                                            onChange={e => setQuickForm({ ...quickForm, firstName: e.target.value })}
-                                                            className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${quickForm.firstName.trim().length >= 2
+                                                            onChange={e => setQuickForm({ ...quickForm, firstName: e.target.value.replace(/[^A-Za-z]/g, "") })}
+                                                            className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${quickForm.firstName.trim().length >= 3
                                                                 ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
                                                                 : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
                                                                 }`}
                                                             placeholder="Rahul"
                                                         />
-                                                        {quickForm.firstName.trim().length >= 2 && (
+                                                        {quickForm.firstName.trim().length >= 3 && (
                                                             <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
                                                         )}
                                                     </div>
@@ -3520,14 +3565,14 @@ export default function OnboardingPage() {
                                                             required
                                                             type="text"
                                                             value={quickForm.lastName}
-                                                            onChange={e => setQuickForm({ ...quickForm, lastName: e.target.value })}
-                                                            className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${quickForm.lastName.trim().length >= 2
+                                                            onChange={e => setQuickForm({ ...quickForm, lastName: e.target.value.replace(/[^A-Za-z]/g, "") })}
+                                                            className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${quickForm.lastName.trim().length >= 1
                                                                 ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
                                                                 : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
                                                                 }`}
                                                             placeholder="Sharma"
                                                         />
-                                                        {quickForm.lastName.trim().length >= 2 && (
+                                                        {quickForm.lastName.trim().length >= 1 && (
                                                             <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
                                                         )}
                                                     </div>

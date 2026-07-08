@@ -252,8 +252,32 @@ export default function ApplicationsPage() {
 
             const matchesSearch = fullName.includes(query) || college.includes(query) || course.includes(query);
 
-            if (filterStatus === "all") return matchesSearch;
-            return matchesSearch && item.status?.toLowerCase() === filterStatus.toLowerCase();
+            if (!matchesSearch) return false;
+            if (filterStatus === "all") return true;
+
+            const status = (item.status || "draft").toLowerCase();
+            if (filterStatus === "pending") {
+                return ["pending", "draft", "submitted"].includes(status);
+            }
+            if (filterStatus === "processing") {
+                return [
+                    "processing",
+                    "submitted_to_bank",
+                    "routed_multiparty",
+                    "file_logged",
+                    "docs_received",
+                    "staff_verified",
+                    "under_review",
+                    "docs_uploaded"
+                ].includes(status);
+            }
+            if (filterStatus === "approved") {
+                return ["approved", "verified", "disbursed", "disbursement_confirmed"].includes(status);
+            }
+            if (filterStatus === "rejected") {
+                return status === "rejected";
+            }
+            return status === filterStatus;
         });
     }, [data, searchQuery, filterStatus]);
 

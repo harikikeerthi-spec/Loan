@@ -1683,15 +1683,15 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                   <div className="flex items-center gap-5">
                     <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-inner">
                       <span className="material-symbols-outlined text-[28px] animate-pulse">
-                        {application.targetBank === "ANY BANK" ? "fork_right" : "rocket_launch"}
+                        {application.targetBank === "ANY BANK" || (application.bank || '').toLowerCase().replace(/\s+/g, '') === 'pendingpartner' ? "fork_right" : "rocket_launch"}
                       </span>
                     </div>
                     <div>
                       <h3 className="text-[18px] font-bold text-white tracking-tight">
-                        {application.targetBank === "ANY BANK" ? "Ready for Multiparty Routing" : "Ready for Bank Submission"}
+                        {application.targetBank === "ANY BANK" || (application.bank || '').toLowerCase().replace(/\s+/g, '') === 'pendingpartner' ? "Ready for Multiparty Routing" : "Ready for Bank Submission"}
                       </h3>
                       <p className="text-[13px] text-indigo-200/80 mt-0.5 font-medium">
-                        {application.targetBank === "ANY BANK" 
+                        {application.targetBank === "ANY BANK" || (application.bank || '').toLowerCase().replace(/\s+/g, '') === 'pendingpartner'
                           ? "This application targets ANY BANK. Review verified documents and route to priority partner banks simultaneously." 
                           : `All initial documents have been submitted. Review document statuses and route this application to ${application.targetBank || "selected bank"}.`}
                       </p>
@@ -1702,9 +1702,9 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     className="flex items-center gap-2.5 px-6 py-3.5 bg-[#6605c7] hover:bg-purple-700 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-purple-600/30 shrink-0"
                   >
                     <span className="material-symbols-outlined text-[18px]">
-                      {application.targetBank === "ANY BANK" ? "fork_right" : "send"}
+                      {application.targetBank === "ANY BANK" || (application.bank || '').toLowerCase().replace(/\s+/g, '') === 'pendingpartner' ? "fork_right" : "send"}
                     </span>
-                    {application.targetBank === "ANY BANK" ? "Route Application" : "Send to Bank"}
+                    {application.targetBank === "ANY BANK" || (application.bank || '').toLowerCase().replace(/\s+/g, '') === 'pendingpartner' ? "Route Application" : "Send to Bank"}
                   </button>
                 </div>
               )}
@@ -3236,7 +3236,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
         loanAmount={Number(application.amount || application.loanAmount || application.student?.loanAmount || 0)}
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        isMultiBank={application.targetBank === "ANY BANK"}
+        isMultiBank={application.targetBank === "ANY BANK" || (application.bank || '').toLowerCase().replace(/\s+/g, '') === 'pendingpartner' || (application.targetBank || '').toLowerCase().replace(/\s+/g, '') === 'pendingpartner'}
         targetBank={application.bank || application.targetBank}
         onSuccess={() => {
           if (onApplicationUpdated) {
@@ -4275,6 +4275,10 @@ const SideBySideComparisonModal = ({
 
 interface EvvMonthBreakdown {
   month: string;
+  points?: number;
+  avg?: number;
+  min?: number;
+  max?: number;
   evv: number;
 }
 
@@ -4389,9 +4393,6 @@ const EvvAnalysisTab = ({
   const evvOverall = application.evvOverall || 0;
   const evvStatus = application.evvStatus || "";
 
-  // Get max balance for bar chart percentage calculations
-  const maxEvv = breakdown.reduce((max, item) => (item.evv > max ? item.evv : max), 10000);
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Upload & Summary Grid */}
@@ -4483,7 +4484,6 @@ const EvvAnalysisTab = ({
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Large Maintained Balance Figure */}
                 <div className="flex items-baseline gap-4">
                   <span className="text-[40px] font-black text-slate-900 tabular-nums">
                     ₹{evvOverall.toLocaleString("en-IN")}
@@ -4492,8 +4492,6 @@ const EvvAnalysisTab = ({
                     Overall EVV Balance
                   </span>
                 </div>
-
-                {/* Routing status info */}
                 <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl w-fit">
                   <span className="material-symbols-outlined text-[20px] text-emerald-600">verified_user</span>
                   <div className="text-[11px] font-black uppercase tracking-widest text-emerald-700">
@@ -4526,47 +4524,108 @@ const EvvAnalysisTab = ({
         </div>
       </div>
 
-      {/* Monthly average balance table and visualizer */}
+      {/* Summary stats row */}
       {breakdown.length > 0 && (
-        <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm">
-          <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-6">Monthly average balance breakdown (5-day snapshot loop)</h4>
-          
-          <div className="space-y-6">
-            {breakdown.map((item, idx) => {
-              const percentage = Math.max(5, Math.min(100, (item.evv / maxEvv) * 100));
-              
-              // Format date from "2026-01" to "Jan 2026"
-              let dateStr = item.month;
-              try {
-                const [year, month] = item.month.split("-");
-                const dateObj = new Date(parseInt(year), parseInt(month) - 1, 1);
-                dateStr = dateObj.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-              } catch (e) {
-                // Keep default
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Overall EVV</span>
+            <span className="text-[22px] font-black text-slate-900 tabular-nums">₹{evvOverall.toLocaleString("en-IN")}</span>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Snapshots</span>
+            <span className="text-[22px] font-black text-slate-900 tabular-nums">
+              {(application.evvTotalSnapshots ?? breakdown.reduce((s: number, b: EvvMonthBreakdown) => s + (b.points ?? 6), 0)).toLocaleString()}
+            </span>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transactions</span>
+            <span className="text-[22px] font-black text-slate-900 tabular-nums">
+              {application.evvTotalTransactions != null ? application.evvTotalTransactions.toLocaleString() : '—'}
+            </span>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</span>
+            {(() => {
+              const period = application.evvPeriod;
+              if (period && typeof period === 'object' && period.from) {
+                return (
+                  <span className="text-[12px] font-black text-slate-700 leading-snug">
+                    {period.from}<br /><span className="text-slate-400 font-bold text-[10px]">to</span><br />{period.to}
+                  </span>
+                );
               }
+              if (breakdown.length > 0) {
+                const [y0, m0] = breakdown[0].month.split('-');
+                const last = breakdown[breakdown.length - 1];
+                const [y1, m1] = last.month.split('-');
+                const fmt = (y: string, m: string) =>
+                  new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+                return <span className="text-[12px] font-black text-slate-700">{fmt(y0, m0)} – {fmt(y1, m1)}</span>;
+              }
+              return <span className="text-[13px] font-black text-slate-400">—</span>;
+            })()}
+          </div>
+        </div>
+      )}
 
-              return (
-                <div key={idx} className="flex items-center gap-6">
-                  {/* Month column */}
-                  <div className="w-28 text-[12px] font-extrabold text-slate-800 uppercase tracking-wider flex-shrink-0">
-                    {dateStr}
-                  </div>
-
-                  {/* Horizontal visual bar */}
-                  <div className="flex-1 bg-slate-50 h-5 rounded-full overflow-hidden border border-slate-100/50 relative">
-                    <div 
-                      className="bg-indigo-600/80 h-full rounded-full transition-all duration-1000"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-
-                  {/* Value column */}
-                  <div className="w-28 text-right text-[13px] font-black text-slate-800 tabular-nums flex-shrink-0">
-                    ₹{item.evv.toLocaleString("en-IN")}
-                  </div>
-                </div>
-              );
-            })}
+      {/* Monthly breakdown 5-col table */}
+      {breakdown.length > 0 && (
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-8 pt-7 pb-4">
+            <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Monthly Average Balance Breakdown — 5-Day Snapshot Loop</h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-t border-b border-slate-100 bg-slate-50/60">
+                  {['Month', 'Points', 'Avg', 'Min', 'Max'].map(col => (
+                    <th key={col} className={`px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap ${col === 'Month' ? 'text-left' : 'text-right'}`}>
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {breakdown.map((item: EvvMonthBreakdown, idx: number) => {
+                  let dateStr = item.month;
+                  try {
+                    const [year, month] = item.month.split('-');
+                    dateStr = new Date(parseInt(year), parseInt(month) - 1, 1)
+                      .toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                  } catch { /* keep default */ }
+                  const avg  = item.avg  ?? item.evv;
+                  const minV = item.min  ?? item.evv;
+                  const maxV = item.max  ?? item.evv;
+                  const pts  = item.points ?? 6;
+                  return (
+                    <tr key={idx} className={`group transition-colors hover:bg-indigo-50/30 ${idx < breakdown.length - 1 ? 'border-b border-slate-50' : ''}`}>
+                      <td className="px-6 py-4 text-[13px] font-extrabold text-slate-800 uppercase tracking-wider whitespace-nowrap">{dateStr}</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-black">{pts}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right text-[13px] font-black text-slate-800 tabular-nums whitespace-nowrap">₹{avg.toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-4 text-right text-[13px] font-semibold text-rose-600 tabular-nums whitespace-nowrap">₹{minV.toLocaleString('en-IN')}</td>
+                      <td className="px-6 py-4 text-right text-[13px] font-semibold text-emerald-600 tabular-nums whitespace-nowrap">₹{maxV.toLocaleString('en-IN')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-200 bg-indigo-50/40">
+                  <td className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest">Overall</td>
+                  <td className="px-6 py-4 text-right text-[11px] font-black text-slate-500">
+                    {breakdown.reduce((s: number, b: EvvMonthBreakdown) => s + (b.points ?? 6), 0)}
+                  </td>
+                  <td className="px-6 py-4 text-right text-[14px] font-black text-indigo-700 tabular-nums whitespace-nowrap">₹{evvOverall.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 text-right text-[13px] font-black text-rose-600 tabular-nums whitespace-nowrap">
+                    ₹{Math.min(...breakdown.map((b: EvvMonthBreakdown) => b.min ?? b.evv)).toLocaleString('en-IN')}
+                  </td>
+                  <td className="px-6 py-4 text-right text-[13px] font-black text-emerald-600 tabular-nums whitespace-nowrap">
+                    ₹{Math.max(...breakdown.map((b: EvvMonthBreakdown) => b.max ?? b.evv)).toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       )}

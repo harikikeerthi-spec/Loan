@@ -1313,196 +1313,108 @@ export class EmailService {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Loan Application Accepted - VidyaLoan</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Application Accepted - VidyaLoan</title>
+    <style>
+        /* Reset styles for consistency across email clients */
+        body, table, td, a { text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        table { border-collapse: collapse !important; }
+        body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+
+        /* Premium Hover Effects (Supported by modern clients) */
+        .cta-button:hover { background-color: #5b21b6 !important; transform: translateY(-1px); }
+    </style>
 </head>
-<body style="margin:0;padding:0;background-color:#0f0f1a;font-family:'Inter','Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0f1a;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;">
-          
-          <!-- HEADER -->
-          <tr>
-            <td style="
-              background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
-              border-radius: 20px 20px 0 0;
-              padding: 36px 40px 28px;
-              border-bottom: 1px solid rgba(139,92,246,0.3);
-            ">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <!-- Left side Logo -->
-                  <td width="60" align="left" style="vertical-align: middle;">
-                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
-                  </td>
-                  <!-- Middle Text -->
-                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
-                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
-                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+<body>
+  <div style="
+    background-image: url('${frontendUrl}/images/vidyaloans-logo-transparent.png'); 
+    background-repeat: no-repeat; 
+    background-position: center center; 
+    background-size: 50% auto;
+    width: 100%; 
+    margin: 0; 
+    padding: 0;
+  ">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: rgba(248, 250, 252, 0.9); padding: 40px 10px;">
+        <tr>
+            <td align="center" valign="top">
+                
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    
+                    <tr>
+                        <td align="center" style="padding: 40px 40px 20px 40px;">
+                            <span style="font-size: 13px; font-weight: 700; letter-spacing: 2px; color: #6605c7; text-transform: uppercase;">VIDYALOAN</span>
+                        </td>
+                    </tr>
 
-          <!-- HERO -->
-          <tr>
-            <td style="
-              background: linear-gradient(160deg, #059669 0%, #10b981 100%);
-              padding: 40px 40px 36px;
-              text-align: center;
-            ">
-              <p style="margin:0 0 8px;font-size:42px;">🎉</p>
-              <h2 style="color:#ffffff;margin:0 0 10px;font-size:26px;font-weight:800;line-height:1.2;">
-                Application Approved!
-              </h2>
-              <p style="color:#d1fae5;margin:0;font-size:15px;line-height:1.65;max-width:420px;display:inline-block;">
-                Great news, ${userName}! Your loan application has been accepted by <strong>${bankName}</strong>.
-              </p>
-            </td>
-          </tr>
+                    <tr>
+                        <td align="left" style="padding: 20px 40px 40px 40px; position: relative; background-image: repeating-linear-gradient(-45deg, rgba(102, 5, 199, 0.03) 0px, rgba(102, 5, 199, 0.03) 2px, transparent 2px, transparent 40px);">
+                            
+                            <h1 style="margin: 0 0 20px 0; font-size: 26px; font-weight: 700; line-height: 1.3; color: #0F172A; text-align: center;">
+                                Loan Application Approved!
+                            </h1>
 
-          <!-- MAIN CARD -->
-          <tr>
-            <td style="background:#ffffff;padding:36px 40px 24px;">
-              <p style="color:#374151;font-size:15px;line-height:1.75;margin:0 0 24px;">
-                Dear <strong>${userName}</strong>, <br><br>
-                We are thrilled to let you know that <strong>${bankName}</strong> has accepted and approved your loan application. Below are the details of your sanction proposal:
-              </p>
+                            <div style="height: 1px; width: 60px; background-color: #E2E8F0; margin: 0 auto 30px auto;"></div>
 
-              <!-- Sanction Details Box -->
-              <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:20px; margin-bottom:28px;">
-                <h4 style="color:#166534; font-size:14px; font-weight:700; margin:0 0 12px; text-transform:uppercase; letter-spacing:0.05em;">💰 Approval Details</h4>
-                <table style="width:100%; font-size:14px; border-collapse:collapse;">
-                  <tr>
-                    <td style="padding:6px 0; color:#166534; font-weight:600;">Sanctioned Amount:</td>
-                    <td style="padding:6px 0; color:#14532d; font-weight:800; font-size:17px;">${amount}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:6px 0; color:#166534; font-weight:600;">Interest Rate:</td>
-                    <td style="padding:6px 0; color:#14532d; font-weight:700;">${rate}% p.a.</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:6px 0; color:#166534; font-weight:600;">Repayment Tenure:</td>
-                    <td style="padding:6px 0; color:#14532d; font-weight:700;">${tenure} months</td>
-                  </tr>
+                            <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                                Hello ${userName},
+                            </p>
+                            <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
+                                We have fantastic news! Your loan application for <strong>${bankName}</strong> has been accepted and approved by the bank. Below are the details of your sanction proposal:
+                            </p>
+
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8FAFC; border-radius: 8px; margin-bottom: 30px;">
+                                <tr>
+                                    <td style="padding: 16px; font-size: 14px; color: #64748B; font-weight: 500; border-bottom: 1px solid #E2E8F0;">Application Number:</td>
+                                    <td style="padding: 16px; font-size: 14px; color: #0F172A; font-weight: 600; text-align: right; border-bottom: 1px solid #E2E8F0;">#${appNum}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 16px; font-size: 14px; color: #64748B; font-weight: 500; border-bottom: 1px solid #E2E8F0;">Sanctioned Amount:</td>
+                                    <td style="padding: 16px; font-size: 14px; color: #0F172A; font-weight: 600; text-align: right; border-bottom: 1px solid #E2E8F0;">${amount}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 16px; font-size: 14px; color: #64748B; font-weight: 500; border-bottom: 1px solid #E2E8F0;">Interest Rate:</td>
+                                    <td style="padding: 16px; font-size: 14px; color: #0F172A; font-weight: 600; text-align: right; border-bottom: 1px solid #E2E8F0;">${rate}% p.a.</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 16px; font-size: 14px; color: #64748B; font-weight: 500;">Repayment Tenure:</td>
+                                    <td style="padding: 16px; font-size: 14px; color: #0F172A; font-weight: 600; text-align: right;">${tenure} months</td>
+                                </tr>
+                            </table>
+
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-top: 10px;">
+                                        <a href="${frontendUrl}/dashboard" target="_blank" class="cta-button" style="display: inline-block; background-color: #6605c7; color: #FFFFFF; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(102, 5, 199, 0.2); transition: all 0.2s ease;">
+                                            Review & Accept Sanction Letter
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="center" style="background-color: #F1F5F9; padding: 24px 40px; border-top: 1px solid #E2E8F0;">
+                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #94A3B8; line-height: 1.4;">
+                                Empowering Indian students to achieve global education goals.<br/>
+                                Registered in India | CIN: U65929KA2024PTC000001
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+                                &copy; ${year} VidyaLoan Technologies Pvt. Ltd. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
                 </table>
-              </div>
-
-              <!-- Progress bar container -->
-              <div style="background:#f3f4f6; border-radius:10px; height:8px; width:100%; margin:24px 0 12px; overflow:hidden;">
-                <div style="background:linear-gradient(to right, #059669, #10b981); height:100%; width:${progress}%; border-radius:10px;"></div>
-              </div>
-              <p style="color:#4b5563; font-size:12px; font-weight:600; margin:0 0 28px; text-align:right;">
-                Overall Progress: ${progress}% completed
-              </p>
-
-              <!-- Timeline -->
-              <h3 style="color:#1e1b4b;font-size:16px;font-weight:700;margin:28px 0 20px;border-bottom:2px solid #f3f4f6;padding-bottom:8px;">
-                📍 Tracking Pipeline
-              </h3>
-              
-              <table cellpadding="0" cellspacing="0" width="100%">
-                <!-- Step 1-4 completed -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #059669; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">✓</div>
-                    <div style="width: 2px; height: 35px; background-color: #059669; margin: 4px auto;"></div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
-                    <span style="color: #111827; font-weight: 700; font-size: 14px; display: block;">Application Submitted & Verified</span>
-                  </td>
-                </tr>
-                <!-- Step 5 Completed -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #059669; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">✓</div>
-                    <div style="width: 2px; height: 35px; background-color: #059669; margin: 4px auto;"></div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
-                    <span style="color: #111827; font-weight: 700; font-size: 14px; display: block;">Sanction Offer Issued</span>
-                    <span style="color: #059669; font-size: 11px; font-weight: 600; text-transform: uppercase;">Completed</span>
-                    <p style="color: #6b7280; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">Sanction letter has been generated. Please review terms and confirm.</p>
-                  </td>
-                </tr>
-                <!-- Step 6 disbursement active -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #7c3aed; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">6</div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px;">
-                    <span style="color: #111827; font-weight: 600; font-size: 14px; display: block;">Disbursement</span>
-                    <span style="color: #7c3aed; font-size: 11px; font-weight: 600; text-transform: uppercase;">Next Step</span>
-                    <p style="color: #6b7280; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">Accepting the letter will trigger transfer of funds to your university.</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- CTA -->
-          <tr>
-            <td style="background:#ffffff;padding:0 40px 40px;text-align:center;">
-              <a href="${frontendUrl}/dashboard" style="
-                display:inline-block;
-                background:linear-gradient(135deg,#10b981,#059669);
-                color:#ffffff;
-                text-decoration:none;
-                padding:16px 44px;
-                border-radius:50px;
-                font-size:16px;
-                font-weight:700;
-                letter-spacing:0.3px;
-                box-shadow:0 6px 20px rgba(16,185,129,0.4);
-              ">🚀 Review & Accept Sanction Letter</a>
-            </td>
-          </tr>
-
-          <!-- SUPPORT -->
-          <tr>
-            <td style="background:#fafafa;border-top:1px solid #f3f4f6;padding:20px 40px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="vertical-align:middle;">
-                    <p style="margin:0;font-weight:700;color:#374151;font-size:13px;">Registered Email Address</p>
-                    <p style="margin:4px 0 0;color:#6b7280;font-size:12px;">This message was sent to ${email} registered with your account.</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- FOOTER -->
-          <tr>
-            <td style="
-              background:linear-gradient(135deg,#1a0533,#1e1b6e);
-              border-radius:0 0 20px 20px;
-              padding:28px 40px;
-              text-align:center;
-            ">
-              <p style="color:#a78bfa;font-size:12px;margin:0 0 8px;font-weight:600;letter-spacing:1px;">VIDYALOAN</p>
-              <p style="color:#6b7280;font-size:11px;margin:0 0 12px;line-height:1.6;">
-                Empowering Indian students to achieve global education goals.<br/>
-                Registered in India | CIN: U65929KA2024PTC000001
-              </p>
-              <p style="color:#4b5563;font-size:10px;margin:0;line-height:1.6;">
-                You received this email because you registered at VidyaLoan.<br/>
-                © ${year} VidyaLoan Technologies Pvt. Ltd. All rights reserved.<br/>
-                <a href="${frontendUrl}/privacy" style="color:#6366f1;text-decoration:none;">Privacy Policy</a> &nbsp;·&nbsp;
-                <a href="${frontendUrl}/terms" style="color:#6366f1;text-decoration:none;">Terms of Service</a>
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
+                </td>
+        </tr>
+    </table>
+  </div>
 </body>
 </html>
       `,
@@ -1534,6 +1446,114 @@ export class EmailService {
       }
     } catch (error) {
       console.error(`[EmailService] Failed to send application accepted email to ${email}:`, error);
+    }
+  }
+
+  async sendApplicationRejectedByStaffEmail(email: string, userName: string, reason: string) {
+    const year = new Date().getFullYear();
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || '"VidyaLoan" <noreply@vidyaloan.com>',
+      to: email,
+      subject: `⚠️ Application Rejected by VidyaLoan Staff`,
+      text: `Dear ${userName},\n\nWe regret to inform you that your loan application has been rejected by VidyaLoan staff.\n\nRejection Reason: ${reason || 'Not specified'}\n\nIf you have any questions or believe this was a mistake, please contact our support desk immediately.\n\nWarm regards,\nThe VidyaLoan Team`,
+      html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Application Rejected by VidyaLoan Staff</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#0f0f1a;font-family:'Inter','Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0f1a;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;">
+          
+          <!-- HEADER -->
+          <tr>
+            <td style="
+              background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
+              border-radius: 20px 20px 0 0;
+              padding: 36px 40px 28px;
+              border-bottom: 1px solid rgba(225,29,72,0.3);
+              text-align: center;
+            ">
+              <span style="font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: 2px;">VIDYALOAN</span>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="background-color:#151526;border-radius:0 0 20px 20px;padding:40px;border:1px solid #272742;border-top:none;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding-bottom:24px;">
+                    <h2 style="color:#ffffff;font-size:20px;font-weight:700;margin:0;letter-spacing:-0.5px;">Application Rejected by VidyaLoan Staff</h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color:#a5a5c7;font-size:15px;line-height:24px;padding-bottom:20px;">
+                    Dear <strong>${userName}</strong>,
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color:#a5a5c7;font-size:15px;line-height:24px;padding-bottom:24px;">
+                    We regret to inform you that after careful review of your documents and profile details, your loan application has been rejected by our <strong>VidyaLoan Verification Staff</strong>.
+                  </td>
+                </tr>
+                
+                <!-- REJECTION BOX -->
+                <tr>
+                  <td style="padding-bottom:28px;">
+                    <div style="background-color:rgba(225,29,72,0.06);border:1px solid rgba(225,29,72,0.3);border-left:4px solid #e11d48;border-radius:8px;padding:20px;">
+                      <h4 style="color:#e11d48;font-size:11px;font-weight:800;text-transform:uppercase;margin:0 0 8px 0;letter-spacing:1px;">Reason for Rejection</h4>
+                      <p style="color:#ffffff;font-size:14px;line-height:20px;font-weight:600;margin:0;font-style:italic;">
+                        "${reason || 'Verification shortfall or incomplete criteria'}"
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="color:#a5a5c7;font-size:14px;line-height:22px;padding-bottom:24px;">
+                    If you believe this was a mistake, or if you can provide additional/updated documents to resolve the issue, please contact our support desk or reach out to your assigned agent. We will be happy to assist you.
+                  </td>
+                </tr>
+
+                <!-- FOOTER -->
+                <tr>
+                  <td style="border-top:1px solid #272742;padding-top:24px;text-align:center;color:#6b7280;font-size:12px;line-height:18px;">
+                    This is an automated notification. Please do not reply directly to this email.<br/>
+                    &copy; ${year} VidyaLoan. All rights reserved.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
+    };
+
+    try {
+      console.log(`[EmailService] Sending application rejected by staff email to ${email}`);
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        await this.transporter.sendMail(mailOptions);
+        console.log(`[EmailService] Staff rejection email sent successfully to ${email}`);
+      } else {
+        console.log(`[EmailService] Email credentials not configured – rejection email logged to console`);
+      }
+    } catch (error) {
+      console.error(`[EmailService] Failed to send staff rejection email to ${email}:`, error);
     }
   }
 
@@ -1724,6 +1744,23 @@ export class EmailService {
         const textColor = '#1f2937';
         const lightGray = '#f3f4f6';
         const darkGray = '#4b5563';
+
+        const drawWatermark = () => {
+          doc.save();
+          doc.opacity(0.04);
+          doc.fillColor(primaryColor);
+          doc.fontSize(70);
+          doc.translate(doc.page.width / 2, doc.page.height / 2);
+          doc.rotate(-30);
+          doc.text('VIDYALOAN', -200, -35, { align: 'center', width: 400 });
+          doc.restore();
+        };
+
+        // Draw on the first page and register for subsequent pages
+        drawWatermark();
+        doc.on('pageAdded', () => {
+          drawWatermark();
+        });
 
         // --- Branded Header ---
         doc.fillColor(primaryColor)

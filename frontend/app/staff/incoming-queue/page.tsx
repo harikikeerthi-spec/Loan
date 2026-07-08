@@ -195,6 +195,11 @@ export default function IncomingQueuePage() {
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isMultiBankShare, setIsMultiBankShare] = useState(false);
 
+    // Rejection Modal
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState("");
+    const [appToReject, setAppToReject] = useState<any | null>(null);
+
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
@@ -319,6 +324,25 @@ export default function IncomingQueuePage() {
             alert(e instanceof Error ? e.message : "Failed to send application to bank");
         } finally {
             setSendToBankLoadingId(null);
+        }
+    };
+
+    const handleConfirmRejection = async () => {
+        if (!appToReject || !rejectionReason.trim()) return;
+        try {
+            await adminApi.updateApplicationStatus(appToReject.id || appToReject._id, {
+                status: 'rejected',
+                rejectionReason: rejectionReason.trim(),
+                remarks: rejectionReason.trim()
+            });
+            await logActivity('verification', `Application #${appToReject.applicationNumber || appToReject.id?.slice(-4)} rejected by staff`, 'cancel', 'bg-rose-50 text-rose-700 border-rose-100');
+            setActiveDockApp(null);
+            setIsRejectModalOpen(false);
+            setAppToReject(null);
+            setRejectionReason("");
+            await loadData();
+        } catch (err) {
+            alert("Failed to reject application");
         }
     };
 
@@ -571,11 +595,17 @@ export default function IncomingQueuePage() {
                                                                                 type="checkbox"
                                                                                 checked={isChecked}
                                                                                 onChange={() => {
-                                                                                    setTempSelectedBanks(prev =>
-                                                                                        prev.includes(bankName)
-                                                                                            ? prev.filter(b => b !== bankName)
-                                                                                            : [...prev, bankName]
-                                                                                    );
+                                                                                    setTempSelectedBanks(prev => {
+                                                                                        if (prev.includes(bankName)) {
+                                                                                            return prev.filter(b => b !== bankName);
+                                                                                        } else {
+                                                                                            if (prev.length >= 3) {
+                                                                                                alert("You can select a maximum of 3 target banks.");
+                                                                                                return prev;
+                                                                                            }
+                                                                                            return [...prev, bankName];
+                                                                                        }
+                                                                                    });
                                                                                 }}
                                                                                 className="rounded text-[#6605c7] focus:ring-[#6605c7] h-3.5 w-3.5"
                                                                             />
@@ -620,7 +650,7 @@ export default function IncomingQueuePage() {
                                                             <div className="flex items-center">
                                                                 {(() => {
                                                                     const bStr = item.bank || item.targetBank || '';
-                                                                    if (!bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank') {
+                                                                    if (!bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank' || bStr.toLowerCase().replace(/\s+/g, '') === 'pendingpartner') {
                                                                         return <span className="text-[12px] font-bold text-slate-400 uppercase">Any Bank</span>;
                                                                     }
                                                                     if (bStr.includes(',') || (item.status || '').toLowerCase() === 'routed_multiparty') {
@@ -649,7 +679,7 @@ export default function IncomingQueuePage() {
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     const bStr = item.bank || item.targetBank || '';
-                                                                    const currentBanks = (!bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank')
+                                                                    const currentBanks = (!bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank' || bStr.toLowerCase().replace(/\s+/g, '') === 'pendingpartner')
                                                                         ? []
                                                                         : bStr.split(',').map((s: string) => s.trim()).filter(Boolean);
                                                                     setTempSelectedBanks(currentBanks);
@@ -748,6 +778,60 @@ export default function IncomingQueuePage() {
                 recipientName={emailModalRecipientName}
             />
 
+            {isRejectModalOpen && appToReject && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-rose-600 text-[20px]">cancel</span>
+                                <h2 className="text-[14px] font-black uppercase tracking-wider text-slate-800">
+                                    Reject Application
+                                </h2>
+                            </div>
+                            <button
+                                onClick={() => { setIsRejectModalOpen(false); setAppToReject(null); setRejectionReason(""); }}
+                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                            >
+                                <span className="material-symbols-outlined text-[20px]">close</span>
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-[11px] font-bold text-slate-600">
+                                Please provide the reason for rejecting {appToReject.firstName || appToReject.student?.firstName || ''} {appToReject.lastName || appToReject.student?.lastName || ''}'s application. This reason will be emailed to the student.
+                            </p>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1">
+                                    Rejection Reason *
+                                </label>
+                                <textarea
+                                    required
+                                    rows={4}
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    placeholder="Enter detailed reason (e.g. CIBIL score too low, missing income proof, invalid academic certifications)..."
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all text-slate-900 resize-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                            <button
+                                onClick={() => { setIsRejectModalOpen(false); setAppToReject(null); setRejectionReason(""); }}
+                                className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmRejection}
+                                disabled={!rejectionReason.trim()}
+                                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-rose-600/10"
+                            >
+                                Confirm Rejection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {selectedAppForShare && (
                 <ShareWithBankModal
                     applicationId={selectedAppForShare.id || selectedAppForShare._id}
@@ -798,16 +882,20 @@ export default function IncomingQueuePage() {
                         </button>
 
                         {/* Select Target Banks: Pills style */}
-                        <div className="flex-1 flex flex-col gap-1 min-w-0">
+                        {/* <div className="flex-1 flex flex-col gap-1 min-w-0">
                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Select Target Banks</span>
                             <div className="flex flex-wrap gap-1.5 mt-1">
                                 {bankOptions.map((bankName: string) => {
-                                    const currentBanks = activeDockApp.bank ? activeDockApp.bank.split(', ').filter(Boolean) : [];
+                                    const currentBanks = activeDockApp.bank && activeDockApp.bank.toLowerCase().replace(/\s+/g, '') !== 'pendingpartner' ? activeDockApp.bank.split(', ').filter(Boolean) : [];
                                     const isChecked = currentBanks.includes(bankName);
                                     return (
                                         <button
                                             key={bankName}
                                             onClick={async () => {
+                                                if (!isChecked && currentBanks.length >= 3) {
+                                                    alert("You can select a maximum of 3 target banks.");
+                                                    return;
+                                                }
                                                 const updated = isChecked
                                                     ? currentBanks.filter((b: string) => b !== bankName)
                                                     : [...currentBanks, bankName];
@@ -832,13 +920,13 @@ export default function IncomingQueuePage() {
                                     );
                                 })}
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Route / Send Bank button */}
                         <div className="shrink-0 flex items-center gap-3">
                             {(() => {
                                 const bStr = activeDockApp.bank || activeDockApp.targetBank || '';
-                                const isAnyBank = !bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank';
+                                const isAnyBank = !bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank' || bStr.toLowerCase().replace(/\s+/g, '') === 'pendingpartner';
 
                                 if (isAnyBank) {
                                     return (
@@ -891,22 +979,9 @@ export default function IncomingQueuePage() {
 
                             {/* Rejection Control (Far right red trash/cancel icon button) */}
                             <button
-                                onClick={async () => {
-                                    const studentName = `${activeDockApp.firstName || activeDockApp.student?.firstName || ''} ${activeDockApp.lastName || activeDockApp.student?.lastName || ''}`.trim() || "this student";
-                                    const confirmed = await dialogConfirm(
-                                        `Are you sure you want to reject ${studentName}'s application?`,
-                                        "Reject Application"
-                                    );
-                                    if (confirmed) {
-                                        try {
-                                            await adminApi.updateApplication(activeDockApp.id || activeDockApp._id, { status: 'rejected' });
-                                            loadData();
-                                            logActivity('verification', `Application #${activeDockApp.applicationNumber || activeDockApp.id?.slice(-4)} rejected`, 'cancel', 'bg-rose-50 text-rose-700 border-rose-100');
-                                            setActiveDockApp(null);
-                                        } catch (err) {
-                                            alert("Failed to reject application");
-                                        }
-                                    }
+                                onClick={() => {
+                                    setAppToReject(activeDockApp);
+                                    setIsRejectModalOpen(true);
                                 }}
                                 className="w-11 h-11 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-600 hover:text-rose-700 transition-all flex items-center justify-center shrink-0 active:scale-95"
                                 title="Reject Lead"

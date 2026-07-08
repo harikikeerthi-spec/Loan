@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import TeamSection from "./TeamSection";
 
 export const metadata: Metadata = {
     title: "About Us - Vidya Loans",
     description: "Learn about VidyaLoan's mission to make education financing simple, transparent, and accessible for every student.",
 };
 
-const team = [
-    { name: "Vamsi Krishna", role: "CEO & Co-Founder", avatar: "" },
-    { name: "Manohar", role: "Senior Counsellor", avatar: "" },
-    { name: "Keerthi Naidu", role: "Team Lead", avatar: "keerthi" },
-    { name: "Abhiram", role: "Developer", avatar: "abhiram" },
-    { name: "Shanmukh Sai", role: "Developer", avatar: "" },
-];
 
 const values = [
     { icon: "diversity_3", title: "Student First", desc: "Every decision we make is centered around what's best for the student." },
@@ -103,29 +97,7 @@ export default function AboutPage() {
             </section>
 
             {/* Team */}
-            <section className="py-24 px-6">
-                <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold font-display mb-4">Meet the Team</h2>
-                        <p className="text-[13px] text-gray-500">Dedicated to changing education financing for the better.</p>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-                        {team.map((m) => (
-                            <div key={m.name} className="text-center group">
-                                <Image
-                                    src={`https://i.pravatar.cc/200?u=${m.avatar}`}
-                                    alt={m.name}
-                                    width={120}
-                                    height={120}
-                                    className="w-24 h-24 rounded-full mx-auto mb-4 ring-4 ring-[#6605c7]/20 group-hover:ring-[#6605c7]/40 transition-all"
-                                />
-                                <h3 className="font-bold text-[15px]">{m.name}</h3>
-                                <p className="text-[13px] text-gray-500">{m.role}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+            <TeamSection />
 
             {/* CTA */}
             <section className="py-16 px-6 text-center">

@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useAgent } from "../AgentContext";
 import { agentApi } from "@/lib/api";
+import { isPhoneValid, formatPhone } from "@/lib/validation";
 
 export default function AgentLeadSubmission() {
     const router = useRouter();
@@ -11,7 +12,7 @@ export default function AgentLeadSubmission() {
         leadForm, setLeadForm,
         eligCheck, setEligCheck,
         eligResult, eligLoading,
-        csvPreview, csvUploaded, setCsvUploaded, setCsvFile,
+        csvPreview, setCsvPreview, csvUploaded, setCsvUploaded, csvFile, setCsvFile,
         handleLeadSubmit, handleRunEligibility, handleConfirmCSVImport,
         showToast
     } = useAgent();
@@ -37,7 +38,13 @@ export default function AgentLeadSubmission() {
 
     const handleBatchFieldChange = (idx: number, field: string, value: string) => {
         const newLeads = [...batchLeads];
-        newLeads[idx] = { ...newLeads[idx], [field]: value };
+        let val = value;
+        if (field === "firstName" || field === "lastName") {
+            val = value.replace(/[^A-Za-z]/g, "").slice(0, 30);
+        } else if (field === "phoneNumber") {
+            val = formatPhone(value);
+        }
+        newLeads[idx] = { ...newLeads[idx], [field]: val };
         setBatchLeads(newLeads);
     };
 
@@ -51,8 +58,25 @@ export default function AgentLeadSubmission() {
         // Validate rows
         for (let i = 0; i < batchLeads.length; i++) {
             const row = batchLeads[i];
+            const studentLabel = `Student #${i + 1}`;
             if (!row.firstName?.trim() || !row.lastName?.trim() || !row.email?.trim() || !row.phoneNumber?.trim() || !row.amount) {
-                showToast(`Please fill all fields for Student #${i + 1}`, "warning");
+                showToast(`Please fill all fields for ${studentLabel}`, "warning");
+                return;
+            }
+            if (row.firstName.trim().length < 3 || row.firstName.trim().length > 30 || /[^A-Za-z]/.test(row.firstName.trim())) {
+                showToast(`${studentLabel} first name must be between 3 and 30 characters and contain only letters`, "warning");
+                return;
+            }
+            if (row.lastName.trim().length < 1 || row.lastName.trim().length > 30 || /[^A-Za-z]/.test(row.lastName.trim())) {
+                showToast(`${studentLabel} last name must be between 1 and 30 characters and contain only letters`, "warning");
+                return;
+            }
+            if (!isPhoneValid(row.phoneNumber.trim())) {
+                showToast(`${studentLabel} mobile number must be a valid 10-digit Indian number`, "warning");
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email.trim())) {
+                showToast(`${studentLabel} has an invalid email format`, "warning");
                 return;
             }
         }
@@ -85,20 +109,119 @@ export default function AgentLeadSubmission() {
         }
     };
 
+    const resolvePincode = async (pin: string) => {
+        try {
+            const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+            const data = await res.json();
+            if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice[0]) {
+                const po = data[0].PostOffice[0];
+                const city = po.District || po.Taluk || po.Name;
+                const state = po.State;
+                if (city && state) {
+                    setLeadForm((prev: any) => {
+                        const currentAddr = (prev.address || "").trim();
+                        if (currentAddr) {
+                            if (currentAddr.includes(city) || currentAddr.includes(state)) {
+                                return prev;
+                            }
+                            return { ...prev, address: `${currentAddr}, ${city}, ${state}` };
+                        }
+                        return { ...prev, address: `${city}, ${state}` };
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Failed to resolve pincode details:", e);
+        }
+    };
+
     const validateStep = (step: number): boolean => {
         const newErrors: Record<string, string> = {};
         if (step === 1) {
-            if (!leadForm.firstName?.trim()) newErrors.firstName = "First name is required";
-            if (!leadForm.lastName?.trim()) newErrors.lastName = "Last name is required";
-            if (!leadForm.phoneNumber?.trim()) newErrors.phoneNumber = "Mobile number is required";
-            if (!leadForm.email?.trim()) {
+            const firstNameTrim = leadForm.firstName?.trim() || "";
+            const lastNameTrim = leadForm.lastName?.trim() || "";
+            const phoneTrim = leadForm.phoneNumber?.trim() || "";
+            const emailTrim = leadForm.email?.trim() || "";
+            const dobVal = leadForm.dob || "";
+            const pincodeTrim = leadForm.pincode?.trim() || "";
+            const addressTrim = leadForm.address?.trim() || "";
+
+            if (!firstNameTrim) {
+                newErrors.firstName = "First name is required";
+            } else if (firstNameTrim.length < 3) {
+                newErrors.firstName = "First name must be at least 3 characters";
+            } else if (firstNameTrim.length > 30) {
+                newErrors.firstName = "First name must not exceed 30 characters";
+            } else if (/[^A-Za-z]/.test(firstNameTrim)) {
+                newErrors.firstName = "First name must contain only letters";
+            }
+
+            if (!lastNameTrim) {
+                newErrors.lastName = "Last name is required";
+            } else if (lastNameTrim.length < 1) {
+                newErrors.lastName = "Last name must be at least 1 character";
+            } else if (lastNameTrim.length > 30) {
+                newErrors.lastName = "Last name must not exceed 30 characters";
+            } else if (/[^A-Za-z]/.test(lastNameTrim)) {
+                newErrors.lastName = "Last name must contain only letters";
+            }
+
+            if (!phoneTrim) {
+                newErrors.phoneNumber = "Mobile number is required";
+            } else if (!isPhoneValid(phoneTrim)) {
+                if (phoneTrim.length !== 10) {
+                    newErrors.phoneNumber = "Mobile number must be exactly 10 digits";
+                } else if (!/^[6-9]/.test(phoneTrim)) {
+                    newErrors.phoneNumber = "Mobile number must start with 6, 7, 8, or 9";
+                } else {
+                    newErrors.phoneNumber = "Please enter a valid Indian mobile number";
+                }
+            }
+
+            if (!emailTrim) {
                 newErrors.email = "Email is required";
-            } else if (!/\S+@\S+\.\S+/.test(leadForm.email)) {
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
                 newErrors.email = "Invalid email format";
+            }
+
+            if (!dobVal) {
+                newErrors.dob = "Date of birth is required";
+            } else {
+                const parts = dobVal.split("-").map(Number);
+                if (parts.length === 3) {
+                    const [yyyy, mm, dd] = parts;
+                    const dob = new Date(yyyy, mm - 1, dd);
+                    const today = new Date();
+                    const ageMs = today.getTime() - dob.getTime();
+                    const age = new Date(ageMs).getUTCFullYear() - 1970;
+                    if (isNaN(age)) {
+                        newErrors.dob = "Invalid date of birth";
+                    } else if (age < 18) {
+                        newErrors.dob = "You must be at least 18 years old to apply for a loan";
+                    } else if (age > 40) {
+                        newErrors.dob = "Applicants above 40 years are not eligible for this loan";
+                    }
+                } else {
+                    newErrors.dob = "Invalid date of birth format";
+                }
+            }
+
+            if (!pincodeTrim) {
+                newErrors.pincode = "Pincode is required";
+            } else if (pincodeTrim.length !== 6) {
+                newErrors.pincode = "Pincode must be exactly 6 digits";
+            }
+
+            if (!addressTrim) {
+                newErrors.address = "Residential address is required";
             }
         } else if (step === 2) {
             if (!leadForm.amount || parseFloat(leadForm.amount) <= 0) {
                 newErrors.amount = "A valid loan amount is required";
+            }
+        } else if (step === 3) {
+            if (leadForm.coApplicantMobile && !isPhoneValid(leadForm.coApplicantMobile)) {
+                newErrors.coApplicantMobile = "Co-applicant mobile number must be a valid 10-digit Indian number";
             }
         }
         setErrors(newErrors);
@@ -142,6 +265,80 @@ export default function AgentLeadSubmission() {
     const onConfirmCSV = () => {
         handleConfirmCSVImport();
         router.push("/agent/students");
+    };
+
+    const handleDownloadTemplate = () => {
+        const headers = ["Name", "Mobile", "Course", "College", "Amount"];
+        const rows = [
+            ["Priya Sharma", "9876543210", "B.Tech", "IIT Bombay", "1200000"],
+            ["Rahul Kumar", "9876543211", "MBBS", "JIPMER", "800000"],
+            ["Asha Reddy", "9876543212", "MBA (Abroad)", "Wharton", "4500000"]
+        ];
+        const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "bulk_leads_template.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("Template CSV download started.", "success");
+    };
+
+    const parseCsvText = (text: string) => {
+        const lines = text.split(/\r?\n/);
+        if (lines.length < 2) return;
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const rows: any[] = [];
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            const cols: string[] = [];
+            let insideQuote = false;
+            let current = "";
+            for (let j = 0; j < line.length; j++) {
+                const char = line[j];
+                if (char === '"') {
+                    insideQuote = !insideQuote;
+                } else if (char === ',' && !insideQuote) {
+                    cols.push(current.trim());
+                    current = "";
+                } else {
+                    current += char;
+                }
+            }
+            cols.push(current.trim());
+            const rowData: any = {};
+            headers.forEach((header, idx) => {
+                const val = cols[idx] || "";
+                if (header.includes("name")) rowData.name = val;
+                else if (header.includes("mobile") || header.includes("phone")) rowData.mobile = val;
+                else if (header.includes("course")) rowData.course = val;
+                else if (header.includes("college") || header.includes("university")) rowData.college = val;
+                else if (header.includes("amount")) rowData.amount = val;
+            });
+            if (!rowData.name) rowData.name = cols[0] || "";
+            if (!rowData.mobile) rowData.mobile = cols[1] || "";
+            if (!rowData.course) rowData.course = cols[2] || "";
+            if (!rowData.college) rowData.college = cols[3] || "";
+            if (!rowData.amount) rowData.amount = cols[4] || "";
+            rowData.status = "Valid";
+            rows.push(rowData);
+        }
+        setCsvPreview(rows);
+        setCsvUploaded(true);
+    };
+
+    const handleCsvFileChange = (file: File) => {
+        setCsvFile(file);
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const text = evt.target?.result as string;
+            parseCsvText(text);
+        };
+        reader.readAsText(file);
     };
 
     return (
@@ -319,31 +516,31 @@ export default function AgentLeadSubmission() {
                                         <div className="space-y-1">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">First Name *</label>
                                             <input type="text" value={leadForm.firstName} onChange={(e) => {
-                                                setLeadForm({ ...leadForm, firstName: e.target.value });
+                                                setLeadForm({ ...leadForm, firstName: e.target.value.replace(/[^A-Za-z]/g, "") });
                                                 if (errors.firstName) setErrors(prev => ({ ...prev, firstName: "" }));
                                             }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
                                                 errors.firstName ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
-                                            }`} />
+                                            }`} maxLength={30} />
                                             {errors.firstName && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.firstName}</p>}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">Last Name *</label>
                                             <input type="text" value={leadForm.lastName} onChange={(e) => {
-                                                setLeadForm({ ...leadForm, lastName: e.target.value });
+                                                setLeadForm({ ...leadForm, lastName: e.target.value.replace(/[^A-Za-z]/g, "") });
                                                 if (errors.lastName) setErrors(prev => ({ ...prev, lastName: "" }));
                                             }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
                                                 errors.lastName ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
-                                            }`} />
+                                            }`} maxLength={30} />
                                             {errors.lastName && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.lastName}</p>}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">Mobile Number *</label>
                                             <input type="tel" value={leadForm.phoneNumber} onChange={(e) => {
-                                                setLeadForm({ ...leadForm, phoneNumber: e.target.value });
+                                                setLeadForm({ ...leadForm, phoneNumber: formatPhone(e.target.value) });
                                                 if (errors.phoneNumber) setErrors(prev => ({ ...prev, phoneNumber: "" }));
                                             }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
                                                 errors.phoneNumber ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
-                                            }`} placeholder="Used for WhatsApp alerts" />
+                                            }`} placeholder="Used for WhatsApp alerts" maxLength={10} />
                                             {errors.phoneNumber && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.phoneNumber}</p>}
                                         </div>
                                         <div className="space-y-1">
@@ -357,20 +554,38 @@ export default function AgentLeadSubmission() {
                                             {errors.email && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.email}</p>}
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Date of Birth</label>
-                                            <input type="date" value={leadForm.dob} onChange={(e) => setLeadForm({ ...leadForm, dob: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Date of Birth *</label>
+                                            <input type="date" value={leadForm.dob} onChange={(e) => {
+                                                setLeadForm({ ...leadForm, dob: e.target.value });
+                                                if (errors.dob) setErrors(prev => ({ ...prev, dob: "" }));
+                                            }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                                errors.dob ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
+                                            }`} />
+                                            {errors.dob && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.dob}</p>}
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">City / State</label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <input type="text" value={leadForm.city} onChange={(e) => setLeadForm({ ...leadForm, city: e.target.value })} placeholder="City" className="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                                <select value={leadForm.state} onChange={(e) => setLeadForm({ ...leadForm, state: e.target.value })} className="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
-                                                    <option>Telangana</option>
-                                                    <option>Andhra Pradesh</option>
-                                                    <option>Maharashtra</option>
-                                                    <option>Karnataka</option>
-                                                </select>
-                                            </div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Residential Pincode *</label>
+                                            <input type="text" value={leadForm.pincode} onChange={(e) => {
+                                                const numericVal = e.target.value.replace(/\D/g, "").slice(0, 6);
+                                                setLeadForm({ ...leadForm, pincode: numericVal });
+                                                if (errors.pincode) setErrors(prev => ({ ...prev, pincode: "" }));
+                                                if (numericVal.length === 6) {
+                                                    resolvePincode(numericVal);
+                                                }
+                                            }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                                errors.pincode ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
+                                            }`} placeholder="e.g. 400001" maxLength={6} />
+                                            {errors.pincode && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.pincode}</p>}
+                                        </div>
+                                        <div className="space-y-1 sm:col-span-2">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase">Residential Address *</label>
+                                            <input type="text" value={leadForm.address} onChange={(e) => {
+                                                setLeadForm({ ...leadForm, address: e.target.value });
+                                                if (errors.address) setErrors(prev => ({ ...prev, address: "" }));
+                                            }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                                errors.address ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
+                                            }`} placeholder="e.g. Flat No, Street, Locality, City, State" />
+                                            {errors.address && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.address}</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -433,7 +648,13 @@ export default function AgentLeadSubmission() {
                                         </div>
                                         <div className="space-y-1">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">Co-App Mobile</label>
-                                            <input type="tel" value={leadForm.coApplicantMobile} onChange={(e) => setLeadForm({ ...leadForm, coApplicantMobile: e.target.value })} placeholder="+91 9XXXXXXXXX" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all" />
+                                            <input type="tel" value={leadForm.coApplicantMobile} onChange={(e) => {
+                                                setLeadForm({ ...leadForm, coApplicantMobile: formatPhone(e.target.value) });
+                                                if (errors.coApplicantMobile) setErrors(prev => ({ ...prev, coApplicantMobile: "" }));
+                                            }} placeholder="+91 9XXXXXXXXX" className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                                errors.coApplicantMobile ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white"
+                                            }`} maxLength={10} />
+                                            {errors.coApplicantMobile && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.coApplicantMobile}</p>}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">Employment Type</label>
@@ -499,7 +720,7 @@ export default function AgentLeadSubmission() {
                                         </div>
                                         <div className="space-y-1 sm:col-span-2">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">Notes for Staff</label>
-                                            <textarea rows={3} value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all resize-none" placeholder="e.g. Student is applying for IIT Bombay M.Tech. Father is Govt. employee — CIBIL 742. Needs sanction within 3 weeks before fee deadline." />
+                                            <textarea rows={3} value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation(); }} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all resize-none" placeholder="e.g. Student is applying for IIT Bombay M.Tech. Father is Govt. employee — CIBIL 742. Needs sanction within 3 weeks before fee deadline." />
                                         </div>
                                     </div>
                                 </div>
@@ -680,20 +901,47 @@ export default function AgentLeadSubmission() {
                                 <p className="text-gray-400 text-xs mt-1">Upload list of up to 500 leads instantly via CSV mapping.</p>
                             </div>
 
-                            <button onClick={() => showToast("Template CSV download started.", "success")} className="w-full py-3.5 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-100 transition-all flex items-center justify-center gap-2">
+                            <button onClick={handleDownloadTemplate} className="w-full py-3.5 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-100 transition-all flex items-center justify-center gap-2">
                                 <span className="material-symbols-outlined text-sm">download</span> Download CSV Template
                             </button>
 
-                            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-[#6605c7]/30 transition-all cursor-pointer bg-gray-50/50 flex flex-col items-center justify-center min-h-[160px]" onClick={() => setCsvUploaded(true)}>
+                            <div 
+                                className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-[#6605c7]/30 transition-all cursor-pointer bg-gray-50/50 flex flex-col items-center justify-center min-h-[160px] relative" 
+                                onClick={() => document.getElementById("csv-file-input")?.click()}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    const file = e.dataTransfer.files?.[0];
+                                    if (file && file.name.endsWith('.csv')) {
+                                        handleCsvFileChange(file);
+                                    } else {
+                                        showToast("Please upload a valid CSV file", "warning");
+                                    }
+                                }}
+                            >
+                                <input 
+                                    type="file" 
+                                    id="csv-file-input" 
+                                    accept=".csv" 
+                                    className="hidden" 
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            handleCsvFileChange(file);
+                                        }
+                                    }}
+                                />
                                 <span className="material-symbols-outlined text-gray-400 text-3xl mb-2">upload_file</span>
-                                <span className="text-[11px] font-bold text-gray-700">Choose File or Drop CSV Here</span>
+                                <span className="text-[11px] font-bold text-gray-700">
+                                    {csvFile ? csvFile.name : "Choose File or Drop CSV Here"}
+                                </span>
                                 <span className="text-[9px] text-gray-400 uppercase tracking-wider mt-1">max 500 leads per file</span>
                             </div>
 
                             {csvUploaded && (
                                 <div className="space-y-4 animate-fade-in">
                                     <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-xs">
-                                        <span className="font-bold text-emerald-800 flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">check_circle</span> 3/3 rows valid</span>
+                                        <span className="font-bold text-emerald-800 flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">check_circle</span> {csvPreview.length}/{csvPreview.length} rows parsed</span>
                                         <span className="text-gray-400 text-[10px]">Ready to import</span>
                                     </div>
                                     <div className="overflow-hidden border border-gray-100 rounded-xl">
@@ -710,7 +958,9 @@ export default function AgentLeadSubmission() {
                                                     <tr key={i} className="border-b border-gray-50 last:border-b-0">
                                                         <td className="p-2 font-bold">{x.name}</td>
                                                         <td className="p-2">{x.course}</td>
-                                                        <td className="p-2 font-mono">₹{x.amount}</td>
+                                                        <td className="p-2 font-mono">
+                                                            ₹{x.amount ? (typeof x.amount === 'string' && x.amount.includes(',') ? x.amount : parseFloat(x.amount).toLocaleString('en-IN')) : '0'}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>

@@ -1064,7 +1064,11 @@ export class ApplicationService {
           if (data.status === 'approved' || data.status === 'sanctioned') {
             await this.emailService.sendApplicationAcceptedByBankEmail(email, userName, bankName, latestApp, data);
           } else if (data.status === 'rejected') {
-            await this.emailService.sendApplicationRejectedByBankEmail(email, userName, bankName, data.rejectionReason || data.remarks || '');
+            if (!latestApp.bank || latestApp.bank === 'Pending Partner' || role === 'staff' || role === 'admin' || role === 'super_admin') {
+              await this.emailService.sendApplicationRejectedByStaffEmail(email, userName, data.rejectionReason || data.remarks || '');
+            } else {
+              await this.emailService.sendApplicationRejectedByBankEmail(email, userName, bankName, data.rejectionReason || data.remarks || '');
+            }
           } else if (data.status === 'submitted_to_bank') {
             await this.emailService.sendApplicationSentToBankEmail(email, userName, bankName, latestApp);
           }
@@ -1768,6 +1772,9 @@ export class ApplicationService {
     let evvOverall = 0;
     let evvMonthlyBreakdown: any = [];
     let evvStatus: 'COMPUTED' | 'FAILED' | 'MANUAL_REVIEW' = 'COMPUTED';
+    let evvTotalSnapshots = 0;
+    let evvTotalTransactions = 0;
+    let evvPeriod: { from: string; to: string } | null = null;
     let errorMessage = '';
 
     try {
@@ -1783,6 +1790,9 @@ export class ApplicationService {
         evvOverall = evvResults.overall_evv;
         evvMonthlyBreakdown = evvResults.monthly_evv;
         evvStatus = evvResults.status;
+        evvTotalSnapshots = evvResults.totalSnapshots;
+        evvTotalTransactions = evvResults.totalTransactions;
+        evvPeriod = evvResults.period;
         console.log(`[EVV Background] Computed EVV for ${applicationId}: ₹${evvOverall} (${evvStatus})`);
 
         // Dynamically update document requirement name to match actual statement months count
@@ -1811,7 +1821,10 @@ export class ApplicationService {
     const updateData: any = {
       evvOverall,
       evvMonthlyBreakdown,
-      evvStatus
+      evvStatus,
+      evvTotalSnapshots,
+      evvTotalTransactions,
+      evvPeriod,
     };
 
     if (evvStatus === 'MANUAL_REVIEW' || evvStatus === 'FAILED') {
@@ -1853,13 +1866,13 @@ export class ApplicationService {
 
     // Auto-sharing routing rules
     let autoShared = false;
-    if (evvStatus === 'COMPUTED' && evvOverall > 5000) {
+    if (evvStatus === 'COMPUTED' && evvOverall > 5000 && application.bank && application.bank !== 'Pending Partner') {
       try {
         console.log(`[EVV Background] Auto-sharing application ${applicationId} to partner banks (EVV = ₹${evvOverall})`);
         await this.workflowService.submitApplicationToBank(
           applicationId,
-          application.bank ? application.bank.toLowerCase().replace(/\s+/g, '') : 'auxilo',
-          application.bank || 'Auxilo Finserve',
+          application.bank.toLowerCase().replace(/\s+/g, ''),
+          application.bank,
           'System Automation'
         );
         autoShared = true;

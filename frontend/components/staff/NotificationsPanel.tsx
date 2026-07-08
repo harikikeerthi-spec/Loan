@@ -506,12 +506,12 @@ const NotificationsPanel = ({
                         Mark all as read
                       </button>
                     )}
-                    {!isConnected && (
+                    {/* {!isConnected && (
                       <div className="flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded text-[10px] text-yellow-700">
                         <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
                         Offline
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>

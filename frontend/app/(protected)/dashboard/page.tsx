@@ -172,15 +172,6 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                         <h3 className="text-sm font-bold text-red-900 capitalize">Application {app.status}</h3>
                         <p className="text-red-700/60 text-xs truncate">Your {app.bank} application was {app.status}.</p>
                     </div>
-                    <Link
-                        href={`/staff/applications/${app.id}`}
-                        target="_blank"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-red-50 text-red-700 text-[10px] font-extrabold uppercase tracking-wider rounded border border-red-200 transition-all shadow-sm shrink-0"
-                    >
-                        <span className="material-symbols-outlined text-[12px] font-bold">admin_panel_settings</span>
-                        Staff Portal View
-                        <span className="material-symbols-outlined text-[10px]">open_in_new</span>
-                    </Link>
                 </div>
                 <div className="p-3 bg-white/60 rounded-lg border border-red-100">
                     <p className="text-xs text-red-700 font-medium">Please contact our support team or start a new application for a different bank.</p>

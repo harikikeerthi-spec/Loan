@@ -709,6 +709,23 @@ export class NotificationService {
         const lightGray = '#f3f4f6';
         const darkGray = '#4b5563';
 
+        const drawWatermark = () => {
+          doc.save();
+          doc.opacity(0.04);
+          doc.fillColor(primaryColor);
+          doc.fontSize(70);
+          doc.translate(doc.page.width / 2, doc.page.height / 2);
+          doc.rotate(-30);
+          doc.text('VIDYALOAN', -200, -35, { align: 'center', width: 400 });
+          doc.restore();
+        };
+
+        // Draw on the first page and register for subsequent pages
+        drawWatermark();
+        doc.on('pageAdded', () => {
+          drawWatermark();
+        });
+
         // --- Branded Header ---
         doc.fillColor(primaryColor)
            .fontSize(24)
@@ -814,12 +831,22 @@ export class NotificationService {
    * Build premium HTML body for disbursement confirmation email
    */
   private buildDisbursementEmailHtml(details: any): string {
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     return `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; color: #1f2937;">
-        <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
-          <h1 style="color: white; margin: 0; font-size: 26px; letter-spacing: 1px;">Vidya Loan</h1>
-          <p style="color: #e9d5ff; margin: 5px 0 0 0; font-size: 14px;">Your Education Journey, Funded</p>
-        </div>
+      <div style="
+        background-image: url('${frontendUrl}/images/vidyaloans-logo-transparent.png'); 
+        background-repeat: no-repeat; 
+        background-position: center center; 
+        background-size: 50% auto;
+        width: 100%; 
+        margin: 0; 
+        padding: 20px 0;
+      ">
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; color: #1f2937; background: rgba(255,255,255,0.95);">
+          <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: white; margin: 0; font-size: 26px; letter-spacing: 1px;">Vidya Loan</h1>
+            <p style="color: #e9d5ff; margin: 5px 0 0 0; font-size: 14px;">Your Education Journey, Funded</p>
+          </div>
         
         <div style="padding: 0 10px;">
           <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Loan Disbursement Confirmed!</h2>
@@ -870,6 +897,7 @@ export class NotificationService {
           </div>
         </div>
       </div>
+    </div>
     `;
   }
 }

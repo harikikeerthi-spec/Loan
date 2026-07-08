@@ -1162,6 +1162,57 @@ export class StaffProfileService {
           });
         }
 
+        // Create a matching BankSubmission record for the target bank so it shows in the bank's dashboard
+        const bId = this.resolveBankId(body.recipientName || 'Credila');
+        const bName = body.recipientName || 'HDFC Credila';
+        const submittedBy = staffUser?.id || staffUser?.uid || 'system';
+
+        const { data: existingSub } = await this.db
+          .from('BankSubmission')
+          .select('id')
+          .eq('applicationId', application.id)
+          .eq('bankId', bId)
+          .maybeSingle();
+
+        if (!existingSub) {
+          const subId = 'sub-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+          const { data: newSub } = await this.db
+            .from('BankSubmission')
+            .insert({
+              id: subId,
+              applicationId: application.id,
+              bankId: bId,
+              bankName: bName,
+              submittedBy,
+              workflowStatus: 'SUBMITTED_TO_BANK',
+              currentStage: 'SUBMITTED_TO_BANK',
+              statusHistory: [
+                {
+                  fromStatus: null,
+                  toStatus: 'SUBMITTED_TO_BANK',
+                  changedAt: new Date().toISOString(),
+                  changedBy: submittedBy,
+                  reason: 'Application shared with bank via staff onboarding',
+                },
+              ],
+              createdAt: new Date().toISOString(),
+              submittedAt: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (newSub) {
+            await this.db
+              .from('LoanApplication')
+              .update({
+                bankSubmissionId: newSub.id,
+                bankWorkflowStatus: 'SUBMITTED_TO_BANK',
+                bankWorkflowStage: 'SUBMITTED_TO_BANK',
+              })
+              .eq('id', application.id);
+          }
+        }
+
         // Add user note if supplied
         if (body.message) {
           await this.db.from('ApplicationNote').insert({
@@ -1680,6 +1731,16 @@ export class StaffProfileService {
     });
 
     return calendarEvents;
+  }
+
+  private resolveBankId(bankName: string): string {
+    const lower = bankName.toLowerCase();
+    if (lower.includes('credila') || lower.includes('hdfc')) return 'credila';
+    if (lower.includes('auxilo')) return 'auxilo';
+    if (lower.includes('avanse')) return 'avanse';
+    if (lower.includes('idfc')) return 'idfc';
+    if (lower.includes('poonawalla')) return 'poonawalla';
+    return lower.split(' ')[0] || 'credila';
   }
 }
 
