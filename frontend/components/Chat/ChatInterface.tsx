@@ -1512,7 +1512,7 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center bg-[#F8F9FC] relative overflow-hidden font-sans">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F8F9FC] font-sans">
                             <div className="absolute inset-0 bg-gradient-to-t from-[#5A42E4]/3 to-transparent"></div>
                             <div className="text-center relative z-10 animate-fade-in px-6">
                                 <div className="w-24 h-24 rounded-3xl bg-[#F2F0FF] text-[#5A42E4] flex items-center justify-center mx-auto mb-6 border border-[#5A42E4]/10 relative shadow-sm">
