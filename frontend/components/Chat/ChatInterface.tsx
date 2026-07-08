@@ -1518,11 +1518,11 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                                 <div className="w-24 h-24 rounded-3xl bg-[#F2F0FF] text-[#5A42E4] flex items-center justify-center mx-auto mb-6 border border-[#5A42E4]/10 relative shadow-sm">
                                     <span className="material-symbols-outlined text-4xl">chat</span>
                                 </div>
-                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">{role === 'agent' ? (hideSidebar ? "Staff RM Connection" : "Student Pipeline") : "Staff Communication Portal"}</h3>
+                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">{portalTitle || (role === 'agent' ? (hideSidebar ? "Staff RM Connection" : "Student Pipeline") : "Staff Communication Portal")}</h3>
                                 <p className="text-[#4A525A] text-sm max-w-sm mx-auto font-medium">
                                     {role === 'agent' && hideSidebar 
                                         ? "Connecting you with your counselor. Messages will load automatically."
-                                        : `Select a student or ${role !== 'agent' ? 'bank ' : ''}conversation from the left sidebar to start messaging in real-time.`
+                                        : `Select a ${portalTitle?.toLowerCase().includes('staff') ? 'counselor' : 'student'} or ${role !== 'agent' ? 'bank ' : ''}conversation from the left sidebar to start messaging in real-time.`
                                     }
                                 </p>
                             </div>
