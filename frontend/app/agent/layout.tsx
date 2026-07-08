@@ -66,10 +66,10 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                             </div>
                             {!sidebarCollapsed && (
                                 <div className="animate-fade-in overflow-hidden">
-                                    <span className="font-display font-black text-2xl tracking-tighter text-gray-900 block leading-none truncate max-w-[200px]" title={agentProfile?.businessName || "VidyaAgent"}>
+                                    <span className="font-display font-black text-xl lg:text-2xl tracking-tighter text-gray-900 block leading-tight break-words pr-2" title={agentProfile?.businessName || "VidyaAgent"}>
                                         {agentProfile?.businessName || <>Vidya<span className="text-[#6605c7]">Agent</span></>}
                                     </span>
-                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40">DSA Partner Hub</span>
+                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 block mt-1">DSA Partner Hub</span>
                                 </div>
                             )}
                         </div>
