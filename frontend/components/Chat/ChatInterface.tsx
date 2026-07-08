@@ -108,9 +108,7 @@ interface StudentDocument {
 }
 
 
-export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className, hideSidebar = false, chatContext = 'student', initialStudentId, autoSendLead = true }: ChatInterfaceProps) {
-
-    export default function ChatInterface({ role, initialUser, initialBank, initialConversation = null, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, initialBank, initialConversation = null, portalTitle, className, hideSidebar = false, chatContext = 'student', initialStudentId, autoSendLead = true }: ChatInterfaceProps) {
 
         const { token, user } = useAuth();
         const isMessageFromMe = (msg: Message) => {
@@ -999,7 +997,6 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                 return true;
             }
             if (role === 'agent') {
-<<<<<<< HEAD
                 if (chatContext === 'staff') {
                     return c.metadata?.type === 'agent_to_staff';
                 } else {
@@ -1007,13 +1004,6 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                 }
             }
             if (role !== 'staff') return true;
-=======
-            // Agents are not allowed to chat with banks directly, and staff chats belong to the dedicated Staff RM Line
-            if (c.metadata?.type === 'bank' || c.metadata?.type === 'staff') return false;
-            return true;
-        }
-        if (role !== 'staff') return true; // other roles
->>>>>>> fd4765f9ad54da17f0772121e15751626c0a990c
             if (chatTypeFilter === 'bank') return c.metadata?.type === 'bank';
             if (chatTypeFilter === 'student') return c.metadata?.type !== 'bank';
             return true; // 'all'
