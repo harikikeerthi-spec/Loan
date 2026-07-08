@@ -488,7 +488,7 @@ export default function ApplicationManagement() {
                         <p className="text-sm text-gray-500 mt-2 font-medium">Verify documents, log file numbers, and record credit underwriting decisions.</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-                        <select
+                        {/* <select
                             value={selectedTagFilter}
                             onChange={(e) => setSelectedTagFilter(e.target.value)}
                             className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all text-gray-700"
@@ -497,7 +497,7 @@ export default function ApplicationManagement() {
                             {allUniqueTags.map(tag => (
                                 <option key={tag} value={tag}>{tag}</option>
                             ))}
-                        </select>
+                        </select> */}
                         <div className="relative flex-1 lg:flex-none">
                             <input
                                 type="text"

@@ -151,6 +151,14 @@ export default function AgentStudentDetail({ params }: PageProps) {
                     </button>
                     <button 
                         onClick={() => { 
+                            router.push(`/agent/chat-staff?studentId=${selectedStudent.id}&sendLead=true`); 
+                        }} 
+                        className="px-6 py-3.5 bg-purple-50 text-purple-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-purple-100 hover:bg-purple-150 transition-all flex items-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-base">chat_bubble</span> Discuss with Staff
+                    </button>
+                    <button 
+                        onClick={() => { 
                             setDocUploadState({ ...docUploadState, studentId: selectedStudent.id }); 
                             router.push("/agent/documents"); 
                         }} 

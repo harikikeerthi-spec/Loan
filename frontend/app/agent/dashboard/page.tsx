@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useAgent } from "../AgentContext";
+import { HttpApiPaths } from "@/lib/http-api-paths";
 
 export default function AgentDashboardOverview() {
     const {
@@ -15,7 +16,38 @@ export default function AgentDashboardOverview() {
         applications,
         tasks,
         loading,
+        token,
     } = useAgent();
+
+    const [rmDiscussions, setRmDiscussions] = useState<any[]>([]);
+    const [loadingChats, setLoadingChats] = useState(true);
+
+    useEffect(() => {
+        if (!token) return;
+        
+        const fetchChats = async () => {
+            try {
+                const res = await fetch(HttpApiPaths.chat.conversations('agent', undefined), {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    // Filter conversations of type agent_to_staff
+                    const filtered = data.filter((c: any) => c.metadata?.type === 'agent_to_staff');
+                    setRmDiscussions(filtered.slice(0, 3)); // show top 3 recent discussions
+                }
+            } catch (e) {
+                console.error("Failed to fetch RM discussions for dashboard", e);
+            } finally {
+                setLoadingChats(false);
+            }
+        };
+
+        fetchChats();
+        // Set up poll interval
+        const interval = setInterval(fetchChats, 15000);
+        return () => clearInterval(interval);
+    }, [token]);
 
     const agentName = user
         ? `${user.firstName || user.email?.split("@")[0] || "Agent"}`
@@ -251,6 +283,65 @@ export default function AgentDashboardOverview() {
                                 </div>
                             )}
                         </div>
+                    </div>
+
+                    {/* RM Discussions Panel */}
+                    <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
+                        <h3 className="font-display font-black text-lg text-gray-900 mb-6 uppercase tracking-tight flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#6605c7]">chat_bubble_outline</span> RM Discussions
+                        </h3>
+                        {loadingChats ? (
+                            <div className="py-8 text-center">
+                                <div className="w-6 h-6 border-2 border-[#6605c7]/20 border-t-[#6605c7] rounded-full animate-spin mx-auto" />
+                            </div>
+                        ) : rmDiscussions.length > 0 ? (
+                            <div className="space-y-4">
+                                {rmDiscussions.map((chat: any) => {
+                                    const studentName = chat.metadata?.studentName || chat.customerName || "Student Lead";
+                                    const lastMsg = chat.lastMessage?.content || "No messages yet";
+                                    const timeStr = chat.updatedAt 
+                                        ? format(new Date(chat.updatedAt), "dd MMM, hh:mm a") 
+                                        : "N/A";
+                                    const unreadCount = chat.unreadCount || 0;
+                                    
+                                    return (
+                                        <div key={chat.id} className="flex items-center justify-between p-4 bg-purple-50/10 border border-[#6605c7]/5 rounded-2xl hover:bg-purple-50/20 transition-all text-left">
+                                            <div className="min-w-0 flex-1 pr-4">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-black text-gray-900 truncate">{studentName}</p>
+                                                    {unreadCount > 0 && (
+                                                        <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[9px] font-black rounded-full leading-none">
+                                                            {unreadCount}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-gray-500 truncate mt-1">
+                                                    {chat.lastMessage && ['agent', 'partner_agent'].includes(chat.lastMessage.senderType) ? 'You: ' : ''}
+                                                    {lastMsg}
+                                                </p>
+                                                <p className="text-[9px] text-gray-400 mt-1 font-semibold">{timeStr}</p>
+                                            </div>
+                                            <Link
+                                                href={`/agent/chat-staff?conversationId=${chat.id}`}
+                                                className="px-4 py-2 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#6605c7]/95 transition-all text-center shrink-0 shadow-sm"
+                                            >
+                                                Open Chat
+                                            </Link>
+                                        </div>
+                                    );
+                                })}
+                                <Link 
+                                    href="/agent/chat-staff" 
+                                    className="w-full py-3 bg-gray-50 hover:bg-[#6605c7]/5 hover:text-[#6605c7] rounded-xl text-[10px] font-black uppercase tracking-wider text-gray-500 transition-all text-center block mt-2"
+                                >
+                                    View All RM Discussions
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center text-xs text-gray-500 font-bold bg-gray-50/50 rounded-2xl border border-dashed border-[#6605c7]/10">
+                                💬 No RM discussions active. Open a student profile to start a discussion.
+                            </div>
+                        )}
                     </div>
                 </div>
 

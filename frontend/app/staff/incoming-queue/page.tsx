@@ -779,7 +779,7 @@ export default function IncomingQueuePage() {
                     >
                         {/* Info Section */}
                         <div className="shrink-0">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] block">Processing Lead</span>
+                            {/* <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] block">Processing Lead</span> */}
                             <h4 className="text-[16px] font-black text-slate-800 tracking-tight mt-0.5">
                                 {activeDockApp.firstName || activeDockApp.student?.firstName || '—'} {activeDockApp.lastName || activeDockApp.student?.lastName || ''}
                             </h4>
@@ -794,7 +794,7 @@ export default function IncomingQueuePage() {
                             className="shrink-0 h-11 px-5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-wider text-slate-700 transition-all flex items-center gap-2 active:scale-95"
                         >
                             <span className="material-symbols-outlined text-[16px] text-slate-500">visibility</span>
-                            View Profile
+                            View Application
                         </button>
 
                         {/* Select Target Banks: Pills style */}
@@ -822,11 +822,10 @@ export default function IncomingQueuePage() {
                                                     alert("Failed to update target banks");
                                                 }
                                             }}
-                                            className={`h-7 px-3.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border ${
-                                                isChecked
-                                                    ? 'bg-[#6605c7] text-white border-[#6605c7] shadow-sm shadow-purple-600/10'
-                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                                            }`}
+                                            className={`h-7 px-3.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border ${isChecked
+                                                ? 'bg-[#6605c7] text-white border-[#6605c7] shadow-sm shadow-purple-600/10'
+                                                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                                }`}
                                         >
                                             {bankName.replace(" Finserve", "").replace(" Financial", "").replace(" FIRST Bank", "").replace(" Fincorp", "").replace("HDFC ", "")}
                                         </button>

@@ -37,6 +37,7 @@ export default function ApplyLoanPage() {
         amount: "",
         courseType: "",
         country: "",
+        otherCountry: "",
         university: "",
         annualFee: "",
         livingCost: "",
@@ -99,20 +100,28 @@ export default function ApplyLoanPage() {
             }
 
             if (uni || country || selectedBank || amountParam || (user && !profileLoaded)) {
-                setFormData((prev) => ({
-                    ...prev,
-                    university: prev.university || uni || "",
-                    country: prev.country || country || "",
-                    bank: selectedBank || prev.bank || "",
-                    amount: prev.amount || (amountParam ? formatIndianCurrency(amountParam) : ""),
-                    firstName: prev.firstName || user?.firstName || "",
-                    lastName: prev.lastName || user?.lastName || "",
-                    email: prev.email || user?.email || "",
-                    phone: prev.phone || user?.phoneNumber || user?.mobile || "",
-                    // Support both DD-MM-YYYY (from DatePicker / backend) and fallback fields
-                    dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
-                    intakeSeason: prev.intakeSeason || user?.intakeSeason || "",
-                }));
+                const queryOrUserCountry = country || user?.studyDestination || "";
+                const isPredefined = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "New Zealand"].includes(queryOrUserCountry);
+
+                setFormData((prev) => {
+                    const finalCountry = prev.country || (queryOrUserCountry ? (isPredefined ? queryOrUserCountry : "Other") : "");
+                    const finalOtherCountry = prev.otherCountry || (queryOrUserCountry && !isPredefined ? queryOrUserCountry : "");
+                    return {
+                        ...prev,
+                        university: prev.university || uni || "",
+                        country: finalCountry,
+                        otherCountry: finalOtherCountry,
+                        bank: selectedBank || prev.bank || "",
+                        amount: prev.amount || (amountParam ? formatIndianCurrency(amountParam) : ""),
+                        firstName: prev.firstName || user?.firstName || "",
+                        lastName: prev.lastName || user?.lastName || "",
+                        email: prev.email || user?.email || "",
+                        phone: prev.phone || user?.phoneNumber || user?.mobile || "",
+                        // Support both DD-MM-YYYY (from DatePicker / backend) and fallback fields
+                        dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
+                        intakeSeason: prev.intakeSeason || user?.intakeSeason || "",
+                    };
+                });
                 // Only mark profile as loaded once we have the DOB from the user object.
                 // This ensures that if refreshUser() resolves after the first render, the
                 // DOB (and other async-loaded fields) still get pre-filled correctly.
@@ -141,7 +150,11 @@ export default function ApplyLoanPage() {
         const errors: Record<string, string> = {};
         if (!formData.loanType) errors.loanType = "Please select a loan type";
         if (!formData.courseType) errors.courseType = "Please select a course type";
-        if (!formData.country) errors.country = "Please select a country";
+        if (!formData.country) {
+            errors.country = "Please select a country";
+        } else if (formData.country === "Other" && (!formData.otherCountry || !formData.otherCountry.trim())) {
+            errors.otherCountry = "Please enter the destination country";
+        }
         if (!formData.university.trim()) errors.university = "Please enter your university";
         const cleanAmount = formData.amount.replace(/,/g, "");
         if (!cleanAmount || Number(cleanAmount) <= 0) errors.amount = "Please enter a valid loan amount";
@@ -252,6 +265,7 @@ export default function ApplyLoanPage() {
 
             await applicationApi.create({
                 ...formData,
+                country: formData.country === "Other" ? formData.otherCountry : formData.country,
                 userId,
                 bank: bankName,
                 amount: parseFloat(cleanAmount),
@@ -380,7 +394,7 @@ export default function ApplyLoanPage() {
                                         <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-100 text-[#6605c7]">
                                             <span className="material-symbols-outlined text-[16px]">public</span>
                                         </div>
-                                        {formData.country}
+                                        {formData.country === "Other" ? formData.otherCountry : formData.country}
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center shadow-sm border border-emerald-100 text-emerald-600">
@@ -446,6 +460,17 @@ export default function ApplyLoanPage() {
                                         options={courses.map((c) => ({ value: c, label: c }))} error={stepErrors.courseType} />
                                     <SelectField label="Destination Country" icon="public" value={formData.country} onChange={(v) => update("country", v)}
                                         options={countries.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
+                                    {formData.country === "Other" && (
+                                        <InputField
+                                            label="Other Destination Country"
+                                            icon="public"
+                                            value={formData.otherCountry || ""}
+                                            onChange={(v) => update("otherCountry", v)}
+                                            placeholder="e.g. France"
+                                            error={stepErrors.otherCountry}
+                                            required
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="space-y-8">
@@ -595,7 +620,7 @@ export default function ApplyLoanPage() {
                                                 { label: "Loan Structure", value: formData.loanType },
                                                 { label: "Academic Goal", value: formData.courseType },
                                                 { label: "Required Amount", value: formData.amount ? `₹${Number(formData.amount.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
-                                                { label: "Destination", value: formData.country },
+                                                { label: "Destination", value: formData.country === "Other" ? formData.otherCountry : formData.country },
                                                 { label: "University", value: formData.university },
                                                 { label: "Target Intake", value: formData.intakeSeason },
                                             ].filter((f) => f.value).map((f) => (

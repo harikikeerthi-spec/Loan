@@ -85,6 +85,96 @@ export class ChatController {
     };
   }
 
+  @Post('agent-staff-start')
+  async startAgentStaffConversation(
+    @Req() req: any,
+    @Body() body: { studentId: string; sendLead?: boolean }
+  ) {
+    const user = req.user;
+    if (!['agent', 'partner_agent', 'admin', 'super_admin'].includes(user.role)) {
+      throw new BadRequestException('Unauthorized: Only agents can initiate staff discussion');
+    }
+    const studentId = body.studentId;
+    if (!studentId) {
+      throw new BadRequestException('studentId is required');
+    }
+
+    // 1. Fetch Student/LoanApplication details
+    const { data: application, error: appError } = await this.chatService.db
+      .from('LoanApplication')
+      .select('*')
+      .eq('id', studentId)
+      .maybeSingle();
+
+    if (appError || !application) {
+      throw new NotFoundException('Student loan application not found');
+    }
+
+    const studentName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || 'Unknown Student';
+
+    // 2. Determine agent details
+    const agentPhone = this.chatService.normalizePhone(user.phoneNumber || '');
+    if (!agentPhone) {
+      throw new BadRequestException('Agent phone number is required to initiate chat. Please update your profile.');
+    }
+
+    // Synthetic customerPhone/identifier for the agent-to-staff chat thread:
+    // AGT_${normalizedAgentPhone}_STUD_${studentId}
+    const syntheticPhone = `AGT_${agentPhone}_STUD_${studentId}`;
+
+    const displayName = `${studentName} (RM Discussion)`;
+
+    // Create or retrieve conversation
+    // type: agent_to_staff
+    const conversation = await this.chatService.getOrCreateConversation(
+      syntheticPhone,
+      application.email || undefined,
+      'agent_to_staff',
+      displayName,
+      application.bank || undefined,
+      {
+        studentId: studentId,
+        studentName: studentName,
+        agentPhone: agentPhone,
+        agentEmail: user.email,
+        agentName: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      }
+    );
+
+    // 3. Post lead details if sendLead is true and we don't have messages yet in this conversation
+    if (body.sendLead !== false) {
+      // Check if we already have messages in this conversation. If so, don't send the card again.
+      const messages = await this.chatService.getMessages(conversation.id);
+      if (messages.length === 0) {
+        // Construct lead details card
+        const formatAmount = (amt: any) => {
+          if (!amt) return 'Not Specified';
+          return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amt);
+        };
+
+        const leadCard = `━━━━━━━━━━━━━━━━━━━━━━━━━━\n📋 *NEW LEAD SHARED BY AGENT*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n👤 *Student:* ${studentName}\n📞 *Phone:* ${application.phone || 'Not Provided'}\n📧 *Email:* ${application.email || 'Not Provided'}\n\n🎓 *Academic Details:*\n• *Course:* ${application.courseName || 'Not Specified'}\n• *University:* ${application.universityName || 'Not Specified'}\n• *Country:* ${application.country || 'Not Specified'}\n\n💰 *Loan Details:*\n• *Amount:* ${formatAmount(application.amount)}\n• *Type:* ${application.loanType || 'Not Specified'}\n• *Bank:* ${application.bank || 'Not Specified'}\n• *Application No:* ${application.applicationNumber || 'Not Specified'}\n━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+        // Save the lead card message as coming from the agent
+        const message = await this.chatService.saveMessage({
+          conversationId: conversation.id,
+          senderType: user.role, // 'agent' or 'partner_agent'
+          senderId: user.email || user.sub,
+          senderName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          content: leadCard,
+          messageType: 'text',
+          status: 'sent'
+        });
+
+        this.eventEmitter.emit('chat.message_created', message);
+      }
+    }
+
+    return {
+      success: true,
+      conversation
+    };
+  }
+
   @Post('bank-start')
   async startBankConversation(@Req() req: any, @Body() body: { bankName: string, bankEmail?: string, applicationId?: string, applicationNumber?: string }) {
     if (!body.bankName) {

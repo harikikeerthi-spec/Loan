@@ -541,7 +541,7 @@ export class ApplicationService {
     return { success: true, data: updated, message: 'Application updated successfully' };
   }
 
-  async adminUpdateApplication(applicationId: string, data: any) {
+  async adminUpdateApplication(applicationId: string, data: any, user?: any) {
     const application = await this.getApplicationById(applicationId);
 
     const targetBank = data.bank !== undefined ? data.bank : application.bank;
@@ -581,6 +581,30 @@ export class ApplicationService {
     if (error) {
       console.error('[ApplicationService.adminUpdateApplication] DB Error:', error);
       throw error;
+    }
+
+    if (data.remarks !== undefined && data.remarks !== application.remarks) {
+      // Find the new notes that were added by splitting by newline
+      const oldRemarks = application.remarks || '';
+      const newRemarks = data.remarks || '';
+      
+      const oldLines = oldRemarks.split('\n');
+      const newLines = newRemarks.split('\n');
+      const addedLines = newLines.filter(line => !oldLines.includes(line) && line.trim());
+
+      if (addedLines.length > 0) {
+        // Emit event for notification
+        const addedRemarkText = addedLines.join('\n');
+        this.eventEmitter.emit('bank.note.added', {
+          applicationId: application.id,
+          applicationNumber: application.applicationNumber,
+          userId: application.userId,
+          candidateName: `${application.firstName || ''} ${application.lastName || ''}`.trim() || 'Candidate',
+          remarks: addedRemarkText,
+          updatedBy: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Bank Partner',
+          userRole: user?.role || 'bank'
+        });
+      }
     }
 
     // Sync target intake and destination to User profile on admin update
@@ -1748,7 +1772,7 @@ export class ApplicationService {
 
     try {
       console.log(`[EVV Background] Starting AI extraction for application ${applicationId}`);
-      const transactions = await this.evvEngine.extractTransactions(file.buffer, file.mimetype);
+      const transactions = await this.evvEngine.extractTransactions(file.buffer, file.mimetype, file.originalname);
       
       if (!transactions || transactions.length === 0) {
         console.warn(`[EVV Background] Parser failed to extract transactions for application ${applicationId}`);
@@ -1760,6 +1784,20 @@ export class ApplicationService {
         evvMonthlyBreakdown = evvResults.monthly_evv;
         evvStatus = evvResults.status;
         console.log(`[EVV Background] Computed EVV for ${applicationId}: ₹${evvOverall} (${evvStatus})`);
+
+        // Dynamically update document requirement name to match actual statement months count
+        const numMonths = evvMonthlyBreakdown.length;
+        const dynamicDocName = `Bank Statements (${numMonths} months)`;
+        const { error: docUpdateError } = await this.db
+          .from('ApplicationDocument')
+          .update({ docName: dynamicDocName })
+          .eq('applicationId', applicationId)
+          .eq('docType', 'bank_statement');
+        if (docUpdateError) {
+          console.error(`[EVV Background] Failed to update docName in DB: ${docUpdateError.message}`);
+        } else {
+          console.log(`[EVV Background] Dynamically updated docName in DB to: ${dynamicDocName}`);
+        }
       }
     } catch (err: any) {
       console.error(`[EVV Background] Calculation exception: ${err.message}`);

@@ -220,9 +220,10 @@ export class ApplicationController {
     @UseGuards(StaffGuard)
     async updateApplicationDetails(
         @Param('id') id: string,
-        @Body() body: any
+        @Body() body: any,
+        @Request() req: any
     ) {
-        return this.applicationService.adminUpdateApplication(id, body);
+        return this.applicationService.adminUpdateApplication(id, body, req.user);
     }
 
     /**

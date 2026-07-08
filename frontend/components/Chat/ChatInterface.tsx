@@ -90,6 +90,9 @@ interface ChatInterfaceProps {
     portalTitle?: string;
     className?: string;
     hideSidebar?: boolean;
+    chatContext?: 'student' | 'staff';
+    initialStudentId?: string;
+    autoSendLead?: boolean;
 }
 
 interface StudentDocument {
@@ -103,7 +106,7 @@ interface StudentDocument {
     uploadedAt?: string;
 }
 
-export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className, hideSidebar = false, chatContext = 'student', initialStudentId, autoSendLead = true }: ChatInterfaceProps) {
     const { token, user } = useAuth();
     const isMessageFromMe = (msg: Message) => {
         const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
@@ -174,6 +177,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const activeConversationRef = useRef<string | null>(null);
+    const hasStartedInitialStudent = useRef(false);
 
     // Sync ref with state
     useEffect(() => {
@@ -393,6 +397,51 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             socketInstance.disconnect();
         };
     }, [token, role]);
+
+    // Handle initialStudentId for agent-to-staff chat
+    useEffect(() => {
+        if (initialStudentId && token && !hasStartedInitialStudent.current) {
+            hasStartedInitialStudent.current = true;
+            
+            const startAgentStaffChat = async () => {
+                try {
+                    const res = await fetch(HttpApiPaths.chat.agentStaffStart(), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            studentId: initialStudentId,
+                            sendLead: autoSendLead
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success && data.conversation) {
+                        setConversations(prev => {
+                            if (prev.some(c => c.id === data.conversation.id)) return prev;
+                            return [data.conversation, ...prev];
+                        });
+                        setActiveConversation(data.conversation.id);
+                        
+                        // Clear parameters from URL
+                        if (typeof window !== 'undefined') {
+                            const newParams = new URLSearchParams(window.location.search);
+                            newParams.delete('studentId');
+                            newParams.delete('sendLead');
+                            const newQuery = newParams.toString();
+                            const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '');
+                            window.history.replaceState({}, '', newUrl);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to start agent staff chat", e);
+                }
+            };
+            
+            startAgentStaffChat();
+        }
+    }, [initialStudentId, token, autoSendLead]);
 
     // Auto-select conversation if conversationId is passed in URL query
     useEffect(() => {
@@ -929,7 +978,14 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             if (initialBank?.applicationId && c.metadata?.applicationId !== initialBank.applicationId) return false;
             return true;
         }
-        if (role !== 'staff') return true; // agent: no extra filter
+        if (role === 'agent') {
+            if (chatContext === 'staff') {
+                return c.metadata?.type === 'agent_to_staff';
+            } else {
+                return c.metadata?.type === 'agent' || !c.metadata?.type;
+            }
+        }
+        if (role !== 'staff') return true;
         if (chatTypeFilter === 'bank') return c.metadata?.type === 'bank';
         if (chatTypeFilter === 'student') return c.metadata?.type !== 'bank';
         return true; // 'all'
@@ -1160,7 +1216,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                 }
                                             </h4>
                                             <span className="px-2 py-0.5 bg-[#F2F0FF] text-[#5A42E4] text-[9px] font-bold uppercase tracking-wider rounded border border-[#5A42E4]/20 whitespace-nowrap">
-                                                STAFF CHANNEL
+                                                {conversations.find(c => c.id === activeConversation)?.metadata?.type === 'agent_to_staff' ? 'RM DISCUSSION' : 'STAFF CHANNEL'}
                                             </span>
                                         </div>
                                         <p className="text-[10px] text-[#8A94A6] truncate mt-0.5 font-medium">

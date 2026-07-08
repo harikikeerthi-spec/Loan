@@ -2299,436 +2299,543 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           )}
 
           {activeSidebarMenu === 'bankdecisions' && (
-            <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
-              {/* Header */}
-              <div className="flex items-center gap-5">
-                <button
-                  onClick={onBack}
-                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
-                >
-                  <span className="material-symbols-outlined text-[22px]">arrow_back</span>
-                </button>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
-                    <span className="material-symbols-outlined text-[20px]">account_balance</span>
-                  </div>
-                  <div>
-                    <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Bank Decisions & Queries</h2>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lender Audits, Decisions and Verification Queries</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Status / Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-[24px]">info</span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overall Status</p>
-                    <p className="text-[18px] font-extrabold text-slate-900 mt-1 uppercase">
-                      {application.status || 'PENDING'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-[24px]">gavel</span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Decisions Logged</p>
-                    <p className="text-[24px] font-black text-slate-900 mt-0.5">
-                      {loadingBankData ? '...' : bankDecisions.length}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-[24px]">help_center</span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Queries</p>
-                    <p className="text-[24px] font-black text-slate-900 mt-0.5">
-                      {loadingBankData ? '...' : bankQueries.filter(q => q.status === 'open' || q.status === 'OPEN').length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Multiparty Routing Tracker */}
-              {application.status === 'ROUTED_MULTIPARTY' && application.bankSubmissions && application.bankSubmissions.length > 0 && (
-                <div className="bg-white/80 backdrop-blur-sm rounded-[32px] p-8 border border-slate-200/60 shadow-sm space-y-6 font-sans">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-[24px] text-purple-600">split_scene</span>
-                      <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Multiparty Routing Tracker</h3>
+            <div className="w-full min-h-full bg-[#F8F9FA] p-8 font-sans">
+              <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-300">
+                {/* Header */}
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={onBack}
+                    className="w-12 h-12 rounded-2xl bg-white border border-slate-200/60 flex items-center justify-center text-slate-500 hover:text-[#334155] hover:border-slate-300 hover:shadow-sm transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                  </button>
+                  <div className="flex items-center gap-4">
+                    <span className="material-symbols-outlined text-[#334155] text-2xl font-light">account_balance</span>
+                    <div>
+                      <h2 className="text-xl font-semibold text-slate-800 leading-tight tracking-tight font-sans">Bank Decisions & Queries</h2>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.06em] mt-0.5">Lender Audits, Decisions and Verification Queries</p>
                     </div>
-                    <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                      {application.bankSubmissions.length} active routes
+                  </div>
+                </div>
+
+                {/* Status / Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Metric Card 1: Overall Status */}
+                  <div 
+                    className="bg-white rounded-3xl p-8 flex flex-col items-start" 
+                    style={{ border: '1px solid rgba(0, 0, 0, 0.04)', boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.02)' }}
+                  >
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-3">Overall Status</span>
+                    <div className="mt-1">
+                      {(() => {
+                        const statusVal = String(application.status || 'PENDING').toUpperCase();
+                        let dotColor = 'bg-slate-400';
+                        let textColor = 'text-slate-700';
+                        let bgColor = 'bg-slate-50';
+
+                        if (['APPROVED', 'SANCTIONED', 'DISBURSED'].includes(statusVal)) {
+                          dotColor = 'bg-emerald-500 shadow-[0_0_6px_#10b981]';
+                          textColor = 'text-emerald-700';
+                          bgColor = 'bg-emerald-50/50';
+                        } else if (['PROCESSING', 'UNDER_REVIEW', 'ROUTED_MULTIPARTY', 'FILE_LOGGED', 'CONDITIONAL_SANCTION', 'PENDING'].includes(statusVal)) {
+                          dotColor = 'bg-amber-500 shadow-[0_0_6px_#f59e0b]';
+                          textColor = 'text-amber-700';
+                          bgColor = 'bg-amber-50/50';
+                        } else if (['REJECTED', 'DECLINED'].includes(statusVal)) {
+                          dotColor = 'bg-rose-500 shadow-[0_0_6px_#f43f5e]';
+                          textColor = 'text-rose-700';
+                          bgColor = 'bg-rose-50/50';
+                        }
+
+                        return (
+                          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[12px] font-bold tracking-tight ${bgColor} ${textColor} border border-black/[0.01] shadow-sm`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                            <span>{statusVal.replace(/_/g, ' ')}</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Metric Card 2: Decisions Logged */}
+                  <div 
+                    className="bg-white rounded-3xl p-8 flex flex-col items-start" 
+                    style={{ border: '1px solid rgba(0, 0, 0, 0.04)', boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.02)' }}
+                  >
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-2">Decisions Logged</span>
+                    <span className="text-3xl font-bold tracking-tight text-slate-800 font-sans mt-1">
+                      {loadingBankData ? '...' : bankDecisions.length}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {application.bankSubmissions.map((sub: any) => {
-                      const logo = getLogoForBank(sub.bankName);
-                      const workflowStatus = sub.workflowStatus || "SUBMITTED_TO_BANK";
-                      const lanNumber = sub.lanNumber || null;
-
-                      let currentStep = 1;
-                      if (workflowStatus === 'DISBURSED') currentStep = 4;
-                      else if (['SANCTIONED', 'CONDITIONAL_SANCTION', 'COUNTER_OFFER', 'PROCESSING_FEE', 'DISBURSEMENT_PENDING'].includes(workflowStatus)) currentStep = 3;
-                      else if (['FILE_LOGGED', 'UNDER_REVIEW', 'QUERY_RAISED'].includes(workflowStatus)) currentStep = 2;
-                      else if (workflowStatus === 'REJECTED') currentStep = 0;
-
-                      return (
-                        <div key={sub.id} className="border border-slate-200 bg-slate-50/20 rounded-2xl p-5 hover:bg-slate-50 transition-all flex flex-col gap-4 relative overflow-hidden group">
-                          {workflowStatus === 'REJECTED' && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500" />
-                          )}
-                          {currentStep === 4 && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />
-                          )}
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-10 h-10 bg-white border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0 shadow-sm">
-                                {logo ? (
-                                  <img src={logo} alt={sub.bankName} className="max-h-full max-w-full object-contain" />
-                                ) : (
-                                  <span className="material-symbols-outlined text-slate-400 text-lg">account_balance</span>
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <h4 className="text-[14px] font-extrabold text-slate-800 truncate">{sub.bankName}</h4>
-                                <p className="text-[10px] font-bold text-slate-400 mt-0.5">
-                                  {lanNumber ? `LAN: ${lanNumber}` : "No LAN Logged"}
-                                </p>
-                              </div>
-                            </div>
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border shrink-0 tracking-wider ${
-                              workflowStatus === 'REJECTED' 
-                                ? 'bg-red-50 text-red-700 border-red-100'
-                                : currentStep === 4 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                  : workflowStatus === 'QUERY_RAISED'
-                                    ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
-                                    : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                            }`}>
-                              {workflowStatus.replace(/_/g, ' ')}
-                            </span>
-                          </div>
-
-                          <div className="mt-2 space-y-2">
-                            <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                              <span>Sanction Status</span>
-                              <span className="text-indigo-600 font-extrabold">Step {currentStep}/4</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {[1, 2, 3, 4].map((step) => {
-                                const isCompleted = step <= currentStep;
-                                const isActive = step === currentStep;
-                                const isRejected = workflowStatus === 'REJECTED';
-                                return (
-                                  <div 
-                                    key={step} 
-                                    className={`h-1.5 rounded-full flex-1 transition-all ${
-                                      isRejected 
-                                        ? 'bg-red-200' 
-                                        : isCompleted 
-                                          ? 'bg-indigo-600' 
-                                          : 'bg-slate-200'
-                                    } ${isActive ? 'animate-pulse' : ''}`}
-                                    title={`Step ${step}`}
-                                  />
-                                );
-                              })}
-                            </div>
-                            <div className="flex justify-between text-[8px] text-slate-400 font-bold uppercase tracking-wider">
-                              <span>Submitted</span>
-                              <span>Review</span>
-                              <span>Sanction</span>
-                              <span>Disbursed</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  {/* Metric Card 3: Active Queries */}
+                  <div 
+                    className="bg-white rounded-3xl p-8 flex flex-col items-start" 
+                    style={{ border: '1px solid rgba(0, 0, 0, 0.04)', boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.02)' }}
+                  >
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-2">Active Queries</span>
+                    <span className="text-3xl font-bold tracking-tight text-slate-800 font-sans mt-1">
+                      {loadingBankData ? '...' : bankQueries.filter(q => q.status === 'open' || q.status === 'OPEN').length}
+                    </span>
                   </div>
                 </div>
-              )}
 
-              {/* Main Content Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Queries Column (Left) */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-[32px] p-8 border border-slate-200/60 shadow-sm">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                {/* Multiparty Routing Tracker */}
+                {application.status === 'ROUTED_MULTIPARTY' && application.bankSubmissions && application.bankSubmissions.length > 0 && (
+                  <div 
+                    className="bg-white rounded-3xl p-8 space-y-6 font-sans"
+                    style={{ border: '1px solid rgba(0, 0, 0, 0.04)', boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.02)' }}
+                  >
+                    <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                       <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-[22px] text-sky-600">question_answer</span>
-                        <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Bank Queries & Clarifications</h3>
+                        <span className="material-symbols-outlined text-[24px] text-purple-600">split_scene</span>
+                        <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Multiparty Routing Tracker</h3>
                       </div>
-                      {loadingBankData && (
-                        <div className="w-5 h-5 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
-                      )}
+                      <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        {application.bankSubmissions.length} active routes
+                      </span>
                     </div>
 
-                    {bankQueries.length === 0 ? (
-                      <div className="text-center py-16">
-                        <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          <span className="material-symbols-outlined text-3xl text-slate-300">chat_bubble_outline</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {application.bankSubmissions.map((sub: any) => {
+                        const logo = getLogoForBank(sub.bankName);
+                        const workflowStatus = sub.workflowStatus || "SUBMITTED_TO_BANK";
+                        const lanNumber = sub.lanNumber || null;
+
+                        let currentStep = 1;
+                        if (workflowStatus === 'DISBURSED') currentStep = 4;
+                        else if (['SANCTIONED', 'CONDITIONAL_SANCTION', 'COUNTER_OFFER', 'PROCESSING_FEE', 'DISBURSEMENT_PENDING'].includes(workflowStatus)) currentStep = 3;
+                        else if (['FILE_LOGGED', 'UNDER_REVIEW', 'QUERY_RAISED'].includes(workflowStatus)) currentStep = 2;
+                        else if (workflowStatus === 'REJECTED') currentStep = 0;
+
+                        return (
+                          <div key={sub.id} className="border border-slate-200 bg-slate-50/20 rounded-2xl p-5 hover:bg-slate-50 transition-all flex flex-col gap-4 relative overflow-hidden group">
+                            {workflowStatus === 'REJECTED' && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500" />
+                            )}
+                            {currentStep === 4 && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />
+                            )}
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-10 h-10 bg-white border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0 shadow-sm">
+                                  {logo ? (
+                                    <img src={logo} alt={sub.bankName} className="max-h-full max-w-full object-contain" />
+                                  ) : (
+                                    <span className="material-symbols-outlined text-slate-400 text-lg">account_balance</span>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="text-[14px] font-extrabold text-slate-800 truncate">{sub.bankName}</h4>
+                                  <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                    {lanNumber ? `LAN: ${lanNumber}` : "No LAN Logged"}
+                                  </p>
+                                </div>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border shrink-0 tracking-wider ${
+                                workflowStatus === 'REJECTED' 
+                                  ? 'bg-red-50 text-red-700 border-red-100'
+                                  : currentStep === 4 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                    : workflowStatus === 'QUERY_RAISED'
+                                      ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
+                                      : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                              }`}>
+                                {workflowStatus.replace(/_/g, ' ')}
+                              </span>
+                            </div>
+
+                            <div className="mt-2 space-y-2">
+                              <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                <span>Sanction Status</span>
+                                <span className="text-indigo-600 font-extrabold">Step {currentStep}/4</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {[1, 2, 3, 4].map((step) => {
+                                  const isCompleted = step <= currentStep;
+                                  const isActive = step === currentStep;
+                                  const isRejected = workflowStatus === 'REJECTED';
+                                  return (
+                                    <div 
+                                      key={step} 
+                                      className={`h-1.5 rounded-full flex-1 transition-all ${
+                                        isRejected 
+                                          ? 'bg-red-200' 
+                                          : isCompleted 
+                                            ? 'bg-indigo-600' 
+                                            : 'bg-slate-200'
+                                      } ${isActive ? 'animate-pulse' : ''}`}
+                                      title={`Step ${step}`}
+                                    />
+                                  );
+                                })}
+                              </div>
+                              <div className="flex justify-between text-[8px] text-slate-400 font-bold uppercase tracking-wider">
+                                <span>Submitted</span>
+                                <span>Review</span>
+                                <span>Sanction</span>
+                                <span>Disbursed</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Content Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Queries Column (Left) */}
+                  <div className="lg:col-span-2 space-y-8">
+                    <div 
+                      className="bg-white rounded-3xl p-8"
+                      style={{ border: '1px solid rgba(0, 0, 0, 0.04)', boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.02)' }}
+                    >
+                      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-[22px] text-sky-600">question_answer</span>
+                          <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Bank Queries & Clarifications</h3>
                         </div>
-                        <h4 className="text-sm font-extrabold text-slate-800">No Queries Raised Yet</h4>
-                        <p className="text-xs text-slate-400 mt-1">This application has no active clarification queries from partner banks.</p>
+                        {loadingBankData && (
+                          <div className="w-5 h-5 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+                        )}
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {bankQueries.map((query, index) => {
-                          const isOpen = query.status === 'open' || query.status === 'OPEN';
-                          return (
-                            <div key={query.id || index} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all flex flex-col gap-3 relative overflow-hidden group">
-                              {isOpen && (
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500 animate-pulse" />
-                              )}
-                              <div className="flex justify-between items-start">
-                                <div className="flex items-center gap-2.5">
-                                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isOpen
-                                    ? 'bg-amber-55 text-amber-700 border border-amber-100'
-                                    : 'bg-emerald-55 text-emerald-700 border border-emerald-100'
-                                    }`}>
-                                    {isOpen ? 'Open' : 'Resolved'}
+
+                      {bankQueries.length === 0 ? (
+                        <div className="text-center py-12 flex flex-col items-center justify-center">
+                          <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center mb-3">
+                            <span className="material-symbols-outlined text-slate-300 text-xl font-light" style={{ fontVariationSettings: "'wght' 200, 'opsz' 20" }}>chat_bubble_outline</span>
+                          </div>
+                          <h4 className="text-[13px] font-semibold text-slate-700 tracking-tight font-sans">No Queries Raised Yet</h4>
+                          <p className="text-[11px] text-slate-400 mt-1 max-w-[280px] leading-[1.6] font-medium mx-auto">
+                            This application has no active clarification queries from partner banks.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {bankQueries.map((query, index) => {
+                            const isOpen = query.status === 'open' || query.status === 'OPEN';
+                            return (
+                              <div key={query.id || index} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all flex flex-col gap-3 relative overflow-hidden group">
+                                {isOpen && (
+                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500 animate-pulse" />
+                                )}
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isOpen
+                                      ? 'bg-amber-55 text-amber-700 border border-amber-100'
+                                      : 'bg-emerald-55 text-emerald-700 border border-emerald-100'
+                                      }`}>
+                                      {isOpen ? 'Open' : 'Resolved'}
+                                    </span>
+                                    {query.queryType && (
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">
+                                        {query.queryType}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                    {query.createdAt || query.timestamp ? formatIST(query.createdAt || query.timestamp, true) : 'N/A'}
                                   </span>
-                                  {query.queryType && (
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">
-                                      {query.queryType}
+                                </div>
+                                <p className="text-[14px] text-slate-700 font-medium leading-relaxed mt-1">
+                                  {query.content}
+                                </p>
+                                <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-200/50 text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                  <span>Raised By: {query.authorName || query.raisedBy || 'Bank Officer'}</span>
+                                  {query.resolvedAt && (
+                                    <span className="text-emerald-600 flex items-center gap-1">
+                                      <span className="material-symbols-outlined text-[14px]">done_all</span>
+                                      Resolved: {formatIST(query.resolvedAt, false)}
                                     </span>
                                   )}
                                 </div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">
-                                  {query.createdAt || query.timestamp ? formatIST(query.createdAt || query.timestamp, true) : 'N/A'}
-                                </span>
                               </div>
-                              <p className="text-[14px] text-slate-700 font-medium leading-relaxed mt-1">
-                                {query.content}
-                              </p>
-                              <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-200/50 text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                                <span>Raised By: {query.authorName || query.raisedBy || 'Bank Officer'}</span>
-                                {query.resolvedAt && (
-                                  <span className="text-emerald-600 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">done_all</span>
-                                    Resolved: {formatIST(query.resolvedAt, false)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Decisions Column (Right) */}
-                <div className="space-y-6">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-[32px] p-8 border border-slate-200/60 shadow-sm">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-[22px] text-emerald-600">verified</span>
-                        <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Bank Decisions</h3>
-                      </div>
-                    </div>
-
-                    {bankDecisions.length === 0 ? (
-                      <div className="text-center py-16">
-                        <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          <span className="material-symbols-outlined text-3xl text-slate-300">gavel</span>
+                            );
+                          })}
                         </div>
-                        <h4 className="text-sm font-extrabold text-slate-800">No Decisions Logged</h4>
-                        <p className="text-xs text-slate-400 mt-1">No formal underwriting decisions have been registered for this file yet.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-5">
-                        {bankDecisions.map((dec, index) => {
-                          const decType = String(dec.decision).toUpperCase();
-                          let style = {
-                            badgeBg: 'bg-slate-100 text-slate-700 border-slate-200',
-                            border: 'border-slate-200',
-                            title: 'Decision Logged'
-                          };
-                          if (decType === 'APPROVED' || decType === 'SANCTIONED') {
-                            style = { badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-100', border: 'border-emerald-100', title: 'Loan Sanctioned' };
-                          } else if (decType === 'CONDITIONAL_SANCTION' || decType === 'CONDITIONAL') {
-                            style = { badgeBg: 'bg-amber-50 text-amber-700 border-amber-100', border: 'border-amber-100', title: 'Conditional Sanction' };
-                          } else if (decType === 'COUNTER_OFFER') {
-                            style = { badgeBg: 'bg-violet-50 text-violet-700 border-violet-100', border: 'border-violet-100', title: 'Counter Offer Proposed' };
-                          } else if (decType === 'REJECTED') {
-                            style = { badgeBg: 'bg-rose-50 text-rose-700 border-rose-100', border: 'border-rose-100', title: 'Application Rejected' };
-                          } else if (decType === 'PARTIAL_SANCTION') {
-                            style = { badgeBg: 'bg-cyan-50 text-cyan-700 border-cyan-100', border: 'border-cyan-100', title: 'Partial Sanction Approved' };
-                          }
+                      )}
+                    </div>
+                  </div>
 
-                          let condList: { text: string; status?: string; deadline?: string }[] = [];
-                          try {
-                            if (dec.conditions) {
-                              const parsed = typeof dec.conditions === 'string' ? JSON.parse(dec.conditions) : dec.conditions;
-                              if (Array.isArray(parsed)) {
-                                condList = parsed.map(c => {
-                                  if (typeof c === 'string') {
-                                    return { text: c, status: 'PENDING' };
-                                  }
-                                  return { text: c.text || '', status: c.status || 'PENDING', deadline: c.deadline };
-                                });
+                  {/* Decisions Column (Right) */}
+                  <div className="space-y-8">
+                    {/* Underwriting Activity Notes (Lender Notes) */}
+                    <div 
+                      className="bg-white rounded-3xl p-8"
+                      style={{ border: '1px solid rgba(0, 0, 0, 0.04)', boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.02)' }}
+                    >
+                      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-[22px] text-purple-600">sticky_note_2</span>
+                          <h3 className="text-[18px] font-bold text-[#0d1b2a] font-sans">Lender Internal Notes</h3>
+                        </div>
+                      </div>
+
+                      {application.remarks ? (
+                        <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto pr-2">
+                          {application.remarks.split('\n').filter(Boolean).map((rem: string, idx: number) => {
+                            let timestamp = "";
+                            let label = "NOTE";
+                            let content = rem;
+
+                            const bankNoteMatch = rem.match(/^\[Bank Note\s*-\s*(.*?)\]:\s*(.*)$/i);
+                            if (bankNoteMatch) {
+                              timestamp = bankNoteMatch[1];
+                              label = "BANK NOTE";
+                              content = bankNoteMatch[2];
+                            } else {
+                              const generalMatch = rem.match(/^\[(.*?)\]:\s*(.*)$/);
+                              if (generalMatch) {
+                                timestamp = generalMatch[1];
+                                label = "REMARK";
+                                content = generalMatch[2];
                               }
                             }
-                          } catch (e) { }
 
-                          let counterTerms: any = null;
-                          try {
-                            if (dec.counterOffer) {
-                              counterTerms = typeof dec.counterOffer === 'string' ? JSON.parse(dec.counterOffer) : dec.counterOffer;
-                            } else if (dec.counterOfferTerms) {
-                              counterTerms = typeof dec.counterOfferTerms === 'string' ? JSON.parse(dec.counterOfferTerms) : dec.counterOfferTerms;
+                            return (
+                              <div key={idx} className="py-4 first:pt-0 last:pb-0 space-y-2">
+                                {timestamp ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase font-mono">
+                                      {timestamp}
+                                    </span>
+                                    <span className="text-[8px] font-black tracking-widest text-[#6605c7] bg-purple-50 px-1.5 py-0.5 rounded uppercase">
+                                      {label}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[8px] font-black tracking-widest text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
+                                      SYSTEM NOTE
+                                    </span>
+                                  </div>
+                                )}
+                                <p className="text-[13px] text-slate-655 font-medium leading-relaxed font-sans">
+                                  {content}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 flex flex-col items-center justify-center">
+                          <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center mb-3">
+                            <span className="material-symbols-outlined text-slate-300 text-xl font-light" style={{ fontVariationSettings: "'wght' 200" }}>note_stack</span>
+                          </div>
+                          <h4 className="text-[13px] font-semibold text-slate-700 tracking-tight font-sans">No Internal Notes</h4>
+                          <p className="text-[11px] text-slate-400 mt-1 max-w-[280px] leading-[1.6] font-medium mx-auto">
+                            No internal underwriting comments have been logged yet.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bank Decisions List */}
+                    <div 
+                      className="bg-white rounded-3xl p-8"
+                      style={{ border: '1px solid rgba(0, 0, 0, 0.04)', boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.02)' }}
+                    >
+                      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-[22px] text-emerald-600">verified</span>
+                          <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Bank Decisions</h3>
+                        </div>
+                      </div>
+
+                      {bankDecisions.length === 0 ? (
+                        <div className="text-center py-16">
+                          <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <span className="material-symbols-outlined text-3xl text-slate-300">gavel</span>
+                          </div>
+                          <h4 className="text-sm font-extrabold text-slate-800">No Decisions Logged</h4>
+                          <p className="text-xs text-slate-400 mt-1">No formal underwriting decisions have been registered for this file yet.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-5">
+                          {bankDecisions.map((dec, index) => {
+                            const decType = String(dec.decision).toUpperCase();
+                            let style = {
+                              badgeBg: 'bg-slate-100 text-slate-700 border-slate-200',
+                              border: 'border-slate-200',
+                              title: 'Decision Logged'
+                            };
+                            if (decType === 'APPROVED' || decType === 'SANCTIONED') {
+                              style = { badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-100', border: 'border-emerald-100', title: 'Loan Sanctioned' };
+                            } else if (decType === 'CONDITIONAL_SANCTION' || decType === 'CONDITIONAL') {
+                              style = { badgeBg: 'bg-amber-50 text-amber-700 border-amber-100', border: 'border-amber-100', title: 'Conditional Sanction' };
+                            } else if (decType === 'COUNTER_OFFER') {
+                              style = { badgeBg: 'bg-violet-50 text-violet-700 border-violet-100', border: 'border-violet-100', title: 'Counter Offer Proposed' };
+                            } else if (decType === 'REJECTED') {
+                              style = { badgeBg: 'bg-rose-50 text-rose-700 border-rose-100', border: 'border-rose-100', title: 'Application Rejected' };
+                            } else if (decType === 'PARTIAL_SANCTION') {
+                              style = { badgeBg: 'bg-cyan-50 text-cyan-700 border-cyan-100', border: 'border-cyan-100', title: 'Partial Sanction Approved' };
                             }
-                          } catch (e) { }
 
-                          return (
-                            <div key={dec.id || index} className={`p-5 rounded-2xl border ${style.border} bg-white transition-all flex flex-col gap-3 relative shadow-sm group hover:shadow-md`}>
-                              <div className="flex justify-between items-start">
-                                <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${style.badgeBg}`}>
-                                  {decType.replace(/_/g, ' ')}
-                                </span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">
-                                  {dec.decidedAt ? formatIST(dec.decidedAt, false) : 'N/A'}
-                                </span>
-                              </div>
+                            let condList: { text: string; status?: string; deadline?: string }[] = [];
+                            try {
+                              if (dec.conditions) {
+                                const parsed = typeof dec.conditions === 'string' ? JSON.parse(dec.conditions) : dec.conditions;
+                                if (Array.isArray(parsed)) {
+                                  condList = parsed.map(c => {
+                                    if (typeof c === 'string') {
+                                      return { text: c, status: 'PENDING' };
+                                    }
+                                    return { text: c.text || '', status: c.status || 'PENDING', deadline: c.deadline };
+                                  });
+                                }
+                              }
+                            } catch (e) { }
 
-                              <h4 className="text-[14px] font-extrabold text-slate-900 mt-1">{style.title}</h4>
+                            let counterTerms: any = null;
+                            try {
+                              if (dec.counterOffer) {
+                                counterTerms = typeof dec.counterOffer === 'string' ? JSON.parse(dec.counterOffer) : dec.counterOffer;
+                              } else if (dec.counterOfferTerms) {
+                                counterTerms = typeof dec.counterOfferTerms === 'string' ? JSON.parse(dec.counterOfferTerms) : dec.counterOfferTerms;
+                              }
+                            } catch (e) { }
 
-                              {/* Decision specifics details */}
-                              <div className="space-y-1.5 text-[12px] text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                                {dec.sanctionAmount && decType !== 'COUNTER_OFFER' && (
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-slate-400">Sanction Amount:</span>
-                                    <span className="font-extrabold text-slate-900">₹{Number(dec.sanctionAmount).toLocaleString('en-IN')}</span>
-                                  </div>
-                                )}
-                                {dec.requestedAmount && (
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-slate-400">Requested Amount:</span>
-                                    <span className="font-extrabold text-slate-900">₹{Number(dec.requestedAmount).toLocaleString('en-IN')}</span>
-                                  </div>
-                                )}
-                                {dec.shortfallAmount && (
-                                  <div className="flex justify-between text-rose-600 bg-rose-50/50 px-2.5 py-1 rounded-lg border border-rose-100/50 mt-1">
-                                    <span className="font-semibold">Shortfall Amount:</span>
-                                    <span className="font-extrabold">₹{Number(dec.shortfallAmount).toLocaleString('en-IN')}</span>
-                                  </div>
-                                )}
-                                {dec.interestRate && decType !== 'COUNTER_OFFER' && (
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-slate-400">Interest Rate:</span>
-                                    <span className="font-extrabold text-slate-900">{dec.interestRate}% {dec.roiType ? `(${dec.roiType.toLowerCase()})` : ''}</span>
-                                  </div>
-                                )}
-                                {dec.tenure && decType !== 'COUNTER_OFFER' && (
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-slate-400">Tenure:</span>
-                                    <span className="font-extrabold text-slate-900">{dec.tenure} Months</span>
-                                  </div>
-                                )}
-                                {dec.rejectionCategory && (
-                                  <div className="flex justify-between border-t border-slate-200/50 pt-1.5 mt-1">
-                                    <span className="font-medium text-rose-500">Rejection Category:</span>
-                                    <span className="font-extrabold text-rose-700 uppercase text-[10px] tracking-wider">{dec.rejectionCategory.replace(/_/g, ' ')}</span>
-                                  </div>
-                                )}
-                                {dec.rejectionReason && (
-                                  <div className="flex flex-col gap-1 mt-1 border-t border-slate-200/50 pt-1.5">
-                                    <span className="font-medium text-rose-500">Rejection Reason:</span>
-                                    <span className="font-semibold text-slate-700">{dec.rejectionReason}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Counter Offer Specifics */}
-                              {counterTerms && (
-                                <div className="space-y-2 mt-1">
-                                  <p className="text-[10px] font-bold text-violet-600 uppercase tracking-widest">Proposed Counter Terms:</p>
-                                  <div className="space-y-1.5 text-[12px] text-slate-600 bg-violet-50/50 p-3.5 rounded-xl border border-violet-100">
-                                    <div className="flex justify-between">
-                                      <span className="font-medium text-violet-700">Offered Amount:</span>
-                                      <span className="font-extrabold text-slate-900">₹{Number(counterTerms.offeredAmount || counterTerms.sanctionAmount || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="font-medium text-violet-700">Offered ROI:</span>
-                                      <span className="font-extrabold text-slate-900">{counterTerms.offeredRate || counterTerms.interestRate || counterTerms.roiEffective || '—'}% {counterTerms.roiType ? `(${counterTerms.roiType.toLowerCase()})` : ''}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="font-medium text-violet-700">Offered Tenure:</span>
-                                      <span className="font-extrabold text-slate-900">{counterTerms.offeredTenure || counterTerms.tenure || '—'} Months</span>
-                                    </div>
-                                  </div>
+                            return (
+                              <div key={dec.id || index} className={`p-5 rounded-2xl border ${style.border} bg-white transition-all flex flex-col gap-3 relative shadow-sm group hover:shadow-md`}>
+                                <div className="flex justify-between items-start">
+                                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${style.badgeBg}`}>
+                                    {decType.replace(/_/g, ' ')}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                    {dec.decidedAt ? formatIST(dec.decidedAt, false) : 'N/A'}
+                                  </span>
                                 </div>
-                              )}
 
-                              {/* Conditions checklist */}
-                              {condList.length > 0 && (
-                                <div className="space-y-2 mt-1">
-                                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Sanction Conditions:</p>
-                                  <ul className="space-y-1">
-                                    {condList.map((cond, cIdx) => (
-                                      <li key={cIdx} className="text-[11px] text-slate-600 flex items-center justify-between gap-1.5 leading-relaxed bg-amber-50/30 px-3 py-2 rounded-xl border border-amber-100/50">
-                                        <div className="flex items-start gap-1.5">
-                                          <span className="material-symbols-outlined text-[13px] text-amber-500 mt-0.5 flex-shrink-0">warning</span>
-                                          <span className="font-medium">{cond.text}</span>
-                                        </div>
-                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${cond.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                                          {cond.status}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                  {dec.conditionDeadline && (
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
-                                      Deadline: {formatIST(dec.conditionDeadline, false)}
-                                    </p>
+                                <h4 className="text-[14px] font-extrabold text-slate-900 mt-1">{style.title}</h4>
+
+                                {/* Decision specifics details */}
+                                <div className="space-y-1.5 text-[12px] text-slate-655 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                                  {dec.sanctionAmount && decType !== 'COUNTER_OFFER' && (
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-slate-400">Sanction Amount:</span>
+                                      <span className="font-extrabold text-slate-900">₹{Number(dec.sanctionAmount).toLocaleString('en-IN')}</span>
+                                    </div>
+                                  )}
+                                  {dec.requestedAmount && (
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-slate-400">Requested Amount:</span>
+                                      <span className="font-extrabold text-slate-900">₹{Number(dec.requestedAmount).toLocaleString('en-IN')}</span>
+                                    </div>
+                                  )}
+                                  {dec.shortfallAmount && (
+                                    <div className="flex justify-between text-rose-600 bg-rose-50/50 px-2.5 py-1 rounded-lg border border-rose-100/50 mt-1">
+                                      <span className="font-semibold">Shortfall Amount:</span>
+                                      <span className="font-extrabold">₹{Number(dec.shortfallAmount).toLocaleString('en-IN')}</span>
+                                    </div>
+                                  )}
+                                  {dec.interestRate && decType !== 'COUNTER_OFFER' && (
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-slate-400">Interest Rate:</span>
+                                      <span className="font-extrabold text-slate-900">{dec.interestRate}% {dec.roiType ? `(${dec.roiType.toLowerCase()})` : ''}</span>
+                                    </div>
+                                  )}
+                                  {dec.tenure && decType !== 'COUNTER_OFFER' && (
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-slate-400">Tenure:</span>
+                                      <span className="font-extrabold text-slate-900">{dec.tenure} Months</span>
+                                    </div>
+                                  )}
+                                  {dec.rejectionCategory && (
+                                    <div className="flex justify-between border-t border-slate-200/50 pt-1.5 mt-1">
+                                      <span className="font-medium text-rose-500">Rejection Category:</span>
+                                      <span className="font-extrabold text-rose-700 uppercase text-[10px] tracking-wider">{dec.rejectionCategory.replace(/_/g, ' ')}</span>
+                                    </div>
+                                  )}
+                                  {dec.rejectionReason && (
+                                    <div className="flex flex-col gap-1 mt-1 border-t border-slate-200/50 pt-1.5">
+                                      <span className="font-medium text-rose-500">Rejection Reason:</span>
+                                      <span className="font-semibold text-slate-700">{dec.rejectionReason}</span>
+                                    </div>
                                   )}
                                 </div>
-                              )}
 
-                              {dec.remarks && (
-                                <p className="text-[12px] text-slate-500 italic mt-1 font-medium bg-slate-50/50 p-2.5 rounded border border-dashed border-slate-200">
-                                  "{dec.remarks}"
-                                </p>
-                              )}
+                                {/* Counter Offer Specifics */}
+                                {counterTerms && (
+                                  <div className="space-y-2 mt-1">
+                                    <p className="text-[10px] font-bold text-violet-600 uppercase tracking-widest">Proposed Counter Terms:</p>
+                                    <div className="space-y-1.5 text-[12px] text-slate-655 bg-violet-50/50 p-3.5 rounded-xl border border-violet-100">
+                                      <div className="flex justify-between">
+                                        <span className="font-medium text-violet-700">Offered Amount:</span>
+                                        <span className="font-extrabold text-slate-900">₹{Number(counterTerms.offeredAmount || counterTerms.sanctionAmount || 0).toLocaleString('en-IN')}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="font-medium text-violet-700">Offered ROI:</span>
+                                        <span className="font-extrabold text-slate-900">{counterTerms.offeredRate || counterTerms.interestRate || counterTerms.roiEffective || '—'}% {counterTerms.roiType ? `(${counterTerms.roiType.toLowerCase()})` : ''}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="font-medium text-violet-700">Offered Tenure:</span>
+                                        <span className="font-extrabold text-slate-900">{counterTerms.offeredTenure || counterTerms.tenure || '—'} Months</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
 
-                              {dec.sanctionLetterUrl && (
-                                <a
-                                  href={dec.sanctionLetterUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="mt-2 text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 uppercase tracking-wider"
-                                >
-                                  <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                                  Download Sanction Letter
-                                </a>
-                              )}
+                                {/* Conditions checklist */}
+                                {condList.length > 0 && (
+                                  <div className="space-y-2 mt-1">
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Sanction Conditions:</p>
+                                    <ul className="space-y-1">
+                                      {condList.map((cond, cIdx) => (
+                                        <li key={cIdx} className="text-[11px] text-slate-655 flex items-center justify-between gap-1.5 leading-relaxed bg-amber-50/30 px-3 py-2 rounded-xl border border-amber-100/50">
+                                          <div className="flex items-start gap-1.5">
+                                            <span className="material-symbols-outlined text-[13px] text-amber-500 mt-0.5 flex-shrink-0">warning</span>
+                                            <span className="font-medium">{cond.text}</span>
+                                          </div>
+                                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${cond.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                                            {cond.status}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                    {dec.conditionDeadline && (
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                                        Deadline: {formatIST(dec.conditionDeadline, false)}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
 
-                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 pt-2 border-t border-slate-100 flex justify-between">
-                                <span>Decided By: {dec.decidedBy || 'Bank System'}</span>
-                                <span>Bank: {dec.bankId?.toUpperCase()}</span>
+                                {dec.remarks && (
+                                  <p className="text-[12px] text-slate-500 italic mt-1 font-medium bg-slate-50/50 p-2.5 rounded border border-dashed border-slate-200">
+                                    "{dec.remarks}"
+                                  </p>
+                                )}
+
+                                {dec.sanctionLetterUrl && (
+                                  <a
+                                    href={dec.sanctionLetterUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-2 text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 uppercase tracking-wider"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                                    Download Sanction Letter
+                                  </a>
+                                )}
+
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 pt-2 border-t border-slate-100 flex justify-between">
+                                  <span>Decided By: {dec.decidedBy || 'Bank System'}</span>
+                                  <span>Bank: {dec.bankId?.toUpperCase()}</span>
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           )}
+
 
           {activeSidebarMenu === 'ai_underwriting' && (
             <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
@@ -4309,7 +4416,7 @@ const EvvAnalysisTab = ({
               </div>
             </div>
             <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
-              Upload the applicant's official 6-month bank statement (PDF/Image). The calculation engine will extract all transaction histories and run a 5-day snapshot audit to evaluate the Monthly Average Balance (MAB) patterns.
+              Upload the applicant's official {breakdown.length > 0 ? `${breakdown.length}-month` : "6-month"} bank statement (PDF/Image). The calculation engine will extract all transaction histories and run a 5-day snapshot audit to evaluate the Monthly Average Balance (MAB) patterns.
             </p>
           </div>
 

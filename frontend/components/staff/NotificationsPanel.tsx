@@ -125,6 +125,13 @@ const NotificationsPanel = ({
         textColor: "text-sky-700",
         badge: "bg-sky-500",
       },
+      bank_note_added: {
+        icon: "sticky_note_2",
+        bgColor: "bg-fuchsia-50",
+        borderColor: "border-fuchsia-200",
+        textColor: "text-fuchsia-700",
+        badge: "bg-fuchsia-500",
+      },
       default: {
         icon: "notifications",
         bgColor: "bg-slate-50",
@@ -383,7 +390,8 @@ const NotificationsPanel = ({
             'application_conditional',
             'application_counter',
             'application_rejected',
-            'hold'
+            'hold',
+            'bank_note_added'
           ].includes(typeLower) ||
           typeLower.includes('approved') ||
           typeLower.includes('sanction') ||

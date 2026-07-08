@@ -214,6 +214,40 @@ export class NotificationService {
   }
 
   /**
+   * Event listener for bank note/remark added
+   * Creates a notification for staff about bank internal notes
+   */
+  @OnEvent('bank.note.added')
+  async handleBankNoteAdded(payload: any) {
+    try {
+      const candidateName = payload.candidateName || 'Candidate';
+      let cleanRemarks = payload.remarks || '';
+      const matches = cleanRemarks.match(/^\[.*?\]:\s*(.*)$/);
+      if (matches) {
+        cleanRemarks = matches[1];
+      }
+
+      await this.createNotification(
+        'staff',
+        `📝 Bank Note Added: ${candidateName}`,
+        `A new note was added by ${payload.updatedBy || 'Bank Partner'}: "${cleanRemarks.length > 60 ? cleanRemarks.substring(0, 57) + '...' : cleanRemarks}" (App #${payload.applicationNumber})`,
+        'bank_note_added',
+        {
+          applicationId: payload.applicationId,
+          applicationNumber: payload.applicationNumber,
+          userId: payload.userId,
+          candidateName: payload.candidateName,
+          remarks: payload.remarks,
+          updatedBy: payload.updatedBy,
+          userRole: payload.userRole
+        }
+      );
+    } catch (error) {
+      this.logger.error(`Failed to handle bank note added event: ${error.message}`);
+    }
+  }
+
+  /**
    * Event listener for application submission
    * Creates a notification for staff about submitted application
    */

@@ -15,9 +15,9 @@ export class ChatService {
     return this.supabase.getClient();
   }
 
-  private normalizePhone(phoneStr: string): string {
-    // Synthetic bank/staff identifiers start with BNK_ or STF_ — pass through unchanged
-    if (phoneStr.startsWith('BNK_') || phoneStr.startsWith('STF_')) return phoneStr;
+  normalizePhone(phoneStr: string): string {
+    // Synthetic bank/staff/agent identifiers start with BNK_, STF_ or AGT_ — pass through unchanged
+    if (phoneStr.startsWith('BNK_') || phoneStr.startsWith('STF_') || phoneStr.startsWith('AGT_')) return phoneStr;
     const cleaned = phoneStr.replace('whatsapp:', '').trim().replace(/\D/g, '');
     if (cleaned.length > 10 && cleaned.startsWith('91')) {
       return cleaned.substring(2);
@@ -200,9 +200,9 @@ export class ChatService {
               this.logger.debug(`Filtering conversations for bank: ${bankName}`);
               query = query.contains('metadata', { bank: bankName });
           }
-      } else if (user && user.role === 'agent') {
-          // Agents see conversations marked for agents
-          query = query.contains('metadata', { type: 'agent' });
+      } else if (user && (user.role === 'agent' || user.role === 'partner_agent')) {
+          // Agents see conversations marked for agents (students) and agent_to_staff (RM/staff discussions)
+          query = query.or('metadata->>type.eq.agent,metadata->>type.eq.agent_to_staff');
       }
 
       const { data, error } = await query;
