@@ -48,7 +48,7 @@ export class AgentProfileController {
     return {
       success: true,
       data: {
-        id: user.id,
+        id: user.id.replace('VL-STU-', 'VL-AGT-'),
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,

@@ -222,7 +222,7 @@ export default function AgentProfilePage() {
                             DSA Partner: {profile?.firstName} {profile?.lastName} | Email: <strong className="text-gray-900">{profile?.email}</strong>
                         </p>
                         <p className="text-[10px] text-gray-400">
-                            Partner ID: {profile?.id} | Member Since: {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "June 2026"}
+                            Partner ID: {profile?.id?.replace("VL-STU-", "VL-AGT-")} | Member Since: {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "June 2026"}
                         </p>
                     </div>
                 </div>
