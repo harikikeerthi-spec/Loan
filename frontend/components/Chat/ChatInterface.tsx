@@ -1158,7 +1158,7 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
             {/* Main Chat Area */}
             <div className="flex-1 flex overflow-hidden bg-[#FFFFFF] relative">
                 {/* Chat column */}
-                <div className={`flex flex-col transition-all duration-300 ${showDocPanel ? 'flex-1' : 'w-full'}`}>
+                <div className={`flex flex-col h-full transition-all duration-300 ${showDocPanel ? 'flex-1' : 'w-full'}`}>
                     {activeConversation ? (
                         <>
                             {/* Chat Header */}
