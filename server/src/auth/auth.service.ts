@@ -39,6 +39,52 @@ export class AuthService {
     dateOfBirth?: string;
   }>();
 
+  private isTempEmailDomain(domain: string): boolean {
+    const tempEmailDomains = [
+      'mailinator.com',
+      '10minutemail.com',
+      'tempmail.com',
+      'temp-mail.org',
+      'guerrillamail.com',
+      'sharklasers.com',
+      'yopmail.com',
+      'dispostable.com',
+      'getairmail.com',
+      'throwawaymail.com',
+      'tempmailaddress.com',
+      'maildrop.cc',
+      'mintemail.com',
+      'generator.email',
+      'fakeinbox.com',
+      'burnermail.io',
+      'trashmail.com',
+      'receivesms.cc',
+      'tempmail.dev',
+      'emailfake.com',
+      'disposable.com',
+      'afterdo.com',
+      'binkmail.com',
+      'safetymail.info',
+      'guerrillamailblock.com',
+      'guerrillamail.net',
+      'guerrillamail.org',
+      'guerrillamail.biz',
+      'grr.la',
+      'pokemail.net',
+      'acoxs.com'
+    ];
+
+    const domainLower = domain.toLowerCase();
+    return tempEmailDomains.some(d => domainLower === d || domainLower.endsWith('.' + d)) ||
+                        domainLower.includes('tempmail') ||
+                        domainLower.includes('temp-mail') ||
+                        domainLower.includes('disposable') ||
+                        domainLower.includes('throwaway') ||
+                        domainLower.includes('10minutemail') ||
+                        domainLower.includes('fakeinbox') ||
+                        domainLower.includes('yopmail');
+  }
+
   constructor(
     private usersService: UsersService,
     private emailService: EmailService,
@@ -244,6 +290,10 @@ export class AuthService {
     const username = emailParts[0];
     const domain = emailParts[1];
 
+    if (this.isTempEmailDomain(domain)) {
+      return { success: false, message: 'Temporary or disposable email addresses are not allowed' };
+    }
+
     // Validate username: minimum 8 characters
     if (username.length < 8) {
       return { success: false, message: 'Email username (before @) must be at least 8 characters long' };
@@ -341,6 +391,10 @@ export class AuthService {
     const username = emailParts[0];
     const domain = emailParts[1];
 
+    if (this.isTempEmailDomain(domain)) {
+      return { success: false, message: 'Temporary or disposable email addresses are not allowed' };
+    }
+
     // Check if user exists first to allow existing/testing/unauthorized accounts to login
     let existingUser: any = null;
     try {
@@ -350,53 +404,6 @@ export class AuthService {
     }
 
     if (!existingUser) {
-      const tempEmailDomains = [
-        'mailinator.com',
-        '10minutemail.com',
-        'tempmail.com',
-        'temp-mail.org',
-        'guerrillamail.com',
-        'sharklasers.com',
-        'yopmail.com',
-        'dispostable.com',
-        'getairmail.com',
-        'throwawaymail.com',
-        'tempmailaddress.com',
-        'maildrop.cc',
-        'mintemail.com',
-        'generator.email',
-        'fakeinbox.com',
-        'burnermail.io',
-        'trashmail.com',
-        'receivesms.cc',
-        'tempmail.dev',
-        'emailfake.com',
-        'disposable.com',
-        'afterdo.com',
-        'binkmail.com',
-        'safetymail.info',
-        'guerrillamailblock.com',
-        'guerrillamail.net',
-        'guerrillamail.org',
-        'guerrillamail.biz',
-        'grr.la',
-        'pokemail.net'
-      ];
-
-      const domainLower = domain.toLowerCase();
-      const isTempEmail = tempEmailDomains.some(d => domainLower === d || domainLower.endsWith('.' + d)) ||
-                          domainLower.includes('tempmail') ||
-                          domainLower.includes('temp-mail') ||
-                          domainLower.includes('disposable') ||
-                          domainLower.includes('throwaway') ||
-                          domainLower.includes('10minutemail') ||
-                          domainLower.includes('fakeinbox') ||
-                          domainLower.includes('yopmail');
-
-      if (isTempEmail) {
-        return { success: false, message: 'Temporary or disposable email addresses are not allowed' };
-      }
-
       if (username.length < 8) {
         return { success: false, message: 'Email username (before @) must be at least 8 characters long' };
       }

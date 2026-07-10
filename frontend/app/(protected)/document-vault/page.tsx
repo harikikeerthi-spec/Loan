@@ -345,15 +345,19 @@ export default function DocumentVaultPage() {
         }
     };
 
-    const handleDelete = async (docType: string) => {
+    const handleDelete = async (docType: string, deleteCard: boolean = false) => {
         if (!user?.id) return;
-        if (!confirm("Are you sure you want to delete this document from the vault?")) return;
+        if (!confirm(deleteCard ? "Are you sure you want to completely remove this custom document placeholder?" : "Are you sure you want to delete this uploaded document?")) return;
 
         setUploading(docType);
         try {
-            await documentApi.delete(user.id, docType);
+            if (deleteCard) {
+                await documentApi.delete(user.id, docType);
+            } else {
+                await documentApi.deleteFile(user.id, docType);
+            }
             await loadDocs();
-            showAlert("Delete Success", "Document deleted successfully.", "success");
+            showAlert("Delete Success", deleteCard ? "Custom document placeholder removed." : "Document deleted successfully.", "success");
         } catch (e) {
             console.error(e);
             showAlert("Delete Failed", "Failed to delete document.", "error");
@@ -370,66 +374,43 @@ export default function DocumentVaultPage() {
         const sanitized = docName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').trim();
         const docType = `${category}_other_${sanitized}_${Date.now()}`;
 
-        // Dynamic file input
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.accept = ".pdf,.jpg,.jpeg,.png";
+        setUploading("adding_requirement");
+        try {
+            const token = localStorage.getItem("accessToken");
+            const response = await fetch('/api/documents/requirement', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                    userId: user?.id,
+                    docType: docType,
+                    docName: docName.trim()
+                })
+            });
 
-        fileInput.onchange = async (e: Event) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (!file || !user?.id) return;
-
-            if (file.size > 5 * 1024 * 1024) {
-                showAlert("File Too Large", "File size exceeds the 5MB limit.", "warning");
-                return;
+            if (!response.ok) {
+                let errorMessage = `Server error: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.error || errorMessage;
+                } catch { }
+                throw new Error(errorMessage);
             }
 
-            const validFileTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-            if (!validFileTypes.includes(file.type)) {
-                showAlert("Invalid File Type", "File must be JPG, PNG, or PDF format.", "warning");
-                return;
-            }
+            showAlert("Added Success", `Placeholder for ${docName.trim()} created successfully!`, "success");
+            await loadDocs();
 
-            setUploading(docType);
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('userId', user.id);
-                formData.append('docType', docType);
-                formData.append('docName', docName.trim());
-
-                const token = localStorage.getItem("accessToken");
-
-                const response = await fetch(`/api/documents/upload`, {
-                    method: 'POST',
-                    headers: token ? { Authorization: `Bearer ${token}` } : {},
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    let errorMessage = `Server error: ${response.status}`;
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.message || errorData.error || errorMessage;
-                    } catch { }
-                    throw new Error(errorMessage);
-                }
-
-                showAlert("Upload Success", `${docName.trim()} uploaded successfully!`, "success");
-                await loadDocs();
-
-                const key = `dashboardDataUpdated_${user.id}`;
-                localStorage.setItem(key, String(Date.now()));
-                window.dispatchEvent(new Event('dashboard-data-changed'));
-            } catch (e: any) {
-                console.error("Upload error:", e.message || e);
-                showAlert("Upload Failed", e.message || "Unknown error occurred.", "error");
-            } finally {
-                setUploading(null);
-            }
-        };
-
-        fileInput.click();
+            const key = `dashboardDataUpdated_${user?.id}`;
+            localStorage.setItem(key, String(Date.now()));
+            window.dispatchEvent(new Event('dashboard-data-changed'));
+        } catch (e: any) {
+            console.error("Add requirement error:", e.message || e);
+            showAlert("Failed", e.message || "Unknown error occurred.", "error");
+        } finally {
+            setUploading(null);
+        }
     };
 
     // Dynamically calculate requirements
@@ -530,8 +511,8 @@ export default function DocumentVaultPage() {
                     const existing = docs.find(d => d.docType === req.type);
                     const isVerified = existing?.status === 'verified';
                     const isRejected = existing?.status === 'rejected';
-                    const isPending = existing?.status === 'uploaded' || existing?.status === 'pending';
-                    const isUploaded = isVerified || isPending;
+                    const isPending = existing?.status === 'uploaded';
+                    const isUploaded = existing?.uploaded === true;
 
                     return (
                         <div key={req.type} className={`bg-white rounded-xl p-5 border transition-all duration-200 ${isVerified ? 'border-emerald-100 bg-emerald-50/10' :
@@ -547,24 +528,36 @@ export default function DocumentVaultPage() {
                                     } rounded-xl flex items-center justify-center transition-colors`}>
                                     <span className="material-symbols-outlined text-[20px]">{req.icon}</span>
                                 </div>
-                                {isVerified && (
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
-                                        <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                                        Verified
-                                    </div>
-                                )}
-                                {isRejected && (
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
-                                        <span className="material-symbols-outlined text-[12px]">cancel</span>
-                                        Rejected
-                                    </div>
-                                )}
-                                {isPending && (
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
-                                        <span className="material-symbols-outlined text-[12px]">hourglass_empty</span>
-                                        Pending Review
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {isVerified && (
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                            <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                                            Verified
+                                        </div>
+                                    )}
+                                    {isRejected && (
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                            <span className="material-symbols-outlined text-[12px]">cancel</span>
+                                            Rejected
+                                        </div>
+                                    )}
+                                    {isPending && (
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                            <span className="material-symbols-outlined text-[12px]">hourglass_empty</span>
+                                            Pending Review
+                                        </div>
+                                    )}
+                                    {req.type.includes('_other_') && !isVerified && (
+                                        <button
+                                            onClick={() => handleDelete(req.type, true)}
+                                            disabled={!!uploading}
+                                            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0 disabled:opacity-50"
+                                            title="Remove this custom document"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">close</span>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             <h3 className="text-[13px] font-bold text-gray-900 mb-1">{req.label}</h3>

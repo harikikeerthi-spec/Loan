@@ -191,7 +191,7 @@ function LoginContent() {
             router.push("/user-details");
         } else {
             const redirectTo = searchParams.get("redirect");
-            router.push(redirectTo ? decodeURIComponent(redirectTo) : "/dashboard");
+            router.push(redirectTo ? decodeURIComponent(redirectTo) : "/");
         }
     };
 

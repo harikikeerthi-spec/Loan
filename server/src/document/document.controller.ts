@@ -525,6 +525,27 @@ export class DocumentController {
     return { success: true, message: 'Document deleted successfully' };
   }
 
+  // ─── Delete document file — removes from S3 but keeps DB requirement ──────
+  @Delete(':userId/:docType/file')
+  async deleteDocumentFile(
+    @Param('userId') userId: string,
+    @Param('docType') docType: string,
+  ) {
+    const docs = await this.usersService.getUserDocuments(userId);
+    const doc = docs.find((d) => d.docType === docType);
+
+    if (doc?.filePath && !doc.filePath.startsWith('in.gov.')) {
+      await this.s3Service.delete(doc.filePath);
+    }
+
+    await this.usersService.upsertUserDocument(userId, docType, {
+      uploaded: false,
+      status: 'pending',
+      filePath: null as any,
+    });
+    return { success: true, message: 'Document file removed successfully' };
+  }
+
   // ─── Add document requirement ────────────────────────────────────────────
   @Post('requirement')
   async addRequirement(

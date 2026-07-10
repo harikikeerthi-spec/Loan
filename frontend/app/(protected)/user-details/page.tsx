@@ -30,7 +30,7 @@ export default function UserDetailsPage() {
             const hasAll = user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth;
             if (hasAll) {
                 // already completed; redirect somewhere sensible
-                router.replace("/dashboard");
+                router.replace("/");
                 return;
             }
 
@@ -97,7 +97,7 @@ export default function UserDetailsPage() {
             setSuccess(true);
             // brief delay so user sees the success message
             setTimeout(() => {
-                router.replace("/dashboard");
+                router.replace("/");
             }, 1500);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : String(err));

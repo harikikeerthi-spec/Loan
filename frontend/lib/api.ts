@@ -1058,6 +1058,11 @@ export const documentApi = {
         apiFetch(HttpApiPaths.documents.byUserIdAndDocType(userId, docType), {
             method: "DELETE",
         }),
+        
+    deleteFile: (userId: string, docType: string) =>
+        apiFetch(`${HttpApiPaths.documents.byUserIdAndDocType(userId, docType)}/file`, {
+            method: "DELETE",
+        }),
 
     initiateDigilocker: (userId: string, docType: string) => {
         // Redirect directly — backend handles the OAuth flow
