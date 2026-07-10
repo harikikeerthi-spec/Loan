@@ -127,38 +127,7 @@ export default function AgentCommissions() {
                     </div>
                 </div>
 
-                {/* Commission rate card */}
-                <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
-                    <h3 className="font-display font-black text-lg text-gray-900 mb-2 uppercase tracking-tight">Commission Rate Card</h3>
-                    <p className="text-xs text-gray-400 mb-6">Current Tier: Master Tier 🥇 (+0.20% bonus structure)</p>
-                    
-                    <div className="space-y-4 text-xs font-bold text-gray-700">
-                        <div className="flex justify-between border-b border-gray-50 pb-2.5">
-                            <span className="text-gray-400">Domestic Loan &lt; ₹10L</span>
-                            <span>0.70% (0.50% Base + 0.20% Bonus)</span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-50 pb-2.5">
-                            <span className="text-gray-400">Domestic Loan ₹10L–₹20L</span>
-                            <span>0.80% (0.60% Base + 0.20% Bonus)</span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-50 pb-2.5">
-                            <span className="text-gray-400">Domestic Loan &gt; ₹20L</span>
-                            <span>0.95% (0.75% Base + 0.20% Bonus)</span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-50 pb-2.5">
-                            <span className="text-gray-400">Abroad Loan (Any amount)</span>
-                            <span>1.00% (0.80% Base + 0.20% Bonus)</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">Collateral Loan</span>
-                            <span>0.60% (0.40% Base + 0.20% Bonus)</span>
-                        </div>
-                    </div>
 
-                    <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider text-center mt-6">
-                        Next Milestone: FRANCHISE (26+ sanctions/month) → Unlock White-Label Portal & Highest Rates
-                    </div>
-                </div>
             </div>
         </div>
     );
