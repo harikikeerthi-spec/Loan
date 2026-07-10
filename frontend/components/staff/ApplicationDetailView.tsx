@@ -2182,7 +2182,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Pincode</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.city || application.student?.mailingAddress?.city || "—"} - {application.pincode || application.student?.mailingAddress?.pincode || "—"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.pincode || application.student?.mailingAddress?.pincode || "—"}</p>
                         </div>
                       </div>
                     </section>
