@@ -1,4 +1,5 @@
-import type { NextConfig } from "next";
+/** @type {import('next').NextConfig} */
+
 
 // Accept any trycloudflare.com tunnel automatically (wildcard) plus any
 // additional origins supplied via ALLOWED_DEV_ORIGINS (comma-separated).
@@ -13,7 +14,7 @@ const allowedDevOrigins: string[] = [
   ...envAllowed,
 ];
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   // Fix: explicitly set Turbopack root to this directory so Next.js does not
   // incorrectly infer the parent Loan/ folder as the workspace root.
   turbopack: {
@@ -50,4 +51,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

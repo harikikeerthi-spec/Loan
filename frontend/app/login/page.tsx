@@ -40,11 +40,13 @@ function LoginContent() {
 
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+    const isLoginInitiated = useRef(false);
+
     // Already logged in — redirect without a page reload
     useEffect(() => {
-        if (isLoading || !isAuthenticated) return;
+        if (isLoading || !isAuthenticated || isLoginInitiated.current) return;
         const redirectTo = searchParams.get("redirect");
-        router.replace(redirectTo ? decodeURIComponent(redirectTo) : "/dashboard");
+        router.replace(redirectTo ? decodeURIComponent(redirectTo) : "/");
     }, [isAuthenticated, isLoading, router, searchParams]);
 
     // Capture referral code from URL on mount
@@ -139,6 +141,7 @@ function LoginContent() {
                 throw new Error(`Access Denied: Please use the ${portalName} to login.`);
             }
 
+            isLoginInitiated.current = true;
             triggerSuccessAndRedirect(data, email.trim());
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Invalid OTP");
@@ -219,6 +222,7 @@ function LoginContent() {
                     throw new Error(`Access Denied: Please use the ${portalName} to login.`);
                 }
 
+                isLoginInitiated.current = true;
                 triggerSuccessAndRedirect(data, result.user.email || "");
             })
             .catch((e: unknown) => {
