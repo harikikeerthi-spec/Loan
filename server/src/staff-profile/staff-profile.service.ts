@@ -1057,7 +1057,8 @@ export class StaffProfileService {
 
       if (!application) {
         const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
-        const appNumber = await this.generateApplicationNumber();
+        const isBankRecipient = body.recipientType?.toLowerCase() === 'bank';
+        const appNumber = await this.generateApplicationNumber(isBankRecipient ? 'bank' : 'default');
         const insertApp = {
           id: 'la-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
           userId: studentId,
@@ -1107,12 +1108,19 @@ export class StaffProfileService {
         });
       } else {
         // If application already exists, update it with onboarding details!
+        const isBankRecipient = body.recipientType?.toLowerCase() === 'bank';
+        let updatedAppNumber = application.applicationNumber;
+        if (isBankRecipient && (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-BNK-'))) {
+          updatedAppNumber = await this.generateApplicationNumber('bank');
+        }
+
         const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
         const { data: updatedApp, error: updateAppErr } = await this.db
           .from('LoanApplication')
           .update({
             bank: body.recipientName || application.bank,
             updatedAt: new Date().toISOString(),
+            applicationNumber: updatedAppNumber,
             ...mappedDetails,
             firstName: mappedDetails.firstName || application.firstName || studentUser?.firstName || 'Student',
             lastName: mappedDetails.lastName || application.lastName || studentUser?.lastName || 'Applicant',
@@ -1403,9 +1411,9 @@ export class StaffProfileService {
     };
   }
 
-  private async generateApplicationNumber(): Promise<string> {
+  private async generateApplicationNumber(formatType: 'default' | 'bank' = 'default'): Promise<string> {
     const year = new Date().getFullYear();
-    const prefix = `VL-APP-${year}-`;
+    const prefix = formatType === 'bank' ? 'VTU-BNK-' : `VL-APP-${year}-`;
     
     try {
       const { data, error } = await this.db
@@ -1423,17 +1431,17 @@ export class StaffProfileService {
       let nextSeq = 1;
       if (data && data.applicationNumber) {
         const parts = data.applicationNumber.split('-');
-        if (parts.length === 4) {
-          const currentSeq = parseInt(parts[3], 10);
+        if (parts.length >= 3) {
+          const currentSeq = parseInt(parts[parts.length - 1], 10);
           if (!isNaN(currentSeq)) {
             nextSeq = currentSeq + 1;
           }
         }
       }
-      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+      return `${prefix}${String(nextSeq).padStart(3, '0')}`;
     } catch (err) {
       console.error('[StaffProfileService] Failed to generate sequential application number, falling back to random:', err);
-      const seq = String(Math.floor(Math.random() * 100_000)).padStart(5, '0');
+      const seq = String(Math.floor(Math.random() * 1_000)).padStart(3, '0');
       return `${prefix}${seq}`;
     }
   }
