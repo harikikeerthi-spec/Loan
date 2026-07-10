@@ -837,6 +837,7 @@ export class StaffProfileService {
       const personal = body.studentDetails?.personal || body.studentDetails || {};
       const academic = body.studentDetails?.academic || {};
       const coApplicant = body.studentDetails?.coApplicant || {};
+      const family = body.studentDetails?.family || {};
       const address = body.studentDetails?.address?.mailing || body.studentDetails?.mailingAddress || {};
 
       const formatCurrency = (val: any) => {
@@ -848,6 +849,18 @@ export class StaffProfileService {
 
       const studentName = body.recipientName || `${personal.firstName || ''} ${personal.lastName || ''}`.trim() || studentUser?.firstName || 'Student';
       const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/share/${token}`;
+
+      const testsHtml = (() => {
+        const t = academic.tests || {};
+        let html = '';
+        if (t.gre) html += `<tr><td style="padding: 6px 0; color: #64748b; font-weight: 600;">GRE:</td><td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${t.greScore || '—'}</td></tr>`;
+        if (t.gmat) html += `<tr><td style="padding: 6px 0; color: #64748b; font-weight: 600;">GMAT:</td><td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${t.gmatScore || '—'}</td></tr>`;
+        if (t.ielts) html += `<tr><td style="padding: 6px 0; color: #64748b; font-weight: 600;">IELTS:</td><td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${t.ieltsScore || '—'}</td></tr>`;
+        if (t.toefl) html += `<tr><td style="padding: 6px 0; color: #64748b; font-weight: 600;">TOEFL:</td><td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${t.toeflScore || '—'}</td></tr>`;
+        if (t.pte) html += `<tr><td style="padding: 6px 0; color: #64748b; font-weight: 600;">PTE:</td><td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${t.pteScore || '—'}</td></tr>`;
+        if (t.duolingo) html += `<tr><td style="padding: 6px 0; color: #64748b; font-weight: 600;">Duolingo:</td><td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${t.duolingoScore || '—'}</td></tr>`;
+        return html;
+      })();
 
       const subject = `🎓 Your Complete VidyaLoans Onboarding Profile Details`;
       const html = `
@@ -869,6 +882,10 @@ export class StaffProfileService {
             <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background-color: #f8fafc; margin-bottom: 24px;">
               <h3 style="color: #059669; font-size: 15px; font-weight: 700; margin: 0 0 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">📂 Study & Loan Information</h3>
               <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 45%;">Target Country:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${body.studentDetails?.targetCountry || '—'}</td>
+                </tr>
                 <tr>
                   <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 45%;">Target University:</td>
                   <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${body.studentDetails?.targetUniversity || body.studentDetails?.university || '—'}</td>
@@ -900,12 +917,77 @@ export class StaffProfileService {
                   <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${personal.mobile || personal.phone || studentUser?.mobile || studentUser?.phone || '—'}</td>
                 </tr>
                 <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Gender:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${personal.gender || '—'}</td>
+                </tr>
+                <tr>
                   <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Date of Birth:</td>
                   <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${personal.dob || '—'}</td>
                 </tr>
                 <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Nationality:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${personal.nationality?.name || '—'}</td>
+                </tr>
+                <tr>
                   <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Pan Card Status:</td>
                   <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${personal.pan || 'Provided'}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background-color: #f8fafc; margin-bottom: 24px;">
+              <h3 style="color: #059669; font-size: 15px; font-weight: 700; margin: 0 0 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">📚 Academic Info & Tests</h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 45%;">Highest Level:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${academic.highestLevel || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Undergrad Univ/Course:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${academic.undergrad?.university || '—'} / ${academic.undergrad?.qualification || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Undergrad Score:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${academic.gradScore || '—'} ${academic.gradScale || ''}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Postgrad Univ/Course:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${academic.postgrad?.university || '—'} / ${academic.postgrad?.qualification || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Postgrad Score:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${academic.postgradScore || '—'} ${academic.postgradScale || ''}</td>
+                </tr>
+                ${testsHtml}
+              </table>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background-color: #f8fafc; margin-bottom: 24px;">
+              <h3 style="color: #059669; font-size: 15px; font-weight: 700; margin: 0 0 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">👨‍👩‍👧‍👦 Family Details</h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 45%;">Father's Name:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${family.fatherName || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Father's Contact:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${family.fatherMobile || '—'} / ${family.fatherEmail || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Father's Employment:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${family.fatherEmploymentType || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Mother's Name:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${family.motherName || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Mother's Contact:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${family.motherMobile || '—'} / ${family.motherEmail || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Mother's Employment:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${family.motherEmploymentType || '—'}</td>
                 </tr>
               </table>
             </div>
@@ -919,7 +1001,7 @@ export class StaffProfileService {
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Relation to Applicant:</td>
-                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${coApplicant.relationship || '—'}</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${coApplicant.relation || coApplicant.relationship || '—'}</td>
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Employment Type:</td>
@@ -928,6 +1010,10 @@ export class StaffProfileService {
                 <tr>
                   <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Monthly Income:</td>
                   <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${formatCurrency(coApplicant.monthlyIncome)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Contact:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${coApplicant.mobile || '—'} / ${coApplicant.email || '—'}</td>
                 </tr>
               </table>
             </div>

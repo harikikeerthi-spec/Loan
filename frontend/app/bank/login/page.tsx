@@ -180,7 +180,7 @@ function BankLoginContent() {
         if (lowerEmail === "jegan14735@aratrin.com") return "credila";
         if (lowerEmail === "hellobro24@gmail.com") return "auxilo";
         if (lowerEmail === "farmatech@gmail.com") return "poonawalla";
-        if (lowerEmail === "ropayi2211@aspensif.com") return "avanse";
+        if (lowerEmail === "avansebank01@gmail.com") return "avanse";
 
         return null;
     };
