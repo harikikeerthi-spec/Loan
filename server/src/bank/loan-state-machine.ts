@@ -65,32 +65,32 @@ export class LoanStateMachine {
     {
       from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'submitted_to_bank'],
       to: 'approved',
-      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
     {
       from: ['under_bank_review', 'file_logged', 'query_raised', 'approved', 'processing', 'sanctioned', 'submitted_to_bank'],
       to: 'sanctioned',
-      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
     {
       from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'conditional_sanction', 'submitted_to_bank'],
       to: 'conditional_sanction',
-      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
     {
       from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'partial_sanction', 'submitted_to_bank'],
       to: 'partial_sanction',
-      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
     {
       from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'counter_offer', 'submitted_to_bank'],
       to: 'counter_offer',
-      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
     {
       from: ['conditional_sanction', 'partial_sanction', 'counter_offer'],
       to: 'sanctioned',
-      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
     {
       from: ['pending', 'docs_received', 'staff_verified', 'submitted_to_bank', 'under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned', 'processing', 'rejected'],
@@ -100,7 +100,7 @@ export class LoanStateMachine {
     {
       from: ['approved', 'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer'],
       to: 'disbursement_confirmed',
-      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
     {
       from: ['disbursement_confirmed'],

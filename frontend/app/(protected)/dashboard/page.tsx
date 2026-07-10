@@ -84,7 +84,7 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
             if (status === 'submitted') return 'application_submitted';
             if (status.includes('document')) return 'document_verification';
             if (status.includes('credit')) return 'credit_check';
-            
+
             // Fallback: infer from progress if available
             if (app.progress >= 100) return 'disbursement';
             if (app.progress >= 95) return 'sanction';
@@ -750,7 +750,7 @@ export default function DashboardPage() {
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <h3 className="font-bold text-[15px] text-gray-900 truncate">{app.bank}</h3>
                                                             {app.applicationNumber && (
-                                                                <span className="text-[11px] text-gray-400 font-semibold bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
+                                                                <span className="text-[15px] text-gray-400 font-semibold bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
                                                                     #{app.applicationNumber}
                                                                 </span>
                                                             )}
@@ -773,11 +773,7 @@ export default function DashboardPage() {
                                                                     {app.country}
                                                                 </span>
                                                             )}
-                                                            {app.id && (
-                                                                <span className="flex items-center gap-1 font-mono text-[10px] text-gray-400" title={`Application ID: ${app.id}`}>
-                                                                    • App #: {app.applicationNumber || app.id}
-                                                                </span>
-                                                            )}
+
                                                         </div>
                                                         {/* Progress Bar */}
                                                         {app.progress !== undefined && (
@@ -913,7 +909,7 @@ export default function DashboardPage() {
                                 </Link>
                             </div>
                         ) : (
-                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {data.documents.map((doc: any, i) => {
                                     const status = doc.status;
                                     const isVerified = status === 'verified';
@@ -951,9 +947,8 @@ export default function DashboardPage() {
                                     }
 
                                     return (
-                                        <div key={i} className={`bg-white rounded-xl p-5 border flex flex-col justify-between hover:border-[#6605c7]/20 transition-all ${
-                                            isRejected ? 'border-rose-100 bg-rose-50/5' : isPending ? 'border-amber-100 bg-amber-50/5' : isVerified ? 'border-emerald-100 bg-emerald-50/5' : 'border-gray-100'
-                                        }`}>
+                                        <div key={i} className={`bg-white rounded-xl p-5 border flex flex-col justify-between hover:border-[#6605c7]/20 transition-all ${isRejected ? 'border-rose-100 bg-rose-50/5' : isPending ? 'border-amber-100 bg-amber-50/5' : isVerified ? 'border-emerald-100 bg-emerald-50/5' : 'border-gray-100'
+                                            }`}>
                                             <div className="flex items-center justify-between w-full">
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-9 h-9 ${bgClass} rounded-lg flex items-center justify-center shrink-0`}>

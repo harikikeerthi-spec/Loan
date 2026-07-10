@@ -320,6 +320,7 @@ export default function IncomingQueuePage() {
             // Reload local list and trigger sidebar layout counts update
             await loadData();
             await fetchBadgeStats();
+            setActiveDockApp(null);
         } catch (e: unknown) {
             alert(e instanceof Error ? e.message : "Failed to send application to bank");
         } finally {
@@ -335,7 +336,7 @@ export default function IncomingQueuePage() {
                 rejectionReason: rejectionReason.trim(),
                 remarks: rejectionReason.trim()
             });
-            await logActivity('verification', `Application #${appToReject.applicationNumber || appToReject.id?.slice(-4)} rejected by staff`, 'cancel', 'bg-rose-50 text-rose-700 border-rose-100');
+            await logActivity('rejected', `Application #${appToReject.applicationNumber || appToReject.id?.slice(-4)} rejected by staff`, 'cancel', 'bg-rose-50 text-rose-700 border-rose-100');
             setActiveDockApp(null);
             setIsRejectModalOpen(false);
             setAppToReject(null);
@@ -848,6 +849,7 @@ export default function IncomingQueuePage() {
                     onSuccess={() => {
                         loadData();
                         fetchBadgeStats();
+                        setActiveDockApp(null);
                     }}
                 />
             )}

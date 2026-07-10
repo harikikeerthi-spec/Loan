@@ -7,7 +7,7 @@ async function check() {
   });
   await client.connect();
   const res = await client.query(`
-    SELECT id, name FROM "Bank"
+    SELECT * FROM "BankPriority"
   `);
   console.log(JSON.stringify(res.rows, null, 2));
   await client.end();

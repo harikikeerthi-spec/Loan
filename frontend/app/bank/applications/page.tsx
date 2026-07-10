@@ -837,14 +837,16 @@ export default function ApplicationManagement() {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <a
-                                                        href={`/api/applications/admin/${selectedApp.id}/documents/${doc.id}/view?token=${token}`}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-[#6605c7]/5 hover:text-[#6605c7] hover:border-[#6605c7]/10 transition-all flex items-center gap-1"
-                                                    >
-                                                        <span className="material-symbols-outlined text-xs">download</span> View
-                                                    </a>
+                                                    {doc.status !== 'not_uploaded' && (
+                                                        <a
+                                                            href={`/api/applications/admin/${selectedApp.id}/documents/${doc.id}/view?token=${token}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-[#6605c7]/5 hover:text-[#6605c7] hover:border-[#6605c7]/10 transition-all flex items-center gap-1"
+                                                        >
+                                                            <span className="material-symbols-outlined text-xs">download</span> View
+                                                        </a>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -1135,7 +1137,7 @@ export default function ApplicationManagement() {
                                         required
                                         placeholder="e.g. LAN-BANK-0000000"
                                         value={lanNumber}
-                                        onChange={(e) => setLanNumber(e.target.value)}
+                                        onChange={(e) => setLanNumber(e.target.value.toUpperCase())}
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
                                     />
                                 </div>

@@ -374,7 +374,7 @@ export default function DocumentVaultPage() {
         const fileInput = document.createElement("input");
         fileInput.type = "file";
         fileInput.accept = ".pdf,.jpg,.jpeg,.png";
-        
+
         fileInput.onchange = async (e: Event) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (!file || !user?.id) return;
@@ -411,7 +411,7 @@ export default function DocumentVaultPage() {
                     try {
                         const errorData = await response.json();
                         errorMessage = errorData.message || errorData.error || errorMessage;
-                    } catch {}
+                    } catch { }
                     throw new Error(errorMessage);
                 }
 
@@ -491,8 +491,8 @@ export default function DocumentVaultPage() {
     ];
 
     const staffRequestedDocs = docs
-        .filter((doc) => 
-            doc?.docType && 
+        .filter((doc) =>
+            doc?.docType &&
             !allRequiredDocs.some((req) => req.type === doc.docType) &&
             !doc.docType.startsWith('student_other_') && !doc.docType.startsWith('other_student_') &&
             !doc.docType.startsWith('coapplicant_other_') && !doc.docType.startsWith('other_coapplicant_') &&
@@ -594,7 +594,7 @@ export default function DocumentVaultPage() {
                                 accept=".pdf,.jpg,.jpeg,.png"
                             />
 
-                             {isUploaded ? (
+                            {isUploaded ? (
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleView(req.type)}
@@ -699,21 +699,6 @@ export default function DocumentVaultPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
-                            <button
-                                onClick={() => handleCoappRelationChange("father")}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${coappRelation === "father" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
-                            >
-                                Co-app: Father
-                            </button>
-                            <button
-                                onClick={() => handleCoappRelationChange("mother")}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${coappRelation === "mother" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
-                            >
-                                Co-app: Mother
-                            </button>
-                        </div>
-
                         <div className="flex items-center gap-3 p-2.5 px-4 bg-emerald-50 rounded-2xl border border-emerald-100/50">
                             <div className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
                                 <span className="material-symbols-outlined text-[16px] font-black">verified</span>
@@ -826,6 +811,28 @@ export default function DocumentVaultPage() {
                     <>
                         {renderDocGroup("Student Documents", "person", studentDocs, () => handleAddOtherDocument("student"))}
                         {renderDocGroup("Financial Co-Applicant", "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
+
+                        <div className="flex justify-end mb-6 -mt-4 mr-1">
+                            <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-2xl">
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Co-applicant:</span>
+                                <div className="flex bg-gray-100/80 p-0.5 rounded-lg border border-gray-200/30">
+                                    <button
+                                        onClick={() => handleCoappRelationChange("father")}
+                                        className={`px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all ${coappRelation === "father" ? "bg-white text-[#6605c7] shadow-sm" : "text-gray-400 hover:text-gray-500"}`}
+                                    >
+                                        Father
+                                    </button>
+                                    <button
+                                        onClick={() => handleCoappRelationChange("mother")}
+                                        className={`px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all ${coappRelation === "mother" ? "bg-white text-[#6605c7] shadow-sm" : "text-gray-400 hover:text-gray-500"}`}
+                                    >
+                                        Mother
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+
                         {renderDocGroup("Father & Mother Documents", "family_restroom", parentDocs, () => handleAddOtherDocument("parent"))}
                         {staffRequestedDocs.length > 0 && renderDocGroup("Staff Requested Documents", "assignment", staffRequestedDocs)}
                     </>

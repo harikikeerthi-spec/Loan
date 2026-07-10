@@ -155,9 +155,17 @@ export default function ApplyLoanPage() {
         } else if (formData.country === "Other" && (!formData.otherCountry || !formData.otherCountry.trim())) {
             errors.otherCountry = "Please enter the destination country";
         }
-        if (!formData.university.trim()) errors.university = "Please enter your university";
+        if (!formData.university.trim()) {
+            errors.university = "Please enter your university";
+        } else if (/\d/.test(formData.university)) {
+            errors.university = "University name cannot contain numbers";
+        }
         const cleanAmount = formData.amount.replace(/,/g, "");
-        if (!cleanAmount || Number(cleanAmount) <= 0) errors.amount = "Please enter a valid loan amount";
+        if (!cleanAmount || Number(cleanAmount) <= 0) {
+            errors.amount = "Please enter a valid loan amount";
+        } else if (Number(cleanAmount) > 15000000) {
+            errors.amount = "Maximum loan amount cannot exceed ₹1,50,00,000 (1.5 Crore)";
+        }
         if (!formData.intakeSeason) errors.intakeSeason = "Please select target intake season";
         setStepErrors(errors);
         return Object.keys(errors).length === 0;
@@ -474,7 +482,7 @@ export default function ApplyLoanPage() {
                                 </div>
 
                                 <div className="space-y-8">
-                                    <InputField label="Full University Name" icon="domain" value={formData.university} onChange={(v) => update("university", v)} placeholder="e.g. University of Toronto" error={stepErrors.university} />
+                                    <InputField label="Full University Name" icon="domain" value={formData.university} onChange={(v) => update("university", v.replace(/\d/g, ""))} placeholder="e.g. University of Toronto" error={stepErrors.university} />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <InputField label="Required Amount Needed (₹)" icon="savings" value={formData.amount} onChange={(v) => update("amount", formatIndianCurrency(v))} placeholder="e.g. 40,00,000" type="text" error={stepErrors.amount} required />

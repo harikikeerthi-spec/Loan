@@ -6,7 +6,7 @@ const team = [
     { name: "Manohar", role: "Senior Counsellor", photo: "/images/team/manohar.jpg" },
     { name: "Keerthi Naidu", role: "Team Lead", photo: "/images/team/keerthi.jpg" },
     { name: "Abhiram", role: "Developer", photo: "/images/team/abhiram.jpg" },
-    { name: "Shanmukh Sai", role: "Developer", photo: "/images/team/shanmukh.jpg" },
+    { name: "Shanmuka Sai", role: "Developer", photo: "/images/team/shanmukh.jpg" },
 ];
 
 export default function TeamSection() {

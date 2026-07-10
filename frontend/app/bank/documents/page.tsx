@@ -123,7 +123,8 @@ export default function DocumentReviewCenter() {
     }, [filteredApps, selectedAppId, mounted]);
 
     const currentDocs = useMemo(() => {
-        return selectedAppId ? appDocs[selectedAppId] || [] : [];
+        const docs = selectedAppId ? appDocs[selectedAppId] || [] : [];
+        return docs.filter((doc: any) => doc.status !== 'not_uploaded');
     }, [selectedAppId, appDocs]);
 
     // Auto-select first document of selected applicant for preview
@@ -562,7 +563,7 @@ export default function DocumentReviewCenter() {
                                     </div>
 
                                     {/* Study Abroad Travel & Visa Validation Banner */}
-                                    {isAbroad && (
+                                    {/* {isAbroad && (
                                         <div className="px-5 py-3.5 bg-blue-50/15 border-b border-[#E2E8F0] space-y-2.5">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -597,7 +598,7 @@ export default function DocumentReviewCenter() {
                                                 </div>
                                             </div>
                                         </div>
-                                    )}
+                                    )} */}
 
                                     {/* Workspace Body: Split Document Selection Hub & Inline PDF Previewer */}
                                     <div className="flex-1 min-h-0 flex flex-col md:flex-row">

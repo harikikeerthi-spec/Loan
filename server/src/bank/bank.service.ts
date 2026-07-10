@@ -6,6 +6,12 @@ import { SalesforceService } from './salesforce.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ChatService } from '../chat/chat.service';
 import { EmailService } from '../auth/email.service';
+import { Writable } from 'stream';
+import archiver = require('archiver');
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
 export class BankService {
@@ -219,26 +225,175 @@ export class BankService {
     return [...docs, ...extraVaultDocs];
   }
 
+  private getS3Client() {
+    const accessKeyId = (process.env.AWS_ACCESS_KEY_ID || '').trim();
+    const secretAccessKey = (process.env.AWS_SECRET_ACCESS_KEY || '').trim();
+
+    if (!accessKeyId || !secretAccessKey) {
+      return null;
+    }
+
+    const rawRegion = (process.env.AWS_REGION || 'us-east-1').trim();
+    const regionMatch = rawRegion.match(/[a-z]{2}-[a-z]+-\d/i);
+    const region = regionMatch ? regionMatch[0].toLowerCase() : 'us-east-1';
+
+    let requestHandler;
+    try {
+      const { NodeHttpHandler } = require('@smithy/node-http-handler');
+      requestHandler = new NodeHttpHandler({
+        connectionTimeout: 1000,
+        socketTimeout: 1500,
+      });
+    } catch (e) {
+      console.warn('[BankService] NodeHttpHandler not found, using default handler');
+    }
+
+    return new S3Client({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+      ...(requestHandler ? { requestHandler } : {}),
+    });
+  }
+
   /**
-   * Category A: Simulated bulk zip document compiler
+   * Category A: Bulk zip document compiler
    */
   async generateDocumentsZip(applicationId: string): Promise<any> {
     console.log(`[BankService] Building bulk documents ZIP buffer for App ID: ${applicationId}`);
 
     const documents = await this.getDocuments(applicationId);
-    if (!documents || documents.length === 0) {
-      throw new NotFoundException(`No student documents found for App ID: ${applicationId}`);
+    const uploadedDocs = (documents || []).filter(
+      (doc: any) => doc.filePath && doc.status !== 'not_uploaded'
+    );
+
+    if (uploadedDocs.length === 0) {
+      throw new NotFoundException(`No uploaded student documents found for App ID: ${applicationId}`);
     }
 
-    // Returns a mock base64/binary payload zip representation
-    const mockZipBase64 = 'UEsDBAoAAAAAACGP1VgAAAAAAAAAAAAAAAAJABwAdGVzdC50eHRVVAkAA8D6aWRg+mlkdXgIAQk4AAAAAABIZWxsbyBXb3JsZCEhUEsBAh4DCgAAAAAAIY/VWAYBAADAAQAAAJIAAAAAAAEAIAAAAAAAAAB0ZXN0LnR4dFVUBQADwPppZHV4CgEJMAAAAAABSAAAAABQSwUGAAAAAAEAAQBLAAAAUgAAAAAA';
+    const archive = new (archiver as any).ZipArchive({ zlib: { level: 9 } });
+    const chunks: Buffer[] = [];
+    const outputStream = new Writable({
+      write(chunk, encoding, callback) {
+        chunks.push(chunk);
+        callback();
+      }
+    });
+    archive.pipe(outputStream);
+
+    const s3Client = this.getS3Client();
+    const bucket = (process.env.AWS_S3_BUCKET_NAME || '').trim();
+
+    for (const doc of uploadedDocs) {
+      const docName = (doc.docName || doc.docType || 'document').replace(/[^a-zA-Z0-9._-]/g, '_');
+      const ext = doc.fileName ? doc.fileName.split('.').pop() : 'pdf';
+      const filename = `${docName}.${ext}`;
+
+      // 1. Check if DigiLocker record
+      if (doc.filePath.startsWith('in.gov.')) {
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DigiLocker Record - ${doc.docName || doc.docType}</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 40px; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; width: 100%; border-top: 6px solid #82c91e; }
+        .header { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        .title { margin: 0; color: #1a3a6b; }
+        .badge { background: #e6fced; color: #12b842; padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+        .field { margin-bottom: 20px; }
+        .label { font-size: 13px; color: #666; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .value { font-size: 18px; color: #333; margin-top: 4px; word-break: break-all; }
+        .footer { margin-top: 40px; font-size: 12px; color: #888; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h2 class="title">Digital Verification Record</h2>
+            <span class="badge">✓ Verified by DigiLocker</span>
+        </div>
+        <div class="field">
+            <div class="label">Document Name</div>
+            <div class="value">${doc.docName || doc.docType || 'Document'}</div>
+        </div>
+        <div class="field">
+            <div class="label">DigiLocker Reference URI</div>
+            <div class="value">${doc.filePath}</div>
+        </div>
+        <div class="field">
+            <div class="label">Date Synced</div>
+            <div class="value">${doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString() : 'N/A'}</div>
+        </div>
+        <div class="footer">
+            This is a digitally verified record synced directly from DigiLocker. The physical file is held securely by the issuing authority.
+        </div>
+    </div>
+</body>
+</html>`;
+        archive.append(html, { name: `${docName}_digilocker.html` });
+        continue;
+      }
+
+      // 2. Check if local file exists
+      const absolutePath = resolve(doc.filePath);
+      if (existsSync(absolutePath)) {
+        archive.file(absolutePath, { name: filename });
+        continue;
+      }
+
+      // 3. Try fetching from S3 via presigned URL with a fast fetch timeout (if S3 is configured)
+      if (s3Client && bucket) {
+        try {
+          const command = new GetObjectCommand({
+            Bucket: bucket,
+            Key: doc.filePath,
+          });
+          const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 60 });
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 1500);
+          const response = await fetch(presignedUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const buffer = Buffer.from(await response.arrayBuffer());
+          archive.append(buffer, { name: filename });
+          continue;
+        } catch (s3Error: any) {
+          console.error(`[generateDocumentsZip] S3 fetch failed for key ${doc.filePath}:`, s3Error.message || s3Error);
+        }
+      }
+
+      // 4. Fallback to missing document mock pdf/text
+      const fallbackPath = resolve(process.cwd(), 'public/mock/document_missing.pdf');
+      if (existsSync(fallbackPath)) {
+        archive.file(fallbackPath, { name: filename });
+      } else {
+        archive.append('Document file not found on disk or S3', { name: `${docName}_missing.txt` });
+      }
+    }
+
+    const bufferPromise = new Promise<Buffer>((res, rej) => {
+      outputStream.on('finish', () => res(Buffer.concat(chunks)));
+      archive.on('error', rej);
+    });
+
+    await archive.finalize();
+    const buffer = await bufferPromise;
 
     return {
       success: true,
       fileName: `VL_Student_Docs_${applicationId}.zip`,
       mimeType: 'application/zip',
-      fileSize: 409600,
-      buffer: Buffer.from(mockZipBase64, 'base64')
+      fileSize: buffer.length,
+      buffer
     };
   }
 

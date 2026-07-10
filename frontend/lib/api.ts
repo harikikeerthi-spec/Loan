@@ -423,7 +423,11 @@ async function handleResponse<T>(res: Response, url?: string, alreadyRetried = f
 /**
  * Fetch wrapper for binary responses (blobs) with proper error handling
  */
-async function fetchBlob(url: string, options: RequestInit = {}): Promise<Blob> {
+async function fetchBlob(
+    url: string,
+    options: RequestInit = {},
+    retried = false
+): Promise<Blob> {
     const token = getToken();
     const headers = token
         ? { Authorization: `Bearer ${token}`, ...options.headers }
@@ -433,6 +437,23 @@ async function fetchBlob(url: string, options: RequestInit = {}): Promise<Blob> 
         ...options,
         headers,
     });
+
+    if (res.status === 401 && !retried) {
+        const newToken = await tryRefreshAccessToken();
+        if (newToken) {
+            return fetchBlob(
+                url,
+                {
+                    ...options,
+                    headers: {
+                        ...options.headers,
+                        Authorization: `Bearer ${newToken}`,
+                    },
+                },
+                true
+            );
+        }
+    }
 
     if (!res.ok) {
         const contentType = res.headers.get("content-type");
@@ -448,6 +469,11 @@ async function fetchBlob(url: string, options: RequestInit = {}): Promise<Blob> 
             }
         } catch (e) {
             // Unable to parse error response
+        }
+
+        // Session expired — soft redirect via AuthContext
+        if (res.status === 401 && !retried) {
+            notifySessionExpired();
         }
 
         throw new Error(`Failed to fetch document: ${errorMessage}`);

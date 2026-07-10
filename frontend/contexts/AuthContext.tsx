@@ -82,6 +82,7 @@ function getStorageKeys(portal: Portal) {
             email: "adminUserEmail",
             userId: "adminUserId",
             user: "adminAuthUser",
+            loginPath: "/admin/login",
         };
     }
     if (portal === "staff") {
@@ -91,6 +92,7 @@ function getStorageKeys(portal: Portal) {
             email: "staffUserEmail",
             userId: "staffUserId",
             user: "staffAuthUser",
+            loginPath: "/staff/login",
         };
     }
     if (portal === "bank") {
@@ -100,6 +102,7 @@ function getStorageKeys(portal: Portal) {
             email: "bankUserEmail",
             userId: "bankUserId",
             user: "bankAuthUser",
+            loginPath: "/bank/login",
         };
     }
     if (portal === "agent") {
@@ -109,6 +112,7 @@ function getStorageKeys(portal: Portal) {
             email: "agentUserEmail",
             userId: "agentUserId",
             user: "agentAuthUser",
+            loginPath: "/agent/login",
         };
     }
     return {
@@ -117,6 +121,7 @@ function getStorageKeys(portal: Portal) {
         email: "userEmail",
         userId: "userId",
         user: "authUser",
+        loginPath: "/login",
     };
 }
 

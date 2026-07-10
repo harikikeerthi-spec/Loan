@@ -1438,22 +1438,18 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
             width: 100% !important;
             height: auto !important;
             overflow: visible !important;
-            display: block !important;
-            background: white !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            box-shadow: none !important;
-            z-index: auto !important;
           }
 
-          /* Reset layout flex wrappers so content flows vertically across pages */
-          .flex, .flex-1, .grid, main {
-            display: block !important;
+          /* Ensure outer wrappers flow naturally across pages */
+          main, .staff-dashboard-body > div {
             height: auto !important;
             overflow: visible !important;
             position: relative !important;
-            padding: 0 !important;
-            margin: 0 !important;
+          }
+
+          /* Force print wrapping for flex containers if they are too wide */
+          .flex {
+            flex-wrap: wrap !important;
           }
 
           /* Remove visual noise and box shadows */

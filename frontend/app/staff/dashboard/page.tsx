@@ -7,8 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { adminApi, staffProfileApi } from "@/lib/api";
 import ActivityLogWidget from "@/components/staff/ActivityLogWidget";
 
-const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-
 const convertToIST = (dateStr: string): Date => {
     if (!dateStr) return new Date();
     let cleanDs = dateStr;
@@ -18,8 +16,7 @@ const convertToIST = (dateStr: string): Date => {
             cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
         }
     }
-    const utcDate = new Date(cleanDs);
-    return new Date(utcDate.getTime() + IST_OFFSET);
+    return new Date(cleanDs);
 };
 
 const formatAbsoluteDateTime = (dateStr: string) => {
@@ -548,19 +545,57 @@ export default function StaffDashboardPage() {
                                         Previous
                                     </button>
                                     <div className="flex items-center gap-1 mx-2">
-                                        {[...Array(Math.min(5, Math.ceil(activitiesTotal / activitiesLimit)))].map((_, i) => {
-                                            const pageNum = i + 1;
+                                        {(() => {
+                                            const totalPages = Math.ceil(activitiesTotal / activitiesLimit);
+                                            const maxVisiblePages = 5;
+                                            let startPage = Math.max(1, activitiesPage - Math.floor(maxVisiblePages / 2));
+                                            let endPage = startPage + maxVisiblePages - 1;
+
+                                            if (endPage > totalPages) {
+                                                endPage = totalPages;
+                                                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                                            }
+
+                                            const pageButtons = [];
+                                            for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
+                                                pageButtons.push(
+                                                    <button
+                                                        key={pageNum}
+                                                        onClick={() => setActivitiesPage(pageNum)}
+                                                        className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${activitiesPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            }
                                             return (
-                                                <button
-                                                    key={pageNum}
-                                                    onClick={() => setActivitiesPage(pageNum)}
-                                                    className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${activitiesPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
-                                                >
-                                                    {pageNum}
-                                                </button>
+                                                <>
+                                                    {startPage > 1 && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => setActivitiesPage(1)}
+                                                                className="w-8 h-8 rounded-lg text-[10px] font-black transition-all bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+                                                            >
+                                                                1
+                                                            </button>
+                                                            {startPage > 2 && <span className="text-slate-400 text-[10px] font-black px-1">...</span>}
+                                                        </>
+                                                    )}
+                                                    {pageButtons}
+                                                    {endPage < totalPages && (
+                                                        <>
+                                                            {endPage < totalPages - 1 && <span className="text-slate-400 text-[10px] font-black px-1">...</span>}
+                                                            <button
+                                                                onClick={() => setActivitiesPage(totalPages)}
+                                                                className="w-8 h-8 rounded-lg text-[10px] font-black transition-all bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+                                                            >
+                                                                {totalPages}
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </>
                                             );
-                                        })}
-                                        {Math.ceil(activitiesTotal / activitiesLimit) > 5 && <span className="text-slate-400 text-[10px] font-black px-1">...</span>}
+                                        })()}
                                     </div>
                                     <button
                                         disabled={activitiesPage >= Math.ceil(activitiesTotal / activitiesLimit) || activitiesLoading}

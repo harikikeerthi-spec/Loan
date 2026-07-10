@@ -87,7 +87,7 @@ export default function PerformanceAnalyticsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     label="Pipeline Value"
-                    value={dashboardSummary ? `₹${(dashboardSummary.pipelineValue || 0).toLocaleString('en-IN')}` : '₹0'}
+                    value={dashboardSummary ? `₹${((dashboardSummary.pipelineValue || 0) / 10000000).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr` : '₹0.00 Cr'}
                     icon="payments"
                     color="text-indigo-600"
                     loading={loading}

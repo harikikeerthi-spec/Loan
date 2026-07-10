@@ -207,7 +207,7 @@ export default function DynamicBankDashboard() {
                     type="text"
                     placeholder="e.g., VLAN-2026-001"
                     value={lanInput}
-                    onChange={(e) => setLanInput(e.target.value)}
+                    onChange={(e) => setLanInput(e.target.value.toUpperCase())}
                     disabled={isSubmittingLan}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-slate-800 font-medium"
                   />

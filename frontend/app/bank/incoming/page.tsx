@@ -247,7 +247,14 @@ export default function IncomingQueuePage() {
 
     const handleOpenLogModal = (app: any) => {
         setSelectedApp(app);
-        setLanNumber(`LAN-${currentBankId.toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`);
+        const bankCode = currentBankId.toUpperCase();
+        const targetLen = 17;
+        const prefixLen = 5 + bankCode.length;
+        const digitsNeeded = Math.max(4, targetLen - prefixLen);
+        const minRand = Math.pow(10, digitsNeeded - 1);
+        const maxRand = Math.pow(10, digitsNeeded) - 1;
+        const randNum = Math.floor(minRand + Math.random() * (maxRand - minRand));
+        setLanNumber(`LAN-${bankCode}-${randNum}`);
         setPriority("medium");
         setAssignedOfficer(officers[0]);
         setConfirmingLog(false);
@@ -260,6 +267,16 @@ export default function IncomingQueuePage() {
 
         if (selectedApp.lanNumber) {
             alert("LAN number has already been assigned and cannot be changed.");
+            return;
+        }
+
+        const lan = lanNumber.trim();
+        if (lan.length < 15 || lan.length > 20) {
+            alert("LAN number must be between 15 and 20 characters long.");
+            return;
+        }
+        if (!/[a-zA-Z]/.test(lan) || !/\d/.test(lan) || !/-/.test(lan)) {
+            alert("LAN number must contain a mix of letters, numbers, and the '-' character.");
             return;
         }
 
@@ -573,7 +590,7 @@ export default function IncomingQueuePage() {
                                         type="text"
                                         required
                                         value={lanNumber}
-                                        onChange={(e) => setLanNumber(e.target.value)}
+                                        onChange={(e) => setLanNumber(e.target.value.toUpperCase())}
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7]"
                                     />
                                 </div>
@@ -931,14 +948,16 @@ export default function IncomingQueuePage() {
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                            <a
-                                                                href={`/api/applications/admin/${selectedApp.id}/documents/${doc.id}/view?token=${token}`}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-[#6605c7]/5 hover:text-[#6605c7] hover:border-[#6605c7]/10 transition-all flex items-center gap-1"
-                                                            >
-                                                                <span className="material-symbols-outlined text-xs">download</span> View
-                                                            </a>
+                                                            {doc.status !== 'not_uploaded' && (
+                                                                <a
+                                                                    href={`/api/applications/admin/${selectedApp.id}/documents/${doc.id}/view?token=${token}`}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-[#6605c7]/5 hover:text-[#6605c7] hover:border-[#6605c7]/10 transition-all flex items-center gap-1"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">download</span> View
+                                                                </a>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>

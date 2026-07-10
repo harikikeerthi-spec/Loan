@@ -66,9 +66,11 @@ export class AuthService {
     return { bankId: null, bankName: null };
   }
 
-  private async generateTokens(user: any) {
+  private async generateTokens(user: any, originalLoginAt?: number) {
     const isBank = user.role === 'bank' || user.role === 'partner_bank';
     const { bankId, bankName } = isBank ? this.resolveBankIdFromEmail(user.email) : { bankId: null, bankName: null };
+
+    const loginAt = originalLoginAt || Date.now();
 
     const payload: Record<string, any> = {
       email: user.email,
@@ -77,6 +79,7 @@ export class AuthService {
       lastName: user.lastName,
       phoneNumber: user.phoneNumber,
       role: user.role,
+      loginAt,
     };
 
     // Embed bank identity in JWT so the socket gateway can auto-join the per-bank room
@@ -85,14 +88,45 @@ export class AuthService {
       payload.bankName = bankName;
     }
 
+    const standardAccessExpStr = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '30m';
+    const standardRefreshExpStr = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION') || '24h';
+
+    let accessExpiresIn: string | number = standardAccessExpStr;
+    let refreshExpiresIn: string | number = standardRefreshExpStr;
+
+    if (originalLoginAt) {
+      const maxAgeMs = 24 * 60 * 60 * 1000; // 24 hours
+      const elapsedMs = Date.now() - originalLoginAt;
+      const remainingMs = maxAgeMs - elapsedMs;
+
+      if (remainingMs <= 0) {
+        throw new UnauthorizedException('Session has expired. Please login again.');
+      }
+
+      const remainingSec = Math.floor(remainingMs / 1000);
+
+      // Parse standard access expiration to seconds
+      let standardAccessSec = 1800; // default 30m
+      if (standardAccessExpStr.endsWith('m')) {
+        standardAccessSec = parseInt(standardAccessExpStr) * 60;
+      } else if (standardAccessExpStr.endsWith('h')) {
+        standardAccessSec = parseInt(standardAccessExpStr) * 3600;
+      } else if (standardAccessExpStr.endsWith('s')) {
+        standardAccessSec = parseInt(standardAccessExpStr);
+      }
+
+      accessExpiresIn = Math.min(standardAccessSec, remainingSec);
+      refreshExpiresIn = remainingSec;
+    }
+
     // Generate access token (short-lived)
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: (this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '30m') as any,
+      expiresIn: accessExpiresIn as any,
     });
 
     // Generate refresh token (long-lived)
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: (this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION') || '7d') as any,
+      expiresIn: refreshExpiresIn as any,
     });
 
     // Store refresh token in database
@@ -627,9 +661,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Refresh access token using refresh token
-   */
   async refreshTokens(refreshToken: string) {
     try {
       // Verify the refresh token
@@ -647,8 +678,11 @@ export class AuthService {
       //   throw new UnauthorizedException('Invalid refresh token');
       // }
 
+      // Extract original login timestamp, with backward compatibility fallback to iat * 1000
+      const originalLoginAt = payload.loginAt || (payload.iat ? payload.iat * 1000 : undefined);
+
       // Generate new tokens
-      const tokens = await this.generateTokens(user);
+      const tokens = await this.generateTokens(user, originalLoginAt);
 
       return {
         success: true,
