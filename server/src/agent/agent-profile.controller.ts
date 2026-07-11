@@ -83,7 +83,7 @@ export class AgentProfileController {
       const parts = body.primaryContact.trim().split(' ');
       const firstName = parts[0];
       const lastName = parts.slice(1).join(' ');
-      await this.usersService.update(user.id, { 
+      await this.usersService.updateExtractedDetails(user.id, { 
         firstName, 
         lastName,
         mobile: body.mobile,
