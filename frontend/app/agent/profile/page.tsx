@@ -11,7 +11,7 @@ const KYC_DOC_TYPES = [
 ];
 
 export default function AgentProfilePage() {
-    const { showToast } = useAgent();
+    const { showToast, setAgentProfile } = useAgent();
     
     // Tab State
     const [activeTab, setActiveTab] = useState<"details" | "kyc" | "bank" | "agreements" | "notifications">("details");
@@ -49,6 +49,7 @@ export default function AgentProfilePage() {
             if (meRes.status === "fulfilled" && (meRes.value as any)?.success) {
                 const meData = (meRes.value as any).data;
                 setProfile(meData);
+                if (setAgentProfile) setAgentProfile(meData);
                 setEditBusinessName(meData.businessName || "");
                 setEditGstin(meData.gstin || "");
             }
