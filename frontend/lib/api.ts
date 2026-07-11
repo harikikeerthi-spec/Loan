@@ -145,6 +145,11 @@ export const agentApi = {
         apiFetch(`${API_URL}/commissions/rate-card`),
     getMe: () =>
         apiFetch(`${API_URL}/agents/me`),
+    updateContact: (data: any) =>
+        apiFetch(`${API_URL}/agents/me/contact`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
     getKyc: () =>
         apiFetch(`${API_URL}/kyc`),
     submitKyc: (data: any) =>

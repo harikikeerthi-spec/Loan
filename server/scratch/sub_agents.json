@@ -63,13 +63,38 @@
     "joinedAt": "2026-07-02T07:41:44.131Z"
   },
   {
+<<<<<<< HEAD
+=======
+    "id": "sub-1-VL-A",
+    "masterAgentId": "VL-AGT-2026-00016",
+    "name": "Amit Kumar",
+    "email": "amit.kumar@example.com",
+    "phone": "9876543210",
+    "status": "active",
+    "joinedAt": "2026-06-23T15:40:34.336Z"
+  },
+  {
+    "id": "sub-2-VL-A",
+    "masterAgentId": "VL-AGT-2026-00016",
+    "name": "Priya Sharma",
+    "email": "priya.sharma@example.com",
+    "phone": "9812345678",
+    "status": "invited",
+    "joinedAt": "2026-07-06T15:40:34.336Z"
+  },
+  {
+>>>>>>> 0cd7127f157381d14f9b12c33a18ba714adf3775
     "id": "sub-1-VL-S",
     "masterAgentId": "VL-STU-2026-00018",
     "name": "Amit Kumar",
     "email": "amit.kumar@example.com",
     "phone": "9876543210",
     "status": "active",
+<<<<<<< HEAD
     "joinedAt": "2026-06-26T08:10:00.329Z"
+=======
+    "joinedAt": "2026-06-26T11:48:18.778Z"
+>>>>>>> 0cd7127f157381d14f9b12c33a18ba714adf3775
   },
   {
     "id": "sub-2-VL-S",
@@ -78,6 +103,10 @@
     "email": "priya.sharma@example.com",
     "phone": "9812345678",
     "status": "invited",
+<<<<<<< HEAD
     "joinedAt": "2026-07-09T08:10:00.329Z"
+=======
+    "joinedAt": "2026-07-09T11:48:18.778Z"
+>>>>>>> 0cd7127f157381d14f9b12c33a18ba714adf3775
   }
 ]

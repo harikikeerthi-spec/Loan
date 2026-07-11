@@ -55,12 +55,43 @@ export class AgentProfileController {
         phoneNumber: user.phoneNumber || user.mobile,
         role: user.role,
         businessName: profile.businessName || `${user.firstName || 'Krishna'} Agency`,
+        officeAddress: profile.officeAddress || '',
         gstin: profile.gstin || '36AAAAA1111A1Z1',
         kycStatus: profile.kycStatus || 'verified',
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }
     };
+  }
+
+  @Post('agents/me/contact')
+  async updateContact(@Req() req: any, @Body() body: any) {
+    const user = req.user;
+    
+    // In a real app we'd update the User table for firstName/lastName/mobile/email, 
+    // but for the agent portal mock, we'll store overrides in the profile json to reflect instantly.
+    const profile = writeProfile(user.id, {
+      officeAddress: body.officeAddress,
+      // If we wanted to override primary contact name/mobile:
+      // firstName: body.primaryContact?.split(' ')[0],
+      // lastName: body.primaryContact?.split(' ').slice(1).join(' '),
+      // mobile: body.mobile
+    });
+    
+    // Also update actual user table for these fields
+    if (body.primaryContact) {
+      const parts = body.primaryContact.trim().split(' ');
+      const firstName = parts[0];
+      const lastName = parts.slice(1).join(' ');
+      await this.usersService.updateExtractedDetails(user.id, { 
+        firstName, 
+        lastName,
+        mobile: body.mobile,
+        phoneNumber: body.mobile
+      });
+    }
+
+    return { success: true, data: profile };
   }
 
   @Get('kyc')
