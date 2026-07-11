@@ -293,6 +293,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [msgInput, setMsgInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
+  const [isNoteInputVisible, setIsNoteInputVisible] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Dynamic Documents State
@@ -705,6 +706,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
         isInternal: true
       } as any);
       setNoteInput("");
+      setIsNoteInputVisible(false);
       fetchNotes();
     } catch (err) {
       console.error("Failed to add note:", err);
@@ -2070,45 +2072,133 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     )} */}
 
                     {activeTab === "notes" && (
-                      <div id="internal-notes-section" className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between">
+                      <div id="internal-notes-section" className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-6 mb-8">
                           <div className="flex items-center gap-4">
-                            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100">
-                              <span className="material-symbols-outlined text-[22px]">sticky_note_2</span>
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
+                              <span className="material-symbols-outlined text-[22px]">history_edu</span>
                             </div>
                             <div>
-                              <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Internal Staff Notes</h3>
-                              <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Confidential staff only</p>
+                              <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Activity Logs & Notes</h3>
+                              <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Confidential staff history</p>
                             </div>
                           </div>
-                          <button onClick={handleAddNote} className="flex items-center gap-2 px-5 py-2.5 bg-[#0d1b2a] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
+                          <button 
+                            onClick={() => {
+                              setIsNoteInputVisible(true);
+                              setTimeout(() => {
+                                const el = document.getElementById("note-input-terminal");
+                                if (el) {
+                                  el.focus();
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                              }, 50);
+                            }}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5"
+                          >
                             <span className="material-symbols-outlined text-[18px]">add</span>
-                            New Note
+                            New Log
                           </button>
                         </div>
-                        <div className="space-y-4">
-                          {notes.map((note, idx) => (
-                            <div key={note.id || note._id || idx} className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 hover:border-amber-200 transition-all">
-                              <div className="flex items-start justify-between mb-3">
-                                <p className="text-[12px] font-black text-slate-900">
-                                  {note.authorName || note.author || 'Staff Member'}{" "}
-                                  <span className="font-medium text-slate-400 ml-2">{note.role}</span>
-                                </p>
-                                <p className="text-[10px] font-bold text-black uppercase">
-                                  {note.createdAt ? formatNoteTime(note.createdAt) : (note.time || 'JUST NOW')}
-                                </p>
+
+                        <div className="space-y-12">
+                          <div className="relative pl-6 space-y-8 before:absolute before:inset-y-0 before:left-[11px] before:w-px before:bg-slate-200 before:-z-10">
+                            {notes.length === 0 && (
+                              <div className="text-center py-10">
+                                <span className="material-symbols-outlined text-[48px] text-slate-200 mb-2">speaker_notes_off</span>
+                                <p className="text-[13px] font-bold text-slate-400">No activity logs found.</p>
                               </div>
-                              <p className="text-[14px] text-slate-600 leading-relaxed">{note.content || note.text}</p>
+                            )}
+                            {notes.map((note, idx) => {
+                              let badge = null;
+                              const lowerContent = (note.content || note.text || "").toLowerCase();
+                              if (lowerContent.includes("urgent") || lowerContent.includes("escalat")) {
+                                badge = <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-[9px] font-black uppercase tracking-widest border border-rose-100"><span className="material-symbols-outlined text-[14px]">warning</span> Urgent</span>;
+                              } else if (lowerContent.includes("pending") || lowerContent.includes("document") || lowerContent.includes("upload")) {
+                                badge = <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-widest border border-amber-100"><span className="material-symbols-outlined text-[14px]">pending_actions</span> Docs Pending</span>;
+                              } else if (lowerContent.includes("verified") || lowerContent.includes("approved") || lowerContent.includes("success")) {
+                                badge = <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest border border-emerald-100"><span className="material-symbols-outlined text-[14px]">check_circle</span> Verified</span>;
+                              } else {
+                                badge = <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest border border-indigo-100"><span className="material-symbols-outlined text-[14px]">info</span> Update</span>;
+                              }
+
+                              return (
+                                <div key={note.id || note._id || idx} className="relative z-0 group animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${idx * 50}ms` }}>
+                                  {/* Timeline Dot */}
+                                  <div className="absolute left-[-29px] top-4 w-3 h-3 bg-white border-[3px] border-amber-400 rounded-full shadow-[0_0_0_4px_rgba(255,255,255,1)] group-hover:border-amber-500 transition-colors z-10" />
+                                  
+                                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-lg transition-all group-hover:border-amber-100">
+                                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+                                      <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-amber-800 font-black text-[14px] shadow-sm">
+                                          {(note.authorName || note.author || 'S')[0].toUpperCase()}
+                                        </div>
+                                        <div>
+                                          <p className="text-[13px] font-bold text-slate-900 flex items-center gap-2">
+                                            {note.authorName || note.author || 'Staff Member'}
+                                            {note.role && <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] rounded uppercase tracking-widest">{note.role}</span>}
+                                          </p>
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                                            {note.createdAt ? formatNoteTime(note.createdAt) : (note.time || 'JUST NOW')}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="ml-14 sm:ml-0">
+                                        {badge}
+                                      </div>
+                                    </div>
+                                    <p className="text-[14px] text-slate-600 leading-relaxed sm:pl-14">{note.content || note.text}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Input Terminal */}
+                          {isNoteInputVisible && (
+                            <div className="pt-8 mt-8 border-t border-slate-100 animate-in fade-in slide-in-from-top-4 duration-300">
+                              <div className="flex flex-col sm:flex-row items-start gap-4">
+                                <div className="hidden sm:flex w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center shrink-0 shadow-inner">
+                                  <span className="material-symbols-outlined text-[20px] text-indigo-600">edit_note</span>
+                                </div>
+                                <div className="flex-1 w-full bg-slate-50/80 border border-slate-200 rounded-[24px] overflow-hidden focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all shadow-sm">
+                                  <textarea
+                                    id="note-input-terminal"
+                                    rows={3}
+                                    value={noteInput}
+                                    onChange={(e) => setNoteInput(e.target.value)}
+                                    placeholder="Type a new internal log... (Use keywords like 'urgent', 'pending', 'verified' for auto-tags)"
+                                    className="w-full bg-transparent p-5 text-[14px] font-medium text-slate-700 focus:outline-none resize-none placeholder:text-slate-400"
+                                  />
+                                  <div className="px-5 py-3 bg-white border-t border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+                                    <div className="flex gap-2">
+                                      <span className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[9px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline-block">Auto-tags enabled</span>
+                                    </div>
+                                    <div className="flex gap-3">
+                                      <button
+                                        onClick={() => {
+                                          setIsNoteInputVisible(false);
+                                          setNoteInput("");
+                                        }}
+                                        className="px-4 py-2.5 text-slate-500 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 hover:text-slate-700 transition-all"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        onClick={handleAddNote}
+                                        disabled={!noteInput.trim()}
+                                        className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none transition-all flex items-center gap-2"
+                                      >
+                                        Save Log
+                                        <span className="material-symbols-outlined text-[16px]">send</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          ))}
+                          )}
                         </div>
-                        <textarea
-                          rows={3}
-                          value={noteInput}
-                          onChange={(e) => setNoteInput(e.target.value)}
-                          placeholder="Write an internal observation or note..."
-                          className="w-full bg-slate-50/50 border border-slate-200 rounded-3xl p-5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500/50 transition-all resize-none"
-                        />
                       </div>
                     )}
                   </div>

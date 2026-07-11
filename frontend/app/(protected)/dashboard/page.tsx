@@ -312,6 +312,7 @@ export default function DashboardPage() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [activeToast, setActiveToast] = useState<{ sender: string; content: string } | null>(null);
     const [conversationId, setConversationId] = useState<string | null>(null);
+    const [selectedAppDetails, setSelectedAppDetails] = useState<any>(null);
 
     const toggleAppProgress = (appId: string) => {
         setExpandedApps(prev => ({ ...prev, [appId]: !prev[appId] }));
@@ -664,15 +665,27 @@ export default function DashboardPage() {
 
                                                     {/* Action Footer for detailed progress toggle */}
                                                     <div className="flex items-center justify-between gap-4 mt-4 pt-3 border-t border-gray-50 select-none">
-                                                        <button
-                                                            onClick={() => toggleAppProgress(app.id)}
-                                                            className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase text-[#6605c7] hover:text-[#5504a8] transition-colors"
-                                                        >
-                                                            <span className="material-symbols-outlined text-[16px]">
-                                                                {expandedApps[app.id] ? 'expand_less' : 'expand_more'}
-                                                            </span>
-                                                            {expandedApps[app.id] ? 'Hide Progress Details' : 'View Progress Details'}
-                                                        </button>
+                                                        <div className="flex items-center gap-3">
+                                                            <button
+                                                                onClick={() => toggleAppProgress(app.id)}
+                                                                className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase text-[#6605c7] hover:text-[#5504a8] transition-colors"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[16px]">
+                                                                    {expandedApps[app.id] ? 'expand_less' : 'expand_more'}
+                                                                </span>
+                                                                {expandedApps[app.id] ? 'Hide Progress' : 'View Progress'}
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => setSelectedAppDetails(app)}
+                                                                className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase text-gray-500 hover:text-gray-800 transition-colors"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[16px]">
+                                                                    visibility
+                                                                </span>
+                                                                Details
+                                                            </button>
+                                                        </div>
 
                                                         {app.id && (
                                                             <span className="text-[9px] font-black uppercase text-gray-300 tracking-wider">
@@ -1031,6 +1044,116 @@ export default function DashboardPage() {
                     )}
                 </button>
             </div>
+            {/* Application Details Modal */}
+            {selectedAppDetails && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSelectedAppDetails(null)} />
+                    <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900 tracking-tight">Application Details</h2>
+                                <p className="text-[13px] text-gray-500 font-medium">#{selectedAppDetails.applicationNumber || selectedAppDetails.id}</p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedAppDetails(null)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-white border border-transparent hover:border-gray-200 transition-all shadow-sm"
+                            >
+                                <span className="material-symbols-outlined text-lg">close</span>
+                            </button>
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {/* Loan Info */}
+                                <div className="space-y-4">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Loan Request</h3>
+                                    
+                                    <div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Bank</div>
+                                        <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.bank || 'Not specified'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Amount Required</div>
+                                        <div className="text-sm font-semibold text-gray-800">₹{selectedAppDetails.amount?.toLocaleString("en-IN") || 'Not specified'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Loan Type</div>
+                                        <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.loanType || 'Not specified'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Collateral</div>
+                                        <div className="text-sm font-semibold text-gray-800">
+                                            {selectedAppDetails.hasCollateral ? (selectedAppDetails.collateralType || 'Yes') : (selectedAppDetails.hasCollateral === false ? 'No' : (selectedAppDetails.collateral || 'Not specified'))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Education Info */}
+                                <div className="space-y-4">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Education Details</h3>
+                                    
+                                    <div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">University & Country</div>
+                                        <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.universityName || 'Not specified'}, {selectedAppDetails.country || 'Not specified'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Course</div>
+                                        <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.courseName || selectedAppDetails.courseType || 'Not specified'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Admission Status</div>
+                                        <div className="text-sm font-semibold text-gray-800 capitalize">{selectedAppDetails.admissionStatus || 'Not specified'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Intake Season</div>
+                                        <div className="text-sm font-semibold text-gray-800 capitalize">{selectedAppDetails.intakeSeason || selectedAppDetails.user?.intakeSeason || 'Not Specified'}</div>
+                                    </div>
+                                </div>
+
+                                {/* Financial & Co-Applicant */}
+                                <div className="space-y-4 sm:col-span-2 mt-2">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Financial & Contact</h3>
+                                    
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant</div>
+                                            <div className="text-sm font-semibold text-gray-800">
+                                                {selectedAppDetails.hasCoApplicant ? (selectedAppDetails.coApplicantRelation || selectedAppDetails.coApplicantName || 'Yes') : (selectedAppDetails.hasCoApplicant === false ? 'No' : (selectedAppDetails.coApplicant || 'Not specified'))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant Income</div>
+                                            <div className="text-sm font-semibold text-gray-800">
+                                                {selectedAppDetails.coApplicantIncome ? `₹${selectedAppDetails.coApplicantIncome.toLocaleString("en-IN")}` : 'Not specified'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[11px] font-bold text-gray-400 uppercase">Applicant Name</div>
+                                            <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.firstName} {selectedAppDetails.lastName}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[11px] font-bold text-gray-400 uppercase">Contact</div>
+                                            <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.email} {selectedAppDetails.phone ? `• ${selectedAppDetails.phone}` : ''}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Notes */}
+                                {selectedAppDetails.notes && (
+                                    <div className="space-y-2 sm:col-span-2 mt-2 bg-amber-50/50 p-4 rounded-xl border border-amber-100/50">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600/70">Additional Notes</h3>
+                                        <div className="text-sm text-amber-900/80 leading-relaxed whitespace-pre-wrap">
+                                            {selectedAppDetails.notes}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -59,17 +59,17 @@ const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: any
 );
 
 const StatMiniCard = ({ label, value, subtext, trendType, trendLabel, icon, bgColor, iconColor, delay = 0 }: any) => {
-    let trendColorClass = "bg-gray-50 text-gray-500";
-    let trendIcon = "trending_flat";
+    let dotColor = "bg-gray-400 shadow-[0_0_8px_#9ca3af]";
+    let sparklineColor = "#9ca3af";
     if (trendType === "up") {
-        trendColorClass = "bg-emerald-50 text-emerald-600 border border-emerald-100/30";
-        trendIcon = "trending_up";
+        dotColor = "bg-emerald-500 shadow-[0_0_8px_#10b981]";
+        sparklineColor = "#10b981";
     } else if (trendType === "down") {
-        trendColorClass = "bg-rose-50 text-rose-600 border border-rose-100/30";
-        trendIcon = "trending_down";
+        dotColor = "bg-rose-500 shadow-[0_0_8px_#f43f5e]";
+        sparklineColor = "#f43f5e";
     } else if (trendType === "neutral" || trendType === "info") {
-        trendColorClass = "bg-purple-50 text-purple-650 border border-purple-100/30";
-        trendIcon = "sync";
+        dotColor = "bg-purple-500 shadow-[0_0_8px_#a855f7]";
+        sparklineColor = "#a855f7";
     }
 
     return (
@@ -77,26 +77,42 @@ const StatMiniCard = ({ label, value, subtext, trendType, trendLabel, icon, bgCo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay, duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-            className="glass-card stat-card-gradient p-4 rounded-2xl relative overflow-hidden group"
+            className="glass-card stat-card-gradient p-5 rounded-2xl relative overflow-hidden group flex flex-col justify-between h-full"
         >
-            <div className="flex justify-between items-start relative z-10">
-                <div className="space-y-2">
+            <div className="flex justify-between items-center relative z-10 mb-4">
+                <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 duration-500 ${bgColor || 'bg-[#6605c7]/10'} shadow-sm`}>
+                        <span className={`material-symbols-outlined text-base ${iconColor || 'text-[#6605c7]'}`}>{icon}</span>
+                    </div>
                     <p className="text-gray-500 text-[9px] font-black uppercase tracking-[0.2em]">{label}</p>
+                </div>
+                {trendLabel && trendType !== "none" && (
+                    <div className="flex items-center gap-1.5" title={trendLabel}>
+                        <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${dotColor}`} />
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-end justify-between relative z-10">
+                <div>
                     <div className="text-2xl font-black font-mono text-gray-900 leading-none tracking-tight">
                         {value}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                        {trendLabel && trendType !== "none" && (
-                            <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${trendColorClass}`}>
-                                <span className="material-symbols-outlined text-[9px] font-black">{trendIcon}</span>
-                                {trendLabel}
-                            </div>
-                        )}
-                        <span className="text-[9.5px] font-medium text-gray-400 uppercase tracking-wider">{subtext}</span>
-                    </div>
+                    <div className="text-[9.5px] font-bold text-gray-400 uppercase tracking-widest mt-2">{subtext}</div>
                 </div>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-12 duration-500 ${bgColor || 'bg-[#6605c7]/10'} shadow-sm`}>
-                    <span className={`material-symbols-outlined text-xl ${iconColor || 'text-[#6605c7]'}`}>{icon}</span>
+
+                {/* Micro Sparkline */}
+                <div className="w-14 h-6 opacity-70 group-hover:opacity-100 transition-opacity duration-300">
+                    <svg viewBox="0 0 60 20" className="w-full h-full overflow-visible">
+                        <path
+                            d={trendType === "up" ? "M0,20 Q15,20 25,10 T40,5 T60,0" : trendType === "down" ? "M0,0 Q15,0 25,10 T40,15 T60,20" : "M0,15 Q15,5 30,15 T60,15"}
+                            fill="none"
+                            stroke={sparklineColor}
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            className="drop-shadow-sm"
+                        />
+                    </svg>
                 </div>
             </div>
         </motion.div>
@@ -131,6 +147,19 @@ export default function BankDashboard() {
 
     const [incomingAlert, setIncomingAlert] = useState<any | null>(null);
     const socketRef = useRef<Socket | null>(null);
+
+    const commandInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                commandInputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const isNotificationForThisBank = useCallback((notif: any) => {
         let metadata = notif.metadata;
@@ -745,28 +774,28 @@ export default function BankDashboard() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                    {funnelStats.map((item, idx) => (
-                        <div key={idx} className="relative p-4.5 bg-gray-50/50 hover:bg-white border border-gray-150 rounded-2xl transition-all group flex flex-col justify-between">
-                            <div className="space-y-1">
-                                <div className="flex justify-between items-center text-[9px] font-black uppercase text-gray-450 tracking-wider">
-                                    <span>Phase 0{idx + 1}</span>
-                                    <span className="font-mono text-[#6605c7]">{item.pct}%</span>
+                <div className="flex flex-col lg:flex-row gap-2 h-auto lg:h-32">
+                    {funnelStats.map((item, idx) => {
+                        const isEmpty = item.count === 0;
+                        return (
+                            <div key={idx} className={`relative flex-1 p-5 rounded-2xl transition-all group flex flex-col justify-center border border-transparent ${isEmpty ? 'bg-gray-50/40 opacity-50 grayscale' : 'bg-gray-50/80 hover:bg-white hover:border-gray-200 hover:shadow-lg'}`}>
+                                {idx !== funnelStats.length - 1 && (
+                                    <div className="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 z-10 text-gray-300 pointer-events-none">
+                                        <span className="material-symbols-outlined text-4xl">chevron_right</span>
+                                    </div>
+                                )}
+                                <div className="relative z-10 flex flex-col items-center text-center">
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${isEmpty ? 'text-gray-400' : 'text-[#6605c7]'}`}>Phase 0{idx + 1}</span>
+                                    <h4 className={`text-sm font-black uppercase tracking-tight mt-1 ${isEmpty ? 'text-gray-500' : 'text-gray-900'}`}>{item.stage}</h4>
+                                    <div className="mt-3 flex items-baseline gap-1">
+                                        <span className={`font-mono text-2xl font-black leading-none ${isEmpty ? 'text-gray-400' : 'text-gray-900'}`}>{item.count}</span>
+                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">files</span>
+                                    </div>
                                 </div>
-                                <h4 className="text-xs font-black text-gray-800 uppercase tracking-tight truncate mt-1">{item.stage}</h4>
+                                <div className={`absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl ${item.color} ${isEmpty ? 'opacity-30' : 'opacity-100'}`} style={{ width: `${item.pct}%` }} />
                             </div>
-
-                            <div className="mt-4.5 space-y-2">
-                                <div className="flex justify-between items-end text-xs font-black text-gray-900">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">caseload</span>
-                                    <span className="font-mono text-sm">{item.count} files</span>
-                                </div>
-                                <div className="w-full bg-gray-200/70 h-2.5 rounded-full overflow-hidden">
-                                    <div className={`${item.color} h-full rounded-full transition-all duration-1000 group-hover:scale-y-110`} style={{ width: `${item.pct}%` }} />
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             </motion.div>
 
@@ -909,14 +938,7 @@ export default function BankDashboard() {
                     transition={{ delay: 0.8 }}
                     className="space-y-4"
                 >
-                    <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
-                        <h3 className="text-sm font-black font-display text-gray-900 mb-4 tracking-tight relative z-10">Direct Commands</h3>
-                        <div className="grid grid-cols-1 gap-2.5 relative z-10">
-                            <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="WhatsApp Secure Channel" onClick={() => router.push('/bank/chat')} />
-                            <QuickAction icon="assignment_add" label="Distribute Tasks" sublabel="Task Allocation Matrix" onClick={() => router.push('/bank/tasks')} />
-                            <QuickAction icon="verified" label="Validate Assets" sublabel="Compliance Review" iconColor="text-emerald-500" bgColor="bg-emerald-500/5" onClick={() => router.push('/bank/applications')} />
-                        </div>
-                    </div>
+
 
                     {portfolio?.topUniversities && portfolio.topUniversities.length > 0 && (
                         <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
@@ -980,6 +1002,26 @@ export default function BankDashboard() {
 
             {/* Mesh background subtle overlay */}
             <div className="fixed inset-0 bg-mesh-gradient opacity-[0.03] pointer-events-none -z-10" />
+
+            {/* Quick Action Command Bar */}
+            {/* <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-xl transition-transform duration-300">
+                <div className="relative group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#6605c7] to-[#8b24e5] rounded-full blur-md opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                    <div className="relative bg-white/90 backdrop-blur-xl border border-gray-200/50 shadow-2xl rounded-full flex items-center px-6 py-4">
+                        <span className="material-symbols-outlined text-[#6605c7] text-2xl mr-4">terminal</span>
+                        <input
+                            ref={commandInputRef}
+                            type="text"
+                            placeholder="Type a command (e.g. /distribute, /chat) or search..."
+                            className="flex-1 bg-transparent border-none outline-none text-base font-bold text-gray-900 placeholder-gray-400"
+                        />
+                        <div className="flex items-center gap-1.5 ml-4 px-3 py-1.5 rounded-lg bg-gray-100/80 border border-gray-200/50 shrink-0">
+                            <span className="text-xs font-bold text-gray-500 font-mono">⌘</span>
+                            <span className="text-xs font-bold text-gray-500 font-mono">K</span>
+                        </div>
+                    </div>
+                </div>
+            </div> */}
         </div>
     );
 }

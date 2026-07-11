@@ -23,9 +23,9 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
     return (
         <Link
             href={path}
-            className={`flex items-center py-2.5 px-3.5 rounded-md transition-all relative group overflow-hidden ${active
-                ? "text-[#0A2540] bg-[#4F46E5]/10 font-bold"
-                : "text-gray-500 hover:text-[#0A2540] hover:bg-gray-50"
+            className={`flex items-center py-2.5 px-3.5 rounded-md transition-all duration-300 relative group overflow-hidden ${active
+                ? "text-[#0A2540] bg-[#4F46E5]/10 font-bold opacity-100"
+                : "text-gray-500 hover:text-[#0A2540] hover:bg-gray-50 hover:opacity-100"
                 }`}
         >
             {/* Active state vertical indicator on left edge */}
@@ -360,9 +360,12 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     {categorizedNav.map((cat, idx) => (
                         <div key={idx} className="space-y-2.5">
                             {isOpened && (
-                                <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#0A2540]/80 mb-2 font-sans">
-                                    {cat.category}
-                                </p>
+                                <div className="flex items-center gap-3 px-3 mb-2">
+                                    <p className="text-[8.5px] font-extrabold uppercase tracking-[0.3em] text-gray-400 font-sans">
+                                        {cat.category}
+                                    </p>
+                                    <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent"></div>
+                                </div>
                             )}
                             <div className="space-y-1.5">
                                 {cat.items.map((item) => (

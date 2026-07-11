@@ -433,6 +433,7 @@ export class UsersService {
     dateOfBirth: string,
     intakeSeason?: string,
     profileImage?: string,
+    pincode?: string,
   ) {
     const dobDate = this.parseDate(dateOfBirth);
 
@@ -442,6 +443,9 @@ export class UsersService {
     }
     if (profileImage !== undefined) {
       updatePayload.profileImage = profileImage;
+    }
+    if (pincode !== undefined) {
+      updatePayload.pincode = pincode;
     }
 
     const { data, error } = await this.db
@@ -865,7 +869,7 @@ export class UsersService {
 
     let query = this.db
       .from('LoanApplication')
-      .select('*')
+      .select('*, user:User!userId(id, intakeSeason, firstName, lastName)')
       .order('id', { ascending: false });
 
     if (email) {

@@ -440,6 +440,16 @@ export class DocumentController {
     if (!doc || !doc.filePath)
       throw new NotFoundException('Document not found');
 
+    // Check local fallback first
+    const localDir = path.join(process.cwd(), 'uploads', userId, docType);
+    if (fs.existsSync(localDir)) {
+      const files = fs.readdirSync(localDir);
+      if (files.length > 0) {
+        const localFilePath = path.join(localDir, files[0]);
+        return res.sendFile(localFilePath);
+      }
+    }
+
     // DigiLocker virtual record
     if (doc.filePath.startsWith('in.gov.')) {
       const html = `<!DOCTYPE html><html><head><title>DigiLocker Record - ${doc.docName || doc.docType}</title>
@@ -496,6 +506,15 @@ export class DocumentController {
 
     if (!doc || !doc.filePath)
       throw new NotFoundException('Document not found');
+
+    // Check local fallback first
+    const localDir = path.join(process.cwd(), 'uploads', userId, docType);
+    if (fs.existsSync(localDir)) {
+      const files = fs.readdirSync(localDir);
+      if (files.length > 0) {
+        return { success: true, url: `/api/documents/view/${userId}/${docType}`, docType, filePath: doc.filePath };
+      }
+    }
 
     const url = await this.s3Service.getPresignedUrl(doc.filePath, 3600);
     return { success: true, url, docType, filePath: doc.filePath };

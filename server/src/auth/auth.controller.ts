@@ -241,6 +241,7 @@ export class AuthController {
     dateOfBirth: string;
     intakeSeason?: string;
     profileImage?: string;
+    pincode?: string;
   }) {
     if (!body || !body.email) {
       return {
@@ -255,7 +256,8 @@ export class AuthController {
       body.phoneNumber,
       body.dateOfBirth,
       body.intakeSeason,
-      body.profileImage
+      body.profileImage,
+      body.pincode
     );
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { agentApi } from "@/lib/api";
 import { format } from "date-fns";
@@ -173,6 +173,8 @@ interface AgentContextType {
     handleAskBot: (e: React.FormEvent) => void;
     handleToggleTask: (taskId: string, completed: boolean) => Promise<void>;
     handleCompleteModule: (moduleId: string) => Promise<void>;
+    unreadChatCount: number;
+    setUnreadChatCount: (val: number) => void;
 }
 
 const AgentContext = createContext<AgentContextType | undefined>(undefined);
@@ -194,270 +196,22 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "info" | "warning" } | null>(null);
+    const [unreadChatCount, setUnreadChatCount] = useState(0);
 
-    // Initial default student data aligning with the blueprint
-    const defaultStudents: StudentApplication[] = useMemo(() => [
-        {
-            id: "LEAD-1092",
-            applicationNumber: "VL-APP-2026-01092",
-            firstName: "Priya",
-            lastName: "Sharma",
-            email: "priya.sharma@gmail.com",
-            phoneNumber: "9876543210",
-            dob: "2004-05-15",
-            city: "Hyderabad",
-            state: "Telangana",
-            loanType: "Domestic",
-            courseName: "B.Tech CSE",
-            collegeName: "IIT Bombay",
-            courseStartDate: "2026-07-15",
-            amount: 1200000,
-            coApplicantName: "Ramesh Sharma",
-            coApplicantRelationship: "Parent",
-            coApplicantMobile: "9876543211",
-            source: "Walk-In",
-            status: "approved",
-            stage: "sanction",
-            bank: "SBI",
-            commissionRate: 0.70,
-            projectedCommission: 8400,
-            lastUpdated: "10-Jun-2026",
-            documents: [
-                { docType: "identity_proof", docName: "Aadhar Card", status: "verified", uploadedBy: "Agent", version: "v1" },
-                { docType: "pan_card", docName: "PAN Card", status: "verified", uploadedBy: "Agent", version: "v1" },
-                { docType: "marksheet_10th", docName: "10th Marksheet", status: "verified", uploadedBy: "Student", version: "v1" },
-                { docType: "marksheet_12th", docName: "12th Marksheet", status: "verified", uploadedBy: "Student", version: "v1" },
-                { docType: "admission_letter", docName: "Admission Letter", status: "verified", uploadedBy: "Agent", version: "v1" },
-                { docType: "bank_statement", docName: "6-Month Bank Statement", status: "verified", uploadedBy: "Agent", version: "v1" },
-                { docType: "income_proof", docName: "Income Certificate", status: "rejected", uploadedBy: "Staff Request", version: "v1", rejectionReason: "Stamp missing — Please re-upload stamped copy" },
-                { docType: "fee_structure", docName: "Fee Structure", status: "verified", uploadedBy: "Agent", version: "v1" },
-                { docType: "photo", docName: "Passport Photo", status: "verified", uploadedBy: "Agent", version: "v1" }
-            ],
-            journey: [
-                { date: "18-May-2026", title: "Lead Submitted", desc: "Submitted by Krishna Agency", done: true },
-                { date: "18-May-2026", title: "Welcome Alert", desc: "Welcome WhatsApp message dispatched to student", done: true },
-                { date: "20-May-2026", title: "Counsellor Contact", desc: "First connection call made by Staff (Neha Sharma)", done: true },
-                { date: "21-May-2026", title: "Documents Requested", desc: "9 checklist files requested", done: true },
-                { date: "25-May-2026", title: "Documents Received", desc: "All core files uploaded to server", done: true },
-                { date: "26-May-2026", title: "AI OCR Verification", desc: "8/9 documents auto-verified (96% confidence score)", done: true },
-                { date: "27-May-2026", title: "Staff Verification", desc: "Document check completed", done: true },
-                { date: "01-Jun-2026", title: "Bank Submission", desc: "Application sent to SBI for processing", done: true },
-                { date: "10-Jun-2026", title: "SBI Query Raised", desc: "Income Certificate requires physical employer stamp", done: true, type: "alert" }
-            ],
-            bankStatus: {
-                product: "SBI Scholar Loan",
-                refNumber: "VL-SBI-1092",
-                submittedOn: "01-Jun-2026",
-                tatExpected: "12 working days (by 17-Jun-2026)",
-                queryText: "Income Certificate — original stamp required",
-                queryDeadline: "22-Jun-2026"
-            },
-            communicationLog: [
-                { sender: "Staff Neha Sharma", timestamp: "10-Jun-2026 12:31 PM", message: "Bank has raised a query on the income certificate. The bank needs a stamped original copy. Please ask Priya's father to re-submit with the seal. Deadline: 22-Jun-2026." }
-            ]
-        },
-        {
-            id: "LEAD-1093",
-            applicationNumber: "VL-APP-2026-01093",
-            firstName: "Rahul",
-            lastName: "Sinha",
-            email: "rahul.sinha@gmail.com",
-            phoneNumber: "9876543220",
-            dob: "2003-09-24",
-            city: "Secunderabad",
-            state: "Telangana",
-            loanType: "Domestic",
-            courseName: "MBBS",
-            collegeName: "JIPMER Puducherry",
-            courseStartDate: "2026-08-01",
-            amount: 800000,
-            coApplicantName: "Anil Sinha",
-            coApplicantRelationship: "Parent",
-            coApplicantMobile: "9876543221",
-            source: "College Event",
-            status: "processing",
-            stage: "bank_review",
-            bank: "HDFC Credila",
-            commissionRate: 0.70,
-            projectedCommission: 5600,
-            lastUpdated: "12-Jun-2026",
-            documents: [
-                { docType: "identity_proof", docName: "Aadhar Card", status: "verified", version: "v1" },
-                { docType: "pan_card", docName: "PAN Card", status: "verified", version: "v1" }
-            ],
-            journey: [
-                { date: "15-May-2026", title: "Lead Logged", desc: "Registered via Event QR Capture", done: true },
-                { date: "20-May-2026", title: "Submitted to Bank", desc: "HDFC portal upload finalized", done: true }
-            ],
-            bankStatus: {
-                product: "HDFC Education Loan Pro",
-                refNumber: "VL-HDFC-889",
-                submittedOn: "20-May-2026",
-                tatExpected: "9 working days"
-            },
-            communicationLog: []
-        },
-        {
-            id: "LEAD-1094",
-            applicationNumber: "VL-APP-2026-01094",
-            firstName: "Anjali",
-            lastName: "Raju",
-            email: "anjali.raju@gmail.com",
-            phoneNumber: "9876543230",
-            dob: "2005-01-12",
-            city: "Hyderabad",
-            state: "Telangana",
-            loanType: "Abroad",
-            courseName: "MS Data Science",
-            collegeName: "University of Maryland",
-            courseStartDate: "2026-08-25",
-            amount: 3200000,
-            coApplicantName: "Raju Kurian",
-            coApplicantRelationship: "Parent",
-            coApplicantMobile: "9876543231",
-            source: "Direct Apply",
-            status: "processing",
-            stage: "credit_review",
-            bank: "Avanse",
-            commissionRate: 1.00,
-            projectedCommission: 32000,
-            lastUpdated: "13-Jun-2026",
-            documents: [
-                { docType: "identity_proof", docName: "Aadhar Card", status: "verified", version: "v1" },
-                { docType: "pan_card", docName: "PAN Card", status: "verified", version: "v1" },
-                { docType: "admission_letter", docName: "Admission Letter", status: "verified", version: "v1" },
-                { docType: "bank_statement", docName: "Bank Statement", status: "pending", version: "v1" }
-            ],
-            journey: [
-                { date: "22-May-2026", title: "Lead Logged", desc: "Direct website enrollment", done: true },
-                { date: "23-May-2026", title: "Documents Verified", desc: "KYC checks cleared", done: true },
-                { date: "29-May-2026", title: "Avanse Submission", desc: "Files shared with credit manager", done: true }
-            ],
-            bankStatus: {
-                product: "Avanse Study Abroad",
-                refNumber: "VL-AVN-113",
-                submittedOn: "29-May-2026",
-                tatExpected: "6 working days"
-            },
-            communicationLog: []
-        },
-        {
-            id: "LEAD-1095",
-            applicationNumber: "VL-APP-2026-01095",
-            firstName: "Meena",
-            lastName: "Pillai",
-            email: "meena.pillai@gmail.com",
-            phoneNumber: "9876543240",
-            dob: "2004-11-05",
-            city: "Nizamabad",
-            state: "Telangana",
-            loanType: "Domestic",
-            courseName: "BBA",
-            collegeName: "Symbiosis Pune",
-            courseStartDate: "2026-07-10",
-            amount: 1500000,
-            coApplicantName: "Gopal Pillai",
-            coApplicantRelationship: "Parent",
-            coApplicantMobile: "9876543241",
-            source: "Walk-In",
-            status: "pending",
-            stage: "document_pending",
-            bank: "Axis Bank",
-            commissionRate: 0.85,
-            projectedCommission: 12750,
-            lastUpdated: "14-Jun-2026",
-            documents: [],
-            journey: [
-                { date: "24-May-2026", title: "Lead Registered", desc: "Added to queue by Krishna Agency", done: true }
-            ],
-            bankStatus: {
-                product: "Axis Prime Loan",
-                refNumber: "VL-AX-402",
-                submittedOn: "Pending Documents",
-                tatExpected: "15 working days once files complete"
-            },
-            communicationLog: []
-        },
-        {
-            id: "LEAD-1096",
-            applicationNumber: "VL-APP-2026-01096",
-            firstName: "Kiran",
-            lastName: "Rao",
-            email: "kiran.rao@gmail.com",
-            phoneNumber: "9876543250",
-            dob: "2002-08-30",
-            city: "Warangal",
-            state: "Telangana",
-            loanType: "Abroad",
-            courseName: "M.S. Mechanical",
-            collegeName: "TU Munich",
-            courseStartDate: "2026-10-01",
-            amount: 2500000,
-            coApplicantName: "Prasad Rao",
-            coApplicantRelationship: "Parent",
-            coApplicantMobile: "9876543251",
-            source: "Direct Web",
-            status: "disbursed",
-            stage: "disbursement_done",
-            bank: "Auxilo",
-            commissionRate: 0.90,
-            projectedCommission: 22500,
-            lastUpdated: "15-Jun-2026",
-            documents: [
-                { docType: "identity_proof", docName: "Aadhar Card", status: "verified", version: "v1" },
-                { docType: "pan_card", docName: "PAN Card", status: "verified", version: "v1" },
-                { docType: "marksheet_12th", docName: "12th Marksheet", status: "verified", version: "v1" },
-                { docType: "admission_letter", docName: "Admission Letter", status: "verified", version: "v1" },
-                { docType: "disbursement_proof", docName: "Disbursement Receipt", status: "verified", version: "v1" }
-            ],
-            journey: [
-                { date: "05-May-2026", title: "Lead Submitted", desc: "Registered by Krishna Agency", done: true },
-                { date: "10-May-2026", title: "Submitted to Auxilo", desc: "Sent with co-applicant guarantee", done: true },
-                { date: "28-May-2026", title: "Sanctioned Issued", desc: "Sanction letter VL-SNC-987 generated", done: true },
-                { date: "15-Jun-2026", title: "Disbursed", desc: "Auxilo wire transfer completed to college", done: true }
-            ],
-            bankStatus: {
-                product: "Auxilo Abroad Special",
-                refNumber: "VL-AUX-554",
-                submittedOn: "10-May-2026",
-                tatExpected: "Disbursed successfully"
-            },
-            communicationLog: []
-        }
-    ], []);
+    const defaultStudents: StudentApplication[] = [];
 
     // Calendar Follow-Ups State
-    const [tasks, setTasks] = useState<FollowUpTask[]>([
-        { id: "task-1", type: "Bank Query", studentName: "Rahul Sinha", dateTime: "2026-06-23T10:30:00", notes: "Bank query raised by HDFC — 24 hr deadline", reminder: "1 hour before", isOverdue: true, isCompleted: false },
-        { id: "task-2", type: "Doc Chase", studentName: "Anjali Raju", dateTime: "2026-06-23T12:00:00", notes: "Document re-upload request from Staff (Income Cert)", reminder: "15 min before", isOverdue: true, isCompleted: false },
-        { id: "task-3", type: "Sanction Expiry", studentName: "Kiran Rao", dateTime: "2026-06-28T17:00:00", notes: "Sanction expires in 5 days — disbursement pending", reminder: "1 day before", isOverdue: false, isCompleted: false },
-        { id: "task-4", type: "Doc Chase", studentName: "Meena Pillai", dateTime: "2026-06-21T09:00:00", notes: "Applied 4 days ago — no documents yet", reminder: "1 day before", isOverdue: true, isCompleted: false, daysAgo: 2 },
-        { id: "task-5", type: "Callback", studentName: "Deepak Reddy", dateTime: "2026-06-22T11:00:00", notes: "Bank submitted, no update in 8 days", reminder: "1 hour before", isOverdue: true, isCompleted: false, daysAgo: 1 },
-        { id: "task-6", type: "Student Callback", studentName: "Sai Krishna", dateTime: "2026-06-22T15:30:00", notes: "Counter-offer presented — student hasn't responded", reminder: "15 min before", isOverdue: true, isCompleted: false }
-    ]);
+    const [tasks, setTasks] = useState<FollowUpTask[]>([]);
 
     // Sub-agents List
-    const [subAgents, setSubAgents] = useState<SubAgent[]>([
-        { id: "sa-1", name: "Ramesh DSA", territory: "Karimnagar", leadsThisMonth: 8, sanctionsThisMonth: 3, theirCut: 12600, myCut: 8400, accessActive: true, trainingCompleted: 4, totalTraining: 6, lastLogin: "2 hours ago" },
-        { id: "sa-2", name: "Lata Associates", territory: "Nizamabad", leadsThisMonth: 6, sanctionsThisMonth: 2, theirCut: 8400, myCut: 5600, accessActive: true, trainingCompleted: 6, totalTraining: 6, lastLogin: "Yesterday" }
-    ]);
+    const [subAgents, setSubAgents] = useState<SubAgent[]>([]);
 
     // LMS Modules
-    const [lmsModules, setLmsModules] = useState([
-        { id: "lms-1", category: "Foundation", title: "Module 1: Vidyaloans Platform Overview", progress: 100, score: 92, completed: true },
-        { id: "lms-2", category: "Foundation", title: "Module 2: Lead Submission & Student Basics", progress: 100, score: 88, completed: true },
-        { id: "lms-3", category: "Foundation", title: "Module 3: Document Collection Best Practices", progress: 100, score: 95, completed: true },
-        { id: "lms-4", category: "Intermediate", title: "Module 4: Bank Products & Eligibility Guide", progress: 100, score: 85, completed: true },
-        { id: "lms-5", category: "Intermediate", title: "Module 5: Co-Applicant Income & CIBIL Basics", progress: 100, score: 79, completed: true },
-        { id: "lms-6", category: "Advanced", title: "Module 6: Abroad Loans — Country-Specific Guide", progress: 100, score: 90, completed: true },
-        { id: "lms-7", category: "Advanced", title: "Module 7: Collateral Loans & Property Documents", progress: 60, score: 0, completed: false },
-        { id: "lms-8", category: "Advanced", title: "Module 8: Balance Transfer & Refinancing", progress: 0, score: 0, completed: false },
-        { id: "lms-9", category: "Compliance", title: "Module 9: KYC, DPDP & Data Privacy", progress: 100, score: 98, completed: true }
-    ]);
+    const [lmsModules, setLmsModules] = useState<any[]>([]);
 
     // AI Knowledge Bot Messages State
     const [botMessages, setBotMessages] = useState<Array<{ sender: "user" | "bot"; text: string }>>([
-        { sender: "bot", text: "Hello! Ask me any product eligibility query, bank requirements, or compliance guidelines. Try asking: 'Which banks accept partial collateral?'" }
+        { sender: "bot", text: "Hello! Once you start receiving leads, I can help with product eligibility, documents, and follow-up suggestions." }
     ]);
     const [botInput, setBotInput] = useState("");
 
@@ -493,11 +247,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
     // CSV Bulk Upload State
     const [csvFile, setCsvFile] = useState<File | null>(null);
-    const [csvPreview, setCsvPreview] = useState<any[]>([
-        { name: "Priya Sharma", mobile: "98XXXXXXXX", course: "B.Tech", college: "IIT Bombay", amount: "12,00,000", status: "Valid" },
-        { name: "Rahul Kumar", mobile: "97XXXXXXXX", course: "MBBS", college: "JIPMER", amount: "8,00,000", status: "Valid" },
-        { name: "Asha Reddy", mobile: "96XXXXXXXX", course: "MBA (Abroad)", college: "Wharton", amount: "45,00,000", status: "Valid" }
-    ]);
+    const [csvPreview, setCsvPreview] = useState<any[]>([]);
     const [csvUploaded, setCsvUploaded] = useState(false);
 
     // Follow-up Calendar Form State
@@ -512,12 +262,12 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
     // Unified Document Center Upload Form State
     const [docUploadState, setDocUploadState] = useState({
-        studentId: "LEAD-1092",
+        studentId: "",
         docType: "identity_proof",
         fileNote: ""
     });
     const [docShareState, setDocShareState] = useState({
-        studentId: "LEAD-1092",
+        studentId: "",
         channel: "WhatsApp",
         expiry: "48"
     });
@@ -539,6 +289,32 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     }, []);
+
+    // Fetch unread chat count
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            if (!token || !user) return;
+            // Don't fetch if unmounted or not agent
+            if (user?.role !== 'agent' && user?.role !== 'partner_agent') return;
+            try {
+                // Import dynamically to avoid circular dependencies if any
+                const { chatApi } = await import("@/lib/api");
+                const conversations = await chatApi.getConversations();
+                if (Array.isArray(conversations)) {
+                    const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+                    setUnreadChatCount(totalUnread);
+                }
+            } catch (err) {
+                console.error("Failed to load agent chat unread count:", err);
+            }
+        };
+
+        if (token && user) {
+            fetchUnreadCount();
+            const interval = setInterval(fetchUnreadCount, 15000);
+            return () => clearInterval(interval);
+        }
+    }, [token, user]);
 
     // Payout ledger download trigger simulation
     const downloadCSV = () => {
@@ -611,16 +387,16 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
             const res = await agentApi.getApplications({ search, status, loanType, page, limit: 20 }) as any;
             const apiApps = res.leads || res.data || [];
             const mapped: StudentApplication[] = apiApps.map(mapApiApp);
-            setApplications(mapped.length > 0 ? mapped : defaultStudents);
+            setApplications(mapped.length > 0 ? mapped : []);
             setTotalLeadCount(res.totalCount || mapped.length);
             setStudentsPage(page);
         } catch (e) {
             console.error("[AgentContext] loadStudents failed:", e);
-            setApplications(defaultStudents);
+            setApplications([]);
         } finally {
             setStudentsLoading(false);
         }
-    }, [mapApiApp, defaultStudents]);
+    }, [mapApiApp]);
 
     // Load summary stats, pipeline, activity feed, and action items
     const loadData = useCallback(async () => {
@@ -648,23 +424,31 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                     disbursedAmount: d.disbursedAmount || 0,
                     revenue: d.revenue || 0,
                 });
+            } else {
+                setStats({ total: 0, activeCount: 0, totalAmount: 0, disbursedAmount: 0, revenue: 0 });
             }
 
             // Pipeline
             if (pipelineRes.status === "fulfilled" && (pipelineRes.value as any)?.success) {
                 setPipeline((pipelineRes.value as any).data as PipelineCounts);
+            } else {
+                setPipeline({ leads: 0, submitted: 0, bank_review: 0, approved: 0, disbursed: 0 });
             }
 
             // Activity feed
             if (feedRes.status === "fulfilled" && (feedRes.value as any)?.success) {
                 const feed: ActivityFeedItem[] = (feedRes.value as any).data || [];
                 setActivityFeed(feed);
+            } else {
+                setActivityFeed([]);
             }
 
             // Action items (query/doc-chase alerts from bank)
             if (actionRes.status === "fulfilled" && (actionRes.value as any)?.success) {
                 const items = (actionRes.value as any).data || [];
-                if (items.length > 0) setActionItems(items);
+                setActionItems(items);
+            } else {
+                setActionItems([]);
             }
 
             // Sub Agents
@@ -683,7 +467,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                     totalTraining: sa.totalTraining || 6,
                     lastLogin: sa.lastLogin || (sa.status === 'active' ? "2-hr ago" : "Never logged in")
                 }));
-                if (mappedSub.length > 0) setSubAgents(mappedSub);
+                setSubAgents(mappedSub);
+            } else {
+                setSubAgents([]);
             }
 
             // Training
@@ -697,7 +483,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                     score: m.score || (m.status === 'COMPLETED' ? 85 : 0),
                     completed: m.status === 'COMPLETED'
                 }));
-                if (mappedLms.length > 0) setLmsModules(mappedLms);
+                setLmsModules(mappedLms);
+            } else {
+                setLmsModules([]);
             }
 
             // Tasks
@@ -714,7 +502,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                     isOverdue: t.isOverdue || false,
                     isCompleted: t.status === 'completed'
                 }));
-                if (mappedTasks.length > 0) setTasks(mappedTasks);
+                setTasks(mappedTasks);
+            } else {
+                setTasks([]);
             }
 
             // Agent Profile
@@ -732,21 +522,24 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                     setTotalLeadCount(res.totalCount || mapped.length);
                     calculateStatsLocally(mapped);
                 } else {
-                    setApplications(defaultStudents);
-                    calculateStatsLocally(defaultStudents);
+                    setApplications([]);
+                    setTotalLeadCount(0);
+                    calculateStatsLocally([]);
                 }
             } else {
-                setApplications(defaultStudents);
-                calculateStatsLocally(defaultStudents);
+                setApplications([]);
+                setTotalLeadCount(0);
+                calculateStatsLocally([]);
             }
         } catch (e) {
             console.error("[AgentContext] loadData failed:", e);
-            setApplications(defaultStudents);
-            calculateStatsLocally(defaultStudents);
+            setApplications([]);
+            setTotalLeadCount(0);
+            calculateStatsLocally([]);
         } finally {
             setLoading(false);
         }
-    }, [defaultStudents, calculateStatsLocally, mapApiApp]);
+    }, [calculateStatsLocally, mapApiApp]);
 
     useEffect(() => {
         loadData();
@@ -1129,7 +922,8 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                 downloadCSV, downloadPDF, loadData, loadStudents,
                 handleLeadSubmit, handleRunEligibility, handleConfirmCSVImport,
                 handleDocumentUpload, handleSendDocLink, handleAddTask,
-                handleInviteSubAgent, handleAskBot, handleToggleTask, handleCompleteModule
+                handleInviteSubAgent, handleAskBot, handleToggleTask, handleCompleteModule,
+                unreadChatCount, setUnreadChatCount
             }}
         >
             {children}

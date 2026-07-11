@@ -928,7 +928,7 @@ export default function IncomingQueuePage() {
                                         )}
 
                                         {/* Documents Package */}
-                                        <div className="space-y-3">
+                                        {/* <div className="space-y-3">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 block pl-1">Document Package</span>
                                             {selectedApp.documents && selectedApp.documents.length > 0 ? (
                                                 <div className="space-y-2">
@@ -966,7 +966,7 @@ export default function IncomingQueuePage() {
                                                     <span className="text-[10px] text-gray-400 uppercase tracking-widest">No documents found.</span>
                                                 </div>
                                             )}
-                                        </div>
+                                        </div> */}
 
                                         {/* Activity Notes/Remarks */}
                                         <div className="space-y-3 border-t border-gray-100 pt-5">

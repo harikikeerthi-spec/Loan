@@ -120,6 +120,7 @@ export default function ApplyLoanPage() {
                         // Support both DD-MM-YYYY (from DatePicker / backend) and fallback fields
                         dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
                         intakeSeason: prev.intakeSeason || user?.intakeSeason || "",
+                        pincode: prev.pincode || user?.pincode || "",
                     };
                 });
                 // Only mark profile as loaded once we have the DOB from the user object.
@@ -291,6 +292,7 @@ export default function ApplyLoanPage() {
                         phoneNumber: formData.phone,
                         dateOfBirth: formData.dateOfBirth, // Custom DatePicker already returns DD-MM-YYYY
                         intakeSeason: formData.intakeSeason,
+                        pincode: formData.pincode,
                     });
                     await refreshUser();
                 } catch (err) {

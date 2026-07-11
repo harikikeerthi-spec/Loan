@@ -216,6 +216,122 @@ export default function AgentAnalytics() {
         });
     }, [applications]);
 
+    const monthlyTrend = useMemo(() => {
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const currentYear = new Date().getFullYear();
+        const trend = months.map(m => ({ month: m, sanctions: 0, comm: 0 }));
+
+        if (applications.length === 0) {
+            return [
+                { month: "Jan", sanctions: 8, comm: 48000 },
+                { month: "Feb", sanctions: 7, comm: 42000 },
+                { month: "Mar", sanctions: 12, comm: 72000 },
+                { month: "Apr", sanctions: 9, comm: 54000 },
+                { month: "May", sanctions: 10, comm: 60000 },
+                { month: "Jun", sanctions: 12, comm: 72000 },
+                { month: "Jul", sanctions: 0, comm: 0 },
+                { month: "Aug", sanctions: 0, comm: 0 },
+                { month: "Sep", sanctions: 0, comm: 0 },
+                { month: "Oct", sanctions: 0, comm: 0 },
+                { month: "Nov", sanctions: 0, comm: 0 },
+                { month: "Dec", sanctions: 0, comm: 0 },
+            ];
+        }
+
+        applications.forEach(app => {
+            const dateStr = app.lastUpdated;
+            if (dateStr) {
+                const d = new Date(dateStr);
+                if (d.getFullYear() === currentYear) {
+                    const monthIdx = d.getMonth();
+                    const isSanctioned = ['approved', 'disbursed', 'sanction', 'disbursement_done'].includes(app.status?.toLowerCase());
+                    if (isSanctioned) {
+                        trend[monthIdx].sanctions += 1;
+                        const amount = Number(app.amount || 1000000);
+                        trend[monthIdx].comm += (amount * 0.005); // Assume 0.5% commission
+                    }
+                }
+            }
+        });
+
+        return trend;
+    }, [applications]);
+
+    const topLeadSources = useMemo(() => {
+        if (applications.length === 0) {
+            return [
+                { course: "B.Tech", leads: 14, sanctions: 5, rate: "36%", loan: "₹12.4L", comm: "₹43,400", top: false },
+                { course: "MBA (Abroad)", leads: 6, sanctions: 3, rate: "50%", loan: "₹42.0L", comm: "₹1,26,000", top: true },
+                { course: "MBBS", leads: 8, sanctions: 2, rate: "25%", loan: "₹8.5L", comm: "₹11,900", top: false },
+                { course: "M.Tech", leads: 4, sanctions: 2, rate: "50%", loan: "₹9.0L", comm: "₹12,600", top: false },
+            ];
+        }
+
+        const groups: Record<string, { leads: number; sanctions: number; loanSum: number; commSum: number }> = {};
+
+        applications.forEach(app => {
+            let course = app.courseName || "Other";
+            if (course.length > 25) course = course.substring(0, 25) + '...';
+            
+            if (!groups[course]) {
+                groups[course] = { leads: 0, sanctions: 0, loanSum: 0, commSum: 0 };
+            }
+
+            groups[course].leads += 1;
+            const amount = Number(app.amount || 0);
+            
+            const isSanctioned = ['approved', 'disbursed', 'sanction', 'disbursement_done'].includes(app.status?.toLowerCase());
+            if (isSanctioned) {
+                groups[course].sanctions += 1;
+                groups[course].loanSum += amount;
+                groups[course].commSum += (amount * 0.005); // Assume 0.5% commission
+            }
+        });
+
+        const sorted = Object.entries(groups)
+            .map(([course, data]) => ({
+                course,
+                leads: data.leads,
+                sanctions: data.sanctions,
+                rate: data.leads > 0 ? `${Math.round((data.sanctions / data.leads) * 100)}%` : "0%",
+                loan: data.sanctions > 0 ? `₹${(data.loanSum / data.sanctions / 100000).toFixed(1)}L` : "₹0L",
+                comm: `₹${Math.round(data.commSum).toLocaleString('en-IN')}`,
+                rawComm: data.commSum
+            }))
+            .sort((a, b) => b.leads - a.leads)
+            .slice(0, 5);
+            
+        if (sorted.length > 0) {
+             const maxCommIdx = sorted.reduce((maxIdx, curr, idx, arr) => curr.rawComm > arr[maxIdx].rawComm ? idx : maxIdx, 0);
+             const result = sorted.map((s, idx) => ({ ...s, top: idx === maxCommIdx && s.rawComm > 0 }));
+             return result;
+        }
+
+        return [];
+    }, [applications]);
+
+    const topCollegeInsight = useMemo(() => {
+        if (applications.length === 0) {
+             return "Top College: IIT Bombay (5 leads, 4 sanctioned — 80% rate!) · Focus more campus outreach events here.";
+        }
+        
+        const groups: Record<string, { leads: number; sanctions: number }> = {};
+        applications.forEach(app => {
+            const college = app.collegeName || "Unknown College";
+            if (!groups[college]) groups[college] = { leads: 0, sanctions: 0 };
+            groups[college].leads += 1;
+            const isSanctioned = ['approved', 'disbursed', 'sanction', 'disbursement_done'].includes(app.status?.toLowerCase());
+            if (isSanctioned) groups[college].sanctions += 1;
+        });
+
+        const sorted = Object.entries(groups).sort((a, b) => b[1].leads - a[1].leads);
+        if (sorted.length === 0) return "No college data available.";
+        
+        const top = sorted[0];
+        const rate = top[1].leads > 0 ? Math.round((top[1].sanctions / top[1].leads) * 100) : 0;
+        return `Top College: ${top[0]} (${top[1].leads} leads, ${top[1].sanctions} sanctioned — ${rate}% rate!) · Focus more campus outreach events here.`;
+    }, [applications]);
+
     return (
         <div className="animate-fade-in-up space-y-12 relative z-10">
             
@@ -282,20 +398,9 @@ export default function AgentAnalytics() {
                                     </div>
                                 ))}
                             </div>
-                            {[
-                                { month: "Jan", sanctions: 8, comm: 48000 },
-                                { month: "Feb", sanctions: 7, comm: 42000 },
-                                { month: "Mar", sanctions: 12, comm: 72000 },
-                                { month: "Apr", sanctions: 9, comm: 54000 },
-                                { month: "May", sanctions: 10, comm: 60000 },
-                                { month: "Jun", sanctions: 12, comm: 72000 },
-                                { month: "Jul", sanctions: 0, comm: 0 },
-                                { month: "Aug", sanctions: 0, comm: 0 },
-                                { month: "Sep", sanctions: 0, comm: 0 },
-                                { month: "Oct", sanctions: 0, comm: 0 },
-                                { month: "Nov", sanctions: 0, comm: 0 },
-                                { month: "Dec", sanctions: 0, comm: 0 },
-                            ].map((m, i) => (
+                            {monthlyTrend.map((m, i) => {
+                                const maxSanctions = Math.max(12, ...monthlyTrend.map(t => t.sanctions));
+                                return (
                                 <div key={i} className="flex-1 flex flex-col items-center gap-1 group cursor-pointer relative">
                                     {m.sanctions > 0 && (
                                         <div className="absolute bottom-7 text-center opacity-0 group-hover:opacity-100 transition-opacity bg-[#6605c7] text-white text-[8px] font-black px-2 py-1 rounded-lg pointer-events-none z-10 whitespace-nowrap">
@@ -304,15 +409,15 @@ export default function AgentAnalytics() {
                                     )}
                                     <div 
                                         className={`w-full rounded-t-lg transition-all duration-300 ${m.sanctions > 0 ? 'bg-[#6605c7]/20 group-hover:bg-[#6605c7]' : 'bg-gray-50 border border-gray-100'}`} 
-                                        style={{ height: m.sanctions > 0 ? `${(m.sanctions / 12) * 180}px` : '8px' }} 
+                                        style={{ height: m.sanctions > 0 ? `${(m.sanctions / maxSanctions) * 180}px` : '8px' }} 
                                     />
                                     <span className="text-[8px] font-bold text-gray-400 uppercase pt-2">{m.month}</span>
                                 </div>
-                            ))}
+                            )})}
                         </div>
                         <div className="flex gap-6 mt-4 text-[10px] font-bold text-gray-500">
                             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[#6605c7]/30 inline-block" /> Sanctions</span>
-                            <span className="text-amber-600">📅 Peak: March &amp; June (Admission Season)</span>
+                            <span className="text-amber-600">📅 Peak based on your active loans</span>
                         </div>
                     </div>
 
@@ -332,12 +437,7 @@ export default function AgentAnalytics() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 font-bold text-gray-700">
-                                    {[
-                                        { course: "B.Tech", leads: 14, sanctions: 5, rate: "36%", loan: "₹12.4L", comm: "₹43,400", top: false },
-                                        { course: "MBA (Abroad)", leads: 6, sanctions: 3, rate: "50%", loan: "₹42.0L", comm: "₹1,26,000", top: true },
-                                        { course: "MBBS", leads: 8, sanctions: 2, rate: "25%", loan: "₹8.5L", comm: "₹11,900", top: false },
-                                        { course: "M.Tech", leads: 4, sanctions: 2, rate: "50%", loan: "₹9.0L", comm: "₹12,600", top: false },
-                                    ].map((row, idx) => (
+                                    {topLeadSources.map((row: any, idx: number) => (
                                         <tr key={idx} className={`transition-colors ${row.top ? 'bg-amber-50/30' : 'hover:bg-gray-50'}`}>
                                             <td className="p-3 font-black text-gray-900 flex items-center gap-2">
                                                 {row.course}
@@ -350,12 +450,17 @@ export default function AgentAnalytics() {
                                             <td className="p-3 text-[#6605c7] font-black">{row.comm}</td>
                                         </tr>
                                     ))}
+                                    {topLeadSources.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="p-4 text-center text-gray-500 font-medium">No lead source data available yet.</td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
                         <div className="mt-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center gap-2">
                             <span className="material-symbols-outlined text-base">school</span>
-                            Top College: IIT Bombay (5 leads, 4 sanctioned — 80% rate!) · Focus more campus outreach events here.
+                            {topCollegeInsight}
                         </div>
                     </div>
 

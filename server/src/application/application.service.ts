@@ -412,7 +412,7 @@ export class ApplicationService {
   async getApplicationById(applicationId: string) {
     const { data: application } = await this.db
       .from('LoanApplication')
-      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason, tests), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*), notes:ApplicationNote(id, content, type, isInternal, createdAt)')
+      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason, tests, pincode), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*), notes:ApplicationNote(id, content, type, isInternal, createdAt)')
       .eq('id', applicationId)
       .single();
 

@@ -260,6 +260,16 @@ export default function ApplicationManagement() {
             return;
         }
 
+        const lanRegex = /^[a-zA-Z0-9-]+$/;
+        if (lanNumber.length < 15 || lanNumber.length > 20) {
+            alert("LAN number must be between 15 and 20 characters long.");
+            return;
+        }
+        if (!lanRegex.test(lanNumber)) {
+            alert("LAN number can only contain letters, numbers, and hyphens (-).");
+            return;
+        }
+
         if (!confirmingLog) {
             setConfirmingLog(true);
             return;
@@ -1135,6 +1145,8 @@ export default function ApplicationManagement() {
                                     <input
                                         type="text"
                                         required
+                                        minLength={15}
+                                        maxLength={20}
                                         placeholder="e.g. LAN-BANK-0000000"
                                         value={lanNumber}
                                         onChange={(e) => setLanNumber(e.target.value.toUpperCase())}

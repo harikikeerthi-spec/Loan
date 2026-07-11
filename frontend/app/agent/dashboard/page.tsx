@@ -83,22 +83,13 @@ export default function AgentDashboardOverview() {
         if (actionItems.length > 0) return actionItems.slice(0, 3);
         if (tasks.filter(t => !t.isCompleted && t.isOverdue).length > 0)
             return tasks.filter(t => !t.isCompleted && t.isOverdue).slice(0, 3);
-        // Blueprint fallback mock action items
-        return [
-            { id: "u1", studentName: "Rahul Sinha", notes: "Bank query raised by HDFC — 24 hr deadline", studentId: null },
-            { id: "u2", studentName: "Anjali Raju", notes: "Document re-upload request from Staff (Income Cert)", studentId: null },
-            { id: "u3", studentName: "Kiran Rao", notes: "Sanction expires in 5 days — disbursement pending", studentId: null },
-        ];
+        return [];
     }, [actionItems, tasks]);
 
     const followUpItems = useMemo(() => {
         const real = tasks.filter(t => !t.isCompleted && !t.isOverdue);
         if (real.length > 0) return real.slice(0, 3);
-        return [
-            { id: "f1", studentName: "Meena Pillai", notes: "Applied 4 days ago — no documents yet" },
-            { id: "f2", studentName: "Deepak Reddy", notes: "Bank submitted, no update in 8 days" },
-            { id: "f3", studentName: "Sai Krishna", notes: "Counter-offer presented — student hasn't responded" },
-        ];
+        return [];
     }, [tasks]);
 
     // Recent wins from disbursed applications
@@ -241,15 +232,18 @@ export default function AgentDashboardOverview() {
                             <p className="font-bold">📣 You need <strong>{sanctionGoal - sanctionedCount}</strong> more sanctions to hit your monthly target!</p>
                         </div>
                     )}
-                    {(() => {
-                        const pendingDocs = applications.filter(a => !a.documents || a.documents.length === 0 || a.documents.every((d: any) => d.status === 'not_uploaded')).length || 6;
-                        return (
-                            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 flex gap-3 text-rose-700 text-xs font-medium items-center">
-                                <span className="material-symbols-outlined text-rose-500 text-lg">folder_open</span>
-                                <p className="font-bold">🔔 <strong>{pendingDocs} students</strong> have documents pending — chase them now!</p>
-                            </div>
-                        );
-                    })()}
+                    {applications.length > 0 && (
+                        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 flex gap-3 text-rose-700 text-xs font-medium items-center">
+                            <span className="material-symbols-outlined text-rose-500 text-lg">folder_open</span>
+                            <p className="font-bold">🔔 Your pipeline is live — keep following up with your active leads.</p>
+                        </div>
+                    )}
+                    {applications.length === 0 && (
+                        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex gap-3 text-emerald-700 text-xs font-medium items-center">
+                            <span className="material-symbols-outlined text-emerald-500 text-lg">auto_awesome</span>
+                            <p className="font-bold">🌟 Your dashboard is ready. New referrals will appear here automatically.</p>
+                        </div>
+                    )}
                 </div>
             </section>
 
@@ -283,7 +277,7 @@ export default function AgentDashboardOverview() {
                                 </div>
                             ) : (
                                 <div className="py-8 text-center text-sm text-emerald-600 font-bold bg-emerald-50/50 rounded-2xl border border-emerald-100">
-                                    ✅ No urgent items today — you're on track!
+                                    ✅ No urgent follow-ups right now — your dashboard is clear and ready for new leads.
                                 </div>
                             )}
 
@@ -316,6 +310,13 @@ export default function AgentDashboardOverview() {
                                                 <span className="font-black text-emerald-600 shrink-0 ml-2">+₹{app.projectedCommission.toLocaleString()}</span>
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+                            )}
+                            {urgentItems.length === 0 && followUpItems.length === 0 && recentWins.length === 0 && (
+                                <div className="pt-4 border-t border-gray-100">
+                                    <div className="p-4 rounded-2xl border border-dashed border-[#6605c7]/20 bg-[#f8f5ff] text-center text-sm text-[#6605c7] font-bold">
+                                        ✨ Your action board is empty for now. New student follow-ups will appear here automatically.
                                     </div>
                                 </div>
                             )}
@@ -376,7 +377,7 @@ export default function AgentDashboardOverview() {
                             </div>
                         ) : (
                             <div className="py-8 text-center text-xs text-gray-500 font-bold bg-gray-50/50 rounded-2xl border border-dashed border-[#6605c7]/10">
-                                💬 No RM discussions active. Open a student profile to start a discussion.
+                                💬 No RM discussions yet. Once you start working on leads, conversations will show up here.
                             </div>
                         )}
                     </div>
@@ -431,14 +432,15 @@ export default function AgentDashboardOverview() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {applications.slice(0, 4).map((app, i) => (
+                                {applications.length > 0 ? applications.slice(0, 4).map((app, i) => (
                                     <div key={app.id} className={`flex gap-4 items-start text-xs ${i > 0 ? "border-t border-gray-50 pt-3" : ""}`}>
                                         <span className="font-bold text-gray-400 shrink-0">{app.lastUpdated}</span>
                                         <span className="text-gray-800">{app.firstName} {app.lastName} → <span className="text-[#6605c7] font-bold capitalize">{app.status}</span></span>
                                     </div>
-                                ))}
-                                {applications.length === 0 && (
-                                    <p className="text-xs text-gray-400 text-center py-4">No activity yet</p>
+                                )) : (
+                                    <div className="rounded-2xl border border-dashed border-[#6605c7]/15 bg-[#f8f5ff] p-4 text-center text-xs text-gray-500 font-semibold">
+                                        Activity will appear here as soon as new referrals move through the pipeline.
+                                    </div>
                                 )}
                             </div>
                         )}

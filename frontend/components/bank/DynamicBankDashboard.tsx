@@ -159,6 +159,17 @@ export default function DynamicBankDashboard() {
         alert("LAN number has already been assigned and cannot be changed.");
         return;
       }
+
+      const lanRegex = /^[a-zA-Z0-9-]+$/;
+      if (lanInput.length < 15 || lanInput.length > 20) {
+        alert("LAN number must be between 15 and 20 characters long.");
+        return;
+      }
+      if (!lanRegex.test(lanInput)) {
+        alert("LAN number can only contain letters, numbers, and hyphens (-).");
+        return;
+      }
+
       setIsSubmittingLan(true);
       try {
         await bankApi.logFile(selectedFile.id, { lanNumber: lanInput.trim() });
@@ -205,6 +216,8 @@ export default function DynamicBankDashboard() {
                   </label>
                   <input
                     type="text"
+                    minLength={15}
+                    maxLength={20}
                     placeholder="e.g., VLAN-2026-001"
                     value={lanInput}
                     onChange={(e) => setLanInput(e.target.value.toUpperCase())}

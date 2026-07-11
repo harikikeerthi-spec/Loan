@@ -786,7 +786,8 @@ export class AuthService {
     phoneNumber: string,
     dateOfBirth: string,
     intakeSeason?: string,
-    profileImage?: string
+    profileImage?: string,
+    pincode?: string
   ) {
     // First, check if user exists with the provided email
     const existingUser = await this.usersService.findOne(email);
@@ -866,7 +867,8 @@ export class AuthService {
         phoneNumber,
         dateOfBirth,
         intakeSeason,
-        profileImage
+        profileImage,
+        pincode
       );
 
       if (!user) {

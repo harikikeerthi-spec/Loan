@@ -546,6 +546,7 @@ export const authApi = {
         dateOfBirth: string;
         passportNumber?: string;
         intakeSeason?: string;
+        pincode?: string;
     }) =>
         apiFetch(HttpApiPaths.auth.updateDetails(), {
             method: "POST",

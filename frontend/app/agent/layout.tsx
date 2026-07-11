@@ -13,7 +13,8 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         toast,
         sidebarCollapsed, setSidebarCollapsed,
         sidebarOpen, setSidebarOpen,
-        agentProfile
+        agentProfile,
+        unreadChatCount
     } = useAgent();
 
     // Side navigation bar definition
@@ -29,7 +30,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         { section: "sub-agents", icon: "share_reviews", label: "Sub-Agents" },
         { section: "training", icon: "school", label: "LMS & Training" },
         { section: "alumni", icon: "diversity_3", label: "Alumni Referrals" },
-        { section: "chat-staff", icon: "support_agent", label: "Staff RM Line" },
+        { section: "chat-staff", icon: "support_agent", label: "Staff RM Line", badge: unreadChatCount },
         { section: "chat-student", icon: "forum", label: "Student Line" },
         { section: "qr-code", icon: "qr_code_2", label: "QR Lead Capture" },
         { section: "tracking-links", icon: "link", label: "Tracking Links" },
@@ -105,6 +106,14 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                     >
                                         <span className="material-symbols-outlined text-xl">{item.icon}</span>
                                         {!sidebarCollapsed && <span className="font-bold text-[10px] tracking-[0.15em] uppercase flex-1">{item.label}</span>}
+                                        {!sidebarCollapsed && item.badge && item.badge > 0 && (
+                                            <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold">
+                                                {item.badge}
+                                            </span>
+                                        )}
+                                        {sidebarCollapsed && item.badge && item.badge > 0 && (
+                                            <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                                        )}
                                     </Link>
                                 </React.Fragment>
                             );
@@ -165,7 +174,9 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                             </div>
                             <button className="relative w-12 h-12 flex items-center justify-center rounded-2xl bg-[#6605c7]/5 text-[#6605c7] hover:bg-[#6605c7]/10 transition-all border border-[#6605c7]/10">
                                 <span className="material-symbols-outlined">notifications</span>
-                                <div className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white" />
+                                {unreadChatCount > 0 && (
+                                    <div className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white" />
+                                )}
                             </button>
                         </div>
                     </header>
