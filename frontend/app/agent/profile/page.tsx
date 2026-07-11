@@ -248,8 +248,12 @@ export default function AgentProfilePage() {
             {/* Header Summary Card */}
             <section className="p-8 rounded-[2.5rem] bg-white border border-[#6605c7]/10 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="flex gap-5 items-center">
-                    <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-[#6605c7] to-[#8b24e5] text-white font-black text-2xl flex items-center justify-center shadow-lg">
-                        {displayProfile?.firstName ? displayProfile.firstName[0] : "V"}
+                    <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-[#6605c7] to-[#8b24e5] text-white font-black text-2xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
+                        {displayProfile?.profileImage || "/agent-logo.png" ? (
+                            <img src={displayProfile?.profileImage || "/agent-logo.png"} alt="Agent Logo" className="w-full h-full object-cover" />
+                        ) : (
+                            displayProfile?.firstName ? displayProfile.firstName[0] : "V"
+                        )}
                     </div>
                     <div className="space-y-1 text-left">
                         <div className="flex items-center gap-3 flex-wrap">
