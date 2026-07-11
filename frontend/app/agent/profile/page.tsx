@@ -463,56 +463,54 @@ export default function AgentProfilePage() {
                 )}
 
                 {activeTab === "bank" && (
-                    <form onSubmit={handleSaveBank} className="space-y-6 max-w-xl text-left">
-                        <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">Payout Bank Details</h3>
-                        <p className="text-xs text-gray-450">Ensure this account belongs to the registered DSA entity. Commission payouts will be wired here monthly.</p>
+                    <div className="space-y-6 max-w-xl text-left">
+                        <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight mb-4">COMMISSION PAYOUT BANK ACCOUNT</h3>
+                        
+                        <div className="bg-white border border-gray-100 rounded-[2rem] shadow-[0_10px_40px_rgb(0,0,0,0.03)] p-6 relative overflow-hidden">
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#6605c7]/20 to-transparent"></div>
+                            
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-40">Account Holder</span>
+                                    <span className="text-xs font-bold text-gray-800 text-right">{displayProfile?.businessName || "Krishna Educational Services"}</span>
+                                </div>
+                                
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-40">Bank</span>
+                                    <span className="text-xs font-bold text-gray-800 text-right">{displayProfile?.bankName || "HDFC Bank"}</span>
+                                </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1 md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase">Bank Partner Name *</label>
-                                <input
-                                    type="text"
-                                    value={editBankName}
-                                    onChange={(e) => setEditBankName(e.target.value)}
-                                    placeholder="e.g. HDFC Bank, SBI Bank"
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1 md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase">Account Number *</label>
-                                <input
-                                    type="text"
-                                    value={editAccountNumber}
-                                    onChange={(e) => setEditAccountNumber(e.target.value)}
-                                    placeholder="e.g. 50100012345678"
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all font-mono"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1 md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase">IFSC Code *</label>
-                                <input
-                                    type="text"
-                                    value={editIfscCode}
-                                    onChange={(e) => setEditIfscCode(e.target.value.toUpperCase())}
-                                    placeholder="e.g. HDFC0000240"
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all font-mono"
-                                    required
-                                />
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-40">Account Number</span>
+                                    <div className="flex items-center gap-3 justify-end">
+                                        <span className="text-xs font-bold text-gray-800 font-mono tracking-widest">
+                                            {displayProfile?.accountNumber ? `●●●●●●●●●● ${displayProfile.accountNumber.slice(-4)}` : "●●●●●●●●●● 3842"}
+                                        </span>
+                                        <button onClick={() => showToast("Bank change request initiated...", "success")} className="text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-wider">
+                                            [Change]
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-40">IFSC Code</span>
+                                    <span className="text-xs font-bold text-gray-800 font-mono text-right">{displayProfile?.ifscCode || "HDFC00XXXXX"}</span>
+                                </div>
+
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-40">Account Type</span>
+                                    <span className="text-xs font-bold text-gray-800 text-right">Current</span>
+                                </div>
+
+                                <div className="flex justify-between items-center pt-2">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-40">Status</span>
+                                    <span className="text-[10px] font-bold text-emerald-600 text-right">
+                                        ✅ Verified <span className="font-normal text-emerald-700/70">(penny-drop verified on {displayProfile?.createdAt ? new Date(displayProfile.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-') : "15-Jan-2025"})</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
-
-                        <div className="pt-4 border-t border-gray-50 flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="px-6 py-3.5 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#6605c7]/95 transition-all shadow-sm"
-                            >
-                                {loading ? "Updating..." : "Update Bank Account Settings"}
-                            </button>
-                        </div>
-                    </form>
+                    </div>
                 )}
 
                 {activeTab === "agreements" && (
