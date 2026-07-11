@@ -62,8 +62,12 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                     {/* Brand Banner Logo */}
                     <div className={`py-6 ${sidebarCollapsed ? "px-2 justify-center" : "px-8 justify-between"} border-b border-[#6605c7]/5 relative z-10 flex items-center`}>
                         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
-                            <div className="w-10 h-10 rounded-[1rem] bg-gradient-to-br from-[#6605c7] to-[#8b24e5] flex items-center justify-center text-white shadow-xl shadow-[#6605c7]/30 transform group-hover:rotate-[15deg] transition-all duration-500 flex-shrink-0">
-                                <span className="material-symbols-outlined font-black text-xl">handshake</span>
+                            <div className="w-10 h-10 rounded-[1rem] bg-gradient-to-br from-[#6605c7] to-[#8b24e5] flex items-center justify-center text-white shadow-xl shadow-[#6605c7]/30 transform group-hover:rotate-[15deg] transition-all duration-500 flex-shrink-0 overflow-hidden">
+                                {agentProfile?.profileImage || "/agent-logo.png" ? (
+                                    <img src={agentProfile?.profileImage || "/agent-logo.png"} alt="Agent Logo" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="material-symbols-outlined font-black text-xl">handshake</span>
+                                )}
                             </div>
                             {!sidebarCollapsed && (
                                 <div className="animate-fade-in overflow-hidden">
