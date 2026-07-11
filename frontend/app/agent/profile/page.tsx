@@ -250,62 +250,58 @@ export default function AgentProfilePage() {
 
                 {/* Tab Content Rendering */}
                 {activeTab === "details" && (
-                    <form onSubmit={handleSaveBusiness} className="space-y-6 max-w-xl text-left">
-                        <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">Business Profile</h3>
-                        <p className="text-xs text-gray-450">Provide legal entity details for commission processing and billing.</p>
+                    <div className="space-y-6 max-w-xl text-left">
+                        <div className="flex justify-between items-end mb-2">
+                            <div>
+                                <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">My Business Profile</h3>
+                                <p className="text-xs text-gray-450 mt-1">These are the details directly given by admin. Agents cannot edit them.</p>
+                            </div>
+                        </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase">DSA Partner Name</label>
-                                <input
-                                    type="text"
-                                    value={`${profile?.firstName || ""} ${profile?.lastName || ""}`}
-                                    disabled
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-500 cursor-not-allowed"
-                                />
+                        <div className="bg-white border border-gray-100 rounded-[2rem] shadow-[0_10px_40px_rgb(0,0,0,0.03)] p-6 space-y-4 relative overflow-hidden">
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#6605c7]/20 to-transparent"></div>
+                            
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-32">Business Name</span>
+                                <span className="text-xs font-black text-gray-800 text-right">{profile?.businessName || "Krishna Educational Services"}</span>
                             </div>
-                            <div className="space-y-1">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase">Contact Mobile</label>
-                                <input
-                                    type="text"
-                                    value={profile?.phoneNumber || ""}
-                                    disabled
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-500 cursor-not-allowed"
-                                />
+                            
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-32">Agent Code</span>
+                                <span className="text-xs font-bold text-indigo-600 font-mono tracking-wider bg-indigo-50 px-2 py-0.5 rounded text-right">{profile?.id || "VL-AGT-007"}</span>
                             </div>
-                            <div className="space-y-1 md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase">Registered Business / Agency Name *</label>
-                                <input
-                                    type="text"
-                                    value={editBusinessName}
-                                    onChange={(e) => setEditBusinessName(e.target.value)}
-                                    placeholder="e.g. Krishna Enterprises"
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all"
-                                    required
-                                />
+                            
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-32">Type</span>
+                                <span className="text-xs font-bold text-gray-700 text-right">Business Agent</span>
                             </div>
-                            <div className="space-y-1 md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase">GSTIN (Optional)</label>
-                                <input
-                                    type="text"
-                                    value={editGstin}
-                                    onChange={(e) => setEditGstin(e.target.value)}
-                                    placeholder="e.g. 36AAAAA1111A1Z1"
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all font-mono"
-                                />
+                            
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-32">Tier</span>
+                                <span className="text-xs font-bold text-amber-600 text-right">🥇 Master</span>
                             </div>
-                        </div>
+                            
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-32">Territory</span>
+                                <span className="text-xs font-bold text-gray-700 text-right">Hyderabad, Secunderabad, Rangareddy</span>
+                            </div>
 
-                        <div className="pt-4 border-t border-gray-50 flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="px-6 py-3.5 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#6605c7]/95 transition-all shadow-sm"
-                            >
-                                {loading ? "Saving..." : "Save Business Details"}
-                            </button>
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-32">Joined</span>
+                                <span className="text-xs font-bold text-gray-700 text-right">
+                                    {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-') : "15-Jan-2025"}
+                                </span>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-32">Staff RM</span>
+                                <div className="text-right flex flex-col">
+                                    <span className="text-xs font-bold text-gray-800">Neha Sharma</span>
+                                    <span className="text-[10px] text-gray-400">neha@vidyaloans.com</span>
+                                </div>
+                            </div>
                         </div>
-                    </form>
+                    </div>
                 )}
 
                 {activeTab === "kyc" && (

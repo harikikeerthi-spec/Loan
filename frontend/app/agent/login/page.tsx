@@ -44,7 +44,14 @@ function AgentLoginContent() {
         setLoading(true);
         setError("");
         try {
-            const res = await authApi.requestOtp(email.trim()) as { success: boolean; otp?: string; userExists: boolean; businessName?: string };
+            const res = await authApi.requestOtp(email.trim()) as { success: boolean; otp?: string; userExists: boolean; businessName?: string; message?: string };
+            
+            if (!res.success) {
+                setError(res.message || "Failed to send OTP. Please check your email.");
+                setLoading(false);
+                return;
+            }
+
             if (res.otp) {
                 setDevOtp(res.otp);
             } else {

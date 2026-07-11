@@ -9,5 +9,11 @@
       "bankName": "IDFC FIRST Bank",
       "ifscCode": "IDFB0040101"
     }
+  },
+  "VL-STU-2026-00018": {
+    "kycStatus": "pending",
+    "kycSubmittedAt": "2026-07-11T11:53:18.618Z",
+    "businessName": "Swargam Enterprises",
+    "gstin": "36AAAAA1111A1Z1"
   }
 }

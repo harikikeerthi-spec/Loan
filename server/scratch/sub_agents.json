@@ -79,5 +79,23 @@
     "phone": "9812345678",
     "status": "invited",
     "joinedAt": "2026-07-06T15:40:34.336Z"
+  },
+  {
+    "id": "sub-1-VL-S",
+    "masterAgentId": "VL-STU-2026-00018",
+    "name": "Amit Kumar",
+    "email": "amit.kumar@example.com",
+    "phone": "9876543210",
+    "status": "active",
+    "joinedAt": "2026-06-26T11:48:18.778Z"
+  },
+  {
+    "id": "sub-2-VL-S",
+    "masterAgentId": "VL-STU-2026-00018",
+    "name": "Priya Sharma",
+    "email": "priya.sharma@example.com",
+    "phone": "9812345678",
+    "status": "invited",
+    "joinedAt": "2026-07-09T11:48:18.778Z"
   }
 ]
