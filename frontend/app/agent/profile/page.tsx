@@ -5,9 +5,11 @@ import { useAgent } from "../AgentContext";
 import { agentApi, documentApi } from "@/lib/api";
 
 const KYC_DOC_TYPES = [
+    { type: "agent_aadhar", label: "Aadhar Card" },
     { type: "agent_pan", label: "PAN Card" },
-    { type: "agent_aadhar", label: "Aadhaar Card (Front & Back)" },
-    { type: "agent_gst", label: "GST Certificate (If Applicable)" }
+    { type: "agent_gst", label: "GST Certificate" },
+    { type: "agent_business_reg", label: "Business Registration" },
+    { type: "agent_agreement", label: "Agent Agreement (Signed)" }
 ];
 
 export default function AgentProfilePage() {
@@ -390,39 +392,47 @@ export default function AgentProfilePage() {
                                     </tr>
                                 </thead>
                                 <tbody className="text-xs font-bold text-gray-800">
-                                    <tr className="border-b border-gray-50">
-                                        <td className="py-4">Aadhar Card</td>
-                                        <td className="py-4 text-emerald-600">✅ Verified</td>
-                                        <td className="py-4 text-gray-500">Lifetime</td>
-                                    </tr>
-                                    <tr className="border-b border-gray-50">
-                                        <td className="py-4">PAN Card</td>
-                                        <td className="py-4 text-emerald-600">✅ Verified</td>
-                                        <td className="py-4 text-gray-500">Lifetime</td>
-                                    </tr>
-                                    <tr className="border-b border-gray-50">
-                                        <td className="py-4">GST Certificate</td>
-                                        <td className="py-4 text-emerald-600">✅ Verified</td>
-                                        <td className="py-4 text-gray-500">Mar 2027</td>
-                                    </tr>
-                                    <tr className="border-b border-gray-50">
-                                        <td className="py-4">Business Registration</td>
-                                        <td className="py-4 text-emerald-600">✅ Verified</td>
-                                        <td className="py-4 text-amber-500 flex items-center gap-1.5 flex-wrap">
-                                            <span>Dec 2026</span>
-                                            <span className="text-[9px] bg-amber-50 border border-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-black tracking-wider uppercase whitespace-nowrap">← Renew in 6 months</span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-4">Agent Agreement (Signed)</td>
-                                        <td className="py-4 text-emerald-600">✅ Active</td>
-                                        <td className="py-4 text-gray-500 flex items-center gap-2">
-                                            <span>Dec 2026</span>
-                                            <button onClick={() => showToast("Downloading agreement...", "success")} className="text-[10px] text-indigo-600 font-black tracking-widest uppercase hover:underline">
-                                                [Download Copy]
-                                            </button>
-                                        </td>
-                                    </tr>
+                                    {KYC_DOC_TYPES.map((typeDef, index) => {
+                                        const uploadedDoc = kycDocs.find(d => d.docType === typeDef.type);
+                                        const isLast = index === KYC_DOC_TYPES.length - 1;
+                                        
+                                        let statusDisplay = <span className="text-gray-400">Not Uploaded</span>;
+                                        if (uploadedDoc) {
+                                            if (uploadedDoc.status === "verified" || uploadedDoc.status === "active") {
+                                                statusDisplay = <span className="text-emerald-600">✅ {uploadedDoc.status === "active" ? "Active" : "Verified"}</span>;
+                                            } else if (uploadedDoc.status === "rejected") {
+                                                statusDisplay = <span className="text-rose-600">❌ Rejected</span>;
+                                            } else {
+                                                statusDisplay = <span className="text-amber-500">⏳ Pending</span>;
+                                            }
+                                        }
+
+                                        let expiryDisplay = <span className="text-gray-300">-</span>;
+                                        if (uploadedDoc) {
+                                            if (uploadedDoc.expiry) {
+                                                expiryDisplay = <span className="text-gray-500">{uploadedDoc.expiry}</span>;
+                                            } else if (uploadedDoc.status === "verified" || uploadedDoc.status === "active") {
+                                                expiryDisplay = <span className="text-gray-500">Lifetime</span>; 
+                                            } else {
+                                                expiryDisplay = <span className="text-gray-400 text-[10px] uppercase">Awaiting Admin</span>;
+                                            }
+                                        }
+
+                                        return (
+                                            <tr key={typeDef.type} className={isLast ? "" : "border-b border-gray-50"}>
+                                                <td className="py-4">{typeDef.label}</td>
+                                                <td className="py-4">{statusDisplay}</td>
+                                                <td className="py-4 flex items-center justify-between">
+                                                    {expiryDisplay}
+                                                    {uploadedDoc && typeDef.type === "agent_agreement" && (
+                                                        <button onClick={() => showToast("Downloading agreement...", "success")} className="text-[10px] text-indigo-600 font-black tracking-widest uppercase hover:underline">
+                                                            [Download Copy]
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
