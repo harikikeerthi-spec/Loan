@@ -594,61 +594,46 @@ export default function AgentProfilePage() {
                 )}
 
                 {activeTab === "notifications" && (
-                    <div className="space-y-6 text-left max-w-xl">
-                        <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">Notification Channels</h3>
-                        <p className="text-xs text-gray-455">Select how and when you want to receive transaction updates and alerts.</p>
+                    <div className="space-y-6 max-w-2xl text-left">
+                        <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight mb-4">NOTIFICATION PREFERENCES</h3>
                         
-                        <div className="space-y-4">
-                            <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl space-y-4">
-                                <h4 className="font-bold text-gray-805 text-sm">WhatsApp Alerts</h4>
-                                <div className="space-y-3">
-                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
-                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
-                                        <span>Welcome Message & Onboarding (Immediate)</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
-                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
-                                        <span>Daily SLA Breach Digest (Every morning)</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
-                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
-                                        <span>Query Escalation Alerts (When bank flags an issue)</span>
-                                    </label>
+                        <div className="bg-white border border-gray-100 rounded-[2rem] shadow-[0_10px_40px_rgb(0,0,0,0.03)] p-6 relative overflow-hidden">
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#6605c7]/20 to-transparent"></div>
+                            
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-xs font-bold text-gray-700">Loan sanctioned for my student</span>
+                                    <span className="text-xs font-black text-emerald-600">✅ WhatsApp + Push</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-xs font-bold text-gray-700">Bank query raised</span>
+                                    <span className="text-xs font-black text-emerald-600">✅ WhatsApp + Push</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-xs font-bold text-gray-700">Document re-upload request</span>
+                                    <span className="text-xs font-black text-emerald-600">✅ Push</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-xs font-bold text-gray-700">Disbursement completed</span>
+                                    <span className="text-xs font-black text-emerald-600">✅ WhatsApp + Email</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-xs font-bold text-gray-700">Commission payout approved</span>
+                                    <span className="text-xs font-black text-emerald-600">✅ WhatsApp + Email</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-xs font-bold text-gray-700">New sub-agent activity</span>
+                                    <span className="text-xs font-black text-emerald-600">✅ Push</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                                    <span className="text-xs font-bold text-gray-700">Overdue task reminder</span>
+                                    <span className="text-xs font-black text-emerald-600">✅ Push + SMS</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-2">
+                                    <span className="text-xs font-bold text-gray-700">Weekly performance summary</span>
+                                    <span className="text-xs font-black text-emerald-600">✅ Email <span className="text-[10px] font-bold text-gray-400">(every Monday 9 AM)</span></span>
                                 </div>
                             </div>
-
-                            <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl space-y-4">
-                                <h4 className="font-bold text-gray-850 text-sm">Email Reports</h4>
-                                <div className="space-y-3">
-                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
-                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
-                                        <span>Monthly Commission Ledger & Invoices</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
-                                        <input type="checkbox" className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
-                                        <span>Marketing Updates & Milestones</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl space-y-4">
-                                <h4 className="font-bold text-gray-805 text-sm">SMS Gateway</h4>
-                                <div className="space-y-3">
-                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
-                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
-                                        <span>Critical Bank Alerts & OTPs</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-gray-50 flex justify-end">
-                            <button
-                                onClick={() => showToast("Notification settings saved successfully!", "success")}
-                                className="px-6 py-3.5 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#6605c7]/95 transition-all shadow-sm"
-                            >
-                                Save Preferences
-                            </button>
                         </div>
                     </div>
                 )}
