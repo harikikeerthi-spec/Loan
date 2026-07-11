@@ -170,8 +170,12 @@ function AgentLoginContent() {
                             
                             {/* Support Agent (Partner) Icon */}
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center border border-[#6605c7]/20 transition-all">
-                                    <span className="material-symbols-outlined text-[#6605c7] text-2xl">support_agent</span>
+                                <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center border border-[#6605c7]/20 transition-all overflow-hidden flex-shrink-0">
+                                    {agencyName && step === "otp" ? (
+                                        <img src="/agent-logo.png" alt="Partner Logo" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="material-symbols-outlined text-[#6605c7] text-2xl">support_agent</span>
+                                    )}
                                 </div>
                                 {agencyName && step === "otp" && (
                                     <div className="animate-fade-in flex flex-col justify-center text-left max-w-[120px]">
