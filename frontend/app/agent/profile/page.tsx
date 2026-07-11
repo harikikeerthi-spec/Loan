@@ -25,6 +25,10 @@ export default function AgentProfilePage() {
     const [agreements, setAgreements] = useState<any[]>([]);
     
     // Form Edit States
+    const [editPrimaryContact, setEditPrimaryContact] = useState("");
+    const [editMobile, setEditMobile] = useState("");
+    const [editEmail, setEditEmail] = useState("");
+    const [editOfficeAddress, setEditOfficeAddress] = useState("");
     const [editBusinessName, setEditBusinessName] = useState("");
     const [editGstin, setEditGstin] = useState("");
     const [editBankName, setEditBankName] = useState("");
@@ -53,6 +57,12 @@ export default function AgentProfilePage() {
                 if (setAgentProfile) setAgentProfile(meData);
                 setEditBusinessName(meData.businessName || "");
                 setEditGstin(meData.gstin || "");
+                
+                const fullName = `${meData.firstName || ""} ${meData.lastName || ""}`.trim();
+                setEditPrimaryContact(fullName || "");
+                setEditMobile(meData.phoneNumber || "");
+                setEditEmail(meData.email || "");
+                setEditOfficeAddress(meData.officeAddress || "");
             }
 
             if (bankRes.status === "fulfilled" && (bankRes.value as any)?.success) {
@@ -104,6 +114,32 @@ export default function AgentProfilePage() {
             }
         } catch (err) {
             console.error("Error saving business details:", err);
+            showToast("Server error updating details. Please try again.", "warning");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Save Contact Details
+    const handleSaveContact = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const res = await agentApi.updateContact({
+                primaryContact: editPrimaryContact,
+                mobile: editMobile,
+                email: editEmail,
+                officeAddress: editOfficeAddress
+            }) as any;
+            
+            if (res?.success) {
+                showToast("Contact details updated successfully!", "success");
+                await loadProfileData();
+            } else {
+                showToast(res?.message || "Failed to update contact details", "warning");
+            }
+        } catch (err) {
+            console.error("Error saving contact details:", err);
             showToast("Server error updating details. Please try again.", "warning");
         } finally {
             setLoading(false);
@@ -302,6 +338,35 @@ export default function AgentProfilePage() {
                                 </div>
                             </div>
                         </div>
+
+                        <form onSubmit={handleSaveContact} className="bg-white border border-gray-100 rounded-[2rem] shadow-[0_10px_40px_rgb(0,0,0,0.03)] p-6 space-y-4">
+                            <h4 className="text-xs font-black text-gray-800 uppercase tracking-widest border-b border-gray-50 pb-2 mb-4">Contact Details</h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Primary Contact</label>
+                                    <input type="text" value={editPrimaryContact} onChange={e => setEditPrimaryContact(e.target.value)} placeholder="e.g. Krishna Rao" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all" required />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Mobile</label>
+                                    <input type="text" value={editMobile} onChange={e => setEditMobile(e.target.value)} placeholder="+91 9XXXXXXXXX" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all" required />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Email</label>
+                                    <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="krishna@kesa.in" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all" required />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Office Address</label>
+                                    <input type="text" value={editOfficeAddress} onChange={e => setEditOfficeAddress(e.target.value)} placeholder="123 Agent Tower, Hyderabad" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all" />
+                                </div>
+                            </div>
+                            
+                            <div className="pt-4 border-t border-gray-50 flex justify-end">
+                                <button type="submit" disabled={loading} className="px-6 py-3.5 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#6605c7]/95 transition-all shadow-sm">
+                                    {loading ? "Saving..." : "Edit Profile"}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 )}
 
