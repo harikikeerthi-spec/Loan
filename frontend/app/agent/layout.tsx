@@ -8,6 +8,7 @@ import Link from "next/link";
 
 function AgentLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const [notificationsOpen, setNotificationsOpen] = React.useState(false);
     const {
         logout,
         toast,
@@ -163,10 +164,96 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                     <span className="material-symbols-outlined text-xl">contact_phone</span>
                                 </Link>
                             </div>
-                            <button className="relative w-12 h-12 flex items-center justify-center rounded-2xl bg-[#6605c7]/5 text-[#6605c7] hover:bg-[#6605c7]/10 transition-all border border-[#6605c7]/10">
-                                <span className="material-symbols-outlined">notifications</span>
-                                <div className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white" />
-                            </button>
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                                    className="relative w-12 h-12 flex items-center justify-center rounded-2xl bg-[#6605c7]/5 text-[#6605c7] hover:bg-[#6605c7]/10 transition-all border border-[#6605c7]/10"
+                                >
+                                    <span className="material-symbols-outlined">notifications</span>
+                                    <div className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white" />
+                                </button>
+
+                                {notificationsOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
+                                        <div className="absolute right-0 mt-4 w-[480px] bg-white rounded-[2rem] shadow-[0_30px_60px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50 animate-fade-in-up">
+                                            <div className="p-6 border-b border-gray-50 flex justify-between items-end bg-white">
+                                                <div>
+                                                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Notifications</h3>
+                                                    <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">Last 24 Hours</p>
+                                                </div>
+                                                <button onClick={() => setNotificationsOpen(false)} className="text-[9px] font-black text-[#6605c7] uppercase tracking-widest hover:underline">
+                                                    [Mark All as Read]
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="max-h-[60vh] overflow-y-auto bg-white">
+                                                <div className="p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 flex gap-4 items-start cursor-pointer">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="text-[11px] font-black text-gray-900">Priya Sharma: Loan Sanctioned ₹14L by SBI</span>
+                                                            <span className="text-[9px] font-bold text-gray-400">13:02</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-500 font-bold">Commission: ₹9,800</p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="p-5 bg-rose-50/30 hover:bg-rose-50/50 transition-colors border-b border-gray-50 flex gap-4 items-start cursor-pointer">
+                                                    <div className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="text-[11px] font-black text-gray-900">HDFC Query on Rahul Sinha</span>
+                                                            <span className="text-[9px] font-bold text-gray-400">12:31</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-500 font-bold mb-2">Deadline: Today 5 PM</p>
+                                                        <span className="inline-block px-2.5 py-1 bg-rose-100 text-rose-700 rounded text-[9px] font-black uppercase tracking-widest">[Take Action]</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 flex gap-4 items-start cursor-pointer">
+                                                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="text-[11px] font-black text-gray-900">Anjali Raju: Document verified by Staff</span>
+                                                            <span className="text-[9px] font-bold text-gray-400">11:47</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-500 font-bold">now pending bank submit</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 flex gap-4 items-start cursor-pointer">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="text-[11px] font-black text-gray-900">System: SBI raised loan limit</span>
+                                                            <span className="text-[9px] font-bold text-gray-400">10:00</span>
+                                                        </div>
+                                                        <button className="text-[10px] text-[#6605c7] font-black uppercase tracking-widest hover:underline mt-1">[Link] Read product update</button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="p-5 hover:bg-gray-50/80 transition-colors flex gap-4 items-start cursor-pointer">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="text-[11px] font-black text-gray-900">Venu Gopal: Loan Disbursed ₹12L</span>
+                                                            <span className="text-[9px] font-bold text-gray-400">09:30</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-500 font-bold">Your commission pending payout</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="p-4 bg-gray-50/50 border-t border-gray-50 text-center">
+                                                <button onClick={() => setNotificationsOpen(false)} className="text-[10px] font-black text-gray-900 uppercase tracking-widest hover:text-[#6605c7] transition-colors">
+                                                    [View All Notifications]
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </header>
 
