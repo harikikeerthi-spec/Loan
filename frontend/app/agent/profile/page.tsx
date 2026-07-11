@@ -371,101 +371,83 @@ export default function AgentProfilePage() {
                 )}
 
                 {activeTab === "kyc" && (
-                    <div className="space-y-8 text-left">
-                        <div className="max-w-xl space-y-4">
-                            <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">KYC Verification Files</h3>
-                            <p className="text-xs text-gray-450">Upload your government-issued documents to clear platform verification constraints.</p>
-                            
-                            {/* Upload widget */}
-                            <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col md:flex-row md:items-center gap-4">
-                                <div className="space-y-1 flex-1">
-                                    <label className="block text-[9px] font-bold text-gray-400 uppercase">Select KYC File Type</label>
-                                    <select
-                                        value={selectedDocType}
-                                        onChange={(e) => setSelectedDocType(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-xs font-bold text-gray-700 focus:outline-none"
-                                    >
-                                        {KYC_DOC_TYPES.map(t => <option key={t.type} value={t.type}>{t.label}</option>)}
-                                    </select>
-                                </div>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileUpload}
-                                    className="hidden"
-                                    accept=".pdf,.png,.jpg,.jpeg"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={triggerFileSelect}
-                                    disabled={uploading}
-                                    className="px-5 py-3 bg-[#6605c7] hover:bg-[#6605c7]/90 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 self-end"
-                                >
-                                    <span className="material-symbols-outlined text-sm">upload</span>
-                                    {uploading ? `Uploading (${uploadProgress}%)` : "Upload KYC Document"}
-                                </button>
+                    <div className="space-y-6 max-w-2xl text-left">
+                        <div className="flex justify-between items-end mb-2">
+                            <div>
+                                <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">KYC DOCUMENTS — Status</h3>
                             </div>
                         </div>
 
-                        {/* Upload progress bar */}
+                        <div className="bg-white border border-gray-100 rounded-[2rem] shadow-[0_10px_40px_rgb(0,0,0,0.03)] p-6 space-y-4 relative overflow-hidden">
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#6605c7]/20 to-transparent"></div>
+                            
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b-2 border-gray-100">
+                                        <th className="pb-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-5/12">Document</th>
+                                        <th className="pb-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-3/12">Status</th>
+                                        <th className="pb-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-4/12">Expiry</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="text-xs font-bold text-gray-800">
+                                    <tr className="border-b border-gray-50">
+                                        <td className="py-4">Aadhar Card</td>
+                                        <td className="py-4 text-emerald-600">✅ Verified</td>
+                                        <td className="py-4 text-gray-500">Lifetime</td>
+                                    </tr>
+                                    <tr className="border-b border-gray-50">
+                                        <td className="py-4">PAN Card</td>
+                                        <td className="py-4 text-emerald-600">✅ Verified</td>
+                                        <td className="py-4 text-gray-500">Lifetime</td>
+                                    </tr>
+                                    <tr className="border-b border-gray-50">
+                                        <td className="py-4">GST Certificate</td>
+                                        <td className="py-4 text-emerald-600">✅ Verified</td>
+                                        <td className="py-4 text-gray-500">Mar 2027</td>
+                                    </tr>
+                                    <tr className="border-b border-gray-50">
+                                        <td className="py-4">Business Registration</td>
+                                        <td className="py-4 text-emerald-600">✅ Verified</td>
+                                        <td className="py-4 text-amber-500 flex items-center gap-1.5 flex-wrap">
+                                            <span>Dec 2026</span>
+                                            <span className="text-[9px] bg-amber-50 border border-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-black tracking-wider uppercase whitespace-nowrap">← Renew in 6 months</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-4">Agent Agreement (Signed)</td>
+                                        <td className="py-4 text-emerald-600">✅ Active</td>
+                                        <td className="py-4 text-gray-500 flex items-center gap-2">
+                                            <span>Dec 2026</span>
+                                            <button onClick={() => showToast("Downloading agreement...", "success")} className="text-[10px] text-indigo-600 font-black tracking-widest uppercase hover:underline">
+                                                [Download Copy]
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
                         {uploading && (
                             <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden animate-pulse">
                                 <div className="h-full bg-indigo-600 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                             </div>
                         )}
 
-                        {/* KYC documents table */}
-                        <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Document Status Verification Checklist</h4>
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-separate border-spacing-y-2">
-                                    <thead>
-                                        <tr className="text-gray-400 text-[10px] font-black uppercase tracking-wider">
-                                            <th className="px-4 py-2 text-left">Document Type</th>
-                                            <th className="px-4 py-2 text-left">Uploaded File</th>
-                                            <th className="px-4 py-2 text-left">Verification Status</th>
-                                            <th className="px-4 py-2 text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {kycDocs.length > 0 ? kycDocs.map((doc, idx) => {
-                                            const match = KYC_DOC_TYPES.find(k => k.type === doc.docType);
-                                            const label = match ? match.label : doc.docType.replace(/_/g, " ").toUpperCase();
-                                            return (
-                                                <tr key={doc.id || idx} className="bg-gray-50 rounded-xl">
-                                                    <td className="px-4 py-3 rounded-l-xl font-bold text-gray-800 text-xs">{label}</td>
-                                                    <td className="px-4 py-3 text-xs text-gray-500 font-mono">{doc.filePath?.split(/[/\\]/).pop() || `${doc.docType}.pdf`}</td>
-                                                    <td className="px-4 py-3 text-xs">
-                                                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                                            doc.status === "verified"
-                                                                ? "bg-emerald-50 text-emerald-700"
-                                                                : doc.status === "rejected"
-                                                                ? "bg-rose-50 text-rose-700"
-                                                                : "bg-amber-50 text-amber-700"
-                                                        }`}>
-                                                            {doc.status || "pending"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 rounded-r-xl text-right">
-                                                        <button 
-                                                            onClick={() => showToast(`Opening ${label} download scheme...`, "success")} 
-                                                            className="text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-wider"
-                                                        >
-                                                            Download
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        }) : (
-                                            <tr>
-                                                <td colSpan={4} className="text-center py-10 text-xs text-gray-400 bg-gray-50 rounded-xl">
-                                                    No KYC documents uploaded yet. Please use the widget above to upload your PAN, Aadhaar, and GST details.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div className="pt-2 flex justify-start">
+                            <button
+                                onClick={triggerFileSelect}
+                                disabled={uploading}
+                                className="px-6 py-3.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-sm"
+                            >
+                                {uploading ? `Uploading (${uploadProgress}%)` : "[Upload Updated Document]"}
+                            </button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                                className="hidden"
+                                accept=".pdf,.png,.jpg,.jpeg"
+                            />
                         </div>
                     </div>
                 )}
