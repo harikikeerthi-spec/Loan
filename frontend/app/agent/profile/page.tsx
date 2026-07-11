@@ -11,7 +11,7 @@ const KYC_DOC_TYPES = [
 ];
 
 export default function AgentProfilePage() {
-    const { showToast, setAgentProfile } = useAgent();
+    const { showToast, setAgentProfile, agentProfile } = useAgent();
     
     // Tab State
     const [activeTab, setActiveTab] = useState<"details" | "kyc" | "bank" | "agreements" | "notifications">("details");
@@ -19,6 +19,7 @@ export default function AgentProfilePage() {
     // Profile Data State
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<any>(null);
+    const displayProfile = profile || agentProfile;
     const [bankAccount, setBankAccount] = useState({ bankName: "", accountNumber: "", ifscCode: "" });
     const [kycDocs, setKycDocs] = useState<any[]>([]);
     const [agreements, setAgreements] = useState<any[]>([]);
@@ -210,20 +211,20 @@ export default function AgentProfilePage() {
             <section className="p-8 rounded-[2.5rem] bg-white border border-[#6605c7]/10 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="flex gap-5 items-center">
                     <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-[#6605c7] to-[#8b24e5] text-white font-black text-2xl flex items-center justify-center shadow-lg">
-                        {profile?.firstName ? profile.firstName[0] : "A"}
+                        {displayProfile?.firstName ? displayProfile.firstName[0] : "V"}
                     </div>
                     <div className="space-y-1 text-left">
                         <div className="flex items-center gap-3 flex-wrap">
-                            <h2 className="text-2xl font-black text-gray-900 font-display">{profile?.businessName || "VidyaLoan Agency"}</h2>
-                            <span className={`inline-flex px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${kycStatusColors[profile?.kycStatus || "unverified"]}`}>
-                                KYC: {profile?.kycStatus || "Unverified"}
+                            <h2 className="text-2xl font-black text-gray-900 font-display">{displayProfile?.businessName || "VidyaLoan Agency"}</h2>
+                            <span className={`inline-flex px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${kycStatusColors[displayProfile?.kycStatus || "unverified"]}`}>
+                                KYC: {displayProfile?.kycStatus || "Unverified"}
                             </span>
                         </div>
                         <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
-                            DSA Partner: {profile?.firstName} {profile?.lastName} | Email: <strong className="text-gray-900">{profile?.email}</strong>
+                            DSA Partner: {displayProfile?.firstName} {displayProfile?.lastName} | Email: <strong className="text-gray-900">{displayProfile?.email}</strong>
                         </p>
                         <p className="text-[10px] text-gray-400">
-                            Partner ID: {profile?.id?.replace("VL-STU-", "VL-AGT-")} | Member Since: {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "June 2026"}
+                            Partner ID: {displayProfile?.id?.replace("VL-STU-", "VL-AGT-")} | Member Since: {displayProfile?.createdAt ? new Date(displayProfile.createdAt).toLocaleDateString() : "June 2026"}
                         </p>
                     </div>
                 </div>
