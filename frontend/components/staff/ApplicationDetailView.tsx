@@ -12,6 +12,34 @@ import SendDocumentToBankModal from "./SendDocumentToBankModal";
 import SendEmailModal from "./SendEmailModal";
 import NotificationsPanel from "./NotificationsPanel";
 import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+  Filler,
+  ArcElement
+} from "chart.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  ChartTooltip,
+  ChartLegend,
+  Filler,
+  ArcElement
+);
+
+import {
   getDocumentCategory,
   getDocumentRequirementName,
   getProfileDocumentRequirements,
@@ -4359,15 +4387,6 @@ const SideBySideComparisonModal = ({
   );
 };
 
-interface EvvMonthBreakdown {
-  month: string;
-  points?: number;
-  avg?: number;
-  min?: number;
-  max?: number;
-  evv: number;
-}
-
 const EvvAnalysisTab = ({
   application,
   onApplicationUpdated,
@@ -4378,11 +4397,20 @@ const EvvAnalysisTab = ({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(application.evvStatus === "PROCESSING");
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [activeChartTab, setActiveChartTab] = useState<"trend" | "flow" | "channels">("trend");
+  const [activeDetailTab, setActiveDetailTab] = useState<"metrics" | "snapshots" | "behaviours" | "validation" | "transactions">("metrics");
+  
+  // Transaction Filters
+  const [txSearch, setTxSearch] = useState("");
+  const [txType, setTxType] = useState<"all" | "credit" | "debit">("all");
+  const [txChannel, setTxChannel] = useState<"all" | "UPI" | "NEFT" | "RTGS" | "IMPS" | "CASH" | "CHEQUE" | "ONLINE">("all");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { alert: dialogAlert } = useDialog();
 
-  // Poll every 5 seconds when EVV status is PROCESSING
-  React.useEffect(() => {
+  // Poll every 2 seconds when EVV status is PROCESSING for fast UI feedback
+  useEffect(() => {
     if (!isPolling) return;
     const interval = setInterval(async () => {
       try {
@@ -4399,12 +4427,11 @@ const EvvAnalysisTab = ({
           }
         }
       } catch {}
-    }, 5000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [isPolling, application.id, application._id, onApplicationUpdated]);
 
-  // Start polling if status becomes PROCESSING externally
-  React.useEffect(() => {
+  useEffect(() => {
     if (application.evvStatus === "PROCESSING") {
       setIsPolling(true);
     } else {
@@ -4438,7 +4465,6 @@ const EvvAnalysisTab = ({
       const data = await res.json();
       if (data.success) {
         if (data.status === "PROCESSING") {
-          // Background processing — start polling
           setIsPolling(true);
           onApplicationUpdated?.();
         } else {
@@ -4465,26 +4491,260 @@ const EvvAnalysisTab = ({
     fileInputRef.current?.click();
   };
 
-  // Resolve breakdown if stored as string or JSON object
-  let breakdown: EvvMonthBreakdown[] = [];
-  try {
-    const rawBreakdown = application.evvMonthlyBreakdown;
-    if (rawBreakdown) {
-      breakdown = typeof rawBreakdown === "string" ? JSON.parse(rawBreakdown) : rawBreakdown;
+  // Safe parsing of fields
+  const parseJsonField = (field: any, defaultVal: any = []) => {
+    if (!field) return defaultVal;
+    if (typeof field === "string") {
+      try {
+        return JSON.parse(field);
+      } catch {
+        return defaultVal;
+      }
     }
-  } catch (e) {
-    console.error("Failed to parse monthly breakdown JSON", e);
-  }
+    return field;
+  };
 
-  const evvOverall = application.evvOverall || 0;
   const evvStatus = application.evvStatus || "";
+  const evvOverall = application.evvOverall || 0;
+  const evvScore = application.evvScore ?? null;
+  const evvGrade = application.evvGrade || "";
+  const evvDecision = application.evvDecision || "";
+  const evvDecisionReason = application.evvDecisionReason || "";
+  
+  const riskFlags = parseJsonField(application.evvRiskFlags);
+  const behaviours = parseJsonField(application.evvBehaviours);
+  const dailyBalances = parseJsonField(application.evvDailyBalances);
+  const snapshots = parseJsonField(application.evvSnapshots);
+  const monthlyMetrics = parseJsonField(application.evvMonthlyMetrics);
+  const validation = parseJsonField(application.evvValidation, null);
+  const weightBreakdown = parseJsonField(application.evvWeightBreakdown);
+  const legacyBreakdown = parseJsonField(application.evvMonthlyBreakdown);
+  
+  // Format period nicely
+  const evvPeriod = application.evvPeriod ? (typeof application.evvPeriod === "string" ? parseJsonField(application.evvPeriod, null) : application.evvPeriod) : null;
+
+  // Retrieve transactions for viewer
+  const rawTransactions: any[] = parseJsonField(application.evvTransactions || "[]");
+  // If evvTransactions doesn't exist, we fall back to generating or looking up from standard location. 
+  // Let's also verify if there is an alternative location or we can mock visually.
+  const transactionsList = rawTransactions.length > 0 ? rawTransactions : (legacyBreakdown.length > 0 ? [] : []);
+
+  // Download Excel / CSV
+  const handleExportCSV = () => {
+    if (rawTransactions.length === 0) {
+      dialogAlert("No transactions available to export.", "Export Failed", "error");
+      return;
+    }
+    const headers = ["Date", "Narration", "Debit (INR)", "Credit (INR)", "Balance (INR)", "Channel", "Reference No"];
+    const rows = rawTransactions.map(tx => [
+      tx.date || "",
+      `"${(tx.narration || "").replace(/"/g, '""')}"`,
+      tx.debit || 0,
+      tx.credit || 0,
+      tx.balance || 0,
+      tx.channel || "",
+      tx.referenceNumber || tx.utr || ""
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `EVV_Report_${application.applicationNumber || application.id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // Helper for color styling based on Underwriting Decision
+  const getDecisionColors = (decisionStr: string) => {
+    switch (decisionStr) {
+      case "APPROVE":
+        return {
+          bg: "bg-emerald-50 dark:bg-emerald-950/20",
+          border: "border-emerald-200 dark:border-emerald-900/50",
+          text: "text-emerald-800 dark:text-emerald-400",
+          badge: "bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300",
+          icon: "check_circle"
+        };
+      case "APPROVE_WITH_CONDITIONS":
+        return {
+          bg: "bg-sky-50 dark:bg-sky-950/20",
+          border: "border-sky-200 dark:border-sky-900/50",
+          text: "text-sky-800 dark:text-sky-400",
+          badge: "bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-300",
+          icon: "info_outline"
+        };
+      case "MANUAL_REVIEW":
+        return {
+          bg: "bg-amber-50 dark:bg-amber-950/20",
+          border: "border-amber-200 dark:border-amber-900/50",
+          text: "text-amber-800 dark:text-amber-400",
+          badge: "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300",
+          icon: "warning"
+        };
+      case "REJECT":
+        return {
+          bg: "bg-rose-50 dark:bg-rose-950/20",
+          border: "border-rose-200 dark:border-rose-900/50",
+          text: "text-rose-800 dark:text-rose-400",
+          badge: "bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-300",
+          icon: "cancel"
+        };
+      default:
+        return {
+          bg: "bg-slate-50 dark:bg-slate-900",
+          border: "border-slate-200 dark:border-slate-800",
+          text: "text-slate-800 dark:text-slate-400",
+          badge: "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300",
+          icon: "help_outline"
+        };
+    }
+  };
+
+  const decisionMeta = getDecisionColors(evvDecision);
+
+  // Preparation for ChartJS Visualizations
+  const trendChartData = {
+    labels: monthlyMetrics.map((m: any) => m.monthLabel || m.month),
+    datasets: [
+      {
+        label: "Average Monthly Balance (INR)",
+        data: monthlyMetrics.map((m: any) => m.avgBalance),
+        borderColor: "#4f46e5",
+        backgroundColor: "rgba(79, 70, 229, 0.05)",
+        fill: true,
+        tension: 0.3,
+        borderWidth: 2,
+        pointBackgroundColor: "#4f46e5",
+        pointRadius: 4,
+      },
+      {
+        label: "Minimum Monthly Balance (INR)",
+        data: monthlyMetrics.map((m: any) => m.lowestBalance),
+        borderColor: "#f43f5e",
+        backgroundColor: "transparent",
+        fill: false,
+        tension: 0.3,
+        borderWidth: 1.5,
+        borderDash: [5, 5],
+        pointBackgroundColor: "#f43f5e",
+        pointRadius: 3,
+      }
+    ]
+  };
+
+  const flowChartData = {
+    labels: monthlyMetrics.map((m: any) => m.monthLabel || m.month),
+    datasets: [
+      {
+        label: "Total Credits (INR)",
+        data: monthlyMetrics.map((m: any) => m.totalCredits || 0),
+        backgroundColor: "rgba(16, 185, 129, 0.8)",
+        borderRadius: 4,
+      },
+      {
+        label: "Total Debits (INR)",
+        data: monthlyMetrics.map((m: any) => m.totalDebits || 0),
+        backgroundColor: "rgba(239, 68, 68, 0.8)",
+        borderRadius: 4,
+      }
+    ]
+  };
+
+  // payment mode distribution aggregator
+  const channelTotals = { UPI: 0, NEFT: 0, RTGS: 0, IMPS: 0, CASH: 0, CHEQUE: 0, ONLINE: 0 };
+  monthlyMetrics.forEach((m: any) => {
+    channelTotals.UPI += m.upiCount || 0;
+    channelTotals.NEFT += m.neftCount || 0;
+    channelTotals.RTGS += m.rtgsCount || 0;
+    channelTotals.IMPS += m.impsCount || 0;
+    channelTotals.CASH += (m.cashDepositCount || 0) + (m.cashWithdrawalCount || 0);
+    channelTotals.CHEQUE += m.chequeCount || 0;
+    channelTotals.ONLINE += m.transactionCount - ((m.upiCount || 0) + (m.neftCount || 0) + (m.rtgsCount || 0) + (m.impsCount || 0) + (m.chequeCount || 0) + ((m.cashDepositCount || 0) + (m.cashWithdrawalCount || 0)));
+  });
+
+  const channelChartData = {
+    labels: Object.keys(channelTotals),
+    datasets: [
+      {
+        data: Object.values(channelTotals),
+        backgroundColor: [
+          "#3b82f6", // UPI
+          "#8b5cf6", // NEFT
+          "#ec4899", // RTGS
+          "#f43f5e", // IMPS
+          "#10b981", // CASH
+          "#f59e0b", // CHEQUE
+          "#64748b"  // ONLINE
+        ],
+        borderWidth: 0
+      }
+    ]
+  };
+
+  // Filtered Transactions List
+  const filteredTransactions = rawTransactions.filter(tx => {
+    const matchesSearch = !txSearch || 
+      (tx.narration || "").toLowerCase().includes(txSearch.toLowerCase()) || 
+      (tx.referenceNumber || "").toLowerCase().includes(txSearch.toLowerCase()) || 
+      (tx.utr || "").toLowerCase().includes(txSearch.toLowerCase());
+      
+    const matchesType = txType === "all" || 
+      (txType === "credit" && tx.credit > 0) || 
+      (txType === "debit" && tx.debit > 0);
+      
+    const matchesChannel = txChannel === "all" || 
+      tx.channel === txChannel || 
+      (txChannel === "CASH" && (tx.narration || "").toLowerCase().includes("cash"));
+
+    return matchesSearch && matchesType && matchesChannel;
+  });
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Upload & Summary Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left: Upload Dropzone Card */}
-        <div className="md:col-span-5 bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between min-h-[300px]">
+    <div className={`space-y-8 animate-in fade-in duration-500 ${isDarkMode ? "dark text-slate-100 bg-slate-950 p-6 rounded-[32px] border border-slate-900" : ""}`}>
+      {/* Premium Dark Mode & Print Utilities Toolbar */}
+      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-900 pb-5 no-print">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+          <h3 className="text-[15px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+            EVV Intelligence Hub
+          </h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 transition-all flex items-center justify-center"
+            title="Toggle Dark Mode Theme"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {isDarkMode ? "light_mode" : "dark_mode"}
+            </span>
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2.5 rounded-xl border border-slate-100 dark:border-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 transition-all flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">print</span>
+            Print Report
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">download</span>
+            Export Excel (CSV)
+          </button>
+        </div>
+      </div>
+
+      {/* Main Grid: Info Upload Zone & Underwriting Verdict Card */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 no-print">
+        {/* Left Hand side: Interactive statement dropzone */}
+        <div className="md:col-span-5 bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 p-8 shadow-sm hover:shadow-md dark:shadow-none transition-all flex flex-col justify-between min-h-[320px]">
           <input
             type="file"
             ref={fileInputRef}
@@ -4494,29 +4754,29 @@ const EvvAnalysisTab = ({
           />
           <div>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
               </div>
               <div>
-                <h4 className="text-[16px] font-extrabold text-slate-800 uppercase tracking-wider">Bank Statement</h4>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Analyze transaction balances</p>
+                <h4 className="text-[16px] font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">Bank Statements</h4>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Parse & Verify Uploaded PDF</p>
               </div>
             </div>
-            <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
-              Upload the applicant's official {breakdown.length > 0 ? `${breakdown.length}-month` : "6-month"} bank statement (PDF/Image). The calculation engine will extract all transaction histories and run a 5-day snapshot audit to evaluate the Monthly Average Balance (MAB) patterns.
+            <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+              Upload client statement files (scanned/native PDF) to generate EVV Scores. The system parses accounts, runs validation checks, reconstructs daily balances, evaluates monthly metrics, and flags behavior patterns.
             </p>
           </div>
 
           <div>
             {uploading ? (
-              <div className="w-full py-4 bg-slate-50 text-slate-500 rounded-2xl flex items-center justify-center gap-3 border border-slate-100">
+              <div className="w-full py-4 bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 rounded-2xl flex items-center justify-center gap-3 border border-slate-100 dark:border-slate-800">
                 <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
                 <span className="text-[11px] font-black uppercase tracking-widest">Uploading Statement...</span>
               </div>
             ) : isPolling ? (
-              <div className="w-full py-4 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center gap-3 border border-indigo-100">
+              <div className="w-full py-4 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center gap-3 border border-indigo-100 dark:border-indigo-900/50">
                 <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                <span className="text-[11px] font-black uppercase tracking-widest">AI Analyzing... Auto-refreshing</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">Analyzing Statement...</span>
               </div>
             ) : (
               <button
@@ -4533,186 +4793,708 @@ const EvvAnalysisTab = ({
           </div>
         </div>
 
-        {/* Right: EVV Status Panel */}
-        <div className="md:col-span-7 bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm flex flex-col justify-between min-h-[300px]">
-          <div>
-            <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-6">EVV Engine Audit Results</h4>
-            
-            {!evvStatus || evvStatus === "" ? (
-              <div className="h-[150px] flex flex-col items-center justify-center text-center">
-                <span className="material-symbols-outlined text-[48px] text-slate-300 mb-3">analytics</span>
-                <p className="text-[14px] font-extrabold text-slate-600 uppercase tracking-wider">No Statement Audited</p>
-                <p className="text-[11px] text-slate-400 mt-1">Upload a statement to compute the maintained balance metrics.</p>
-              </div>
-            ) : evvStatus === "PROCESSING" ? (
-              <div className="bg-indigo-50 border border-indigo-200/50 rounded-3xl p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-7 h-7 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h5 className="text-[14px] font-extrabold text-indigo-800 uppercase tracking-wider">Analyzing Statement...</h5>
-                    <p className="text-[12px] text-indigo-700 leading-relaxed mt-2 font-medium">
-                      The AI engine is scanning your bank statement and extracting transactions. This may take 1–2 minutes for large PDFs. This page will refresh automatically when done.
-                    </p>
-                  </div>
+        {/* Right Hand side: Underwriting verdict / gauge */}
+        <div className="md:col-span-7 bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 p-8 shadow-sm flex flex-col justify-between min-h-[320px]">
+          {!evvStatus || evvStatus === "" ? (
+            <div className="h-[240px] flex flex-col items-center justify-center text-center">
+              <span className="material-symbols-outlined text-[48px] text-slate-300 dark:text-slate-700 mb-3">analytics</span>
+              <p className="text-[14px] font-extrabold text-slate-600 dark:text-slate-400 uppercase tracking-wider">No Statement Audited</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Upload a statement to compute the EVV Intelligence Report.</p>
+            </div>
+          ) : evvStatus === "PROCESSING" ? (
+            <div className="flex-1 flex flex-col justify-center">
+              <div className="flex items-start gap-4 p-6 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 rounded-3xl animate-pulse">
+                <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                <div>
+                  <h5 className="text-[14px] font-black text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">Reconstructing Balances...</h5>
+                  <p className="text-[12px] text-indigo-700 dark:text-indigo-400 leading-relaxed mt-2">
+                    Running transaction OCR algorithms, reconstructing missing daily records, computing 5-day snapshot averages, and matching compliance metrics. This takes about 1 minute.
+                  </p>
                 </div>
-              </div>
-            ) : evvStatus === "MANUAL_REVIEW" || evvStatus === "FAILED" ? (
-              <div className="bg-amber-50 border border-amber-200/50 rounded-3xl p-6">
-                <div className="flex items-start gap-4">
-                  <span className="material-symbols-outlined text-[28px] text-amber-600 mt-0.5">warning</span>
-                  <div>
-                    <h5 className="text-[14px] font-extrabold text-amber-800 uppercase tracking-wider">Manual Review Required</h5>
-                    <p className="text-[12px] text-amber-700 leading-relaxed mt-2 font-medium">
-                      The parser could not fully automate parsing on this statement. Details: {application.remarks || "No additional error details available."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="flex items-baseline gap-4">
-                  <span className="text-[40px] font-black text-slate-900 tabular-nums">
-                    ₹{evvOverall.toLocaleString("en-IN")}
-                  </span>
-                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-                    Overall EVV Balance
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl w-fit">
-                  <span className="material-symbols-outlined text-[20px] text-emerald-600">verified_user</span>
-                  <div className="text-[11px] font-black uppercase tracking-widest text-emerald-700">
-                    {evvStatus === "ROUTED_TO_BANK" 
-                      ? "Leads Routed: Automatically Shared with Partner Bank" 
-                      : "Audit Complete: Maintained Balance Verified"}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {evvStatus === "COMPUTED" || evvStatus === "ROUTED_TO_BANK" ? (
-            <div className="border-t border-slate-100 pt-6 flex items-center justify-between">
-              <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-                Rule Check: Overall Balance &gt; ₹5,000
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">
-                  Passed Auto-Share
-                </span>
               </div>
             </div>
-          ) : evvStatus && (
-            <div className="border-t border-slate-100 pt-6 text-[11px] font-black uppercase tracking-widest text-slate-400">
-              Manual fallback mode active. Please inspect the statement and manually route to banks.
+          ) : (
+            <div className="space-y-6 flex-1 flex flex-col justify-between">
+              {/* Verdict header row */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <h4 className="text-[12px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  Underwriting Verdict
+                </h4>
+                {evvScore !== null && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase">EVV Grade:</span>
+                    <span className="px-3 py-1 text-[11px] font-black rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50">
+                      {evvGrade}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Score & Verdict Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                {/* Visual Gauge */}
+                <div className="sm:col-span-5 flex justify-center">
+                  <div className="relative w-40 h-40 flex items-center justify-center">
+                    {/* SVG Arc Gauge */}
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle
+                        cx="80"
+                        cy="80"
+                        r="64"
+                        stroke="#e2e8f0"
+                        strokeWidth="10"
+                        fill="transparent"
+                        className="dark:stroke-slate-800"
+                      />
+                      <circle
+                        cx="80"
+                        cy="80"
+                        r="64"
+                        stroke="url(#gradientScore)"
+                        strokeWidth="12"
+                        fill="transparent"
+                        strokeDasharray={402}
+                        strokeDashoffset={402 - (402 * (evvScore || 0)) / 100}
+                        strokeLinecap="round"
+                        className="transition-all duration-1000"
+                      />
+                      <defs>
+                        <linearGradient id="gradientScore" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#f43f5e" />
+                          <stop offset="50%" stopColor="#f59e0b" />
+                          <stop offset="100%" stopColor="#10b981" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-[36px] font-black text-slate-900 dark:text-white tabular-nums leading-none">
+                        {evvScore}
+                      </span>
+                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider mt-1.5">
+                        EVV Score
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Verdict text column */}
+                <div className="sm:col-span-7 space-y-4">
+                  <div className={`p-5 rounded-2xl border ${decisionMeta.bg} ${decisionMeta.border} ${decisionMeta.text} flex items-start gap-3`}>
+                    <span className="material-symbols-outlined text-[22px] flex-shrink-0 mt-0.5">
+                      {decisionMeta.icon}
+                    </span>
+                    <div>
+                      <h5 className="text-[13px] font-black uppercase tracking-wider">
+                        {evvDecision.replace(/_/g, " ")}
+                      </h5>
+                      <p className="text-[11px] opacity-90 leading-relaxed mt-1 font-semibold">
+                        {evvDecisionReason || "Application complies with default lending benchmarks."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[20px] font-black text-slate-900 dark:text-white">
+                      ₹{evvOverall.toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Overall MAB
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lower boundary rules status */}
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-5 flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Verification Quality: {validation?.confidenceScore ?? 100}% Confidence
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${riskFlags.length > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+                  <span className={`text-[10px] font-black uppercase tracking-wider ${riskFlags.length > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                    {riskFlags.length > 0 ? `${riskFlags.length} Flags Triggered` : "Clean History"}
+                  </span>
+                </span>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Summary stats row */}
-      {breakdown.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Overall EVV</span>
-            <span className="text-[22px] font-black text-slate-900 tabular-nums">₹{evvOverall.toLocaleString("en-IN")}</span>
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Snapshots</span>
-            <span className="text-[22px] font-black text-slate-900 tabular-nums">
-              {(application.evvTotalSnapshots ?? breakdown.reduce((s: number, b: EvvMonthBreakdown) => s + (b.points ?? 6), 0)).toLocaleString()}
-            </span>
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transactions</span>
-            <span className="text-[22px] font-black text-slate-900 tabular-nums">
-              {application.evvTotalTransactions != null ? application.evvTotalTransactions.toLocaleString() : '—'}
-            </span>
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</span>
-            {(() => {
-              const period = application.evvPeriod;
-              if (period && typeof period === 'object' && period.from) {
-                return (
-                  <span className="text-[12px] font-black text-slate-700 leading-snug">
-                    {period.from}<br /><span className="text-slate-400 font-bold text-[10px]">to</span><br />{period.to}
-                  </span>
-                );
-              }
-              if (breakdown.length > 0) {
-                const [y0, m0] = breakdown[0].month.split('-');
-                const last = breakdown[breakdown.length - 1];
-                const [y1, m1] = last.month.split('-');
-                const fmt = (y: string, m: string) =>
-                  new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-                return <span className="text-[12px] font-black text-slate-700">{fmt(y0, m0)} – {fmt(y1, m1)}</span>;
-              }
-              return <span className="text-[13px] font-black text-slate-400">—</span>;
-            })()}
-          </div>
-        </div>
-      )}
+      {/* Analytics, Charts and Indicators section */}
+      {evvStatus && evvStatus !== "PROCESSING" && (
+        <div className="space-y-8">
+          
+          {/* Section: Premium Visual Charts tabs */}
+          <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 p-8 shadow-sm no-print">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-5 mb-6 gap-4">
+              <div>
+                <h4 className="text-[14px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                  Financial Analytics & Cashflow Trends
+                </h4>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                  Statement period: {evvPeriod?.from || "—"} to {evvPeriod?.to || "—"}
+                </p>
+              </div>
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl self-stretch sm:self-auto">
+                <button
+                  onClick={() => setActiveChartTab("trend")}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeChartTab === "trend" ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                >
+                  Balance Trend
+                </button>
+                <button
+                  onClick={() => setActiveChartTab("flow")}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeChartTab === "flow" ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                >
+                  Credits vs Debits
+                </button>
+                <button
+                  onClick={() => setActiveChartTab("channels")}
+                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeChartTab === "channels" ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                >
+                  Payment Channels
+                </button>
+              </div>
+            </div>
 
-      {/* Monthly breakdown 5-col table */}
-      {breakdown.length > 0 && (
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-8 pt-7 pb-4">
-            <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Monthly Average Balance Breakdown — 5-Day Snapshot Loop</h4>
+            {/* Render selected chart */}
+            <div className="h-[280px] w-full flex items-center justify-center">
+              {monthlyMetrics.length > 0 ? (
+                <>
+                  {activeChartTab === "trend" && (
+                    <Line
+                      data={trendChartData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true, position: "top" as const } },
+                        scales: { y: { grid: { color: isDarkMode ? "#1e293b" : "#f1f5f9" } } }
+                      }}
+                    />
+                  )}
+                  {activeChartTab === "flow" && (
+                    <Bar
+                      data={flowChartData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true } },
+                        scales: { y: { grid: { color: isDarkMode ? "#1e293b" : "#f1f5f9" } } }
+                      }}
+                    />
+                  )}
+                  {activeChartTab === "channels" && (
+                    <div className="w-[280px] h-full">
+                      <Doughnut
+                        data={channelChartData}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: { legend: { position: "right" as const } }
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-[12px] font-bold text-slate-400 dark:text-slate-600">
+                  No monthly data points available to plot.
+                </div>
+              )}
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-t border-b border-slate-100 bg-slate-50/60">
-                  {['Month', 'Points', 'Avg', 'Min', 'Max'].map(col => (
-                    <th key={col} className={`px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap ${col === 'Month' ? 'text-left' : 'text-right'}`}>
-                      {col}
-                    </th>
+
+          {/* Details Section tabs switcher */}
+          <div className="flex border-b border-slate-200 dark:border-slate-800 pb-px gap-6 overflow-x-auto no-print">
+            {[
+              { id: "metrics", label: "Monthly Metrics", icon: "calendar_month" },
+              { id: "snapshots", label: "Balance Snapshots", icon: "screenshot_monitor" },
+              { id: "behaviours", label: "Behaviours & Flags", icon: "psychology" },
+              { id: "validation", label: "Data Validation", icon: "verified_user" },
+              { id: "transactions", label: "Statement Transactions", icon: "toc" }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveDetailTab(tab.id as any)}
+                className={`pb-4 border-b-2 text-[11px] font-black uppercase tracking-widest whitespace-nowrap flex items-center gap-2 transition-all ${activeDetailTab === tab.id ? "border-indigo-600 text-indigo-600 dark:text-indigo-400" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+              >
+                <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Details tab views */}
+          <div className="space-y-6">
+            
+            {/* VIEW 1: MONTHLY METRICS CARD GRID */}
+            {activeDetailTab === "metrics" && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
+                  {monthlyMetrics.map((item: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-[24px] shadow-sm hover:shadow-md transition-all space-y-4"
+                    >
+                      <div className="flex justify-between items-center border-b border-slate-50 dark:border-slate-800 pb-3">
+                        <span className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                          {item.monthLabel}
+                        </span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          {item.transactionCount || 0} Tx
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-left">
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Average Balance</span>
+                          <span className="text-[13px] font-black text-slate-800 dark:text-indigo-400">₹{(item.avgBalance || 0).toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Lowest Balance</span>
+                          <span className="text-[13px] font-black text-rose-500">₹{(item.lowestBalance || 0).toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Credits</span>
+                          <span className="text-[12px] font-semibold text-emerald-600">₹{(item.totalCredits || 0).toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Debits</span>
+                          <span className="text-[12px] font-semibold text-rose-600">₹{(item.totalDebits || 0).toLocaleString("en-IN")}</span>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {breakdown.map((item: EvvMonthBreakdown, idx: number) => {
-                  let dateStr = item.month;
-                  try {
-                    const [year, month] = item.month.split('-');
-                    dateStr = new Date(parseInt(year), parseInt(month) - 1, 1)
-                      .toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                  } catch { /* keep default */ }
-                  const avg  = item.avg  ?? item.evv;
-                  const minV = item.min  ?? item.evv;
-                  const maxV = item.max  ?? item.evv;
-                  const pts  = item.points ?? 6;
-                  return (
-                    <tr key={idx} className={`group transition-colors hover:bg-indigo-50/30 ${idx < breakdown.length - 1 ? 'border-b border-slate-50' : ''}`}>
-                      <td className="px-6 py-4 text-[13px] font-extrabold text-slate-800 uppercase tracking-wider whitespace-nowrap">{dateStr}</td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-black">{pts}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right text-[13px] font-black text-slate-800 tabular-nums whitespace-nowrap">₹{avg.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 text-right text-[13px] font-semibold text-rose-600 tabular-nums whitespace-nowrap">₹{minV.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 text-right text-[13px] font-semibold text-emerald-600 tabular-nums whitespace-nowrap">₹{maxV.toLocaleString('en-IN')}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-slate-200 bg-indigo-50/40">
-                  <td className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-widest">Overall</td>
-                  <td className="px-6 py-4 text-right text-[11px] font-black text-slate-500">
-                    {breakdown.reduce((s: number, b: EvvMonthBreakdown) => s + (b.points ?? 6), 0)}
-                  </td>
-                  <td className="px-6 py-4 text-right text-[14px] font-black text-indigo-700 tabular-nums whitespace-nowrap">₹{evvOverall.toLocaleString('en-IN')}</td>
-                  <td className="px-6 py-4 text-right text-[13px] font-black text-rose-600 tabular-nums whitespace-nowrap">
-                    ₹{Math.min(...breakdown.map((b: EvvMonthBreakdown) => b.min ?? b.evv)).toLocaleString('en-IN')}
-                  </td>
-                  <td className="px-6 py-4 text-right text-[13px] font-black text-emerald-600 tabular-nums whitespace-nowrap">
-                    ₹{Math.max(...breakdown.map((b: EvvMonthBreakdown) => b.max ?? b.evv)).toLocaleString('en-IN')}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                </div>
+
+                {/* Print layout summary table */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[28px] overflow-hidden shadow-sm">
+                  <div className="px-8 pt-7 pb-4 flex items-center justify-between no-print">
+                    <h4 className="text-[12px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      Full Monthly Statement Summary
+                    </h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-t border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60">
+                          {["Month", "Opening", "Avg (MAB)", "Min Bal", "Max Bal", "Credits Count", "Debits Count", "Closing Bal"].map((col, i) => (
+                            <th
+                              key={i}
+                              className={`px-6 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap ${i === 0 ? "text-left" : "text-right"}`}
+                            >
+                              {col}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {monthlyMetrics.map((item: any, idx: number) => (
+                          <tr
+                            key={idx}
+                            className={`group border-b border-slate-50 dark:border-slate-900 hover:bg-slate-50/40 dark:hover:bg-slate-900/40 transition-all`}
+                          >
+                            <td className="px-6 py-4 text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-wider text-left">
+                              {item.monthLabel || item.month}
+                            </td>
+                            <td className="px-6 py-4 text-[12px] text-right font-medium dark:text-slate-300 tabular-nums">
+                              ₹{(item.openingBalance || 0).toLocaleString("en-IN")}
+                            </td>
+                            <td className="px-6 py-4 text-[12px] text-right font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                              ₹{(item.avgBalance || 0).toLocaleString("en-IN")}
+                            </td>
+                            <td className="px-6 py-4 text-[12px] text-right font-medium text-rose-500 tabular-nums">
+                              ₹{(item.lowestBalance || 0).toLocaleString("en-IN")}
+                            </td>
+                            <td className="px-6 py-4 text-[12px] text-right font-medium text-emerald-500 tabular-nums">
+                              ₹{(item.highestBalance || 0).toLocaleString("en-IN")}
+                            </td>
+                            <td className="px-6 py-4 text-[12px] text-right font-medium text-slate-600 dark:text-slate-400">
+                              {item.creditCount || 0}
+                            </td>
+                            <td className="px-6 py-4 text-[12px] text-right font-medium text-slate-600 dark:text-slate-400">
+                              {item.debitCount || 0}
+                            </td>
+                            <td className="px-6 py-4 text-[12px] text-right font-bold text-slate-800 dark:text-white tabular-nums">
+                              ₹{(item.closingBalance || 0).toLocaleString("en-IN")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 2: SNAPSHOT BALANCE VIEW */}
+            {activeDetailTab === "snapshots" && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-[28px] shadow-sm space-y-6">
+                <div>
+                  <h4 className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                    Periodic Snapshot Ledger
+                  </h4>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                    Configured audit snapshot intervals (1st, 5th, 10th, 15th, 20th, 25th, and Last Day)
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                  {snapshots.map((item: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-1.5"
+                    >
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                        Day {item.snapshotDay === -1 || item.snapshotDay === 30 || item.snapshotDay === 31 ? "Last" : item.snapshotDay}
+                      </span>
+                      <span className="text-[13px] font-black text-slate-800 dark:text-white tabular-nums">
+                        ₹{(item.balance || 0).toLocaleString("en-IN")}
+                      </span>
+                      <span className="text-[9px] font-bold text-slate-400">
+                        {item.date}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 3: BEHAVIOURS & FLAGS */}
+            {activeDetailTab === "behaviours" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Detected Behaviours */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-[28px] shadow-sm space-y-6">
+                  <h4 className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                    Behavior Pattern Detections
+                  </h4>
+                  <div className="space-y-4">
+                    {behaviours.length > 0 ? (
+                      behaviours.map((b: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-2xl border ${
+                            b.detected
+                              ? "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800"
+                              : "opacity-40 border-transparent bg-transparent"
+                          } flex items-start gap-3`}
+                        >
+                          <span
+                            className={`material-symbols-outlined text-[20px] mt-0.5 ${
+                              b.detected
+                                ? (b.severity === "positive"
+                                  ? "text-emerald-500"
+                                  : b.severity === "warning" || b.severity === "critical"
+                                  ? "text-rose-500"
+                                  : "text-indigo-600 dark:text-indigo-400")
+                                : "text-slate-300"
+                            }`}
+                          >
+                            {b.detected ? "psychology" : "circle"}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h5 className="text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                                {b.label}
+                              </h5>
+                              {b.detected && (
+                                <span className="text-[9px] font-bold text-indigo-500 uppercase">
+                                  {Math.round(b.confidence * 100)}% Match
+                                </span>
+                              )}
+                            </div>
+                            {b.detected && (
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-semibold leading-relaxed">
+                                {b.evidence}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[11px] text-slate-400 text-center py-6">
+                        No custom behaviors extracted.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Risk Flags List */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-[28px] shadow-sm space-y-6">
+                  <h4 className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                    Underwriting Risk Flags
+                  </h4>
+                  <div className="space-y-4">
+                    {riskFlags.length > 0 ? (
+                      riskFlags.map((flag: any, idx: number) => {
+                        const isCritical = flag.severity === "critical" || flag.severity === "high";
+                        return (
+                          <div
+                            key={idx}
+                            className={`p-4 rounded-2xl border ${
+                              isCritical
+                                ? "bg-rose-50/50 dark:bg-rose-950/10 border-rose-100 dark:border-rose-900/50 text-rose-800 dark:text-rose-400"
+                                : "bg-amber-50/50 dark:bg-amber-950/10 border-amber-100 dark:border-amber-900/50 text-amber-800 dark:text-amber-400"
+                            } flex items-start gap-3`}
+                          >
+                            <span className="material-symbols-outlined text-[20px] flex-shrink-0 mt-0.5">
+                              warning
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h5 className="text-[12px] font-black uppercase tracking-wider">
+                                  {flag.label}
+                                </h5>
+                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                  isCritical ? "bg-rose-100 dark:bg-rose-900/50 text-rose-800" : "bg-amber-100 dark:bg-amber-900/50 text-amber-800"
+                                }`}>
+                                  {flag.severity}
+                                </span>
+                              </div>
+                              <p className="text-[11px] opacity-90 font-medium leading-relaxed mt-1">
+                                {flag.description}
+                              </p>
+                              <p className="text-[10px] font-mono opacity-85 mt-1.5 font-bold">
+                                Evidence: {flag.evidence}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="h-[200px] flex flex-col items-center justify-center text-center">
+                        <span className="material-symbols-outlined text-[36px] text-emerald-500 mb-2">verified_user</span>
+                        <h5 className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider">No Risks Triggered</h5>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Lending parameters match standard eligibility criteria.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 4: DATA VALIDATION REPORT */}
+            {activeDetailTab === "validation" && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-[28px] shadow-sm space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-50 dark:border-slate-800 pb-4">
+                  <div>
+                    <h4 className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                      Internal Integrity Validation Checks
+                    </h4>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                      Double-entry accounting checks executed on OCR data
+                    </p>
+                  </div>
+                  {validation && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase">Verification Score:</span>
+                      <span className={`px-3 py-1 rounded-xl text-[11px] font-black ${
+                        validation.confidenceScore >= 80 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
+                      }`}>
+                        {validation.confidenceScore}% Confidence
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {validation?.checks && validation.checks.length > 0 ? (
+                    validation.checks.map((check: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 rounded-2xl"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`material-symbols-outlined text-[20px] ${check.passed ? "text-emerald-500" : "text-rose-500"}`}>
+                            {check.passed ? "check_circle" : "cancel"}
+                          </span>
+                          <div>
+                            <h5 className="text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                              {check.name}
+                            </h5>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                              {check.detail}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${
+                          check.passed ? "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800" : "bg-rose-100 dark:bg-rose-950/30 text-rose-800"
+                        }`}>
+                          {check.passed ? "passed" : "warning"}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[11px] text-slate-400 text-center py-6">
+                      Integrity check validations not run yet. Upload a statement.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 5: TRANSACTION VIEW TABLE */}
+            {activeDetailTab === "transactions" && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[28px] overflow-hidden shadow-sm">
+                <div className="p-8 border-b border-slate-50 dark:border-slate-800 space-y-4 no-print">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <h4 className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                      Extracted Transaction History ({filteredTransactions.length} items)
+                    </h4>
+                  </div>
+                  
+                  {/* Filters and Search Bar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div className="sm:col-span-5 relative">
+                      <span className="material-symbols-outlined text-[18px] text-slate-400 absolute left-3 top-3">
+                        search
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="Search transactions..."
+                        value={txSearch}
+                        onChange={(e) => setTxSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 text-[12px] font-medium border border-transparent rounded-xl focus:border-indigo-500 focus:bg-white outline-none dark:text-white"
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <select
+                        value={txType}
+                        onChange={(e) => setTxType(e.target.value as any)}
+                        className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 text-[12px] font-bold border border-transparent rounded-xl outline-none dark:text-white"
+                      >
+                        <option value="all">All Transactions</option>
+                        <option value="credit">Credits only</option>
+                        <option value="debit">Debits only</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-4">
+                      <select
+                        value={txChannel}
+                        onChange={(e) => setTxChannel(e.target.value as any)}
+                        className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 text-[12px] font-bold border border-transparent rounded-xl outline-none dark:text-white"
+                      >
+                        <option value="all">All Channels</option>
+                        <option value="UPI">UPI</option>
+                        <option value="NEFT">NEFT</option>
+                        <option value="RTGS">RTGS</option>
+                        <option value="IMPS">IMPS</option>
+                        <option value="CASH">CASH</option>
+                        <option value="CHEQUE">CHEQUE</option>
+                        <option value="ONLINE">ONLINE / OTHER</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-t border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60">
+                        {["Date", "Description / Narration", "Channel", "Debit", "Credit", "Balance"].map((col, idx) => (
+                          <th
+                            key={idx}
+                            className={`px-6 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap ${idx === 1 ? "text-left" : "text-right"}`}
+                          >
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTransactions.length > 0 ? (
+                        filteredTransactions.map((tx: any, idx: number) => (
+                          <tr
+                            key={idx}
+                            className="group border-b border-slate-50 dark:border-slate-900 hover:bg-slate-50/40 dark:hover:bg-slate-900/40 transition-colors"
+                          >
+                            <td className="px-6 py-4 text-right text-[12px] font-bold text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">
+                              {tx.date}
+                            </td>
+                            <td className="px-6 py-4 text-left text-[12px] font-extrabold text-slate-800 dark:text-white leading-normal max-w-xs sm:max-w-md truncate">
+                              {tx.narration}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <span className="inline-flex px-2 py-0.5 rounded text-[9px] font-black bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400">
+                                {tx.channel || "ONLINE"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right text-[12px] font-bold text-rose-500 tabular-nums whitespace-nowrap">
+                              {tx.debit > 0 ? `₹${Number(tx.debit).toLocaleString("en-IN")}` : "—"}
+                            </td>
+                            <td className="px-6 py-4 text-right text-[12px] font-bold text-emerald-500 tabular-nums whitespace-nowrap">
+                              {tx.credit > 0 ? `₹${Number(tx.credit).toLocaleString("en-IN")}` : "—"}
+                            </td>
+                            <td className="px-6 py-4 text-right text-[12px] font-black text-slate-800 dark:text-white tabular-nums whitespace-nowrap">
+                              ₹{Number(tx.balance).toLocaleString("en-IN")}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="text-center py-10 text-[12px] font-bold text-slate-400 dark:text-slate-600">
+                            No transactions match the search filters.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
           </div>
+
+          {/* Printable Underwriting Report Layout (only visible in @media print) */}
+          <div className="hidden print:block border-2 border-slate-900 p-8 rounded-3xl space-y-6">
+            <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4">
+              <div>
+                <h1 className="text-[20px] font-black uppercase">VidyaLoans Underwriting Report</h1>
+                <p className="text-[11px] font-semibold uppercase text-slate-500">EVV Intelligence Assessment</p>
+              </div>
+              <div className="text-right">
+                <span className="text-[18px] font-black">Score: {evvScore}/100</span>
+                <span className="block text-[10px] font-bold uppercase text-slate-400">Grade: {evvGrade}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-b border-slate-200 pb-4">
+              <div>
+                <h5 className="text-[11px] font-black uppercase text-slate-400">Applicant Details</h5>
+                <p className="text-[13px] font-black uppercase mt-1">Application #: {application.applicationNumber || application.id}</p>
+                <p className="text-[12px] font-semibold mt-0.5">Type: {application.loanType} | Target Bank: {application.bank}</p>
+              </div>
+              <div>
+                <h5 className="text-[11px] font-black uppercase text-slate-400">Audit Metadata</h5>
+                <p className="text-[12px] font-semibold mt-1">Audit Period: {evvPeriod?.from} to {evvPeriod?.to}</p>
+                <p className="text-[12px] font-semibold mt-0.5">Overall Verified Value: ₹{evvOverall?.toLocaleString("en-IN")}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-black uppercase">Decision Recommendation</h4>
+              <div className="p-4 bg-slate-50 border border-slate-300 rounded-xl">
+                <p className="text-[12px] font-black">Recommendation: {evvDecision?.replace(/_/g, " ")}</p>
+                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">{evvDecisionReason}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[13px] font-black uppercase">Triggered Risk Logs ({riskFlags.length})</h4>
+              {riskFlags.map((flag: any, idx: number) => (
+                <div key={idx} className="text-[11px] border-b pb-2">
+                  <span className="font-black uppercase text-rose-600">[{flag.severity}] {flag.label}</span>
+                  <p className="text-slate-600 mt-0.5">{flag.description} (Evidence: {flag.evidence})</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-10 flex justify-between items-center text-[10px] text-slate-400 uppercase font-bold border-t">
+              <span>VidyaLoans EVV Intelligence Engine v2.0</span>
+              <span>Generated on: {new Date().toLocaleDateString("en-IN")}</span>
+            </div>
+          </div>
+
         </div>
       )}
     </div>

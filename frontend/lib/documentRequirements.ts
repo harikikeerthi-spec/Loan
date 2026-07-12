@@ -78,7 +78,11 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
 
   const fatherName = family.fatherName || profile.fatherName;
   const motherName = family.motherName || profile.motherName;
-  const coApplicantName = coApplicant.name || profile.coApplicantName;
+  
+  // Dynamically determine relation and fallback co-applicant name
+  const relation = coApplicant.relation || coApplicant.coApplicantRelation || profile.coApplicantRelation || student.coApplicant || "";
+  const relationLabel = relation ? relation.charAt(0).toUpperCase() + relation.slice(1) : "Co-applicant";
+  const coApplicantName = coApplicant.name || profile.coApplicantName || relationLabel;
 
   const docs: DocumentRequirement[] = [...getStudentDocumentRequirements(student)];
 
@@ -87,8 +91,8 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
   docs.push(...getPersonDocumentRequirements(family.motherEmploymentType || profile.motherEmploymentType || "", motherName || "Mother", "mother"));
 
   // Collect Co-applicant documents if configured
-  if (hasValue(coApplicantName) || hasValue(coApplicant.employmentType) || hasValue(profile.coApplicantEmploymentType) || hasValue(coApplicant.relation)) {
-    docs.push(...getPersonDocumentRequirements(coApplicant.employmentType || profile.coApplicantEmploymentType || "", coApplicantName || "Co-applicant", "coapplicant"));
+  if (hasValue(coApplicantName) || hasValue(coApplicant.employmentType) || hasValue(profile.coApplicantEmploymentType) || hasValue(relation)) {
+    docs.push(...getPersonDocumentRequirements(coApplicant.employmentType || profile.coApplicantEmploymentType || "", coApplicantName, "coapplicant"));
   }
 
   const seen = new Set<string>();

@@ -27,6 +27,54 @@ const formatIndianCurrency = (val: string): string => {
     return new Intl.NumberFormat("en-IN").format(num);
 };
 
+const convertNumberToWords = (numStr: string): string => {
+    const clean = numStr.replace(/\D/g, "");
+    if (!clean) return "";
+    const num = parseInt(clean, 10);
+    if (isNaN(num) || num === 0) return "";
+
+    const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+    const convertLessThanThousand = (n: number): string => {
+        if (n < 20) return ones[n];
+        const hundred = Math.floor(n / 100);
+        const rem = n % 100;
+        let s = "";
+        if (hundred > 0) {
+            s += ones[hundred] + " Hundred";
+            if (rem > 0) s += " ";
+        }
+        if (rem < 20) {
+            s += ones[rem];
+        } else {
+            s += tens[Math.floor(rem / 10)];
+            if (rem % 10 > 0) s += " " + ones[rem % 10];
+        }
+        return s;
+    };
+
+    let result = "";
+    let temp = num;
+
+    if (Math.floor(temp / 10000000) > 0) {
+        result += convertLessThanThousand(Math.floor(temp / 10000000)) + " Crore" + (Math.floor(temp / 10000000) > 1 ? "s" : "") + " ";
+        temp %= 10000000;
+    }
+    if (Math.floor(temp / 100000) > 0) {
+        result += convertLessThanThousand(Math.floor(temp / 100000)) + " Lakh" + (Math.floor(temp / 100000) > 1 ? "s" : "") + " ";
+        temp %= 100000;
+    }
+    if (Math.floor(temp / 1000) > 0) {
+        result += convertLessThanThousand(Math.floor(temp / 1000)) + " Thousand ";
+        temp %= 1000;
+    }
+    if (temp > 0) {
+        result += convertLessThanThousand(temp);
+    }
+    return result.trim();
+};
+
 export default function ApplyLoanPage() {
     const { isAuthenticated, user, refreshUser } = useAuth();
     const router = useRouter();
@@ -34,7 +82,7 @@ export default function ApplyLoanPage() {
     const [formData, setFormData] = useState({
         bank: "",
         loanType: "",
-        amount: "",
+        amount: "40,00,000",
         courseType: "",
         country: "",
         otherCountry: "",
@@ -42,8 +90,9 @@ export default function ApplyLoanPage() {
         annualFee: "",
         livingCost: "",
         coApplicant: "",
+        otherRelation: "",
         income: "",
-        collateral: "",
+        collateral: "no",
         firstName: "",
         lastName: "",
         email: "",
@@ -112,7 +161,7 @@ export default function ApplyLoanPage() {
                         country: finalCountry,
                         otherCountry: finalOtherCountry,
                         bank: selectedBank || prev.bank || "",
-                        amount: prev.amount || (amountParam ? formatIndianCurrency(amountParam) : ""),
+                        amount: prev.amount || (amountParam ? formatIndianCurrency(amountParam) : "40,00,000"),
                         firstName: prev.firstName || user?.firstName || "",
                         lastName: prev.lastName || user?.lastName || "",
                         email: prev.email || user?.email || "",
@@ -147,10 +196,30 @@ export default function ApplyLoanPage() {
         }
     };
 
+    const amountLakhs = (() => {
+        if (!formData.amount) return 40;
+        const cleanNum = Number(formData.amount.replace(/[^0-9]/g, ""));
+        return Math.round(cleanNum / 100000);
+    })();
+
+    const formatAmountDisplay = (amountStr: string) => {
+        if (!amountStr) return "₹0";
+        const clean = amountStr.replace(/,/g, "");
+        const cleanNum = Number(clean);
+        if (isNaN(cleanNum) || cleanNum === 0) return "₹0";
+
+        return `₹${cleanNum.toLocaleString("en-IN")}`;
+    };
+
+    const handleSliderChange = (lakhs: number) => {
+        const rupees = lakhs * 100000;
+        const formatted = formatIndianCurrency(rupees.toString());
+        update("amount", formatted);
+    };
+
     const validateStep1 = (): boolean => {
         const errors: Record<string, string> = {};
         if (!formData.loanType) errors.loanType = "Please select a loan type";
-        if (!formData.courseType) errors.courseType = "Please select a course type";
         if (!formData.country) {
             errors.country = "Please select a country";
         } else if (formData.country === "Other" && (!formData.otherCountry || !formData.otherCountry.trim())) {
@@ -167,7 +236,6 @@ export default function ApplyLoanPage() {
         } else if (Number(cleanAmount) > 15000000) {
             errors.amount = "Maximum loan amount cannot exceed ₹1,50,00,000 (1.5 Crore)";
         }
-        if (!formData.intakeSeason) errors.intakeSeason = "Please select target intake season";
         setStepErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -231,11 +299,13 @@ export default function ApplyLoanPage() {
         }
 
         if (!formData.coApplicant) errors.coApplicant = "Please select co-applicant type";
+        if (formData.coApplicant === "other" && !formData.otherRelation) {
+            errors.otherRelation = "Please select other relation type";
+        }
         const cleanIncome = formData.income.replace(/,/g, "");
-        if (formData.coApplicant && formData.coApplicant !== "none" && (!cleanIncome || Number(cleanIncome) <= 0)) {
+        if (formData.coApplicant && (!cleanIncome || Number(cleanIncome) <= 0)) {
             errors.income = "Please enter co-applicant annual income";
         }
-        if (!formData.collateral) errors.collateral = "Please select collateral availability";
         setStepErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -274,6 +344,7 @@ export default function ApplyLoanPage() {
 
             await applicationApi.create({
                 ...formData,
+                coApplicant: formData.coApplicant === "other" ? formData.otherRelation : formData.coApplicant,
                 country: formData.country === "Other" ? formData.otherCountry : formData.country,
                 userId,
                 bank: bankName,
@@ -321,12 +392,12 @@ export default function ApplyLoanPage() {
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-[#fcfaff] flex items-center justify-center p-6 relative overflow-hidden">
+            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6 relative overflow-hidden">
                 {/* Bright Success Decorations matching Homepage aesthetic */}
                 <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-white/20 z-0" />
-                <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-[#6605c7]/10 blur-[150px] rounded-full z-0" />
-                <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-[#a855f7]/5 blur-[150px] rounded-full z-0" />
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #6605c7 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+                <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-[#3A2EAB]/10 blur-[150px] rounded-full z-0" />
+                <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-[#9B51E0]/5 blur-[150px] rounded-full z-0" />
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #3A2EAB 1px, transparent 0)', backgroundSize: '40px 40px' }} />
 
                 <div className="relative z-10 max-w-xl w-full text-center animate-fade-in-up">
                     <div className="mb-10 relative inline-block">
@@ -338,14 +409,14 @@ export default function ApplyLoanPage() {
 
                     <h2 className="text-4xl font-black text-gray-900 mb-6 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Application Transmitted!</h2>
                     <p className="text-gray-600 font-medium text-lg mb-4 leading-relaxed">
-                        Your financing request for <span className="text-[#6605c7] font-black">{formData.university}</span> has been successfully logged.
+                        Your financing request for <span className="text-[#3A2EAB] font-black">{formData.university}</span> has been successfully logged.
                     </p>
                     <p className="text-gray-500 text-sm font-medium mb-12">
                         Our credit specialists are currently reviewing your eligibility. Expect a status update within <span className="text-gray-900 font-bold">24-48 hours</span>.
                     </p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 group">
-                        <Link href="/dashboard#applications" className="px-8 py-5 bg-[#6605c7] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#7a0de8] hover:shadow-2xl hover:shadow-[#6605c7]/30 transition-all flex items-center justify-center gap-3">
+                        <Link href="/dashboard#applications" className="px-8 py-5 bg-gradient-to-r from-[#9B51E0] to-[#E040FB] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:brightness-110 hover:shadow-2xl hover:shadow-[#9B51E0]/30 transition-all flex items-center justify-center gap-3">
                             <span className="material-symbols-outlined text-lg">dashboard_customize</span>
                             Dashboard
                         </Link>
@@ -360,95 +431,65 @@ export default function ApplyLoanPage() {
     }
 
     return (
-        <div className="min-h-screen text-gray-900 overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' }}>
+        <div className="min-h-screen text-gray-900 overflow-hidden relative" style={{ backgroundColor: '#F8FAFC' }}>
             {/* Bright Aesthetic Background Decorations mimicking the Homepage */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-50 z-0" style={{ background: 'radial-gradient(circle, #d8b4fe, transparent)' }} />
-                <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-40 z-0" style={{ background: 'radial-gradient(circle, #fed7aa, transparent)' }} />
-                <div className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full blur-[80px] opacity-20 z-0" style={{ background: 'radial-gradient(circle, #c4b5fd, transparent)' }} />
-                <div className="absolute inset-0 opacity-[0.04] z-0" style={{ backgroundImage: 'radial-gradient(circle, #6605c7 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-30 z-0" style={{ background: 'radial-gradient(circle, #3A2EAB/10, transparent)' }} />
+                <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-20 z-0" style={{ background: 'radial-gradient(circle, #9B51E0/10, transparent)' }} />
+                <div className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full blur-[80px] opacity-20 z-0" style={{ background: 'radial-gradient(circle, #3A2EAB/5, transparent)' }} />
+                <div className="absolute inset-0 opacity-[0.02] z-0" style={{ backgroundImage: 'radial-gradient(circle, #3A2EAB 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
             </div>
 
-            <div className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full border border-purple-200/40 pointer-events-none z-0" />
-            <div className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full border border-purple-100/30 pointer-events-none z-0" />
+            <div className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full border border-indigo-100/40 pointer-events-none z-0" />
+            <div className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full border border-indigo-50/30 pointer-events-none z-0" />
 
             <div className="relative z-10 pt-32 pb-24 px-6 md:px-12">
                 <div className="max-w-4xl mx-auto">
                     {/* Header Section */}
                     <div className="text-center mb-12 animate-fade-in-up">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-[#6605c7]/20 text-gray-900 shadow-sm text-[10px] font-black uppercase tracking-widest mb-4">
-                            <span className="material-symbols-outlined text-[14px] text-[#6605c7]">bolt</span>
-                            Fast-Track Financing
-                        </div>
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 tracking-tight font-display">
                             {formData.university ? (
-                                <span>Apply for <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6605c7] to-[#a855f7]">{formData.university}</span></span>
+                                <span>Apply for <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#3A2EAB] to-[#9B51E0]">{formData.university}</span></span>
                             ) : "Apply for Education Loan"}
                         </h1>
-                        <p className="text-gray-600 font-medium text-base max-w-xl mx-auto leading-relaxed">
-                            Fuel your global education dreams with competitive rates, zero collateral options, and 100% digital processing.
-                        </p>
+
                     </div>
 
                     {formData.university && (
-                        <div className="mb-12 bg-white/80 backdrop-blur-2xl rounded-[2.5rem] p-8 border border-white shadow-[0_8px_32px_rgba(102,5,199,0.05)] flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group hover:shadow-[0_12px_40px_rgba(102,5,199,0.1)] transition-all duration-500">
-                            <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#6605c7]/10 blur-3xl rounded-full opacity-50 group-hover:bg-[#a855f7]/20 transition-colors duration-700" />
-                            <div className="w-24 h-24 bg-gradient-to-br from-[#f3eaff] to-[#e0c389]/20 rounded-3xl flex items-center justify-center text-[#6605c7] shrink-0 border border-[#6605c7]/20 transform group-hover:rotate-6 transition-transform shadow-sm">
-                                <span className="material-symbols-outlined text-4xl">domain</span>
-                            </div>
-                            <div className="flex-1 text-center md:text-left relative z-10">
-                                <div className="text-[11px] font-black text-[#6605c7] uppercase tracking-[0.2em] mb-2">Selected Academic Target</div>
-                                <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight mb-3 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{formData.university}</h2>
-                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-bold text-gray-500">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-100 text-[#6605c7]">
-                                            <span className="material-symbols-outlined text-[16px]">public</span>
-                                        </div>
-                                        {formData.country === "Other" ? formData.otherCountry : formData.country}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center shadow-sm border border-emerald-100 text-emerald-600">
-                                            <span className="material-symbols-outlined text-[16px]">verified</span>
-                                        </div>
-                                        Matched Partner Found
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-white/80 backdrop-blur-xl py-4 px-8 rounded-3xl border border-gray-100 text-center shadow-sm flex flex-col items-center">
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Max Cover</div>
-                                <div className="text-2xl font-black text-[#6605c7]">100%</div>
-                                <div className="text-[9px] font-bold text-gray-400 mt-1 uppercase">of Total Cost</div>
-                            </div>
+                        <div className="mb-8 bg-[#3A2EAB]/5 border border-[#3A2EAB]/10 text-[#3A2EAB] py-4 px-6 rounded-2xl flex items-center justify-center gap-3 text-sm font-extrabold shadow-sm animate-fade-in-up select-none">
+                            <span className="text-lg">🎓</span>
+                            <span>Financing your dream at <span className="underline decoration-[#9B51E0] decoration-2 underline-offset-4 font-black">{formData.university}</span>, {formData.country === "Other" ? formData.otherCountry : formData.country}</span>
                         </div>
                     )}
 
                     {/* Enhanced Progress Tracker */}
                     <div className="relative mb-16 max-w-2xl mx-auto">
-                        <div className="absolute top-5 left-0 w-full h-[2px] bg-purple-100 transition-all">
+                        <div className="absolute top-5 left-0 w-full h-[2px] bg-indigo-100/70 transition-all">
                             <div
-                                className="h-full bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] transition-all duration-700 ease-out shadow-[0_0_10px_#6605c7]"
+                                className="h-full bg-gradient-to-r from-[#3A2EAB] to-[#9B51E0] transition-all duration-700 ease-out shadow-[0_0_10px_#3A2EAB]"
                                 style={{ width: `${(step / 3) * 100}%` }}
                             />
                         </div>
                         <div className="relative flex justify-between">
-                            {["Program Info", "Personal ID", "Final Review"].map((s, i) => {
+                            {["Program Info", "Personal Identity", "Review"].map((s, i) => {
                                 const isCompleted = step > i + 1;
                                 const isActive = step === i + 1;
                                 return (
                                     <div key={s} className="flex flex-col items-center gap-4">
-                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-[13px] font-black transition-all duration-500 shadow-sm ${isCompleted ? "bg-emerald-50 text-emerald-600 rotate-[360deg] border border-emerald-200" : isActive ? "bg-[#6605c7] text-white shadow-purple-500/40 scale-110 border border-[#8b5cf6]" : "bg-white text-gray-400 border border-gray-200"
+                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-[13px] font-black transition-all duration-500 shadow-sm ${isCompleted ? "bg-emerald-50 text-emerald-600 rotate-[360deg] border border-emerald-200" : isActive ? "bg-[#3A2EAB] text-white shadow-indigo-500/40 scale-110 border border-[#3A2EAB]" : "bg-white text-gray-400 border border-gray-200"
                                             }`}>
                                             {isCompleted ? <span className="material-symbols-outlined text-lg">check</span> : i + 1}
                                         </div>
-                                        <div className={`text-[10px] uppercase tracking-[0.15em] font-black transition-colors ${isActive ? "text-[#6605c7]" : isCompleted ? "text-emerald-600" : "text-gray-400"}`}>{s}</div>
+                                        <div className={`text-[10px] uppercase tracking-[0.15em] font-black transition-colors ${isActive ? "text-[#3A2EAB]" : isCompleted ? "text-emerald-600" : "text-gray-400"}`}>{s}</div>
                                     </div>
                                 );
                             })}
                         </div>
                     </div>
 
-                    <div className="bg-white/80 backdrop-blur-2xl rounded-[3rem] p-8 md:p-14 shadow-xl border border-white relative overflow-hidden">
-                        <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#6605c7]/10 rounded-full blur-3xl opacity-50" />
+                    <div className="bg-[#F8FAFC]/50 backdrop-blur-2xl rounded-[3rem] p-8 md:p-14 shadow-xl border border-white relative overflow-hidden">
+                        <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#3A2EAB]/5 rounded-full blur-3xl opacity-50" />
 
                         {/* Step 1: Loan Details */}
                         {step === 1 && (
@@ -458,36 +499,78 @@ export default function ApplyLoanPage() {
                                         <span className="material-symbols-outlined text-2xl">account_balance</span>
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Financing Details</h2>
+                                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Academic & Financial Details</h2>
                                         <p className="text-gray-500 text-sm font-medium">Specify your academic target and preferred lender</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <SelectField label="Loan Category" icon="category" value={formData.loanType} onChange={(v) => update("loanType", v)}
+                                    <SelectField label="Field of Study" icon="category" value={formData.loanType} onChange={(v) => update("loanType", v)}
                                         options={loanTypes.map((t) => ({ value: t, label: t }))} error={stepErrors.loanType} />
-                                    <SelectField label="Academic Level" icon="school" value={formData.courseType} onChange={(v) => update("courseType", v)}
-                                        options={courses.map((c) => ({ value: c, label: c }))} error={stepErrors.courseType} />
                                     <SelectField label="Destination Country" icon="public" value={formData.country} onChange={(v) => update("country", v)}
                                         options={countries.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
                                     {formData.country === "Other" && (
-                                        <InputField
-                                            label="Other Destination Country"
-                                            icon="public"
-                                            value={formData.otherCountry || ""}
-                                            onChange={(v) => update("otherCountry", v)}
-                                            placeholder="e.g. France"
-                                            error={stepErrors.otherCountry}
-                                            required
-                                        />
+                                        <div className="md:col-span-2">
+                                            <InputField
+                                                label="Other Destination Country"
+                                                icon="public"
+                                                value={formData.otherCountry || ""}
+                                                onChange={(v) => update("otherCountry", v)}
+                                                placeholder="e.g. France"
+                                                error={stepErrors.otherCountry}
+                                                required
+                                            />
+                                        </div>
                                     )}
                                 </div>
 
                                 <div className="space-y-8">
                                     <InputField label="Full University Name" icon="domain" value={formData.university} onChange={(v) => update("university", v.replace(/\d/g, ""))} placeholder="e.g. University of Toronto" error={stepErrors.university} />
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <InputField label="Required Amount Needed (₹)" icon="savings" value={formData.amount} onChange={(v) => update("amount", formatIndianCurrency(v))} placeholder="e.g. 40,00,000" type="text" error={stepErrors.amount} required />
+                                    {/* Loan Amount Slider (0 - 1.5 Cr) */}
+                                    <div className="bg-white/50 backdrop-blur-xl border border-gray-100 rounded-[2.5rem] p-6 md:p-8 shadow-sm space-y-5">
+                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                                            <label className="text-[11px] uppercase tracking-[0.2em] font-black text-gray-500 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-lg text-[#6605c7]">payments</span>
+                                                Requested Loan Amount
+                                            </label>
+                                            <span className="text-base font-black text-[#6605c7] bg-purple-50 border border-purple-100 px-4 py-2 rounded-2xl shadow-sm self-start sm:self-auto select-none">
+                                                {formatAmountDisplay(formData.amount)}
+                                            </span>
+                                        </div>
+
+                                        <div className="relative pt-4 pb-2 px-1">
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="150"
+                                                step="5"
+                                                value={amountLakhs}
+                                                onChange={(e) => handleSliderChange(Number(e.target.value))}
+                                                className="w-full h-2.5 bg-purple-100 rounded-lg appearance-none cursor-pointer accent-[#6605c7] focus:outline-none transition-all duration-300"
+                                            />
+                                            <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-wider mt-4 px-1 select-none">
+                                                <span>0</span>
+                                                <span>20L</span>
+                                                <span>40L</span>
+                                                <span>60L</span>
+                                                <span>80L</span>
+                                                <span>1Cr</span>
+                                                <span>1.2Cr</span>
+                                                <span>1.4Cr</span>
+                                                <span>1.5Cr</span>
+                                            </div>
+                                        </div>
+
+                                        {stepErrors.amount && (
+                                            <p className="text-rose-500 text-xs font-bold mt-1.5 flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-sm">warning</span>
+                                                {stepErrors.amount}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-8">
                                         <SelectField label="Admission Status" icon="verified" value={formData.admissionStatus} onChange={(v) => update("admissionStatus", v)}
                                             options={[
                                                 { value: "confirmed", label: "Confirmed Admission" },
@@ -495,20 +578,6 @@ export default function ApplyLoanPage() {
                                                 { value: "waiting", label: "Awaiting Result" },
                                                 { value: "planning", label: "Planning Stage" }
                                             ]} error={stepErrors.admissionStatus} required />
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <SelectField label="Target Intake Season" icon="calendar_today" value={formData.intakeSeason} onChange={(v) => update("intakeSeason", v)}
-                                            options={(() => {
-                                                const cy = new Date().getFullYear();
-                                                return [
-                                                    { value: `Fall ${cy}`, label: `Fall ${cy}` },
-                                                    { value: `Spring ${cy + 1}`, label: `Spring ${cy + 1}` },
-                                                    { value: `Summer ${cy + 1}`, label: `Summer ${cy + 1}` },
-                                                    { value: `Fall ${cy + 1}`, label: `Fall ${cy + 1}` },
-                                                    { value: `Spring ${cy + 2}`, label: `Spring ${cy + 2}` }
-                                                ];
-                                            })()} error={stepErrors.intakeSeason} required />
                                     </div>
                                 </div>
                             </div>
@@ -519,7 +588,7 @@ export default function ApplyLoanPage() {
                             <div className="space-y-10 animate-fade-in-up relative z-10">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-purple-50 border border-purple-100 rounded-2xl flex items-center justify-center text-[#6605c7]">
+                                        <div className="w-12 h-12 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center text-[#3A2EAB]">
                                             <span className="material-symbols-outlined text-2xl">person_pin</span>
                                         </div>
                                         <div>
@@ -535,85 +604,143 @@ export default function ApplyLoanPage() {
                                     )}
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <InputField label="Given Name" icon="person" value={formData.firstName} onChange={(v) => update("firstName", v.replace(/[^A-Za-z]/g, "").slice(0, 30))} placeholder="Rahul" error={stepErrors.firstName} required />
-                                    <InputField label="Surname" icon="person" value={formData.lastName} onChange={(v) => update("lastName", v.replace(/[^A-Za-z]/g, "").slice(0, 30))} placeholder="Sharma" error={stepErrors.lastName} required />
+                                {/* Card 1: Primary Applicant Details */}
+                                <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-8 shadow-[0_4px_25_rgba(0,0,0,0.02)] space-y-6">
+                                    <div className="flex items-center gap-2.5 pb-4 border-b border-gray-100/70">
+                                        <span className="material-symbols-outlined text-xl text-[#3A2EAB]">person</span>
+                                        <h3 className="text-sm font-black uppercase tracking-wider text-gray-800">Primary Applicant Details</h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <InputField label="Given Name" icon="person" value={formData.firstName} onChange={(v) => update("firstName", v.replace(/[^A-Za-z]/g, "").slice(0, 30))} placeholder="Rahul" error={stepErrors.firstName} required />
+                                        <InputField label="Surname" icon="person" value={formData.lastName} onChange={(v) => update("lastName", v.replace(/[^A-Za-z]/g, "").slice(0, 30))} placeholder="Sharma" error={stepErrors.lastName} required />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <InputField label="Email Address" icon="mail" value={formData.email} onChange={(v) => update("email", v)} placeholder="rahul@example.com" type="email" error={stepErrors.email} required />
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-500 flex items-center justify-between">
+                                                <span>Mobile Number <span className="text-red-500 ml-1">*</span></span>
+                                            </label>
+                                            <div className="relative group">
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-gray-400 group-focus-within:text-[#3A2EAB] transition-all select-none">
+                                                    <span className="text-lg">🇮🇳</span>
+                                                    <span className="text-xs font-bold text-gray-500">+91</span>
+                                                </div>
+                                                <input
+                                                    type="tel"
+                                                    value={formData.phone.startsWith("+91 ") ? formData.phone.replace("+91 ", "") : formData.phone.replace(/^\+91/, "")}
+                                                    onChange={(e) => {
+                                                        const cleanNum = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                                        update("phone", cleanNum ? `+91 ${cleanNum}` : "");
+                                                    }}
+                                                    placeholder="98237 49821"
+                                                    className={`w-full pl-20 pr-6 py-4 bg-white/70 border rounded-2xl shadow-sm transition-all outline-none text-sm font-bold text-gray-900 focus:bg-white placeholder:text-gray-400 ${stepErrors.phone ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#3A2EAB]/50 focus:ring-4 focus:ring-[#3A2EAB]/10 hover:border-gray-300"}`}
+                                                />
+                                            </div>
+                                            {stepErrors.phone && <p className="text-red-500 text-[10px] font-black uppercase tracking-wider pl-1">{stepErrors.phone}</p>}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <DatePicker
+                                            label="Date of Birth"
+                                            value={formData.dateOfBirth}
+                                            onChange={(v) => update("dateOfBirth", v)}
+                                            error={stepErrors.dateOfBirth}
+                                            required
+                                        />
+                                        <InputField
+                                            label="Residential Pincode"
+                                            icon="pin_drop"
+                                            value={formData.pincode}
+                                            onChange={(v) => {
+                                                const numericVal = v.replace(/\D/g, "").slice(0, 6);
+                                                update("pincode", numericVal);
+                                                if (numericVal.length === 6) {
+                                                    resolvePincode(numericVal);
+                                                }
+                                            }}
+                                            placeholder="e.g. 400001"
+                                            error={stepErrors.pincode}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-8">
+                                        <InputField label="Residential Address" icon="location_on" value={formData.address} onChange={(v) => update("address", v)} placeholder="e.g. Flat No, Street, Locality, City, State" error={stepErrors.address} required />
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <InputField label="Electronic Mail" icon="mail" value={formData.email} onChange={(v) => update("email", v)} placeholder="rahul@example.com" type="email" error={stepErrors.email} required />
-                                    <InputField label="Mobile Connection" icon="phone_android" value={formData.phone} onChange={(v) => update("phone", v)} placeholder="+91 9876543210" type="tel" error={stepErrors.phone} required />
-                                </div>
+                                {/* Card 2: Co-Applicant & Financials */}
+                                <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-8 shadow-[0_4px_25_rgba(0,0,0,0.02)] space-y-6">
+                                    <div className="flex items-center gap-2.5 pb-4 border-b border-gray-100/70">
+                                        <span className="material-symbols-outlined text-xl text-[#3A2EAB]">group</span>
+                                        <h3 className="text-sm font-black uppercase tracking-wider text-gray-800">Co-Applicant & Financials</h3>
+                                    </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <DatePicker
-                                        label="Date of Birth"
-                                        value={formData.dateOfBirth}
-                                        onChange={(v) => update("dateOfBirth", v)}
-                                        error={stepErrors.dateOfBirth}
-                                        required
-                                    />
-                                    <InputField
-                                        label="Residential Pincode"
-                                        icon="pin_drop"
-                                        value={formData.pincode}
-                                        onChange={(v) => {
-                                            const numericVal = v.replace(/\D/g, "").slice(0, 6);
-                                            update("pincode", numericVal);
-                                            if (numericVal.length === 6) {
-                                                resolvePincode(numericVal);
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <SelectField label="Relationship" icon="family_history" value={formData.coApplicant} onChange={(v) => {
+                                            update("coApplicant", v);
+                                            if (v !== "other") {
+                                                update("otherRelation", "");
                                             }
                                         }}
-                                        placeholder="e.g. 400001"
-                                        error={stepErrors.pincode}
-                                        required
-                                    />
-                                </div>
+                                            options={[
+                                                { value: "parent", label: "Parent" },
+                                                { value: "spouse", label: "Spouse" },
+                                                { value: "sibling", label: "Sibling" },
+                                                { value: "other", label: "Other" }
+                                            ]} error={stepErrors.coApplicant} required />
+                                        {formData.coApplicant === "other" && (
+                                            <SelectField label="If Other, Specify Relation" icon="people" value={formData.otherRelation} onChange={(v) => update("otherRelation", v)}
+                                                options={[
+                                                    { value: "uncle", label: "Uncle" },
+                                                    { value: "aunt", label: "Aunt" },
+                                                    { value: "brother", label: "Brother" }
+                                                ]} error={stepErrors.otherRelation} required />
+                                        )}
+                                    </div>
 
-                                <div className="grid grid-cols-1 gap-8">
-                                    <InputField label="Residential Address" icon="location_on" value={formData.address} onChange={(v) => update("address", v)} placeholder="e.g. Flat No, Street, Locality, City, State" error={stepErrors.address} required />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <SelectField label="Co-Applicant Identity" icon="family_history" value={formData.coApplicant} onChange={(v) => update("coApplicant", v)}
-                                        options={[{ value: "parent", label: "Parent" }, { value: "spouse", label: "Spouse" }, { value: "sibling", label: "Sibling" }, { value: "none", label: "None" }]} error={stepErrors.coApplicant} required />
-                                    {formData.coApplicant && formData.coApplicant !== "none" && (
-                                        <InputField label="Co-Applicant Annual Income (₹)" icon="database" value={formData.income} onChange={(v) => update("income", formatIndianCurrency(v))} placeholder="e.g. 10,00,000" type="text" error={stepErrors.income} required />
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-8">
-                                    <SelectField label="Collateral Assets" icon="home" value={formData.collateral} onChange={(v) => update("collateral", v)}
-                                        options={[{ value: "yes-property", label: "Secured: Property" }, { value: "yes-fdr", label: "Secured: FDR/Insurance" }, { value: "no", label: "Unsecured: No Collateral" }]} error={stepErrors.collateral} required />
-                                </div>
-
-                                <div className="pt-4">
-                                    <label className="text-[11px] uppercase tracking-[0.2em] font-black text-gray-500 block mb-4">Proposals or Requirements</label>
-                                    <div className="relative group">
-                                        <div className="absolute top-4 left-4 text-gray-400 group-focus-within:text-[#6605c7] transition-colors">
-                                            <span className="material-symbols-outlined text-xl">sticky_note_2</span>
+                                    <div className="grid grid-cols-1 gap-8">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-500">
+                                                Co-Applicant Gross Annual Income <span className="text-red-500 ml-1">*</span>
+                                            </label>
+                                            <div className="relative group">
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-bold text-sm pointer-events-none">
+                                                    ₹
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={formData.income}
+                                                    onChange={(e) => update("income", formatIndianCurrency(e.target.value))}
+                                                    placeholder="20,00,000"
+                                                    className={`w-full pl-8 pr-44 py-4 bg-white border rounded-2xl shadow-sm outline-none text-sm font-bold text-gray-900 focus:bg-white transition-all ${stepErrors.income ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#3A2EAB]/50 focus:ring-4 focus:ring-[#3A2EAB]/10 hover:border-gray-300"}`}
+                                                />
+                                                {formData.income && (
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-extrabold text-[#3A2EAB] bg-[#3A2EAB]/5 px-2.5 py-1 rounded-lg border border-[#3A2EAB]/10 animate-fadeIn pointer-events-none truncate max-w-[170px]">
+                                                        ({convertNumberToWords(formData.income)})
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {stepErrors.income && <p className="text-red-500 text-[10px] font-black uppercase tracking-wider pl-1">{stepErrors.income}</p>}
                                         </div>
-                                        <textarea
-                                            value={formData.notes}
-                                            onChange={(e) => update("notes", e.target.value)}
-                                            placeholder="Ex: I need help with disbursement stages or insurance coverage..."
-                                            rows={4}
-                                            className="w-full pl-12 pr-6 py-4 bg-white/70 border border-gray-200 rounded-3xl focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-[#6605c7]/50 transition-all text-sm font-medium leading-relaxed text-gray-900 placeholder:text-gray-400 shadow-sm"
-                                        />
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* Step 3: Review */}
                         {step === 3 && (
                             <div className="space-y-12 animate-fade-in-up relative z-10">
-                                <div className="text-center mb-4">
-                                    <div className="w-20 h-20 bg-emerald-50 border border-emerald-100 rounded-3xl flex items-center justify-center text-emerald-600 mx-auto mb-6 shadow-sm">
-                                        <span className="material-symbols-outlined text-4xl">rate_review</span>
+                                <div className="flex items-center justify-center gap-4 mb-8">
+                                    <div className="w-12 h-12 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0 shadow-sm">
+                                        <span className="material-symbols-outlined text-2xl">rate_review</span>
                                     </div>
-                                    <h2 className="text-3xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Validate Your File</h2>
-                                    <p className="text-gray-500 text-sm font-medium">Verify all details before submission</p>
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Validate Your File</h2>
+                                        <p className="text-gray-500 text-sm font-medium">Verify all details before submission</p>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -623,16 +750,14 @@ export default function ApplyLoanPage() {
                                             <div className="w-8 h-8 bg-purple-50 border border-purple-100 rounded-xl flex items-center justify-center">
                                                 <span className="material-symbols-outlined text-sm">account_balance</span>
                                             </div>
-                                            Program Blueprint
+                                            Loan Details
                                         </h3>
                                         <div className="bg-white/70 rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-4">
                                             {[
                                                 { label: "Loan Structure", value: formData.loanType },
-                                                { label: "Academic Goal", value: formData.courseType },
                                                 { label: "Required Amount", value: formData.amount ? `₹${Number(formData.amount.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Destination", value: formData.country === "Other" ? formData.otherCountry : formData.country },
                                                 { label: "University", value: formData.university },
-                                                { label: "Target Intake", value: formData.intakeSeason },
                                             ].filter((f) => f.value).map((f) => (
                                                 <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100/50 last:border-0">
                                                     <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">{f.label}</span>
@@ -653,7 +778,7 @@ export default function ApplyLoanPage() {
                                         <div className="bg-white/70 rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-4">
                                             {[
                                                 { label: "Legal Name", value: `${formData.firstName} ${formData.lastName}`.trim() },
-                                                { label: "Electronic ID", value: formData.email },
+                                                { label: "Email ID", value: formData.email },
                                                 { label: "Mobile Line", value: formData.phone },
                                                 {
                                                     label: "Birth Record", value: (() => {
@@ -683,17 +808,7 @@ export default function ApplyLoanPage() {
                                     </div>
                                 </div>
 
-                                {formData.notes && (
-                                    <div className="mt-4">
-                                        <div className="bg-white/70 rounded-3xl p-8 border border-gray-100 shadow-sm">
-                                            <h3 className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-500 mb-4 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-sm">notes</span>
-                                                Internal Observations
-                                            </h3>
-                                            <p className="text-[13px] text-gray-700 font-medium leading-loose">"{formData.notes}"</p>
-                                        </div>
-                                    </div>
-                                )}
+
 
                                 {error && (
                                     <div className="px-6 py-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-[13px] font-bold flex items-center gap-3 animate-bounce">
@@ -722,19 +837,19 @@ export default function ApplyLoanPage() {
                                     <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
                                     Previous Stage
                                 </button>
-                            ) : <div className="hidden sm:block" />}
+                            ) : <div />}
 
                             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                                 {step < 3 ? (
-                                    <button onClick={next} className="w-full sm:w-auto px-12 py-4 bg-[#6605c7] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#7a0de8] hover:shadow-[0_0_20px_rgba(102,5,199,0.4)] transition-all flex items-center justify-center gap-3 group border border-[#8b24e5]">
-                                        Next
+                                    <button onClick={next} className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-[#9B51E0] to-[#E040FB] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:brightness-110 hover:shadow-[0_0_20px_rgba(155,81,224,0.4)] transition-all flex items-center justify-center gap-3 group border border-[#e040fb]/30 active:scale-98">
+                                        {step === 2 ? "Save & Continue" : "Next"}
                                         <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
                                     </button>
                                 ) : (
                                     <button
                                         onClick={handleSubmit}
                                         disabled={submitting}
-                                        className="w-full sm:w-auto px-16 py-4 bg-gradient-to-r from-[#6605c7] to-[#a855f7] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:brightness-110 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] disabled:opacity-50 transition-all flex items-center justify-center gap-4 group relative overflow-hidden"
+                                        className="w-full sm:w-auto px-16 py-4 bg-gradient-to-r from-[#9B51E0] to-[#E040FB] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:brightness-110 hover:shadow-[0_0_30px_rgba(155,81,224,0.4)] disabled:opacity-50 transition-all flex items-center justify-center gap-4 group relative overflow-hidden active:scale-98 border border-[#e040fb]/30"
                                     >
                                         {submitting ? (
                                             <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
@@ -752,19 +867,19 @@ export default function ApplyLoanPage() {
                     </div>
 
                     {/* Footer Info */}
-                    <div className="mt-12 flex flex-col md:flex-row items-center justify-center gap-8 text-[10px] font-black text-gray-500 uppercase tracking-widest relative z-10">
+                    <div className="mt-12 flex flex-col md:flex-row items-center justify-center gap-8 text-[10px] font-black text-gray-500 uppercase tracking-widest relative z-10 select-none">
                         <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-sm text-emerald-500">lock</span>
-                            256-bit AES Encrypted
+                            <span className="text-emerald-500 text-xs">🔒</span>
+                            256-Bit AES Encrypted
                         </div>
                         <div className="w-1.5 h-1.5 bg-gray-300 rounded-full hidden md:block" />
                         <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-sm text-[#6605c7]">shield_check</span>
+                            <span className="text-[#3A2EAB] text-xs">🏛</span>
                             RBI Licensed Lenders
                         </div>
                         <div className="w-1.5 h-1.5 bg-gray-300 rounded-full hidden md:block" />
                         <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-sm text-blue-500">verified</span>
+                            <span className="text-emerald-500 text-xs">✅</span>
                             VidyaLoan Assurance
                         </div>
                     </div>

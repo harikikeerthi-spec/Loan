@@ -13,6 +13,7 @@ export default function DocumentVaultPage() {
     const { user, refreshUser } = useAuth();
     const [docs, setDocs] = useState<any[]>([]);
     const [profile, setProfile] = useState<any>(null);
+    const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState<string | null>(null);
     const [profileType, setProfileType] = useState<"salaried" | "self-employed">("salaried");
@@ -57,6 +58,7 @@ export default function DocumentVaultPage() {
             if (res.success) {
                 setDocs(res.data.documents || []);
                 setProfile(res.data.user || null);
+                setApplications(res.data.applications || []);
 
                 // Keep the salaried vs self-employed toggle in sync with the database
                 const baseProfile = res.data.user || {};
@@ -180,7 +182,9 @@ export default function DocumentVaultPage() {
 
         // Ensure coApplicant has a default name and matches coappRelation
         const coapp = baseProfile.coApplicant || {};
-        const coappName = coapp.name || baseProfile.coApplicantName || "Co-applicant";
+        const dbRelation = baseProfile.coApplicantRelation || coapp.relation || "";
+        const fallbackName = dbRelation ? dbRelation.charAt(0).toUpperCase() + dbRelation.slice(1) : "Co-applicant";
+        const coappName = coapp.name || baseProfile.coApplicantName || fallbackName;
 
         return {
             ...baseProfile,
@@ -194,7 +198,7 @@ export default function DocumentVaultPage() {
             coApplicant: {
                 ...coapp,
                 name: coappName,
-                relation: coappRelation,
+                relation: dbRelation || coappRelation,
                 employmentType: coapp.employmentType || "employed"
             }
         };
@@ -680,8 +684,33 @@ export default function DocumentVaultPage() {
         <div className="min-h-screen bg-transparent">
             <Navbar />
             <div className="max-w-6xl mx-auto px-6 pt-30 pb-16">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
-                    <div className="flex items-center gap-4">
+                {!loading && applications.length === 0 ? (
+                    <div className="max-w-xl mx-auto my-12 animate-fade-in-up relative z-10 text-center">
+                        <div className="bg-white/80 backdrop-blur-2xl rounded-[3rem] p-10 md:p-14 shadow-2xl border border-white relative overflow-hidden flex flex-col items-center">
+                            <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#6605c7]/10 rounded-full blur-3xl opacity-60 animate-pulse" />
+                            <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl opacity-40 animate-pulse" />
+
+                            <div className="w-24 h-24 bg-purple-50 border border-purple-100 rounded-[2rem] flex items-center justify-center text-[#6605c7] mb-8 shadow-sm relative group animate-bounce-slow">
+                                <span className="material-symbols-outlined text-5xl">shield_lock</span>
+                            </div>
+
+                            <h1 className="text-3xl font-black text-gray-900 mb-4 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+                                Document Vault Locked
+                            </h1>
+                            <p className="text-gray-500 font-semibold text-sm leading-relaxed mb-10 max-w-sm">
+                                You haven't submitted a loan application yet. Once you apply for a loan, your personalized Document Vault will unlock instantly to upload required files.
+                            </p>
+
+                            <Link href="/apply-loan" className="w-full py-4.5 bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all flex items-center justify-center gap-3">
+                                <span className="material-symbols-outlined text-lg">bolt</span>
+                                Apply for a Loan Now
+                            </Link>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
+                            <div className="flex items-center gap-4">
                         <Link href="/dashboard" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm hover:border-gray-200 transition-all">
                             <span className="material-symbols-outlined text-gray-400 text-[20px]">arrow_back</span>
                         </Link>
@@ -803,7 +832,7 @@ export default function DocumentVaultPage() {
                 ) : (
                     <>
                         {renderDocGroup("Student Documents", "person", studentDocs, () => handleAddOtherDocument("student"))}
-                        {renderDocGroup("Financial Co-Applicant", "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
+                        {renderDocGroup(`Financial Co-Applicant (${activeProfile.coApplicant?.relation ? activeProfile.coApplicant.relation.charAt(0).toUpperCase() + activeProfile.coApplicant.relation.slice(1) : 'Co-applicant'})`, "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
 
                         <div className="flex justify-end mb-6 -mt-4 mr-1">
                             <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-2xl">
@@ -859,6 +888,8 @@ export default function DocumentVaultPage() {
                         </div>
                     </div>
                 </div>
+            </>
+                )}
             </div>
 
             {showConsentModal && user?.id && (

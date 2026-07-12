@@ -276,8 +276,8 @@ export class OpenRouterService {
                         ]
                     }
                 ],
-                max_tokens: 4096,
-                temperature: 0.1,
+                max_tokens: 2048,
+                temperature: 0,
             };
 
             try {
@@ -290,7 +290,7 @@ export class OpenRouterService {
                         'X-Title': 'VidyaLoan',
                     },
                     body: JSON.stringify(requestBody),
-                    signal: this.createTimeoutSignal(180_000), // 180 seconds timeout for vision/PDF tasks
+                    signal: this.createTimeoutSignal(90_000), // 90 seconds timeout for vision/PDF tasks
                 });
 
                 if (!response.ok) {

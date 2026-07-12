@@ -4,9 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model User {
@@ -271,10 +269,26 @@ model LoanApplication {
   collateralValue   Float?
   collateralDetails String?
 
-  // EVV Maintained Balance Fields
+  // EVV Maintained Balance Fields (legacy)
   evvOverall           Float?
   evvMonthlyBreakdown  Json?
   evvStatus            String?
+  evvTotalSnapshots    Int?
+  evvTotalTransactions Int?
+  evvPeriod            Json?
+
+  // EVV Intelligence Engine — Extended Fields
+  evvScore             Float?    // 0-100 composite score
+  evvGrade             String?   // A+, A, B, C, D
+  evvDecision          String?   // APPROVE | APPROVE_WITH_CONDITIONS | MANUAL_REVIEW | REJECT
+  evvDecisionReason    String?   @db.Text
+  evvRiskFlags         Json?     // Array of RiskFlag objects
+  evvBehaviours        Json?     // Array of FinancialBehaviour objects
+  evvDailyBalances     Json?     // Reconstructed daily balances (sampled for storage)
+  evvSnapshots         Json?     // Snapshot balances
+  evvMonthlyMetrics    Json?     // Full monthly statistics
+  evvValidation        Json?     // Data validation report
+  evvWeightBreakdown   Json?     // Weight contributions breakdown
 
   // Timestamps
   submittedAt           DateTime?

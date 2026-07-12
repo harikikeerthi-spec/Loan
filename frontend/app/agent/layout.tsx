@@ -177,21 +177,15 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                     <span className="material-symbols-outlined text-xl">contact_phone</span>
                                 </Link>
                             </div>
-<<<<<<< HEAD
-                            <button className="relative w-12 h-12 flex items-center justify-center rounded-2xl bg-[#6605c7]/5 text-[#6605c7] hover:bg-[#6605c7]/10 transition-all border border-[#6605c7]/10">
-                                <span className="material-symbols-outlined">notifications</span>
-                                {unreadChatCount > 0 && (
-                                    <div className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white" />
-                                )}
-                            </button>
-=======
                             <div className="relative">
                                 <button 
                                     onClick={() => setNotificationsOpen(!notificationsOpen)}
                                     className="relative w-12 h-12 flex items-center justify-center rounded-2xl bg-[#6605c7]/5 text-[#6605c7] hover:bg-[#6605c7]/10 transition-all border border-[#6605c7]/10"
                                 >
                                     <span className="material-symbols-outlined">notifications</span>
-                                    <div className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white" />
+                                    {unreadChatCount > 0 && (
+                                        <div className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-red-500 border-2 border-white" />
+                                    )}
                                 </button>
 
                                 {notificationsOpen && (
@@ -275,7 +269,6 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                     </>
                                 )}
                             </div>
->>>>>>> 0cd7127f157381d14f9b12c33a18ba714adf3775
                         </div>
                     </header>
 

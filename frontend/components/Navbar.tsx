@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { authApi } from "@/lib/api";
 
 export default function Navbar() {
     const { user, isAuthenticated, logout } = useAuth();
@@ -12,6 +13,7 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [hasApplied, setHasApplied] = useState(false);
     const profileRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -29,6 +31,29 @@ export default function Navbar() {
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, []);
+
+    useEffect(() => {
+        if (isAuthenticated && user?.id) {
+            const checkApplication = async () => {
+                try {
+                    const res = await authApi.getDashboardData(user.id) as any;
+                    const apps = res?.data?.applications || [];
+                    setHasApplied(apps.length > 0);
+                } catch (err) {
+                    console.error("Navbar failed to check application status:", err);
+                }
+            };
+            checkApplication();
+
+            const handleDataChange = () => checkApplication();
+            window.addEventListener('dashboard-data-changed', handleDataChange);
+            return () => {
+                window.removeEventListener('dashboard-data-changed', handleDataChange);
+            };
+        } else {
+            setHasApplied(false);
+        }
+    }, [isAuthenticated, user?.id]);
 
     const handleLogout = () => {
         logout();
@@ -74,7 +99,7 @@ export default function Navbar() {
                             <button className={`nav-link flex items-center gap-1 text-[13px] font-semibold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
                                 Loans
                             </button>
-                            <div className="absolute top-full -left-4 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                            <div className="absolute top-full left-0 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
                                 <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-xl p-6">
                                     <div className="grid grid-cols-3 gap-6">
                                         {/* Column 1: Calculators */}
@@ -117,7 +142,7 @@ export default function Navbar() {
                             <button className={`nav-link flex items-center gap-1 text-[13px] font-semibold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
                                 Services
                             </button>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                            <div className="absolute top-full left-0 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
                                 <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-xl p-8">
                                     <div className="grid grid-cols-3 gap-8">
                                         <div>
@@ -162,7 +187,7 @@ export default function Navbar() {
                             <button className={`nav-link flex items-center gap-1 text-[13px] font-semibold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
                                 Community
                             </button>
-                            <div className="absolute top-full -left-20 w-[500px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                            <div className="absolute top-full left-0 w-[500px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
                                 <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-xl overflow-hidden">
                                     <div className="grid grid-cols-5 h-full">
                                         <div className="col-span-2 bg-gradient-to-br from-primary to-purple-800 p-6 flex flex-col justify-between">
@@ -276,12 +301,14 @@ export default function Navbar() {
                             </div>
 
                             {/* 3D Apply Now Button */}
-                            <Link
-                                href="/apply-loan"
-                                className="relative px-5 py-2.5 bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f43f5e] text-white text-[11px] font-extrabold uppercase tracking-widest rounded-full shadow-[0_4px_0_#4c1d95] hover:shadow-[0_8px_20px_rgba(124,58,237,0.35),0_6px_0_#4c1d95] border-t border-white/20 translate-y-0 hover:-translate-y-1 hover:brightness-105 active:translate-y-0.5 active:shadow-none transition-all duration-150 ease-out cursor-pointer select-none"
-                            >
-                                Apply Now
-                            </Link>
+                            {!hasApplied && (
+                                <Link
+                                    href="/apply-loan"
+                                    className="relative px-5 py-2.5 bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f43f5e] text-white text-[11px] font-extrabold uppercase tracking-widest rounded-full shadow-[0_4px_0_#4c1d95] hover:shadow-[0_8px_20px_rgba(124,58,237,0.35),0_6px_0_#4c1d95] border-t border-white/20 translate-y-0 hover:-translate-y-1 hover:brightness-105 active:translate-y-0.5 active:shadow-none transition-all duration-150 ease-out cursor-pointer select-none"
+                                >
+                                    Apply Now
+                                </Link>
+                            )}
                         </div>
                     )}
 

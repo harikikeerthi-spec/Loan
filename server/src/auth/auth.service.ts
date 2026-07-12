@@ -134,7 +134,7 @@ export class AuthService {
       payload.bankName = bankName;
     }
 
-    const standardAccessExpStr = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '30m';
+    const standardAccessExpStr = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '24h';
     const standardRefreshExpStr = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION') || '24h';
 
     let accessExpiresIn: string | number = standardAccessExpStr;

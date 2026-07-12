@@ -27,7 +27,7 @@ import { FirebaseAuthService } from './firebase-auth.service';
       useFactory: async (configService: ConfigService) => ({
         secret: (configService.get<string>('JWT_SECRET') || 'secretKey') as any,
         signOptions: {
-          expiresIn: (configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || configService.get<string>('JWT_EXPIRATION') || '30m') as any,
+          expiresIn: (configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || configService.get<string>('JWT_EXPIRATION') || '24h') as any,
         },
       }),
       inject: [ConfigService],

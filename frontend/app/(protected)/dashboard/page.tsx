@@ -31,6 +31,7 @@ interface DashboardData {
         firstName?: string;
         lastName?: string;
         remarks?: string;
+        sanctionLetterUrl?: string;
     }>;
     recommendedLoans?: Array<{ name: string; rate: string }>;
     documents?: Array<{ name: string; status: string; docType: string }>;
@@ -313,6 +314,7 @@ export default function DashboardPage() {
     const [activeToast, setActiveToast] = useState<{ sender: string; content: string } | null>(null);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [selectedAppDetails, setSelectedAppDetails] = useState<any>(null);
+    const [connectingSupport, setConnectingSupport] = useState(false);
 
     const toggleAppProgress = (appId: string) => {
         setExpandedApps(prev => ({ ...prev, [appId]: !prev[appId] }));
@@ -456,19 +458,25 @@ export default function DashboardPage() {
         };
     }, [loadData]);
 
-    const stats = [
-        { icon: "description", label: "Loan Applications", value: data.applicationCount ?? 0, color: "text-purple-500", bg: "bg-purple-500/10" },
-        { icon: "account_balance", label: "Partner Network", value: "5+", color: "text-blue-500", bg: "bg-blue-500/10" },
-        { icon: "psychology", label: "AI Tools Available", value: "7", color: "text-emerald-500", bg: "bg-emerald-500/10" },
-        { icon: "school", label: "Universities Covered", value: "3K+", color: "text-amber-500", bg: "bg-amber-500/10" },
-    ];
+    const hasApplied = !!(data.applications && data.applications.length > 0);
+    const firstApp = hasApplied ? data.applications![0] : null;
+    const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
+    const profileCompleteness = (() => {
+        let count = 0;
+        if (user?.id) count += 1;
+        if (user?.firstName) count += 1;
+        if (user?.lastName) count += 1;
+        if (user?.phoneNumber) count += 1;
+        if (user?.dateOfBirth) count += 1;
+        return count * 20;
+    })();
 
     const quickLinks = [
-        { href: "/apply-loan", icon: "add_circle", label: "Apply for Loan", desc: "Start a new application", color: "from-purple-500 to-indigo-600" },
+        ...(hasApplied ? [] : [{ href: "/apply-loan", icon: "add_circle", label: "Apply for Loan", desc: "Start a new application", color: "from-purple-500 to-indigo-600" }]),
         { href: "/document-vault", icon: "folder_shared", label: "Document Vault", desc: "Securely upload docs", color: "from-blue-600 to-indigo-700" },
-        { href: "/emi", icon: "calculate", label: "EMI Calculator", desc: "Plan your repayments", color: "from-blue-500 to-cyan-600" },
-        { href: "/sop-writer", icon: "auto_fix_high", label: "AI SOP Writer", desc: "Draft your statement", color: "from-pink-500 to-rose-600" },
-        { href: "/compare-loans", icon: "compare", label: "Compare Loans", desc: "Find the best rates", color: "from-amber-500 to-orange-600" },
+        // { href: "/emi", icon: "calculate", label: "EMI Calculator", desc: "Plan your repayments", color: "from-blue-500 to-cyan-600" },
+        // { href: "/sop-writer", icon: "auto_fix_high", label: "AI SOP Writer", desc: "Draft your statement", color: "from-pink-500 to-rose-600" },
+        // { href: "/compare-loans", icon: "compare", label: "Compare Loans", desc: "Find the best rates", color: "from-amber-500 to-orange-600" },
         { href: "/community/discussions", icon: "forum", label: "Community", desc: "Ask & share advice", color: "from-emerald-500 to-teal-600" },
     ];
 
@@ -513,7 +521,9 @@ export default function DashboardPage() {
                         <div className="flex flex-wrap gap-3">
                             <button
                                 id="btn-connect-support"
+                                disabled={connectingSupport}
                                 onClick={async () => {
+                                    setConnectingSupport(true);
                                     try {
                                         const res = await chatApi.connect() as any;
                                         const whatsappUrl = res?.whatsappUrl;
@@ -528,38 +538,197 @@ export default function DashboardPage() {
                                         const rawNumber = process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886';
                                         const cleanNumber = rawNumber.replace('whatsapp:', '').replace(/\D/g, '');
                                         window.open(`https://wa.me/${cleanNumber}`, '_blank');
+                                    } finally {
+                                        setConnectingSupport(false);
                                     }
                                 }}
-                                className="px-5 py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2"
+                                className="px-5 py-2.5 bg-emerald-600 disabled:bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 disabled:hover:bg-emerald-500 transition-all shadow-sm flex items-center gap-2 select-none"
                             >
-                                <span className="material-symbols-outlined text-sm">chat</span>
-                                Connect with Support
+                                {connectingSupport ? (
+                                    <>
+                                        <span className="material-symbols-outlined text-sm animate-spin">sync</span>
+                                        Connecting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined text-sm">chat</span>
+                                        Connect with Support
+                                    </>
+                                )}
                             </button>
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
-                                View Roadmap
+                                Speak with AI
                             </Link>
                         </div>
                     </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-                    {stats.map((s) => (
-                        <div key={s.label} className="bg-white rounded-xl p-5 border border-gray-100 hover:border-[#6605c7]/20 transition-all">
-                            <div className={`w-9 h-9 ${s.bg} rounded-lg flex items-center justify-center ${s.color} mb-3`}>
-                                <span className="material-symbols-outlined text-[20px]">{s.icon}</span>
+                {/* Loan Action Roadmap / Journey Cards Grid */}
+                <div className={
+                    !hasApplied
+                        ? "grid grid-cols-1 max-w-md mb-10"
+                        : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mb-10"
+                }>
+                    {/* Card 1: Apply Loan / Loan Applied */}
+                    {!hasApplied ? (
+                        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-[#6605c7]/20 hover:-translate-y-1 hover:shadow-md transition-all group duration-300">
+                            <div>
+                                <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-[#6605c7] mb-5 border border-purple-100 group-hover:scale-110 transition-transform">
+                                    <span className="material-symbols-outlined text-2xl">add_circle</span>
+                                </div>
+                                <h3 className="text-base font-black text-gray-900 mb-2">Apply for Loan</h3>
+                                <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-6">
+                                    Submit your financing blueprint and university target for competitive interest rates.
+                                </p>
                             </div>
-                            <div className="text-xl font-bold text-gray-900">
-                                {loading ? <span className="h-6 bg-gray-100 rounded animate-pulse block w-12" /> : s.value}
-                            </div>
-                            <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider mt-1">{s.label}</div>
+                            <Link href="/apply-loan" className="w-full py-3 bg-[#6605c7] hover:bg-[#5504a8] text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 active:scale-98">
+                                <span className="material-symbols-outlined text-sm">bolt</span> Apply Now
+                            </Link>
                         </div>
-                    ))}
+                    ) : (
+                        <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                            <div>
+                                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-5 border border-emerald-100">
+                                    <span className="material-symbols-outlined text-2xl">check_circle</span>
+                                </div>
+                                <h3 className="text-base font-black text-emerald-800 mb-2">Loan Applied</h3>
+                                <p className="text-emerald-700 text-xs font-bold leading-relaxed mb-1">
+                                    Bank: {firstApp?.bank || 'Not specified'}
+                                </p>
+                                <p className="text-emerald-600/80 text-[11px] font-semibold">
+                                    Amount: ₹{firstApp?.amount?.toLocaleString("en-IN") || '0'}
+                                </p>
+                            </div>
+                            <div className="w-full py-3 bg-emerald-100/50 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-emerald-200/50 flex items-center justify-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">verified</span> Submission Logged
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Card 2: Upload Documents */}
+                    {hasApplied && (
+                        isApproved ? (
+                            <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                                <div>
+                                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-5 border border-emerald-100">
+                                        <span className="material-symbols-outlined text-2xl">check_circle</span>
+                                    </div>
+                                    <h3 className="text-base font-black text-emerald-800 mb-2">Documents Verified</h3>
+                                    <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
+                                        All your primary profile and parent financial documents have been successfully verified.
+                                    </p>
+                                </div>
+                                <Link href="/document-vault" className="w-full py-3 bg-emerald-100/50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center transition-all border border-emerald-200/50 flex items-center justify-center gap-1.5 active:scale-98">
+                                    <span className="material-symbols-outlined text-sm">folder_open</span> View Documents
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-[#6605c7]/20 hover:-translate-y-1 hover:shadow-md transition-all group duration-300">
+                                <div>
+                                    <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-[#6605c7] mb-5 border border-purple-100 group-hover:scale-110 transition-transform">
+                                        <span className="material-symbols-outlined text-2xl">cloud_upload</span>
+                                    </div>
+                                    <h3 className="text-base font-black text-gray-900 mb-2">Upload Documents</h3>
+                                    <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-6">
+                                        Upload academic marksheets and parents' income proofs to your secure vault.
+                                    </p>
+                                </div>
+                                <Link href="/document-vault" className="w-full py-3 bg-[#6605c7] hover:bg-[#5504a8] text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 active:scale-98">
+                                    <span className="material-symbols-outlined text-sm">folder_shared</span> Open Vault
+                                </Link>
+                            </div>
+                        )
+                    )}
+
+                    {/* Card 3: Bank Review / Approved */}
+                    {hasApplied && (
+                        isApproved ? (
+                            <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                                <div>
+                                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-5 border border-emerald-100">
+                                        <span className="material-symbols-outlined text-2xl">task_alt</span>
+                                    </div>
+                                    <h3 className="text-base font-black text-emerald-800 mb-2">Bank Approved</h3>
+                                    <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
+                                        Congratulations! Your application has been officially approved by {firstApp?.bank}.
+                                    </p>
+                                </div>
+                                <div className="w-full py-3 bg-emerald-100/50 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-emerald-200/50 flex items-center justify-center gap-1.5">
+                                    <span className="material-symbols-outlined text-sm">verified</span> Approval Confirmed
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-amber-500/20 hover:-translate-y-1 hover:shadow-md transition-all group duration-300">
+                                <div>
+                                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-5 border border-amber-100 group-hover:scale-110 transition-transform">
+                                        <span className="material-symbols-outlined text-2xl animate-spin" style={{ animationDuration: '3s' }}>sync</span>
+                                    </div>
+                                    <h3 className="text-base font-black text-gray-900 mb-2">Bank Review</h3>
+                                    <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-6">
+                                        Your loan application is under underwriting evaluation at {firstApp?.bank || 'partner banks'}.
+                                    </p>
+                                </div>
+                                <div className="w-full py-3 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-amber-100 flex items-center justify-center gap-1.5">
+                                    <span className="material-symbols-outlined text-sm">pending</span> Review in Progress
+                                </div>
+                            </div>
+                        )
+                    )}
+
+                    {/* Card 4: Sanction Letter (Awaiting Approval / Locked until isApproved, otherwise View & Download) */}
+                    {hasApplied && (
+                        isApproved ? (
+                            <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group">
+                                <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl" />
+                                <div>
+                                    <div className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
+                                        <span className="material-symbols-outlined text-2xl">download</span>
+                                    </div>
+                                    <h3 className="text-base font-black text-emerald-800 mb-2">Sanction Letter</h3>
+                                    <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
+                                        Your official sanction letter provided by the bank is ready. View or download it below.
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <a
+                                        href={firstApp?.sanctionLetterUrl || "/docs/mock-sanction.pdf"}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer text-center"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">visibility</span> View
+                                    </a>
+                                    <a
+                                        href={firstApp?.sanctionLetterUrl || "/docs/mock-sanction.pdf"}
+                                        download
+                                        className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-98 shadow-md shadow-emerald-500/15 cursor-pointer text-center"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">download</span> Download
+                                    </a>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100/85 shadow-sm flex flex-col justify-between select-none opacity-60">
+                                <div>
+                                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-5 border border-slate-200">
+                                        <span className="material-symbols-outlined text-2xl">lock</span>
+                                    </div>
+                                    <h3 className="text-base font-black text-slate-500 mb-2">Sanction Letter</h3>
+                                    <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-6">
+                                        Your official sanction letter will be unlocked here once the bank completes evaluation and approves your loan.
+                                    </p>
+                                </div>
+                                <div className="w-full py-3 bg-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl text-center border border-slate-200/50 flex items-center justify-center gap-1.5">
+                                    <span className="material-symbols-outlined text-sm">lock</span> Locked
+                                </div>
+                            </div>
+                        )
+                    )}
                 </div>
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-8 overflow-x-auto no-scrollbar border-b border-gray-100">
-                    {["overview", "applications", "documents", "activity", "profile"].map((tab) => (
+                    {["overview", "applications", "documents", "profile"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -720,9 +889,11 @@ export default function DashboardPage() {
                     <div>
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-gray-900">My Applications</h2>
-                            <Link href="/apply-loan" className="px-4 py-2 bg-[#6605c7] text-white text-xs font-bold rounded-lg hover:bg-[#5504a8] transition-all">
-                                + New Application
-                            </Link>
+                            {!hasApplied && (
+                                <Link href="/apply-loan" className="px-4 py-2 bg-[#6605c7] text-white text-xs font-bold rounded-lg hover:bg-[#5504a8] transition-all">
+                                    + New Application
+                                </Link>
+                            )}
                         </div>
                         {loading ? (
                             <div className="space-y-4">
@@ -848,7 +1019,7 @@ export default function DashboardPage() {
                 )}
 
                 {/* Activity Tab */}
-                {activeTab === "activity" && (
+                {/* {activeTab === "activity" && (
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 mb-6">Activity Log</h2>
                         <div className="bg-white rounded-xl border border-gray-100 p-8">
@@ -860,44 +1031,77 @@ export default function DashboardPage() {
                             />
                         </div>
                     </div>
-                )}
+                )} */}
 
                 {/* Profile Tab */}
                 {activeTab === "profile" && (
-                    <div className="max-w-2xl">
-                        <h2 className="text-xl font-bold text-gray-900 mb-6">My Profile</h2>
-                        <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm">
-                            <div className="flex items-center gap-5 mb-8">
-                                <div className="w-16 h-16 bg-[#6605c7] rounded-lg flex items-center justify-center text-white text-2xl font-bold">
-                                    {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
+                    <div className="max-w-4xl mx-auto bg-slate-50 p-8 rounded-3xl perspective-1000">
+                        <div className="bg-white/85 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(102,5,199,0.12)] border border-white transform-gpu transition-all duration-300 hover:shadow-[0_30px_60px_rgba(102,5,199,0.22)] hover:-translate-y-2 flex flex-col md:flex-row overflow-visible">
+                            {/* Left Column */}
+                            <div className="md:w-1/3 p-6 bg-gradient-to-b from-slate-50 to-slate-100 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none flex flex-col items-center text-center relative pt-16">
+                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-[#6605c7] to-[#8b5cf6] text-white flex items-center justify-center text-3xl font-bold shadow-[0_10px_25px_rgba(102,5,199,0.35)] transform -translate-y-12 border-4 border-white mb-[-24px] hover:scale-105 transition-transform duration-300">
+                                    {user?.firstName?.[0] || ""}{user?.lastName?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900">
-                                        {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "User"}
-                                    </h3>
-                                    <p className="text-gray-500 text-sm">{user?.email}</p>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                                {[
-                                    { label: "User ID", value: displayUserId || "—" },
-                                    { label: "First Name", value: user?.firstName || "—" },
-                                    { label: "Last Name", value: user?.lastName || "—" },
-                                    { label: "Email", value: user?.email || "—" },
-                                    { label: "Phone Number", value: user?.phoneNumber || "—" },
-                                    { label: "Date of Birth", value: user?.dateOfBirth || "—" },
-                                    { label: "Role", value: user?.role || "user" },
-                                ].map((f) => (
-                                    <div key={f.label}>
-                                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{f.label}</label>
-                                        <p className="text-[13px] font-medium text-gray-900 mt-1">{f.value}</p>
+
+                                <h2 className="text-xl font-bold text-slate-800 mt-2">
+                                    {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email?.split("@")[0]}
+                                </h2>
+                                <p className="text-xs text-slate-500 mb-6 truncate max-w-full px-2">{user?.email}</p>
+
+                                <div className="w-full bg-white rounded-xl p-4 shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] border border-slate-100 mt-auto">
+                                    <div className="flex justify-between text-xs font-bold text-[#6605c7] mb-2">
+                                        <span>Profile Setup</span>
+                                        <span>{profileCompleteness}%</span>
                                     </div>
-                                ))}
+                                    <div className="w-full bg-slate-100 h-3 rounded-full p-0.5 overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
+                                        <div
+                                            className="bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] h-full rounded-full shadow-[0_1px_5px_rgba(102,5,199,0.3)] transition-all duration-500"
+                                            style={{ width: `${profileCompleteness}%` }}
+                                        />
+                                    </div>
+                                    <span className="inline-block mt-3 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold tracking-wider uppercase rounded-md border border-emerald-200 shadow-sm">
+                                        Active Account
+                                    </span>
+                                </div>
                             </div>
-                            <div className="mt-8 border-t border-gray-50 pt-8">
-                                <Link href="/profile" className="px-5 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg hover:bg-[#5504a8] transition-all">
-                                    Edit Profile
-                                </Link>
+
+                            {/* Right Column */}
+                            <div className="md:w-2/3 p-8 space-y-6 relative">
+                                <div className="absolute -top-4 right-6 bg-slate-900 text-white font-mono text-xs px-3 py-1.5 rounded-lg shadow-[0_8px_16px_rgba(0,0,0,0.2)] tracking-wide border border-slate-800 transform hover:scale-105 transition-transform select-none">
+                                    ID: {displayUserId || "—"}
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">First Name</span>
+                                        <span className="text-sm font-semibold text-slate-700">{user?.firstName || "—"}</span>
+                                    </div>
+
+                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Last Name</span>
+                                        <span className="text-sm font-semibold text-slate-700">{user?.lastName || "—"}</span>
+                                    </div>
+
+                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Date of Birth</span>
+                                        <span className="text-sm font-semibold text-slate-700">{user?.dateOfBirth || "—"}</span>
+                                    </div>
+
+                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Phone Number</span>
+                                        <span className="text-sm font-semibold text-slate-700">{user?.phoneNumber || "—"}</span>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 flex justify-end">
+                                    <Link
+                                        href="/profile"
+                                        className="px-6 py-2.5 bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] text-white font-medium text-sm rounded-xl shadow-[0_4px_14px_rgba(102,5,199,0.3)] border-b-4 border-[#5504a8] active:border-b-0 active:translate-y-1 transition-all flex items-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                                        <span>Edit Profile</span>
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1062,14 +1266,14 @@ export default function DashboardPage() {
                                 <span className="material-symbols-outlined text-lg">close</span>
                             </button>
                         </div>
-                        
+
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto p-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {/* Loan Info */}
                                 <div className="space-y-4">
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Loan Request</h3>
-                                    
+
                                     <div>
                                         <div className="text-[11px] font-bold text-gray-400 uppercase">Bank</div>
                                         <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.bank || 'Not specified'}</div>
@@ -1093,7 +1297,7 @@ export default function DashboardPage() {
                                 {/* Education Info */}
                                 <div className="space-y-4">
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Education Details</h3>
-                                    
+
                                     <div>
                                         <div className="text-[11px] font-bold text-gray-400 uppercase">University & Country</div>
                                         <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.universityName || 'Not specified'}, {selectedAppDetails.country || 'Not specified'}</div>
@@ -1115,7 +1319,7 @@ export default function DashboardPage() {
                                 {/* Financial & Co-Applicant */}
                                 <div className="space-y-4 sm:col-span-2 mt-2">
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Financial & Contact</h3>
-                                    
+
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant</div>
@@ -1139,7 +1343,7 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 {/* Notes */}
                                 {selectedAppDetails.notes && (
                                     <div className="space-y-2 sm:col-span-2 mt-2 bg-amber-50/50 p-4 rounded-xl border border-amber-100/50">

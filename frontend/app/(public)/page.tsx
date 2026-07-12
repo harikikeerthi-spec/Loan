@@ -1,10 +1,11 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import JourneyPath from "../../components/JourneyPath";
 import AnimatedNumber from "../../components/AnimatedNumber";
 import InteractiveEMI from "../../components/InteractiveEMI";
 import ToolCard from "../../components/ToolCard";
+import PostAdmissionServicesSection from "../../components/PostAdmissionServicesSection";
 import { lenders, features } from "../../data/home";
 import { fetchTopGoogleReviews } from "../../lib/googleReviews";
 
@@ -351,26 +352,27 @@ export default async function HomePage() {
                             </Link>
 
                             {/* 4 — Exam Prep */}
-                            <Link href="/practice" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[240px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
+                            <div className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[240px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
                                 <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/ecosystem/exam-prep.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6,78,59,0.9) 0%, rgba(6,78,59,0.3) 70%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-emerald-400/20 backdrop-blur-md will-change-transform flex items-center justify-center border border-emerald-400/30">
                                     <span className="material-symbols-outlined text-5xl text-white font-light">edit_note</span>
                                 </div>
-                                <div className="absolute top-4 left-4 flex gap-1.5">
+                                <div className="absolute top-4 left-4 flex flex-wrap gap-1.5 items-center">
                                     {['GRE', 'IELTS', 'TOEFL'].map(t => (
                                         <span key={t} className="px-2 py-0.5 rounded-lg bg-emerald-400/20 backdrop-blur-sm will-change-transform text-emerald-300 text-[10px] font-black border border-emerald-400/20">{t}</span>
                                     ))}
+                                    <span className="px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider">Coming Soon</span>
                                 </div>
                                 <div className="relative z-10 p-6">
                                     <div className="text-2xl font-black text-white mb-1"><AnimatedNumber value="5000+" /></div>
                                     <h3 className="text-lg font-bold text-white mb-2">Exam Prep</h3>
                                     <p className="text-white/55 text-[13px] font-medium leading-relaxed mb-4">GRE, IELTS, TOEFL & more. AI‑adaptive tests.</p>
-                                    <span className="inline-flex items-center gap-2 text-emerald-300 font-bold text-[13px] group-hover:gap-3 transition-all">
-                                        Start <span className="material-symbols-outlined text-[13px]" aria-hidden="true">arrow_forward</span>
+                                    <span className="inline-flex items-center gap-2 text-emerald-300 font-bold text-[13px]">
+                                        Coming Soon <span className="material-symbols-outlined text-[13px]" aria-hidden="true">lock</span>
                                     </span>
                                 </div>
-                            </Link>
+                            </div>
 
                             {/* 5 — Education Loan */}
                             <Link href="/apply-loan" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[240px]" style={{ background: 'linear-gradient(135deg, #6605c7 0%, #9333ea 100%)' }}>
@@ -682,183 +684,9 @@ export default async function HomePage() {
                         </div>
                     </div>
                 </section>
+                {/* Post-Admission Services — Coming Soon Bento Grid (Client Interactive) */}
+                <PostAdmissionServicesSection />
 
-                {/* Post-Admission Services — Bento Grid (same style as Universe) */}
-                <section className="py-24 bg-transparent overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-[#6605c7]/5 rounded-full blur-[120px] -mr-[10vw] -mt-[10vw] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-blue-500/5 rounded-full blur-[120px] -ml-[10vw] -mb-[10vw] pointer-events-none" />
-
-                    <div className="max-w-7xl mx-auto px-6 relative z-10">
-                        {/* Header */}
-                        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16">
-                            <div>
-                                <span className="inline-block px-4 py-1.5 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[11px] font-black uppercase tracking-widest mb-4 border border-[#6605c7]/15">
-                                    BEYOND LOANS 🎓
-                                </span>
-                                <h2 className="text-3xl md:text-5xl font-black text-gray-900 leading-tight">
-                                    Post-Admission <br />
-                                    <span style={{ background: 'linear-gradient(135deg, #6605c7, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Services</span>
-                                </h2>
-                                <p className="text-gray-500 text-[13px] mt-4 max-w-lg leading-relaxed font-medium">
-                                    Everything you need after getting your admit — banking, housing, visa & more
-                                </p>
-                            </div>
-                            <Link href="/community/discussions" className="flex-shrink-0 inline-flex items-center gap-2 px-7 py-4 rounded-xl border-2 border-[#6605c7]/20 text-[#6605c7] font-black hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all group text-[11px] uppercase tracking-widest">
-                                View All Services
-                                <span className="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform" aria-hidden="true">arrow_forward</span>
-                            </Link>
-                        </div>
-
-                        {/* Bento Grid */}
-                        <div className="grid grid-cols-12 gap-5">
-                            {/* Row 1 */}
-                            {/* 1 — US Credit Card (large left) */}
-                            <Link href="/us-credit-card" className="col-span-12 lg:col-span-5 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/us-credit-card.jpg') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(30,58,138,0.97) 0%, rgba(30,58,138,0.3) 60%, transparent 100%)' }} />
-                                <div className="absolute top-6 left-6">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm will-change-transform text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
-                                        🇺🇸 USA
-                                    </span>
-                                </div>
-                                <div className="absolute top-4 right-4 w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm will-change-transform flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-transform border border-white/20">
-                                    <span className="text-3xl">💳</span>
-                                </div>
-                                <div className="relative z-10 p-7">
-                                    <div className="text-4xl font-black text-white mb-1">Day 1</div>
-                                    <div className="text-white/50 text-[10px] uppercase tracking-widest font-black mb-3">Start Building Credit</div>
-                                    <h3 className="text-xl font-black text-white mb-2">US Credit Card</h3>
-                                    <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Build your US credit score from day one with a student credit card — no SSN required to apply.</p>
-                                    <span className="inline-flex items-center gap-2 text-blue-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Get Started <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
-                                    </span>
-                                </div>
-                            </Link>
-
-                            {/* 2 — German Blocked Account (top middle) */}
-                            <Link href="/german-blocked-account" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)' }}>
-                                <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/services/german-account.jpg') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(31,41,55,0.98) 0%, rgba(31,41,55,0.3) 60%, transparent 100%)' }} />
-                                <div className="absolute top-4 right-4">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/20 backdrop-blur-sm will-change-transform text-yellow-200 text-[10px] font-black uppercase tracking-widest border border-yellow-400/20">
-                                        🇩🇪 Germany
-                                    </span>
-                                </div>
-                                <div className="relative z-10 p-6">
-                                    <div className="text-3xl font-black text-white mb-1">€11,208</div>
-                                    <div className="text-white/40 text-[10px] uppercase tracking-widest font-black mb-2">Required Balance</div>
-                                    <h3 className="text-lg font-black text-white mb-2">German Blocked Account</h3>
-                                    <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Open your mandatory blocked account hassle-free for Germany visa application.</p>
-                                    <span className="inline-flex items-center gap-2 text-yellow-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Open Account <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
-                                    </span>
-                                </div>
-                            </Link>
-
-                            {/* 3 — Forex Card (top right) */}
-                            <Link href="/forex" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/forex-card.jpg') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(5,150,105,0.97) 0%, rgba(5,150,105,0.3) 70%, transparent 100%)' }} />
-                                <div className="absolute top-4 left-4">
-                                    <span className="text-3xl">🌍</span>
-                                </div>
-                                <div className="relative z-10 p-6">
-                                    <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="0%" /></div>
-                                    <div className="text-emerald-200/50 text-[10px] uppercase tracking-widest font-black mb-2">Markup Fee</div>
-                                    <h3 className="text-lg font-black text-white mb-2">Forex Card</h3>
-                                    <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Multi-currency forex card with the best exchange rates.</p>
-                                    <span className="inline-flex items-center gap-2 text-emerald-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Get Card <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
-                                    </span>
-                                </div>
-                            </Link>
-
-                            {/* Row 2 */}
-                            {/* 4 — Student Housing (bottom left) */}
-                            <Link href="/housing" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/housing.jpg') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(76,29,149,0.98) 0%, rgba(76,29,149,0.3) 70%, transparent 100%)' }} />
-                                <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-purple-400/20 backdrop-blur-sm will-change-transform flex items-center justify-center border border-purple-400/20">
-                                    <span className="text-xl">🏠</span>
-                                </div>
-                                <div className="absolute top-4 left-4">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-400/20 backdrop-blur-sm will-change-transform text-purple-200 text-[10px] font-black uppercase tracking-widest border border-purple-400/20">
-                                        ✅ Verified
-                                    </span>
-                                </div>
-                                <div className="relative z-10 p-6">
-                                    <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="1000+" /></div>
-                                    <div className="text-purple-200/50 text-[10px] uppercase tracking-widest font-black mb-2">Verified Listings</div>
-                                    <h3 className="text-lg font-black text-white mb-2">Accommodation Support</h3>
-                                    <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Find verified student housing near your university campus.</p>
-                                    <span className="inline-flex items-center gap-2 text-purple-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Explore <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
-                                    </span>
-                                </div>
-                            </Link>
-
-                            {/* 5 — UK Bank Account (bottom middle) */}
-                            <Link href="/uk-bank-account" className="col-span-12 sm:col-span-6 lg:col-span-5 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/uk-bank.jpg') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(124,45,18,0.97) 0%, rgba(124,45,18,0.3) 60%, transparent 100%)' }} />
-                                <div className="absolute top-6 left-6">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm will-change-transform text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
-                                        🇬🇧 UK
-                                    </span>
-                                </div>
-                                <div className="absolute top-4 right-4 w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
-                                    <span className="text-3xl">🏦</span>
-                                </div>
-                                <div className="relative z-10 p-7">
-                                    <div className="text-4xl font-black text-white mb-1">Pre-Arrival</div>
-                                    <div className="text-white/50 text-[10px] uppercase tracking-widest font-black mb-3">Account Opening</div>
-                                    <h3 className="text-xl font-black text-white mb-2">UK Bank Account</h3>
-                                    <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Pre-arrival UK bank account opening for Indian students — be ready before you land.</p>
-                                    <span className="inline-flex items-center gap-2 text-orange-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Open Account <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
-                                    </span>
-                                </div>
-                            </Link>
-
-                            {/* 6 — Visa Counselling (bottom right) */}
-                            <Link href="/visa-mock" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-2xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
-                                <div className="absolute inset-0 opacity-10" style={{ background: "url('/images/services/counselling.jpg') center/cover" }} />
-                                <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
-                                    <span className="material-symbols-outlined text-5xl text-white font-light">flight</span>
-                                </div>
-                                <div className="relative z-10 p-6">
-                                    <span className="inline-block px-2.5 py-1 rounded-lg bg-white/20 text-white text-[10px] font-black uppercase tracking-widest mb-3">🎯 Expert Guidance</span>
-                                    <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="98%" /></div>
-                                    <div className="text-emerald-200/60 text-[10px] uppercase tracking-widest font-black mb-2">Success Rate</div>
-                                    <h3 className="text-lg font-black text-white mb-2">Visa Counselling</h3>
-                                    <span className="inline-flex items-center gap-2 text-emerald-200 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Get Guidance <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
-                                    </span>
-                                </div>
-                            </Link>
-                        </div>
-
-                        {/* Stats Bar */}
-                        <div className="mt-8 flex flex-wrap gap-4 justify-center">
-                            {[
-                                { icon: 'verified', val: '98%', label: 'Visa Success Rate' },
-                                { icon: 'home_pin', val: '1,000+', label: 'Verified Listings' },
-                                { icon: 'public', val: '30+', label: 'Countries Covered' },
-                                { icon: 'payments', val: '0%', label: 'Forex Markup' },
-                                { icon: 'account_balance', val: 'Pre-Arrival', label: 'Bank Accounts' },
-                                { icon: 'target', val: '10K+', label: 'Students Helped' },
-                            ].map(s => (
-                                <div key={s.label} className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
-                                    <span className="material-symbols-outlined text-[#6605c7] text-2xl group-hover:scale-125 transition-transform">{s.icon}</span>
-                                    <div>
-                                        <div className="font-black text-gray-900 text-[13px] leading-none"><AnimatedNumber value={s.val} /></div>
-                                        <div className="text-gray-400 text-[10px] uppercase tracking-wider font-bold">{s.label}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
 
                 {/* Refer & Earn Section */}
                 <section className="py-20 bg-transparent">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
@@ -714,13 +715,13 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                 const existingDoc = student.documents.find(d => d.docType === docType);
                 let updatedDocs: StudentApplication['documents'] = [];
                 if (existingDoc) {
-                    updatedDocs = student.documents.map(d => 
+                    updatedDocs = student.documents.map(d =>
                         d.docType === docType ? { ...d, status: "pending" as const, uploadedBy: "Agent", version: `v${parseInt(d.version.replace("v", "")) + 1}` } : d
                     );
                 } else {
                     updatedDocs = [...student.documents, { docType, docName: docType.replace(/_/g, " ").toUpperCase(), status: "pending" as const, uploadedBy: "Agent", version: "v1" }];
                 }
-                
+
                 const updatedJourney = [
                     ...student.journey,
                     { date: format(new Date(), "dd-MMM-yyyy"), title: "Document Uploaded", desc: `Doc Type: ${docType.replace(/_/g, " ").toUpperCase()} (${fileName}) uploaded`, done: true }
@@ -737,7 +738,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     const handleSendDocLink = async () => {
         const student = applications.find(x => x.id === docShareState.studentId);
         if (!student) return;
-        
+
         try {
             const res = await agentApi.shareUploadLink(student.id, {
                 channel: docShareState.channel,

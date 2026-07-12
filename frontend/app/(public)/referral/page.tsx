@@ -199,47 +199,47 @@ export default function ReferralPage() {
 
                                 {/* Share Buttons */}
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                                    <ShareButton 
-                                        icon="whatsapp" 
-                                        label="WhatsApp" 
-                                        color="bg-[#25D366]" 
+                                    <ShareButton
+                                        icon="whatsapp"
+                                        label="WhatsApp"
+                                        color="bg-[#25D366]"
                                         onClick={() => {
                                             const shareText = encodeURIComponent(`Hey! Use my code ${referralCode} to get your study abroad loan sorted with VidyaLoans: ${referralLink}`);
                                             window.open(`https://api.whatsapp.com/send?text=${shareText}`, '_blank');
                                         }}
                                     />
-                                    <ShareButton 
-                                        icon="telegram" 
-                                        label="Telegram" 
-                                        color="bg-[#0088cc]" 
+                                    <ShareButton
+                                        icon="telegram"
+                                        label="Telegram"
+                                        color="bg-[#0088cc]"
                                         onClick={() => {
                                             const shareText = encodeURIComponent(`Hey! Use my code ${referralCode} to get your study abroad loan sorted with VidyaLoans.`);
                                             window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${shareText}`, '_blank');
                                         }}
                                     />
-                                    <ShareButton 
-                                        icon="mail" 
-                                        label="Email" 
-                                        color="bg-gray-700" 
+                                    <ShareButton
+                                        icon="mail"
+                                        label="Email"
+                                        color="bg-gray-700"
                                         onClick={() => {
                                             const subject = encodeURIComponent("Get your study abroad loan sorted with VidyaLoans");
                                             const body = encodeURIComponent(`Hey! Use my code ${referralCode} to get your study abroad loan sorted with VidyaLoans: ${referralLink}`);
                                             window.location.href = `mailto:?subject=${subject}&body=${body}`;
                                         }}
                                     />
-                                    <ShareButton 
-                                        icon="share" 
-                                        label="More" 
-                                        color="bg-gray-900" 
+                                    <ShareButton
+                                        icon="share"
+                                        label="More"
+                                        color="bg-gray-900"
                                         onClick={() => {
                                             if (navigator.share) {
                                                 navigator.share({
                                                     title: 'Join VidyaLoan & Earn ₹3,000!',
                                                     text: `Use my referral code ${referralCode} to sign up on VidyaLoan and get started with your education loan.`,
                                                     url: referralLink,
-                                                }).catch(() => {});
+                                                }).catch(() => { });
                                             } else {
-                                               copyToClipboard(referralLink);
+                                                copyToClipboard(referralLink);
                                             }
                                         }}
                                     />
@@ -263,7 +263,7 @@ export default function ReferralPage() {
                                     <span className="material-symbols-outlined text-amber-500">group</span>
                                     Referred Friends
                                 </h3>
-                                
+
                                 {referrals.length === 0 ? (
                                     <div className="text-center py-12 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
                                         <span className="material-symbols-outlined text-4xl text-gray-300 mb-3">group_off</span>
@@ -291,11 +291,10 @@ export default function ReferralPage() {
                                                             {new Date(item.createdAt).toLocaleDateString()}
                                                         </td>
                                                         <td className="py-4 px-4">
-                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                                                item.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                                                item.status === 'signed_up' ? 'bg-blue-100 text-blue-700' :
-                                                                'bg-amber-100 text-amber-700'
-                                                            }`}>
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                                                    item.status === 'signed_up' ? 'bg-blue-100 text-blue-700' :
+                                                                        'bg-amber-100 text-amber-700'
+                                                                }`}>
                                                                 {item.status.replace('_', ' ')}
                                                             </span>
                                                         </td>

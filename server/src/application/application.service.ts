@@ -1769,55 +1769,83 @@ export class ApplicationService {
     application: any,
     s3Key: string
   ) {
+    // EVV Intelligence Engine — Full output fields
     let evvOverall = 0;
     let evvMonthlyBreakdown: any = [];
     let evvStatus: 'COMPUTED' | 'FAILED' | 'MANUAL_REVIEW' = 'COMPUTED';
     let evvTotalSnapshots = 0;
     let evvTotalTransactions = 0;
     let evvPeriod: { from: string; to: string } | null = null;
+    // Extended fields
+    let evvScore: number | null = null;
+    let evvGrade: string | null = null;
+    let evvDecision: string | null = null;
+    let evvDecisionReason: string | null = null;
+    let evvRiskFlags: any = null;
+    let evvBehaviours: any = null;
+    let evvMonthlyMetrics: any = null;
+    let evvValidation: any = null;
+    let evvWeightBreakdown: any = null;
+    let evvSnapshots: any = null;
     let errorMessage = '';
 
     try {
-      console.log(`[EVV Background] Starting AI extraction for application ${applicationId}`);
-      const transactions = await this.evvEngine.extractTransactions(file.buffer, file.mimetype, file.originalname);
-      
-      if (!transactions || transactions.length === 0) {
-        console.warn(`[EVV Background] Parser failed to extract transactions for application ${applicationId}`);
-        evvStatus = 'MANUAL_REVIEW';
-        errorMessage = 'Unable to extract transaction text patterns from this statement format.';
-      } else {
-        const evvResults = this.evvEngine.computeEvv(transactions);
-        evvOverall = evvResults.overall_evv;
-        evvMonthlyBreakdown = evvResults.monthly_evv;
-        evvStatus = evvResults.status;
-        evvTotalSnapshots = evvResults.totalSnapshots;
-        evvTotalTransactions = evvResults.totalTransactions;
-        evvPeriod = evvResults.period;
-        console.log(`[EVV Background] Computed EVV for ${applicationId}: ₹${evvOverall} (${evvStatus})`);
+      console.log(`[EVV Background] Starting full EVV analysis for application ${applicationId}`);
 
-        // Dynamically update document requirement name to match actual statement months count
-        const numMonths = evvMonthlyBreakdown.length;
-        const dynamicDocName = `Bank Statements (${numMonths} months)`;
-        const { error: docUpdateError } = await this.db
-          .from('ApplicationDocument')
-          .update({ docName: dynamicDocName })
-          .eq('applicationId', applicationId)
-          .eq('docType', 'bank_statement');
-        if (docUpdateError) {
-          console.error(`[EVV Background] Failed to update docName in DB: ${docUpdateError.message}`);
-        } else {
-          console.log(`[EVV Background] Dynamically updated docName in DB to: ${dynamicDocName}`);
-        }
-      }
+      // Run the full EVV intelligence pipeline
+      const report = await this.evvEngine.computeFullEvv(
+        file.buffer,
+        file.mimetype,
+        file.originalname,
+        applicationId,
+      );
+
+      evvStatus = report.status;
+      evvOverall = report.overallEvv;
+      evvMonthlyBreakdown = report.monthly_evv;
+      evvTotalSnapshots = report.totalSnapshots;
+      evvTotalTransactions = report.totalTransactions;
+      evvPeriod = report.period;
+
+      // New intelligence fields
+      evvScore = report.evvScore?.score ?? null;
+      evvGrade = report.evvScore?.grade ?? null;
+      evvDecision = report.underwritingDecision?.decision ?? null;
+      evvDecisionReason = report.underwritingDecision?.reasons?.join(' | ') ?? null;
+      evvRiskFlags = report.riskFlags ?? null;
+      evvBehaviours = report.behaviours ?? null;
+      evvMonthlyMetrics = report.monthlyMetrics ?? null;
+      evvValidation = report.validation ?? null;
+      evvWeightBreakdown = report.evvScore?.breakdown ?? null;
+      // Store sampled snapshots (max 200 rows to avoid JSON size limits)
+      evvSnapshots = (report.snapshots || []).slice(0, 200);
+
+      console.log(
+        `[EVV Background] Analysis complete for ${applicationId}: ` +
+        `Score=${evvScore}/100 Grade=${evvGrade} Balance=₹${evvOverall} ` +
+        `Decision=${evvDecision} Flags=${evvRiskFlags?.length ?? 0} Status=${evvStatus}`
+      );
+
+      // Update docName dynamically
+      const numMonths = evvMonthlyBreakdown.length;
+      this.db
+        .from('ApplicationDocument')
+        .update({ docName: `Bank Statements (${numMonths} months)` })
+        .eq('applicationId', applicationId)
+        .eq('docType', 'bank_statement')
+        .then(({ error: docErr }) => {
+          if (docErr) console.error(`[EVV Background] docName update failed: ${docErr.message}`);
+        });
+
     } catch (err: any) {
-      console.error(`[EVV Background] Calculation exception: ${err.message}`);
+      console.error(`[EVV Background] Full analysis exception: ${err.message}`);
       evvStatus = 'MANUAL_REVIEW';
       errorMessage = err.message?.includes('timeout') || err.message?.includes('aborted')
-        ? 'AI processing timed out — the bank statement may be too large or complex. Please try a smaller/clearer PDF.'
-        : err.message || 'Error occurred during AI statement scanning.';
+        ? 'AI processing timed out — try a smaller/clearer PDF.'
+        : err.message || 'Error during EVV analysis.';
     }
 
-    // Update database with results
+    // Update database with all EVV intelligence results
     const updateData: any = {
       evvOverall,
       evvMonthlyBreakdown,
@@ -1825,6 +1853,17 @@ export class ApplicationService {
       evvTotalSnapshots,
       evvTotalTransactions,
       evvPeriod,
+      // New intelligence fields
+      evvScore,
+      evvGrade,
+      evvDecision,
+      evvDecisionReason,
+      evvRiskFlags,
+      evvBehaviours,
+      evvMonthlyMetrics,
+      evvValidation,
+      evvWeightBreakdown,
+      evvSnapshots,
     };
 
     if (evvStatus === 'MANUAL_REVIEW' || evvStatus === 'FAILED') {
@@ -1840,29 +1879,30 @@ export class ApplicationService {
       console.error(`[EVV Background] Failed to update LoanApplication with EVV: ${updateError.message}`);
     }
 
-    // Log notes & status history
+    // Log notes & status history in parallel for speed
     const auditNotes = evvStatus === 'COMPUTED'
       ? `EVV Calculation completed. Overall balance: ₹${evvOverall.toLocaleString('en-IN')}. Monthly breakdowns saved.`
       : `EVV Calculation: Manual Review Required — ${errorMessage}`;
 
-    await this.db.from('ApplicationNote').insert({
-      id: 'note-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      applicationId,
-      authorId: adminId,
-      authorName: 'EVV Engine',
-      content: auditNotes,
-      type: 'general',
-      isInternal: true
-    });
-
-    await this.createStatusHistory(applicationId, {
-      fromStatus: application.status,
-      toStatus: application.status,
-      changedBy: adminId,
-      changedByName: adminName,
-      notes: auditNotes,
-      isAutomatic: true
-    });
+    await Promise.all([
+      this.db.from('ApplicationNote').insert({
+        id: 'note-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        applicationId,
+        authorId: adminId,
+        authorName: 'EVV Engine',
+        content: auditNotes,
+        type: 'general',
+        isInternal: true
+      }),
+      this.createStatusHistory(applicationId, {
+        fromStatus: application.status,
+        toStatus: application.status,
+        changedBy: adminId,
+        changedByName: adminName,
+        notes: auditNotes,
+        isAutomatic: true
+      }),
+    ]);
 
     // Auto-sharing routing rules
     let autoShared = false;
