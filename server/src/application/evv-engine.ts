@@ -662,49 +662,61 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
 
   calculateSnapshots(
     dailyBalances: DailyBalance[],
-    snapshotDays: number[] = [1, 5, 10, 15, 20, 25],
+    intervalOrDays: number | number[] = 5,
   ): SnapshotBalance[] {
     if (dailyBalances.length === 0) return [];
 
-    // Build quick lookup: date → balance
-    const balanceMap = new Map<string, number>();
-    for (const db of dailyBalances) {
-      balanceMap.set(db.date, db.balance);
-    }
-
-    const getBalance = (targetDateStr: string): number => {
-      // Walk backward from target to find the nearest balance
-      const target = new Date(targetDateStr);
-      for (let i = 0; i <= 31; i++) {
-        const d = new Date(target);
-        d.setDate(d.getDate() - i);
-        const ds = d.toISOString().slice(0, 10);
-        if (balanceMap.has(ds)) return balanceMap.get(ds)!;
+    if (Array.isArray(intervalOrDays)) {
+      const snapshotDays = intervalOrDays;
+      const balanceMap = new Map<string, number>();
+      for (const db of dailyBalances) {
+        balanceMap.set(db.date, db.balance);
       }
-      // Fall back to first balance
-      return dailyBalances[0]?.balance ?? 0;
-    };
 
-    // Determine months covered
-    const months = new Set<string>();
-    for (const db of dailyBalances) months.add(db.date.slice(0, 7));
+      const getBalance = (targetDateStr: string): number => {
+        const target = new Date(targetDateStr);
+        for (let i = 0; i <= 31; i++) {
+          const d = new Date(target);
+          d.setDate(d.getDate() - i);
+          const ds = d.toISOString().slice(0, 10);
+          if (balanceMap.has(ds)) return balanceMap.get(ds)!;
+        }
+        return dailyBalances[0]?.balance ?? 0;
+      };
 
-    const snapshots: SnapshotBalance[] = [];
+      const months = new Set<string>();
+      for (const db of dailyBalances) months.add(db.date.slice(0, 7));
 
-    for (const month of Array.from(months).sort()) {
-      const [y, m] = month.split('-').map(Number);
-      const lastDay = daysInMonth(y, m);
-      const days = [...snapshotDays, -1].map(d => d === -1 ? lastDay : d);
+      const snapshots: SnapshotBalance[] = [];
+      for (const month of Array.from(months).sort()) {
+        const [y, m] = month.split('-').map(Number);
+        const lastDay = daysInMonth(y, m);
+        const days = [...snapshotDays, -1].map(d => d === -1 ? lastDay : d);
 
-      for (const day of days) {
-        if (day > lastDay) continue;
-        const dateStr = `${month}-${String(day).padStart(2, '0')}`;
-        const balance = getBalance(dateStr);
-        snapshots.push({ date: dateStr, balance, month, snapshotDay: day });
+        for (const day of days) {
+          if (day > lastDay) continue;
+          const dateStr = `${month}-${String(day).padStart(2, '0')}`;
+          const balance = getBalance(dateStr);
+          snapshots.push({ date: dateStr, balance, month, snapshotDay: day });
+        }
       }
+      return snapshots;
+    } else {
+      const interval = intervalOrDays;
+      const snapshots: SnapshotBalance[] = [];
+      for (let i = 0; i < dailyBalances.length; i += interval) {
+        const db = dailyBalances[i];
+        const month = db.date.slice(0, 7);
+        const snapshotDay = new Date(db.date).getDate();
+        snapshots.push({
+          date: db.date,
+          balance: db.balance,
+          month,
+          snapshotDay,
+        });
+      }
+      return snapshots;
     }
-
-    return snapshots;
   }
 
   // ──────────────────────────────────────────────────────────
@@ -734,14 +746,11 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
       txByMonth.get(m)!.push(tx);
     }
 
-    // Group snapshots by month (using only standard 5-point days: 1,10,15,20,25)
-    const snapshotDays5 = [1, 10, 15, 20, 25];
+    // Group snapshots by month
     const snap5ByMonth = new Map<string, SnapshotBalance[]>();
     for (const s of snapshots) {
-      if (snapshotDays5.includes(s.snapshotDay)) {
-        if (!snap5ByMonth.has(s.month)) snap5ByMonth.set(s.month, []);
-        snap5ByMonth.get(s.month)!.push(s);
-      }
+      if (!snap5ByMonth.has(s.month)) snap5ByMonth.set(s.month, []);
+      snap5ByMonth.get(s.month)!.push(s);
     }
 
     const months = Array.from(dailyByMonth.keys()).sort();
@@ -755,11 +764,19 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
       const credits = txList.filter(tx => tx.credit > 0).map(tx => tx.credit);
       const debits = txList.filter(tx => tx.debit > 0).map(tx => tx.debit);
 
-      const avgBalance = dayBalances.length > 0 ? Math.round(dayBalances.reduce((s, b) => s + b, 0) / dayBalances.length) : 0;
+      const avgBalance = dayBalances.length > 0
+        ? Number((dayBalances.reduce((s, b) => s + b, 0) / dayBalances.length).toFixed(2))
+        : 0;
       const snapshotBalances = snap5.map(s => s.balance);
-      const snapshotAvg = snapshotBalances.length > 0 ? Math.round(snapshotBalances.reduce((s, b) => s + b, 0) / snapshotBalances.length) : avgBalance;
-      const snapshotMin = snapshotBalances.length > 0 ? Math.min(...snapshotBalances) : Math.min(...dayBalances);
-      const snapshotMax = snapshotBalances.length > 0 ? Math.max(...snapshotBalances) : Math.max(...dayBalances);
+      const snapshotAvg = snapshotBalances.length > 0
+        ? Number((snapshotBalances.reduce((s, b) => s + b, 0) / snapshotBalances.length).toFixed(2))
+        : avgBalance;
+      const snapshotMin = snapshotBalances.length > 0
+        ? Number(Math.min(...snapshotBalances).toFixed(2))
+        : Number(Math.min(...dayBalances).toFixed(2));
+      const snapshotMax = snapshotBalances.length > 0
+        ? Number(Math.max(...snapshotBalances).toFixed(2))
+        : Number(Math.max(...dayBalances).toFixed(2));
 
       // Classify each transaction
       let cashDepositCount = 0, cashWithdrawalCount = 0;
@@ -1464,9 +1481,8 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
     // Step 3: Daily balances
     const dailyBalances = this.reconstructDailyBalances(transactions, openingBalance);
 
-    // Step 4: Snapshots (full set + 5-point for EVV)
-    const snapshotDays = [1, 5, 10, 15, 20, 25, -1]; // -1 = last day
-    const snapshots = this.calculateSnapshots(dailyBalances, snapshotDays);
+    // Step 4: Snapshots (5-day continuous interval for EVV)
+    const snapshots = this.calculateSnapshots(dailyBalances, 5);
 
     // Step 5: Monthly metrics
     const monthlyMetrics = this.calculateMonthlyMetrics(dailyBalances, transactions, snapshots);
@@ -1483,9 +1499,9 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
     // Step 9: Underwriting decision
     const underwritingDecision = this.generateUnderwritingDecision(evvScore, riskFlags, behaviours, monthlyMetrics);
 
-    // Step 10: Overall EVV balance (average of monthly snapshot avgs)
-    const overallEvv = monthlyMetrics.length > 0
-      ? Math.round(monthlyMetrics.reduce((s, m) => s + m.snapshotAvg, 0) / monthlyMetrics.length)
+    // Step 10: Overall EVV balance (average of all snapshots)
+    const overallEvv = snapshots.length > 0
+      ? Math.round(snapshots.reduce((s, b) => s + b.balance, 0) / snapshots.length)
       : 0;
 
     // Period
@@ -1509,7 +1525,7 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
       debitCount: m.debitCount,
     }));
 
-    const totalSnapshots = snapshots.filter(s => [1, 10, 15, 20, 25].includes(s.snapshotDay)).length;
+    const totalSnapshots = snapshots.length;
 
     return {
       bankName: undefined,

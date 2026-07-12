@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { aiApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function SOPWriterPage() {
     const { isAuthenticated } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [showAnalysis, setShowAnalysis] = useState(false);
@@ -21,6 +24,20 @@ export default function SOPWriterPage() {
         careerGoals: ""
     });
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("pending_sop_data");
+            if (saved) {
+                try {
+                    setFormData(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Failed to restore saved SOP data", e);
+                }
+                localStorage.removeItem("pending_sop_data");
+            }
+        }
+    }, []);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
@@ -29,7 +46,9 @@ export default function SOPWriterPage() {
         e.preventDefault();
 
         if (!isAuthenticated) {
-            alert("⚠️ Please login to use the SOP Generator");
+            localStorage.setItem("pending_sop_data", JSON.stringify(formData));
+            alert("To view your AI-generated SOP and detailed analysis, please login. You will be redirected to the login page.");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
             return;
         }
 

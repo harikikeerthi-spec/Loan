@@ -10,6 +10,7 @@ import ProgressTracker from "@/components/ProgressTracker";
 import UserActivityLog from "@/components/User/UserActivityLog";
 import StudentChatPanel from "@/components/Chat/StudentChatPanel";
 import { io } from "socket.io-client";
+import { getProfileDocumentRequirements } from "@/lib/documentRequirements";
 
 interface DashboardData {
     applicationCount?: number;
@@ -43,6 +44,7 @@ interface DashboardData {
         timestamp: string;
         link?: string;
     }>;
+    profile?: any;
 }
 
 interface Stage {
@@ -338,6 +340,7 @@ export default function DashboardPage() {
                         documents?: DashboardData["documents"];
                         activity?: DashboardData["activity"];
                         applicationCount?: number;
+                        user?: any;
                     };
                 };
                 if (dynamic?.success && dynamic.data) {
@@ -346,6 +349,7 @@ export default function DashboardPage() {
                         applications: dynamic.data.applications || [],
                         documents: dynamic.data.documents || [],
                         activity: dynamic.data.activity || [],
+                        profile: dynamic.data.user || null,
                     });
                 }
             }
@@ -461,6 +465,33 @@ export default function DashboardPage() {
     const hasApplied = !!(data.applications && data.applications.length > 0);
     const firstApp = hasApplied ? data.applications![0] : null;
     const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
+    
+    const allDocsUploaded = (() => {
+        if (!hasApplied) return false;
+        
+        // 1. Get the requirements for this profile
+        const activeProfile = data.profile || user || {};
+        const family = activeProfile.family || activeProfile.familyDetails || {};
+        const coApplicant = activeProfile.coApplicant || {};
+        
+        const mergedProfile = {
+            ...activeProfile,
+            family,
+            coApplicant
+        };
+        
+        const requiredDocs = getProfileDocumentRequirements(mergedProfile);
+        if (requiredDocs.length === 0) return true;
+        
+        // 2. Get the uploaded docTypes (or those synced/uploaded)
+        const uploadedDocTypes = new Set(
+            (data.documents || [])
+                .map(d => d.docType)
+        );
+        
+        // 3. Verify all requiredDocs types are in uploadedDocTypes
+        return requiredDocs.every(req => uploadedDocTypes.has(req.type));
+    })();
     const profileCompleteness = (() => {
         let count = 0;
         if (user?.id) count += 1;
@@ -564,11 +595,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Loan Action Roadmap / Journey Cards Grid */}
-                <div className={
-                    !hasApplied
-                        ? "grid grid-cols-1 max-w-md mb-10"
-                        : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mb-10"
-                }>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mb-10">
                     {/* Card 1: Apply Loan / Loan Applied */}
                     {!hasApplied ? (
                         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-[#6605c7]/20 hover:-translate-y-1 hover:shadow-md transition-all group duration-300">
@@ -606,123 +633,149 @@ export default function DashboardPage() {
                     )}
 
                     {/* Card 2: Upload Documents */}
-                    {hasApplied && (
-                        isApproved ? (
-                            <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-                                <div>
-                                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-5 border border-emerald-100">
-                                        <span className="material-symbols-outlined text-2xl">check_circle</span>
-                                    </div>
-                                    <h3 className="text-base font-black text-emerald-800 mb-2">Documents Verified</h3>
-                                    <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
-                                        All your primary profile and parent financial documents have been successfully verified.
-                                    </p>
+                    {!hasApplied ? (
+                        <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100/85 shadow-sm flex flex-col justify-between select-none opacity-60">
+                            <div>
+                                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-5 border border-slate-200">
+                                    <span className="material-symbols-outlined text-2xl">lock</span>
                                 </div>
-                                <Link href="/document-vault" className="w-full py-3 bg-emerald-100/50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center transition-all border border-emerald-200/50 flex items-center justify-center gap-1.5 active:scale-98">
-                                    <span className="material-symbols-outlined text-sm">folder_open</span> View Documents
-                                </Link>
+                                <h3 className="text-base font-black text-slate-500 mb-2">Upload Documents</h3>
+                                <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-6">
+                                    Upload academic marksheets and parents' income proofs to your secure vault.
+                                </p>
                             </div>
-                        ) : (
-                            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-[#6605c7]/20 hover:-translate-y-1 hover:shadow-md transition-all group duration-300">
-                                <div>
-                                    <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-[#6605c7] mb-5 border border-purple-100 group-hover:scale-110 transition-transform">
-                                        <span className="material-symbols-outlined text-2xl">cloud_upload</span>
-                                    </div>
-                                    <h3 className="text-base font-black text-gray-900 mb-2">Upload Documents</h3>
-                                    <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-6">
-                                        Upload academic marksheets and parents' income proofs to your secure vault.
-                                    </p>
+                            <div className="w-full py-3 bg-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl text-center border border-slate-200/50 flex items-center justify-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">lock</span> Locked
+                            </div>
+                        </div>
+                    ) : isApproved ? (
+                        <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                            <div>
+                                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-5 border border-emerald-100">
+                                    <span className="material-symbols-outlined text-2xl">check_circle</span>
                                 </div>
-                                <Link href="/document-vault" className="w-full py-3 bg-[#6605c7] hover:bg-[#5504a8] text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 active:scale-98">
-                                    <span className="material-symbols-outlined text-sm">folder_shared</span> Open Vault
-                                </Link>
+                                <h3 className="text-base font-black text-emerald-800 mb-2">Documents Verified</h3>
+                                <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
+                                    All your primary profile and parent financial documents have been successfully verified.
+                                </p>
                             </div>
-                        )
+                            <Link href="/document-vault" className="w-full py-3 bg-emerald-100/50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center transition-all border border-emerald-200/50 flex items-center justify-center gap-1.5 active:scale-98">
+                                <span className="material-symbols-outlined text-sm">folder_open</span> View Documents
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-[#6605c7]/20 hover:-translate-y-1 hover:shadow-md transition-all group duration-300">
+                            <div>
+                                <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-[#6605c7] mb-5 border border-purple-100 group-hover:scale-110 transition-transform">
+                                    <span className="material-symbols-outlined text-2xl">cloud_upload</span>
+                                </div>
+                                <h3 className="text-base font-black text-gray-900 mb-2">Upload Documents</h3>
+                                <p className="text-gray-505 text-xs font-semibold leading-relaxed mb-6">
+                                    Upload academic marksheets and parents' income proofs to your secure vault.
+                                </p>
+                            </div>
+                            <Link href="/document-vault" className="w-full py-3 bg-[#6605c7] hover:bg-[#5504a8] text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 active:scale-98">
+                                <span className="material-symbols-outlined text-sm">folder_shared</span> Open Vault
+                            </Link>
+                        </div>
                     )}
 
                     {/* Card 3: Bank Review / Approved */}
-                    {hasApplied && (
-                        isApproved ? (
-                            <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-                                <div>
-                                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-5 border border-emerald-100">
-                                        <span className="material-symbols-outlined text-2xl">task_alt</span>
-                                    </div>
-                                    <h3 className="text-base font-black text-emerald-800 mb-2">Bank Approved</h3>
-                                    <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
-                                        Congratulations! Your application has been officially approved by {firstApp?.bank}.
-                                    </p>
+                    {!hasApplied || !allDocsUploaded ? (
+                        <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100/85 shadow-sm flex flex-col justify-between select-none opacity-60">
+                            <div>
+                                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-5 border border-slate-200">
+                                    <span className="material-symbols-outlined text-2xl">lock</span>
                                 </div>
-                                <div className="w-full py-3 bg-emerald-100/50 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-emerald-200/50 flex items-center justify-center gap-1.5">
-                                    <span className="material-symbols-outlined text-sm">verified</span> Approval Confirmed
-                                </div>
+                                <h3 className="text-base font-black text-slate-500 mb-2">Bank Review</h3>
+                                <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-6">
+                                    {!hasApplied 
+                                        ? "Your loan application is under underwriting evaluation at partner banks." 
+                                        : "Your loan application review will begin once all pre-required documents have been uploaded."}
+                                </p>
                             </div>
-                        ) : (
-                            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-amber-500/20 hover:-translate-y-1 hover:shadow-md transition-all group duration-300">
-                                <div>
-                                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-5 border border-amber-100 group-hover:scale-110 transition-transform">
-                                        <span className="material-symbols-outlined text-2xl animate-spin" style={{ animationDuration: '3s' }}>sync</span>
-                                    </div>
-                                    <h3 className="text-base font-black text-gray-900 mb-2">Bank Review</h3>
-                                    <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-6">
-                                        Your loan application is under underwriting evaluation at {firstApp?.bank || 'partner banks'}.
-                                    </p>
-                                </div>
-                                <div className="w-full py-3 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-amber-100 flex items-center justify-center gap-1.5">
-                                    <span className="material-symbols-outlined text-sm">pending</span> Review in Progress
-                                </div>
+                            <div className="w-full py-3 bg-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl text-center border border-slate-200/50 flex items-center justify-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">lock</span> Locked
                             </div>
-                        )
+                        </div>
+                    ) : isApproved ? (
+                        <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                            <div>
+                                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-5 border border-emerald-100">
+                                    <span className="material-symbols-outlined text-2xl">task_alt</span>
+                                </div>
+                                <h3 className="text-base font-black text-emerald-800 mb-2">Bank Approved</h3>
+                                <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
+                                    Congratulations! Your application has been officially approved by {firstApp?.bank}.
+                                </p>
+                            </div>
+                            <div className="w-full py-3 bg-emerald-100/50 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-emerald-200/50 flex items-center justify-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">verified</span> Approval Confirmed
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-amber-500/20 hover:-translate-y-1 hover:shadow-md transition-all group duration-300">
+                            <div>
+                                <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-5 border border-amber-100 group-hover:scale-110 transition-transform">
+                                    <span className="material-symbols-outlined text-2xl animate-spin" style={{ animationDuration: '3s' }}>sync</span>
+                                </div>
+                                <h3 className="text-base font-black text-gray-900 mb-2">Bank Review</h3>
+                                <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-6">
+                                    Your loan application is under underwriting evaluation at {firstApp?.bank || 'partner banks'}.
+                                </p>
+                            </div>
+                            <div className="w-full py-3 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-amber-100 flex items-center justify-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">pending</span> Review in Progress
+                            </div>
+                        </div>
                     )}
 
-                    {/* Card 4: Sanction Letter (Awaiting Approval / Locked until isApproved, otherwise View & Download) */}
-                    {hasApplied && (
-                        isApproved ? (
-                            <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group">
-                                <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl" />
-                                <div>
-                                    <div className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
-                                        <span className="material-symbols-outlined text-2xl">download</span>
-                                    </div>
-                                    <h3 className="text-base font-black text-emerald-800 mb-2">Sanction Letter</h3>
-                                    <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
-                                        Your official sanction letter provided by the bank is ready. View or download it below.
-                                    </p>
+                    {/* Card 4: Sanction Letter */}
+                    {hasApplied && isApproved ? (
+                        <div className="bg-emerald-50/20 rounded-3xl p-6 border border-emerald-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group">
+                            <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl" />
+                            <div>
+                                <div className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
+                                    <span className="material-symbols-outlined text-2xl">download</span>
                                 </div>
-                                <div className="flex gap-2">
-                                    <a
-                                        href={firstApp?.sanctionLetterUrl || "/docs/mock-sanction.pdf"}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer text-center"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">visibility</span> View
-                                    </a>
-                                    <a
-                                        href={firstApp?.sanctionLetterUrl || "/docs/mock-sanction.pdf"}
-                                        download
-                                        className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-98 shadow-md shadow-emerald-500/15 cursor-pointer text-center"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">download</span> Download
-                                    </a>
-                                </div>
+                                <h3 className="text-base font-black text-emerald-800 mb-2">Sanction Letter</h3>
+                                <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
+                                    Your official sanction letter provided by the bank is ready. View or download it below.
+                                </p>
                             </div>
-                        ) : (
-                            <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100/85 shadow-sm flex flex-col justify-between select-none opacity-60">
-                                <div>
-                                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-5 border border-slate-200">
-                                        <span className="material-symbols-outlined text-2xl">lock</span>
-                                    </div>
-                                    <h3 className="text-base font-black text-slate-500 mb-2">Sanction Letter</h3>
-                                    <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-6">
-                                        Your official sanction letter will be unlocked here once the bank completes evaluation and approves your loan.
-                                    </p>
-                                </div>
-                                <div className="w-full py-3 bg-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl text-center border border-slate-200/50 flex items-center justify-center gap-1.5">
-                                    <span className="material-symbols-outlined text-sm">lock</span> Locked
-                                </div>
+                            <div className="flex gap-2">
+                                <a
+                                    href={firstApp?.sanctionLetterUrl || "/docs/mock-sanction.pdf"}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer text-center"
+                                >
+                                    <span className="material-symbols-outlined text-sm">visibility</span> View
+                                </a>
+                                <a
+                                    href={firstApp?.sanctionLetterUrl || "/docs/mock-sanction.pdf"}
+                                    download
+                                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-98 shadow-md shadow-emerald-500/15 cursor-pointer text-center"
+                                >
+                                    <span className="material-symbols-outlined text-sm">download</span> Download
+                                </a>
                             </div>
-                        )
+                        </div>
+                    ) : (
+                        <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100/85 shadow-sm flex flex-col justify-between select-none opacity-60">
+                            <div>
+                                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-5 border border-slate-200">
+                                    <span className="material-symbols-outlined text-2xl">lock</span>
+                                </div>
+                                <h3 className="text-base font-black text-slate-500 mb-2">Sanction Letter</h3>
+                                <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-6">
+                                    Your official sanction letter will be unlocked here once the bank completes evaluation and approves your loan.
+                                </p>
+                            </div>
+                            <div className="w-full py-3 bg-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl text-center border border-slate-200/50 flex items-center justify-center gap-1.5">
+                                <span className="material-symbols-outlined text-sm">lock</span> Locked
+                            </div>
+                        </div>
                     )}
                 </div>
 

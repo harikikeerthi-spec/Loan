@@ -8,6 +8,7 @@ import { adminApi } from "@/lib/api";
 import { format, formatDistanceToNow } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import CampaignsDashboard from "@/components/Admin/CampaignsDashboard";
+import AdminBanksSection from "@/components/Admin/AdminBanksSection";
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -678,6 +679,7 @@ export default function AdminDashboardPage() {
         { section: "applications", icon: "description", label: "Applications", badge: pendingCount },
         { section: "system", icon: "admin_panel_settings", label: "System Control", badge: announcements.length },
         { section: "users", icon: "people", label: "Users", badge: 0 },
+        { section: "banks", icon: "account_balance", label: "Bank Partners", badge: 0 },
         { section: "campaigns", icon: "campaign", label: "Email Campaigns", badge: 0 },
         { section: "blogs", icon: "article", label: "Blogs", badge: 0 },
         { section: "chat", icon: "forum", label: "Student Chat", badge: 0 },
@@ -692,6 +694,7 @@ export default function AdminDashboardPage() {
         applications: 'Applications',
         system: 'System Control',
         users: 'User Management',
+        banks: 'Bank Partners Management',
         campaigns: 'Email Campaigns',
         blogs: 'Blog Management',
         chat: 'Student Chat',
@@ -1521,6 +1524,10 @@ export default function AdminDashboardPage() {
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {activeSection === "banks" && (
+                        <AdminBanksSection />
                     )}
 
                     {/* ─── USERS MANAGEMENT DASHBOARD ──────────────────────────────────────── */}

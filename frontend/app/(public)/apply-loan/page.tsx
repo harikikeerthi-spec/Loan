@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { applicationApi, authApi } from "@/lib/api";
+import { applicationApi, authApi, aiApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
 
@@ -109,6 +109,7 @@ export default function ApplyLoanPage() {
     const [error, setError] = useState("");
     const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
     const [profileLoaded, setProfileLoaded] = useState(false);
+    const [validatingUniversity, setValidatingUniversity] = useState(false);
 
     // Pre-fill personal info from user profile and URL params
     useEffect(() => {
@@ -217,7 +218,7 @@ export default function ApplyLoanPage() {
         update("amount", formatted);
     };
 
-    const validateStep1 = (): boolean => {
+    const validateStep1 = async (): Promise<boolean> => {
         const errors: Record<string, string> = {};
         if (!formData.loanType) errors.loanType = "Please select a loan type";
         if (!formData.country) {
@@ -236,6 +237,26 @@ export default function ApplyLoanPage() {
         } else if (Number(cleanAmount) > 15000000) {
             errors.amount = "Maximum loan amount cannot exceed ₹1,50,00,000 (1.5 Crore)";
         }
+
+        if (Object.keys(errors).length === 0) {
+            const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+            setValidatingUniversity(true);
+            try {
+                const res = await aiApi.validateUniversityCountry(formData.university, selectedCountry) as any;
+                if (res && res.success && !res.valid) {
+                    let errMsg = `This university does not seem to be located in ${selectedCountry}.`;
+                    if (res.correctedCountry) {
+                        errMsg += ` It appears to be in ${res.correctedCountry}.`;
+                    }
+                    errors.university = errMsg;
+                }
+            } catch (err) {
+                console.error("AI university verification failed", err);
+            } finally {
+                setValidatingUniversity(false);
+            }
+        }
+
         setStepErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -310,8 +331,11 @@ export default function ApplyLoanPage() {
         return Object.keys(errors).length === 0;
     };
 
-    const next = () => {
-        if (step === 1 && !validateStep1()) return;
+    const next = async () => {
+        if (step === 1) {
+            const isValid = await validateStep1();
+            if (!isValid) return;
+        }
         if (step === 2 && !validateStep2()) return;
         setStep((s) => s + 1);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -693,12 +717,15 @@ export default function ApplyLoanPage() {
                                                 { value: "other", label: "Other" }
                                             ]} error={stepErrors.coApplicant} required />
                                         {formData.coApplicant === "other" && (
-                                            <SelectField label="If Other, Specify Relation" icon="people" value={formData.otherRelation} onChange={(v) => update("otherRelation", v)}
-                                                options={[
-                                                    { value: "uncle", label: "Uncle" },
-                                                    { value: "aunt", label: "Aunt" },
-                                                    { value: "brother", label: "Brother" }
-                                                ]} error={stepErrors.otherRelation} required />
+                                            <InputField
+                                                label="If Other, Specify Relation"
+                                                icon="people"
+                                                value={formData.otherRelation}
+                                                onChange={(v) => update("otherRelation", v)}
+                                                placeholder="e.g. Uncle"
+                                                error={stepErrors.otherRelation}
+                                                required
+                                            />
                                         )}
                                     </div>
 
@@ -841,9 +868,22 @@ export default function ApplyLoanPage() {
 
                             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                                 {step < 3 ? (
-                                    <button onClick={next} className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-[#9B51E0] to-[#E040FB] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:brightness-110 hover:shadow-[0_0_20px_rgba(155,81,224,0.4)] transition-all flex items-center justify-center gap-3 group border border-[#e040fb]/30 active:scale-98">
-                                        {step === 2 ? "Save & Continue" : "Next"}
-                                        <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                    <button 
+                                        onClick={next} 
+                                        disabled={step === 1 && validatingUniversity}
+                                        className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-[#9B51E0] to-[#E040FB] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:brightness-110 hover:shadow-[0_0_20px_rgba(155,81,224,0.4)] transition-all flex items-center justify-center gap-3 group border border-[#e040fb]/30 active:scale-98 disabled:opacity-50 cursor-pointer"
+                                    >
+                                        {step === 1 && validatingUniversity ? (
+                                            <>
+                                                <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                                                Verifying target...
+                                            </>
+                                        ) : (
+                                            <>
+                                                {step === 2 ? "Save & Continue" : "Next"}
+                                                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                            </>
+                                        )}
                                     </button>
                                 ) : (
                                     <button

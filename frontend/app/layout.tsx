@@ -6,6 +6,7 @@ import { DialogProvider } from "@/contexts/DialogContext";
 import SelectedUniversityWidget from "@/components/SelectedUniversityWidget";
 import ReferralTracker from "@/components/ReferralTracker";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
+import ProfileGate from "@/components/ProfileGate";
 
 export const metadata: Metadata = {
   title: {
@@ -70,9 +71,11 @@ export default function RootLayout({
             <DialogProvider>
               <ReferralTracker />
               <UniversityProvider>
-                {children}
-                <SelectedUniversityWidget />
-                <CookieConsentBanner />
+                <ProfileGate>
+                  {children}
+                  <SelectedUniversityWidget />
+                  <CookieConsentBanner />
+                </ProfileGate>
               </UniversityProvider>
             </DialogProvider>
           </AuthProvider>

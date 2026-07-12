@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { aiApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function GradeConverterPage() {
+    const { isAuthenticated } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [activeTab, setActiveTab] = useState("single");
@@ -21,8 +26,33 @@ export default function GradeConverterPage() {
         subjects: ""
     });
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("pending_grade_converter_data");
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.activeTab) setActiveTab(parsed.activeTab);
+                    if (parsed.formData) setFormData(parsed.formData);
+                    if (parsed.multipleData) setMultipleData(parsed.multipleData);
+                } catch (e) {
+                    console.error("Failed to restore saved grade converter data", e);
+                }
+                localStorage.removeItem("pending_grade_converter_data");
+            }
+        }
+    }, []);
+
     const handleSingleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!isAuthenticated) {
+            localStorage.setItem("pending_grade_converter_data", JSON.stringify({ activeTab, formData, multipleData }));
+            alert("To view your grade conversion results and AI analysis, please login. You will be redirected to the login page.");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await aiApi.gradeConverter({
@@ -41,6 +71,14 @@ export default function GradeConverterPage() {
 
     const handleMultipleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!isAuthenticated) {
+            localStorage.setItem("pending_grade_converter_data", JSON.stringify({ activeTab, formData, multipleData }));
+            alert("To view your grade conversion results and AI analysis, please login. You will be redirected to the login page.");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
+
         setLoading(true);
         try {
             const marks = multipleData.marks.split(",").map(m => Number(m.trim())).filter(m => !isNaN(m));

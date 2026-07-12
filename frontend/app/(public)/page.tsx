@@ -9,6 +9,20 @@ import PostAdmissionServicesSection from "../../components/PostAdmissionServices
 import { lenders, features } from "../../data/home";
 import { fetchTopGoogleReviews } from "../../lib/googleReviews";
 
+async function getDynamicBanks() {
+    try {
+        const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:5000";
+        const res = await fetch(`${backendUrl}/api/reference/banks`, { next: { revalidate: 60 } });
+        const json = await res.json();
+        if (json?.success && Array.isArray(json.data) && json.data.length > 0) {
+            return json.data;
+        }
+    } catch (e) {
+        console.error("Error fetching dynamic banks for homepage:", e);
+    }
+    return null;
+}
+
 export const metadata: Metadata = {
     title: "Vidya Loans - Find Your Dream Education Abroad",
     description:
@@ -19,6 +33,18 @@ const heroGradient = { background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 
 
 export default async function HomePage() {
     const dynamicTestimonials = await fetchTopGoogleReviews();
+    const dbBanks = await getDynamicBanks();
+    const activeLenders = dbBanks ? dbBanks.map((b: any) => ({
+        name: b.name,
+        slug: b.shortName || b.name.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        // badge: b.isPopular ? "Most Popular" : "",
+        rate: b.interestRateMin === b.interestRateMax ? `${b.interestRateMin}% p.a.` : `${b.interestRateMin}% - ${b.interestRateMax}% p.a.`,
+        time: b.processingTime,
+        fee: b.processingFee,
+        logo: b.logoUrl || "",
+        link: b.website || ""
+    })) : lenders;
+
     return (
         <div className="relative min-h-screen text-gray-900">
             <div className="relative z-10">
@@ -149,9 +175,11 @@ export default async function HomePage() {
                                 </div>
                                 <div className="hidden sm:block w-px h-8 bg-gray-100" />
                                 {[
-                                    { val: `${lenders.length}+`, label: 'Lenders' },
+                                    // { val: `${activeLenders.length}+`, label: 'Lenders' },
+                                    { val: '30+', label: 'Countries' },
                                     { val: '48h', label: 'Approval' },
                                     { val: '₹500Cr+', label: 'Disbursed' },
+
                                 ].map(s => (
                                     <div key={s.label} className="text-center">
                                         <div className="text-[13px] font-black text-[#6605c7]">{s.val}</div>
@@ -187,7 +215,7 @@ export default async function HomePage() {
                                 </div>
                                 <div>
                                     <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Lowest Rate</div>
-                                    <div className="text-xl font-black text-[#1a1626] leading-none">8.5% p.a.</div>
+                                    <div className="text-xl font-black text-[#1a1626] leading-none">10.25% p.a.</div>
                                 </div>
                             </div>
 
@@ -214,30 +242,6 @@ export default async function HomePage() {
                         </div> */}
                     </div>
                 </section>
-
-                {/* Trust Badges */}
-                <div className="bg-white/50 backdrop-blur-sm will-change-transform border-y border-gray-100 py-10">
-                    <div className="max-w-7xl mx-auto px-6">
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-                            {[
-                                { icon: "account_balance", num: "5+", label: "Lending Partners" },
-                                { icon: "speed", num: "48hrs", label: "Quick Approval" },
-                                { icon: "verified_user", num: "100%", label: "Secure & Trusted" },
-                                { icon: "public", num: "30+", label: "Countries Covered" },
-                            ].map((s) => (
-                                <div key={s.label} className="flex items-center gap-4">
-                                    <div className="w-11 h-11 bg-[#6605c7]/5 rounded-xl flex items-center justify-center text-[#6605c7]">
-                                        <span className="material-symbols-outlined text-2xl" aria-hidden="true">{s.icon}</span>
-                                    </div>
-                                    <div>
-                                        <div className="text-xl font-black text-gray-900 leading-none mb-1"><AnimatedNumber value={s.num} /></div>
-                                        <div className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{s.label}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
 
                 {/* Why Choose Us */}
                 <section className="py-24 bg-transparent overflow-hidden">
@@ -396,8 +400,8 @@ export default async function HomePage() {
                                 { icon: '🌍', val: '30+', label: 'Countries' },
                                 { icon: '🏛️', val: '500+', label: 'Universities' },
                                 { icon: '📚', val: '200+', label: 'Courses' },
-                                { icon: '🏆', val: '150+', label: 'Scholarships' },
-                                { icon: '💰', val: '5+', label: 'Loan Partners' },
+
+
                             ].map(s => (
                                 <div key={s.label} className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
                                     <span className="text-lg group-hover:scale-125 transition-transform">{s.icon}</span>
@@ -591,7 +595,7 @@ export default async function HomePage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {lenders.map((l) => (
+                                    {activeLenders.map((l: any) => (
                                         <tr key={l.name} className="hover:bg-[#6605c7]/[0.03] transition-all duration-200 group">
                                             <td className="p-6">
                                                 <Link href={`/bank/${l.slug}`} className="flex items-center gap-4">
@@ -599,7 +603,7 @@ export default async function HomePage() {
                                                         <img
                                                             src={l.logo}
                                                             alt={l.name}
-                                                            className={`w-full h-full object-contain ${l.name.includes("Auxilo") ? "scale-195" : ""}`}
+                                                            className={`w-full h-full object-contain ${l.name.includes("Auxilo") ? "scale-100" : ""}`}
                                                         />
                                                     </div>
                                                     <div>

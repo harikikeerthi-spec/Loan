@@ -80,7 +80,8 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
   const motherName = family.motherName || profile.motherName;
   
   // Dynamically determine relation and fallback co-applicant name
-  const relation = coApplicant.relation || coApplicant.coApplicantRelation || profile.coApplicantRelation || student.coApplicant || "";
+  const rawRelation = coApplicant.relation || coApplicant.coApplicantRelation || profile.coApplicantRelation || student.coApplicant || "";
+  const relation = typeof rawRelation === "string" ? rawRelation : "";
   const relationLabel = relation ? relation.charAt(0).toUpperCase() + relation.slice(1) : "Co-applicant";
   const coApplicantName = coApplicant.name || profile.coApplicantName || relationLabel;
 

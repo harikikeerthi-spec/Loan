@@ -442,6 +442,43 @@ export class AiController {
     }
   }
 
+  @Post('validate-university-country')
+  async validateUniversityCountry(
+    @Body() data: { university: string; country: string }
+  ) {
+    if (!data.university || !data.country) {
+      throw new BadRequestException('University and country are required');
+    }
+
+    const prompt = `You are an expert in global higher education.
+    Task: Verify if the university "${data.university}" is located in the country "${data.country}".
+    
+    Rules:
+    - Consider common variations, abbreviations, or nicknames of the university (e.g. "MIT" is located in "USA" or "United States").
+    - If the university actually exists and is located in the specified country, return: { "valid": true }
+    - If it is located in a DIFFERENT country, return: { "valid": false, "correctedCountry": "Name of the actual country it is in (if known)" }
+    - If the university is fake, fictional, or you have never heard of it, return: { "valid": false }
+    
+    Respond with strictly valid JSON:
+    {
+      "valid": boolean,
+      "correctedCountry": string
+    }`;
+
+    try {
+      const result = await this.openRouterService.getJson<{ valid: boolean; correctedCountry?: string }>(prompt);
+      return {
+        success: true,
+        valid: result.valid,
+        correctedCountry: result.correctedCountry || null
+      };
+    } catch (error) {
+      console.error('AI University Country Check Failed:', error);
+      // Fallback permissive in case AI is down
+      return { success: true, valid: true, correctedCountry: null };
+    }
+  }
+
   @Post('search-advice')
   async searchAdvice(@Body() data: { query: string; type: 'university' | 'course' | 'ug_university'; context?: any }) {
     try {

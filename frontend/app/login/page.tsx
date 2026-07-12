@@ -71,11 +71,20 @@ function LoginContent() {
     }, [countdown]);
 
     const sendOtp = async () => {
-        if (!email.trim()) { setError("Please enter your email"); return; }
+        const emailVal = email.trim();
+        if (!emailVal) {
+            setError("Please enter your email");
+            return;
+        }
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(emailVal)) {
+            setError("Please enter a valid email address");
+            return;
+        }
         setLoading(true);
         setError("");
         try {
-            await authApi.sendOtp(email.trim());
+            await authApi.sendOtp(emailVal);
             setStep("otp");
             setResendDisabled(true);
             setCountdown(60);

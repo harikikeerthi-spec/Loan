@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ReferenceService } from './reference.service';
+import { AdminGuard } from '../auth/admin.guard';
 
 @Controller('reference')
 export class ReferenceController {
@@ -116,6 +117,45 @@ export class ReferenceController {
     @Get('banks/:id')
     async getBankById(@Param('id') id: string) {
         return this.referenceService.getBankById(id);
+    }
+
+    /**
+     * Get bank by slug
+     * GET /reference/banks/slug/:slug
+     */
+    @Get('banks/slug/:slug')
+    async getBankBySlug(@Param('slug') slug: string) {
+        return this.referenceService.getBankBySlug(slug);
+    }
+
+    /**
+     * Create a new bank
+     * POST /reference/banks
+     */
+    @Post('banks')
+    @UseGuards(AdminGuard)
+    async createBank(@Body() body: any) {
+        return this.referenceService.createBank(body);
+    }
+
+    /**
+     * Update an existing bank
+     * PUT /reference/banks/:id
+     */
+    @Put('banks/:id')
+    @UseGuards(AdminGuard)
+    async updateBank(@Param('id') id: string, @Body() body: any) {
+        return this.referenceService.updateBank(id, body);
+    }
+
+    /**
+     * Delete a bank
+     * DELETE /reference/banks/:id
+     */
+    @Delete('banks/:id')
+    @UseGuards(AdminGuard)
+    async deleteBank(@Param('id') id: string) {
+        return this.referenceService.deleteBank(id);
     }
 
     /**

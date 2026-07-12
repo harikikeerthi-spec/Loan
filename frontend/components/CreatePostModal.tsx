@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { communityApi, aiApi } from "@/lib/api";
 import {
     moderateContent,
@@ -57,6 +58,7 @@ export default function CreatePostModal({
     const [similarPosts, setSimilarPosts] = useState<SimilarPost[]>([]);
     const titleRef = useRef<HTMLInputElement>(null);
     const { isAuthenticated } = useAuth();
+    const router = useRouter();
 
     // Reset on open
     useEffect(() => {
@@ -195,6 +197,10 @@ export default function CreatePostModal({
         if (!isAuthenticated) {
             setSubmitError("Please log in to post a question.");
             setStep("appreciate");
+            setTimeout(() => {
+                const currentPath = window.location.pathname + window.location.search;
+                router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+            }, 1500);
             return;
         }
 

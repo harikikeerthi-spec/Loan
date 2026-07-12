@@ -180,9 +180,13 @@ export default function DocumentVaultPage() {
         const fatherEmploymentType = family.fatherEmploymentType || baseProfile.fatherEmploymentType || "employed";
         const motherEmploymentType = family.motherEmploymentType || baseProfile.motherEmploymentType || "employed";
 
+        // Extract co-applicant details from the active application if available
+        const activeApp = applications && applications.length > 0 ? applications[0] : null;
+        const appCoappRelation = activeApp && activeApp.coApplicant && activeApp.coApplicant !== "none" ? activeApp.coApplicant : "";
+
         // Ensure coApplicant has a default name and matches coappRelation
         const coapp = baseProfile.coApplicant || {};
-        const dbRelation = baseProfile.coApplicantRelation || coapp.relation || "";
+        const dbRelation = appCoappRelation || baseProfile.coApplicantRelation || coapp.relation || "";
         const fallbackName = dbRelation ? dbRelation.charAt(0).toUpperCase() + dbRelation.slice(1) : "Co-applicant";
         const coappName = coapp.name || baseProfile.coApplicantName || fallbackName;
 

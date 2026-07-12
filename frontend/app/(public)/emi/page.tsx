@@ -1,15 +1,37 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function EmiCalculatorPage() {
+    const { isAuthenticated } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const [principal, setPrincipal] = useState(2500000);
     const [rate, setRate] = useState(10.5);
     const [tenure, setTenure] = useState(10); // in years
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("pending_emi_data");
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.principal) setPrincipal(parsed.principal);
+                    if (parsed.rate) setRate(parsed.rate);
+                    if (parsed.tenure) setTenure(parsed.tenure);
+                } catch (e) {
+                    console.error("Failed to restore saved EMI data", e);
+                }
+                localStorage.removeItem("pending_emi_data");
+            }
+        }
+    }, []);
 
     const { emi, totalInterest, totalPayable, amortization } = useMemo(() => {
         const monthlyRate = rate / 12 / 100;
@@ -72,6 +94,12 @@ export default function EmiCalculatorPage() {
     };
 
     const downloadSchedule = () => {
+        if (!isAuthenticated) {
+            localStorage.setItem("pending_emi_data", JSON.stringify({ principal, rate, tenure }));
+            alert("Please login to download your amortization schedule. You will be redirected to the login page.");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
         const headers = ["Month", "Principal Payment (INR)", "Interest Payment (INR)", "Remaining Balance (INR)"];
         const rows = amortization.map((row) => [
             row.month,
@@ -149,8 +177,8 @@ export default function EmiCalculatorPage() {
                                     <span className="material-symbols-outlined text-[#6605c7] text-[18px]">calendar_month</span>
                                     Amortization Schedule
                                 </h3>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
+                                <div className="overflow-x-auto relative">
+                                    <table className={`w-full text-left ${!isAuthenticated ? 'blur-sm select-none pointer-events-none' : ''}`}>
                                         <thead>
                                             <tr className="text-[11px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-50">
                                                 <th className="pb-3 pr-4">Month</th>
@@ -170,6 +198,24 @@ export default function EmiCalculatorPage() {
                                             ))}
                                         </tbody>
                                     </table>
+
+                                    {!isAuthenticated && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px] p-6 text-center">
+                                            <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center mb-3">
+                                                <span className="material-symbols-outlined text-[#6605c7] text-xl">lock</span>
+                                            </div>
+                                            <p className="text-gray-900 font-bold text-sm mb-3">Login to unlock full 12-month amortization schedule</p>
+                                            <button 
+                                                onClick={() => {
+                                                    localStorage.setItem("pending_emi_data", JSON.stringify({ principal, rate, tenure }));
+                                                    router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+                                                }}
+                                                className="px-6 py-2 bg-[#6605c7] hover:bg-[#5504a6] text-white text-[11px] uppercase tracking-widest font-bold rounded-xl transition-all shadow-md cursor-pointer"
+                                            >
+                                                Unlock Schedule
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

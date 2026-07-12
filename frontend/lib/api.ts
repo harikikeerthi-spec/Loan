@@ -795,6 +795,12 @@ export const aiApi = {
             body: JSON.stringify(data),
         }),
 
+    validateUniversityCountry: (university: string, country: string) =>
+        apiFetch(`${API_URL}/ai/validate-university-country`, {
+            method: "POST",
+            body: JSON.stringify({ university, country }),
+        }),
+
     saveVisaReport: (data: Record<string, unknown>) =>
         apiFetch(`${API_URL}/ai/visa-interview/save-report`, {
             method: "POST",
@@ -805,6 +811,8 @@ export const aiApi = {
 // ─── Reference Data ───────────────────────────────────────────────────
 export const referenceApi = {
     getBanks: () => apiFetch(HttpApiPaths.reference.banks()),
+    getBankBySlug: (slug: string) =>
+        apiFetch(`${API_URL}/reference/banks/slug/${slug}`),
     getCountries: () =>
         apiFetch(HttpApiPaths.reference.countries()),
     getUniversities: () =>
@@ -876,6 +884,22 @@ export const referralApi = {
 
 // ─── Admin ────────────────────────────────────────────────────────────
 export const adminApi = {
+    // Banks Management
+    createBank: (data: any) =>
+        apiFetch(`${API_URL}/reference/banks`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    updateBank: (id: string, data: any) =>
+        apiFetch(`${API_URL}/reference/banks/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+    deleteBank: (id: string) =>
+        apiFetch(`${API_URL}/reference/banks/${id}`, {
+            method: "DELETE",
+        }),
+
     // Stats
     getBlogStats: () =>
         apiFetch(HttpApiPaths.admin.blogsStats()),

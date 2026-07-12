@@ -5,6 +5,8 @@ import ComparisonGrid from "./university-comparison/ComparisonGrid";
 import MetricComparison from "./university-comparison/MetricComparison";
 import WeightedScorer from "./university-comparison/WeightedScorer";
 import { aiApi, referenceApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 type University = {
   id: string;
@@ -33,6 +35,8 @@ interface UniversityComparisonFlowProps {
 export default function UniversityComparisonFlow({
   initialUnis = [],
 }: UniversityComparisonFlowProps) {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
   const [selectedUnis, setSelectedUnis] = useState<University[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<University[]>([]);
@@ -291,6 +295,24 @@ export default function UniversityComparisonFlow({
     }
   }, [initialUnisSerialized, dbUnis]);
 
+  useEffect(() => {
+    if (activeUnis.length > 0 && typeof window !== "undefined") {
+      const saved = localStorage.getItem("pending_compare_unis_data");
+      if (saved) {
+        try {
+          const savedIds = JSON.parse(saved) as string[];
+          const restoredUnis = activeUnis.filter(u => savedIds.includes(u.id));
+          if (restoredUnis.length > 0) {
+            setSelectedUnis(restoredUnis);
+          }
+        } catch (e) {
+          console.error("Failed to restore comparison universities", e);
+        }
+        localStorage.removeItem("pending_compare_unis_data");
+      }
+    }
+  }, [dbUnis, activeUnis]);
+
   // Reset AI report when list of selected universities changes
   useEffect(() => {
     setAiReport(null);
@@ -388,6 +410,14 @@ export default function UniversityComparisonFlow({
 
   const generateAiInsights = async () => {
     if (selectedUnis.length < 2) return;
+
+    if (!isAuthenticated) {
+      localStorage.setItem("pending_compare_unis_data", JSON.stringify(selectedUnis.map(u => u.id)));
+      alert("To view detailed AI university comparison insights and advice, please login. You will be redirected to the login page.");
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
     setIsGeneratingAi(true);
     setAiReport(null);
 

@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { aiApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function AdmitPredictorPage() {
+    const { isAuthenticated } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [formData, setFormData] = useState({
@@ -19,8 +24,30 @@ export default function AdmitPredictorPage() {
         researchPapers: "0"
     });
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("pending_admit_predictor_data");
+            if (saved) {
+                try {
+                    setFormData(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Failed to restore saved admit predictor data", e);
+                }
+                localStorage.removeItem("pending_admit_predictor_data");
+            }
+        }
+    }, []);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!isAuthenticated) {
+            localStorage.setItem("pending_admit_predictor_data", JSON.stringify(formData));
+            alert("To view your admission probability and detailed AI feedback, please login. You will be redirected to the login page.");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await aiApi.admitPredictor(formData) as any;

@@ -1,17 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { aiApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function SOPAnalyzerPage() {
+    const { isAuthenticated } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(false);
     const [humanizing, setHumanizing] = useState(false);
     const [sopText, setSopText] = useState("");
     const [result, setResult] = useState<any>(null);
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("pending_sop_analyzer_text");
+            if (saved) {
+                setSopText(saved);
+                localStorage.removeItem("pending_sop_analyzer_text");
+            }
+        }
+    }, []);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!sopText.trim()) return;
+
+        if (!isAuthenticated) {
+            localStorage.setItem("pending_sop_analyzer_text", sopText);
+            alert("To view your SOP quality score and analysis, please login. You will be redirected to the login page.");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
 
         setLoading(true);
         try {
@@ -27,6 +49,14 @@ export default function SOPAnalyzerPage() {
 
     const handleHumanize = async () => {
         if (!sopText.trim()) return;
+
+        if (!isAuthenticated) {
+            localStorage.setItem("pending_sop_analyzer_text", sopText);
+            alert("To humanize your SOP and view analysis, please login. You will be redirected to the login page.");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
+
         setHumanizing(true);
         try {
             const res = await aiApi.sopHumanize(sopText) as any;

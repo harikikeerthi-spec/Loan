@@ -4525,6 +4525,8 @@ const EvvAnalysisTab = ({
 
   // Retrieve transactions for viewer
   const rawTransactions: any[] = parseJsonField(application.evvTransactions || "[]");
+  const evvTotalSnapshots = application.evvTotalSnapshots ?? snapshots.length ?? 0;
+  const evvTotalTransactions = application.evvTotalTransactions ?? rawTransactions.length ?? 0;
   // If evvTransactions doesn't exist, we fall back to generating or looking up from standard location. 
   // Let's also verify if there is an alternative location or we can mock visually.
   const transactionsList = rawTransactions.length > 0 ? rawTransactions : (legacyBreakdown.length > 0 ? [] : []);
@@ -4613,7 +4615,7 @@ const EvvAnalysisTab = ({
     datasets: [
       {
         label: "Average Monthly Balance (INR)",
-        data: monthlyMetrics.map((m: any) => m.avgBalance),
+        data: monthlyMetrics.map((m: any) => m.snapshotAvg ?? m.avgBalance),
         borderColor: "#4f46e5",
         backgroundColor: "rgba(79, 70, 229, 0.05)",
         fill: true,
@@ -4624,7 +4626,7 @@ const EvvAnalysisTab = ({
       },
       {
         label: "Minimum Monthly Balance (INR)",
-        data: monthlyMetrics.map((m: any) => m.lowestBalance),
+        data: monthlyMetrics.map((m: any) => m.snapshotMin ?? m.lowestBalance),
         borderColor: "#f43f5e",
         backgroundColor: "transparent",
         fill: false,
@@ -4740,6 +4742,47 @@ const EvvAnalysisTab = ({
           </button>
         </div>
       </div>
+
+      {/* EVV Summary Card Row */}
+      {evvStatus && evvStatus !== "PROCESSING" && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 no-print">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-[24px] shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              Overall EVV
+            </span>
+            <span className="text-[20px] font-black text-slate-900 dark:text-white mt-2">
+              ₹{evvOverall.toLocaleString("en-IN")}
+            </span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-[24px] shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              Snapshots
+            </span>
+            <span className="text-[20px] font-black text-slate-900 dark:text-white mt-2">
+              {evvTotalSnapshots}
+            </span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-[24px] shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              Transactions
+            </span>
+            <span className="text-[20px] font-black text-slate-900 dark:text-white mt-2">
+              {evvTotalTransactions}
+            </span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-[24px] shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              Period
+            </span>
+            <span className="text-[13px] font-black text-slate-900 dark:text-white mt-3 truncate">
+              {evvPeriod?.from && evvPeriod?.to ? `${evvPeriod.from} - ${evvPeriod.to}` : "—"}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Main Grid: Info Upload Zone & Underwriting Verdict Card */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 no-print">
@@ -5047,20 +5090,20 @@ const EvvAnalysisTab = ({
                       </div>
                       <div className="grid grid-cols-2 gap-3 text-left">
                         <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Average Balance</span>
-                          <span className="text-[13px] font-black text-slate-800 dark:text-indigo-400">₹{(item.avgBalance || 0).toLocaleString("en-IN")}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Snapshot Avg ({item.snapshotPoints || 0} pts)</span>
+                          <span className="text-[13px] font-black text-slate-800 dark:text-indigo-400">₹{Number(item.snapshotAvg ?? item.avgBalance ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Lowest Balance</span>
-                          <span className="text-[13px] font-black text-rose-500">₹{(item.lowestBalance || 0).toLocaleString("en-IN")}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Snapshot Min</span>
+                          <span className="text-[13px] font-black text-rose-500">₹{Number(item.snapshotMin ?? item.lowestBalance ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Snapshot Max</span>
+                          <span className="text-[13px] font-black text-emerald-500">₹{Number(item.snapshotMax ?? item.highestBalance ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div>
                           <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Credits</span>
                           <span className="text-[12px] font-semibold text-emerald-600">₹{(item.totalCredits || 0).toLocaleString("en-IN")}</span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Total Debits</span>
-                          <span className="text-[12px] font-semibold text-rose-600">₹{(item.totalDebits || 0).toLocaleString("en-IN")}</span>
                         </div>
                       </div>
                     </div>
@@ -5078,7 +5121,7 @@ const EvvAnalysisTab = ({
                     <table className="w-full">
                       <thead>
                         <tr className="border-t border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60">
-                          {["Month", "Opening", "Avg (MAB)", "Min Bal", "Max Bal", "Credits Count", "Debits Count", "Closing Bal"].map((col, i) => (
+                          {["Month", "Points", "Opening", "Avg (MAB)", "Min Bal", "Max Bal", "Credits Count", "Debits Count", "Closing Bal"].map((col, i) => (
                             <th
                               key={i}
                               className={`px-6 py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap ${i === 0 ? "text-left" : "text-right"}`}
@@ -5097,17 +5140,20 @@ const EvvAnalysisTab = ({
                             <td className="px-6 py-4 text-[12px] font-black text-slate-800 dark:text-white uppercase tracking-wider text-left">
                               {item.monthLabel || item.month}
                             </td>
+                            <td className="px-6 py-4 text-[12px] text-right font-bold text-slate-600 dark:text-slate-400">
+                              {item.snapshotPoints || 0}
+                            </td>
                             <td className="px-6 py-4 text-[12px] text-right font-medium dark:text-slate-300 tabular-nums">
                               ₹{(item.openingBalance || 0).toLocaleString("en-IN")}
                             </td>
                             <td className="px-6 py-4 text-[12px] text-right font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
-                              ₹{(item.avgBalance || 0).toLocaleString("en-IN")}
+                              ₹{Number(item.snapshotAvg ?? item.avgBalance ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td className="px-6 py-4 text-[12px] text-right font-medium text-rose-500 tabular-nums">
-                              ₹{(item.lowestBalance || 0).toLocaleString("en-IN")}
+                              ₹{Number(item.snapshotMin ?? item.lowestBalance ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td className="px-6 py-4 text-[12px] text-right font-medium text-emerald-500 tabular-nums">
-                              ₹{(item.highestBalance || 0).toLocaleString("en-IN")}
+                              ₹{Number(item.snapshotMax ?? item.highestBalance ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td className="px-6 py-4 text-[12px] text-right font-medium text-slate-600 dark:text-slate-400">
                               {item.creditCount || 0}

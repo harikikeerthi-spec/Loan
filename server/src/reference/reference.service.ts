@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ReferenceService {
@@ -104,6 +105,43 @@ export class ReferenceService {
   async getBankById(id: string) {
     const { data } = await this.db.from('Bank').select('*').eq('id', id).single();
     return { success: true, data };
+  }
+
+  async getBankBySlug(slug: string) {
+    const { data } = await this.db.from('Bank').select('*').eq('shortName', slug).maybeSingle();
+    return { success: true, data };
+  }
+
+  async createBank(bankData: any) {
+    const now = new Date().toISOString();
+    const payload = {
+      id: bankData.id || randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+      ...bankData,
+    };
+    const { data, error } = await this.db.from('Bank').insert([payload]).select().single();
+    if (error) throw new Error(error.message);
+    return { success: true, data };
+  }
+
+  async updateBank(id: string, bankData: any) {
+    const now = new Date().toISOString();
+    const payload = {
+      ...bankData,
+      updatedAt: now,
+    };
+    delete payload.id;
+    delete payload.createdAt;
+    const { data, error } = await this.db.from('Bank').update(payload).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
+    return { success: true, data };
+  }
+
+  async deleteBank(id: string) {
+    const { error } = await this.db.from('Bank').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+    return { success: true, message: 'Bank deleted successfully' };
   }
 
   async getBanksByType(type: string) {

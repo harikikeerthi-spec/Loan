@@ -30,7 +30,7 @@ export default function PostAdmissionServicesSection() {
         setEmail("");
         setSubmitted(false);
         setError("");
-        
+
         // Check if already subscribed in localStorage
         if (typeof window !== "undefined") {
             const hasSubscribed = localStorage.getItem(`subscribed_service_${id}`);
@@ -39,7 +39,7 @@ export default function PostAdmissionServicesSection() {
                 setSubmitted(true);
             }
         }
-        
+
         setIsOpen(true);
     };
 
@@ -315,8 +315,6 @@ export default function PostAdmissionServicesSection() {
                 {/* Stats Bar */}
                 <div className="mt-8 flex flex-wrap gap-4 justify-center">
                     {[
-                        { icon: 'verified', val: '98%', label: 'Visa Success Rate' },
-                        { icon: 'home_pin', val: '1,000+', label: 'Verified Listings' },
                         { icon: 'public', val: '30+', label: 'Countries Covered' },
                         { icon: 'payments', val: '0%', label: 'Forex Markup' },
                         { icon: 'account_balance', val: 'Pre-Arrival', label: 'Bank Accounts' },

@@ -10,24 +10,130 @@ interface Props {
     }>;
 }
 
+async function getDynamicBankBySlug(slug: string) {
+    try {
+        const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:5000";
+        const res = await fetch(`${backendUrl}/api/reference/banks/slug/${slug}`, { next: { revalidate: 60 } });
+        const json = await res.json();
+        if (json?.success && json.data) {
+            return json.data;
+        }
+    } catch (e) {
+        console.error(`Error fetching dynamic bank ${slug}:`, e);
+    }
+    return null;
+}
+
 export async function generateMetadata({ params }: Props) {
     const { slug } = await params;
-    const bank = banks[slug];
-    if (!bank) return { title: "Bank Not Found" };
+    const dbBank = await getDynamicBankBySlug(slug);
+    const name = dbBank ? dbBank.name : (banks[slug]?.name || "Bank Not Found");
+    const description = dbBank ? (dbBank.features?.[0] || `Get customized education loans from ${dbBank.name}.`) : (banks[slug]?.description || "");
+    
     return {
-        title: `${bank.name} Education Loan - VidyaLoan`,
-        description: bank.description,
+        title: `${name} Education Loan - VidyaLoan`,
+        description: description,
     };
 }
 
 export default async function BankPage({ params }: Props) {
     const { slug } = await params;
-    const bank = banks[slug];
-    const dynamicTestimonials = await fetchTopGoogleReviews();
+    const dbBank = await getDynamicBankBySlug(slug);
+    let bank = banks[slug];
+
+    if (dbBank) {
+        const roiStr = dbBank.interestRateMin === dbBank.interestRateMax 
+            ? `${dbBank.interestRateMin}%` 
+            : `${dbBank.interestRateMin}% - ${dbBank.interestRateMax}%`;
+            
+        const dbFeatures = dbBank.features && dbBank.features.length > 0 ? dbBank.features.map((feat: string, i: number) => {
+            const colors = [
+                { iconColor: "text-red-500", bgColor: "bg-red-500/10", icon: "percent" },
+                { iconColor: "text-blue-500", bgColor: "bg-blue-500/10", icon: "account_balance" },
+                { iconColor: "text-green-500", bgColor: "bg-green-500/10", icon: "schedule" },
+                { iconColor: "text-orange-500", bgColor: "bg-orange-500/10", icon: "payments" }
+            ];
+            const parts = feat.split(":");
+            const title = parts[0]?.trim() || "Feature";
+            const desc = parts.slice(1).join(":")?.trim() || feat;
+            const style = colors[i % colors.length];
+            return {
+                icon: style.icon,
+                title,
+                desc,
+                iconColor: style.iconColor,
+                bgColor: style.bgColor
+            };
+        }) : [];
+
+        if (bank) {
+            bank = {
+                ...bank,
+                name: dbBank.name,
+                logo: dbBank.logoUrl || bank.logo || "",
+                interestRate: roiStr,
+                maxLoan: dbBank.maxLoanAmount,
+                approvalTime: dbBank.processingTime,
+                description: dbBank.features?.[0] || bank.description,
+                features: dbFeatures.length > 0 ? dbFeatures : bank.features,
+                specifications: [
+                    { label: "Interest Rate", value: `${roiStr} p.a.` },
+                    { label: "Loan Amount", value: dbBank.maxLoanAmount },
+                    { label: "Processing Fee", value: dbBank.processingFee },
+                    { label: "Repayment Tenure", value: bank.specifications?.find(s => s.label === "Repayment Tenure")?.value || "Up to 15 years" },
+                    { label: "Moratorium Period", value: bank.specifications?.find(s => s.label === "Moratorium Period")?.value || "Course + 12 months" },
+                    { label: "Collateral", value: dbBank.collateralRequired ? "Required" : `Not required up to ${dbBank.collateralFreeLimit || '₹40L'}` }
+                ]
+            };
+        } else {
+            bank = {
+                name: dbBank.name,
+                slug: dbBank.shortName || slug,
+                logo: dbBank.logoUrl || "",
+                rating: "4.5",
+                description: dbBank.features?.[0] || `Get customized education loans from ${dbBank.name}.`,
+                interestRate: roiStr,
+                maxLoan: dbBank.maxLoanAmount,
+                approvalTime: dbBank.processingTime,
+                primaryColor: "#6605c7",
+                gradient: "linear-gradient(135deg, #6605c7 0%, #4f0496 100%)",
+                stats: {
+                    studentsFunded: "10,000+",
+                    universitiesCovered: "500+",
+                    countriesSupported: "20+",
+                    customerRating: "4.5★"
+                },
+                features: dbFeatures,
+                specifications: [
+                    { label: "Interest Rate", value: `${roiStr} p.a.` },
+                    { label: "Loan Amount", value: dbBank.maxLoanAmount },
+                    { label: "Processing Fee", value: dbBank.processingFee },
+                    { label: "Repayment Tenure", value: "Up to 15 years" },
+                    { label: "Moratorium Period", value: "Course + 12 months" },
+                    { label: "Collateral", value: dbBank.collateralRequired ? "Required" : `Not required up to ${dbBank.collateralFreeLimit || '₹40L'}` }
+                ],
+                eligibility: [
+                    { title: "Admission Confirmed", desc: "From recognized university abroad" },
+                    { title: "Co-Applicant Required", desc: "Parent or guardian with income proof" }
+                ],
+                documents: [
+                    { icon: "badge", title: "Identity Proof", desc: "Passport, Aadhaar, PAN Card", color: "red" },
+                    { icon: "school", title: "Admission Letter", desc: "From the university/college", color: "blue" }
+                ],
+                courses: [
+                    { icon: "computer", title: "MS in CS", color: "red" },
+                    { icon: "business", title: "MBA", color: "blue" }
+                ],
+                uniqueFeatures: []
+            };
+        }
+    }
 
     if (!bank) {
         notFound();
     }
+
+    const dynamicTestimonials = await fetchTopGoogleReviews();
 
     const howItWorksSteps = [
         { icon: "checklist", title: "Check Eligibility", desc: "Use our free tool to verify your eligibility and receive conditional loan offers instantly." },

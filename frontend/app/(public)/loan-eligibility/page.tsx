@@ -2,8 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { aiApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function LoanEligibilityPage() {
+    const { isAuthenticated } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [userId, setUserId] = useState<string | null>(null);
@@ -11,6 +16,20 @@ export default function LoanEligibilityPage() {
     useEffect(() => {
         if (typeof window !== "undefined") {
             setUserId(localStorage.getItem("userId"));
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("pending_loan_eligibility_data");
+            if (saved) {
+                try {
+                    setFormData(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Failed to restore saved loan eligibility data", e);
+                }
+                localStorage.removeItem("pending_loan_eligibility_data");
+            }
         }
     }, []);
 
@@ -27,6 +46,14 @@ export default function LoanEligibilityPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!isAuthenticated) {
+            localStorage.setItem("pending_loan_eligibility_data", JSON.stringify(formData));
+            alert("To view your eligibility score, rate estimates, and pre-approved offers, please login. You will be redirected to the login page.");
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
+
         setLoading(true);
         try {
             const data = await aiApi.loanEligibility({ ...formData, userId });
