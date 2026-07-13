@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { authApi } from "@/lib/api";
@@ -11,6 +12,7 @@ import { formatPhone, isPhoneValid } from "@/lib/validation";
 export default function ProfilePage() {
     const { user, refreshUser } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -33,6 +35,16 @@ export default function ProfilePage() {
             });
         }
     }, [user]);
+
+    // Auto-enter edit mode when ?edit=1 is present in the URL
+    useEffect(() => {
+        try {
+            const edit = searchParams?.get?.('edit');
+            if (edit === '1' || edit === 'true') {
+                setEditing(true);
+            }
+        } catch (e) { }
+    }, [searchParams]);
 
     // Fetch latest user details on profile page mount
     useEffect(() => {

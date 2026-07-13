@@ -4,10 +4,10 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffLayout } from "@/app/staff/layout";
-import { adminApi, referenceApi, staffProfileApi, apiFetch } from "@/lib/api";
+import { adminApi, staffProfileApi, apiFetch } from "@/lib/api";
 import Link from "next/link";
 import SendEmailModal from "@/components/staff/SendEmailModal";
-import ShareWithBankModal from "@/components/staff/ShareWithBankModal";
+ 
 import { useDialog } from "@/contexts/DialogContext";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -173,16 +173,13 @@ export default function IncomingQueuePage() {
     const [searchQuery, setSearchQuery] = useState("");
     const applicationsPerPage = 20;
 
-    const [availableBanks, setAvailableBanks] = useState<any[]>([]);
-    const [sendToBankSelection, setSendToBankSelection] = useState<Record<string, string>>({});
-    const [sendToBankLoadingId, setSendToBankLoadingId] = useState<string | null>(null);
+    
 
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
     const [activeContactPopup, setActiveContactPopup] = useState<{ id: string; type: 'email' | 'phone' } | null>(null);
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-    const [editingTargetBankRowId, setEditingTargetBankRowId] = useState<string | null>(null);
-    const [tempSelectedBanks, setTempSelectedBanks] = useState<string[]>([]);
+    
     const [activeDockApp, setActiveDockApp] = useState<any | null>(null);
 
     // Email Modal
@@ -190,10 +187,7 @@ export default function IncomingQueuePage() {
     const [emailModalRecipient, setEmailModalRecipient] = useState("");
     const [emailModalRecipientName, setEmailModalRecipientName] = useState("");
 
-    // Share / Route with Bank Modal
-    const [selectedAppForShare, setSelectedAppForShare] = useState<any | null>(null);
-    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const [isMultiBankShare, setIsMultiBankShare] = useState(false);
+    
 
     // Rejection Modal
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -229,17 +223,7 @@ export default function IncomingQueuePage() {
         loadData();
     }, [loadData]);
 
-    useEffect(() => {
-        const fetchBanks = async () => {
-            try {
-                const res: any = await referenceApi.getBanks();
-                setAvailableBanks(res?.data || res || []);
-            } catch (e) {
-                console.error("Failed to load reference banks", e);
-            }
-        };
-        fetchBanks();
-    }, []);
+    
 
     const toggleRowExpanded = (rowId: string) => {
         setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
@@ -251,16 +235,7 @@ export default function IncomingQueuePage() {
         setIsEmailModalOpen(true);
     };
 
-    const getBankDisplayName = (bank: any) =>
-        bank?.name || bank?.bankName || bank?.displayName || bank?.title || bank?.label || bank?.id || "";
-
-    const bankOptions = [
-        "Auxilo Finserve",
-        "Avanse Financial",
-        "HDFC Credila",
-        "IDFC FIRST Bank",
-        "Poonawalla Fincorp",
-    ];
+    
 
     const logActivity = async (type: string, msg: string, icon: string, color: string) => {
         try {
@@ -270,61 +245,29 @@ export default function IncomingQueuePage() {
         }
     };
 
-    const handleSendApplicationToBank = async (item: any, selectedBank: string) => {
+    
+
+    const handleApproveApplication = async (item: any) => {
         const appId = item.id || item._id;
         if (!appId) {
             alert("Application ID is missing.");
             return;
         }
-        if (!selectedBank) {
-            alert("Select a bank before sending this application.");
-            return;
-        }
 
-        setSendToBankLoadingId(appId);
         try {
             await adminApi.updateApplicationStatus(appId, {
-                status: "submitted_to_bank",
-                bank: selectedBank,
-                stage: "Submitted",
-                progress: 50,
-                remarks: `Sent to ${selectedBank} from staff incoming queue.`,
+                status: 'approved',
+                stage: 'approved',
+                progress: 100,
+                remarks: 'Moved to active pipeline by staff',
             });
 
-            // Map selectedBank display name to reference bank details
-            const matchingBank = availableBanks.find(b => getBankDisplayName(b) === selectedBank);
-            const bankId = matchingBank?.id || matchingBank?.bankId || selectedBank.toLowerCase();
-            const bankName = matchingBank?.name || matchingBank?.bankName || selectedBank;
-            const staffName = user
-                ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
-                : "Staff";
-
-            try {
-                await apiFetch("/api/bank/workflow/submit", {
-                    method: "POST",
-                    body: JSON.stringify({
-                        applicationId: appId,
-                        bankId,
-                        bankName,
-                        submittedBy: staffName,
-                    }),
-                });
-            } catch (workflowErr: any) {
-                console.warn("Workflow submit warning:", workflowErr?.message);
-            }
-
-            await logActivity("share", `Sent application to ${selectedBank}`, "send", "text-indigo-600 bg-indigo-50");
-            setActiveMenuId(null);
-            setMenuPosition(null);
-
-            // Reload local list and trigger sidebar layout counts update
+            await logActivity('approved', `Application #${item.applicationNumber || (appId + '').slice(-6)} moved to active pipeline`, 'check_circle', 'bg-emerald-50 text-emerald-700');
+            setActiveDockApp(null);
             await loadData();
             await fetchBadgeStats();
-            setActiveDockApp(null);
-        } catch (e: unknown) {
-            alert(e instanceof Error ? e.message : "Failed to send application to bank");
-        } finally {
-            setSendToBankLoadingId(null);
+        } catch (e: any) {
+            alert(e?.message || 'Failed to approve application');
         }
     };
 
@@ -406,7 +349,7 @@ export default function IncomingQueuePage() {
                         <TableHeader>
                             <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">APPLICANT PROFILE</span></th>
                             <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">COLLEGE NAME</span></th>
-                            <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">TARGET BANK</span></th>
+                            
                             <th className="px-5 py-5 w-48"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">PROGRESS</span></th>
                             <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">CURRENT STATUS</span></th>
                             <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
@@ -582,119 +525,6 @@ export default function IncomingQueuePage() {
                                                     {item.courseName || item.program || item.courseLevel || '—'}
                                                 </p>
                                             </td>
-                                            <td className="px-6 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors min-w-[240px] w-[260px]">
-                                                <div className="flex flex-col justify-center min-h-[60px] gap-1">
-                                                    {editingTargetBankRowId === rowId ? (
-                                                        <div className="relative z-30 bg-white border border-slate-200 rounded-xl p-3 shadow-xl max-w-[280px]" onClick={(e) => e.stopPropagation()}>
-                                                            <div className="text-[10px] font-black uppercase text-slate-400 mb-2">Select Target Banks</div>
-                                                            <div className="max-h-36 overflow-y-auto space-y-1.5 mb-3 custom-scrollbar">
-                                                                {bankOptions.map((bankName: string) => {
-                                                                    const isChecked = tempSelectedBanks.includes(bankName);
-                                                                    return (
-                                                                        <label key={bankName} className="flex items-center gap-2 cursor-pointer py-1 px-1.5 rounded hover:bg-slate-50 text-[11px] font-bold text-slate-700">
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={isChecked}
-                                                                                onChange={() => {
-                                                                                    setTempSelectedBanks(prev => {
-                                                                                        if (prev.includes(bankName)) {
-                                                                                            return prev.filter(b => b !== bankName);
-                                                                                        } else {
-                                                                                            if (prev.length >= 3) {
-                                                                                                alert("You can select a maximum of 3 target banks.");
-                                                                                                return prev;
-                                                                                            }
-                                                                                            return [...prev, bankName];
-                                                                                        }
-                                                                                    });
-                                                                                }}
-                                                                                className="rounded text-[#6605c7] focus:ring-[#6605c7] h-3.5 w-3.5"
-                                                                            />
-                                                                            <span>{bankName}</span>
-                                                                        </label>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                            <div className="flex gap-2 justify-end">
-                                                                <button
-                                                                    onClick={() => setEditingTargetBankRowId(null)}
-                                                                    className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                                <button
-                                                                    onClick={async () => {
-                                                                        try {
-                                                                            const updateVal = tempSelectedBanks.length > 0 ? tempSelectedBanks.join(', ') : 'ANY BANK';
-                                                                            await adminApi.updateApplication(item.id || item._id, { bank: updateVal });
-                                                                            // Update local state item bank
-                                                                            setData(prevData =>
-                                                                                prevData.map(d =>
-                                                                                    (d.id || d._id) === (item.id || item._id)
-                                                                                        ? { ...d, bank: updateVal }
-                                                                                        : d
-                                                                                )
-                                                                            );
-                                                                            setEditingTargetBankRowId(null);
-                                                                        } catch (err) {
-                                                                            alert("Failed to update target banks");
-                                                                        }
-                                                                    }}
-                                                                    className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white bg-[#6605c7] hover:bg-purple-800 rounded-lg transition-colors"
-                                                                >
-                                                                    Save
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center justify-between group/cell w-full">
-                                                            <div className="flex items-center">
-                                                                {(() => {
-                                                                    const bStr = item.bank || item.targetBank || '';
-                                                                    if (!bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank' || bStr.toLowerCase().replace(/\s+/g, '') === 'pendingpartner') {
-                                                                        return <span className="text-[12px] font-bold text-slate-400 uppercase">Any Bank</span>;
-                                                                    }
-                                                                    if (bStr.includes(',') || (item.status || '').toLowerCase() === 'routed_multiparty') {
-                                                                        const banksList = bStr.split(',').map((s: string) => s.trim()).filter(Boolean);
-                                                                        return (
-                                                                            <div className="flex flex-wrap items-center gap-1.5">
-                                                                                {banksList.map((bankName: string, index: number) => (
-                                                                                    <div key={index} className="h-9 px-2 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
-                                                                                        {renderBankLogo(bankName, "h-7 max-w-[80px]")}
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        );
-                                                                    }
-                                                                    const bName = bStr.toLowerCase();
-                                                                    if (bName.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC FIRST Bank" className="h-12 max-w-[190px] w-auto object-contain" />;
-                                                                    if (bName.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className="h-14 max-w-[190px] w-auto object-contain" />;
-                                                                    if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-24 max-w-[240px] w-auto object-contain" />;
-                                                                    if (bName.includes('credila') || bName.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className="h-11 max-w-[190px] w-auto object-contain" />;
-                                                                    if (bName.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className="h-[52px] max-w-[190px] w-auto object-contain" />;
-
-                                                                    return <div className="text-[#0d1b2a] font-black text-[14px] uppercase truncate max-w-[200px]">{item.bank || item.targetBank || '—'}</div>;
-                                                                })()}
-                                                            </div>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const bStr = item.bank || item.targetBank || '';
-                                                                    const currentBanks = (!bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank' || bStr.toLowerCase().replace(/\s+/g, '') === 'pendingpartner')
-                                                                        ? []
-                                                                        : bStr.split(',').map((s: string) => s.trim()).filter(Boolean);
-                                                                    setTempSelectedBanks(currentBanks);
-                                                                    setEditingTargetBankRowId(rowId);
-                                                                }}
-                                                                className="opacity-0 group-hover/cell:opacity-100 text-slate-400 hover:text-[#6605c7] p-1.5 hover:bg-slate-100 rounded-lg transition-all ml-2 shrink-0 animate-in fade-in"
-                                                                title="Edit Target Banks"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[18px]">edit</span>
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
                                             <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 160 }}>
                                                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
                                                     <div className={`h-1.5 rounded-full transition-all duration-700 ${progress === 100 ? 'bg-emerald-500' : 'bg-[#4f46e5]'}`} style={{ width: `${progress}%` }} />
@@ -833,26 +663,7 @@ export default function IncomingQueuePage() {
                 </div>
             )}
 
-            {selectedAppForShare && (
-                <ShareWithBankModal
-                    applicationId={selectedAppForShare.id || selectedAppForShare._id}
-                    applicationNumber={selectedAppForShare.applicationNumber || `APP-${(selectedAppForShare.id || selectedAppForShare._id || 'UNKNOWN').slice(-6)}`}
-                    studentName={`${selectedAppForShare.firstName || selectedAppForShare.student?.firstName || ''} ${selectedAppForShare.lastName || selectedAppForShare.student?.lastName || ''}`}
-                    loanAmount={Number(selectedAppForShare.amount || selectedAppForShare.loanAmount || selectedAppForShare.student?.loanAmount || 0)}
-                    isOpen={isShareModalOpen}
-                    onClose={() => {
-                        setIsShareModalOpen(false);
-                        setSelectedAppForShare(null);
-                    }}
-                    isMultiBank={isMultiBankShare}
-                    targetBank={selectedAppForShare.bank || selectedAppForShare.targetBank}
-                    onSuccess={() => {
-                        loadData();
-                        fetchBadgeStats();
-                        setActiveDockApp(null);
-                    }}
-                />
-            )}
+            
 
             <AnimatePresence>
                 {activeDockApp && (
@@ -926,58 +737,17 @@ export default function IncomingQueuePage() {
 
                         {/* Route / Send Bank button */}
                         <div className="shrink-0 flex items-center gap-3">
-                            {(() => {
-                                const bStr = activeDockApp.bank || activeDockApp.targetBank || '';
-                                const isAnyBank = !bStr || bStr.toLowerCase().replace(/\s+/g, '') === 'anybank' || bStr.toLowerCase().replace(/\s+/g, '') === 'pendingpartner';
-
-                                if (isAnyBank) {
-                                    return (
-                                        <button
-                                            onClick={() => {
-                                                setSelectedAppForShare(activeDockApp);
-                                                setIsMultiBankShare(true);
-                                                setIsShareModalOpen(true);
-                                            }}
-                                            className="h-11 px-5 bg-[#6605c7] hover:bg-purple-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-purple-600/10 active:scale-95 animate-pulse"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">fork_right</span>
-                                            Route Application
-                                        </button>
-                                    );
-                                }
-
-                                const targetBanksList = bStr.split(', ').map((s: string) => s.trim()).filter(Boolean);
-                                const selectedBank = sendToBankSelection[activeDockApp.id || activeDockApp._id] || targetBanksList[0] || "";
-                                const isSending = sendToBankLoadingId === (activeDockApp.id || activeDockApp._id);
-
-                                return (
-                                    <div className="flex items-center gap-2">
-                                        {targetBanksList.length > 1 && (
-                                            <select
-                                                value={selectedBank}
-                                                onChange={(e) => setSendToBankSelection(prev => ({ ...prev, [activeDockApp.id || activeDockApp._id]: e.target.value }))}
-                                                className="h-11 px-3 rounded-2xl border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                                            >
-                                                {targetBanksList.map((bankName: string) => (
-                                                    <option key={bankName} value={bankName}>{bankName}</option>
-                                                ))}
-                                            </select>
-                                        )}
-                                        <button
-                                            onClick={() => handleSendApplicationToBank(activeDockApp, selectedBank)}
-                                            disabled={isSending || !selectedBank}
-                                            className="h-11 px-6 bg-[#6605c7] hover:bg-purple-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-lg shadow-purple-600/10 active:scale-95"
-                                        >
-                                            {isSending ? (
-                                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            ) : (
-                                                <span className="material-symbols-outlined text-[16px]">send</span>
-                                            )}
-                                            {targetBanksList.length > 1 ? "Send" : `Send to ${selectedBank.split(' ')[0]}`}
-                                        </button>
-                                    </div>
-                                );
-                            })()}
+                            {/* Approve button: moves application to active pipeline */}
+                            <button
+                                onClick={async () => {
+                                    if (!confirm('Move this application to the active pipeline?')) return;
+                                    await handleApproveApplication(activeDockApp);
+                                }}
+                                className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                                Approve
+                            </button>
 
                             {/* Rejection Control (Far right red trash/cancel icon button) */}
                             <button

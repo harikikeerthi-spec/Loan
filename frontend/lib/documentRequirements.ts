@@ -83,7 +83,7 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
   const rawRelation = coApplicant.relation || coApplicant.coApplicantRelation || profile.coApplicantRelation || student.coApplicant || "";
   const relation = typeof rawRelation === "string" ? rawRelation : "";
   const relationLabel = relation ? relation.charAt(0).toUpperCase() + relation.slice(1) : "Co-applicant";
-  const coApplicantName = coApplicant.name || profile.coApplicantName || relationLabel;
+  const coApplicantName = relationLabel;
 
   const docs: DocumentRequirement[] = [...getStudentDocumentRequirements(student)];
 

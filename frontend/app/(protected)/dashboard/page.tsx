@@ -1148,7 +1148,7 @@ export default function DashboardPage() {
 
                                 <div className="pt-4 flex justify-end">
                                     <Link
-                                        href="/profile"
+                                        href="/profile?edit=1"
                                         className="px-6 py-2.5 bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] text-white font-medium text-sm rounded-xl shadow-[0_4px_14px_rgba(102,5,199,0.3)] border-b-4 border-[#5504a8] active:border-b-0 active:translate-y-1 transition-all flex items-center gap-2"
                                     >
                                         <span className="material-symbols-outlined text-[16px]">edit</span>

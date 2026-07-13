@@ -217,6 +217,50 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
         router.back();
     };
 
+    const getDisplayValue = (value: unknown, fallback = "—") => {
+        if (value === null || value === undefined || value === "") return fallback;
+        if (typeof value === "string") return value.trim() || fallback;
+        return String(value);
+    };
+
+    const getParentName = (type: "father" | "mother") => {
+        const family = (userData as any)?.family;
+        const parentDetails = (userData as any)?.parentDetails;
+        const parents = (userData as any)?.parents;
+        const direct = (userData as any)?.[`${type}Name`];
+
+        const candidates = [
+            family?.[`${type}Name`],
+            parentDetails?.[`${type}Name`],
+            parents?.[`${type}Name`],
+            direct,
+        ];
+
+        return candidates.find((value) => typeof value === "string" && value.trim()) || "—";
+    };
+
+    const getCoApplicantName = (index: 1 | 2 | 3) => {
+        const coApplicant = (userData as any)?.coApplicant;
+
+        if (Array.isArray(coApplicant)) {
+            return getDisplayValue(coApplicant[index - 1]?.name, "—");
+        }
+
+        if (coApplicant && typeof coApplicant === "object") {
+            if (index === 1) {
+                return getDisplayValue(coApplicant.name || coApplicant?.coApplicant1?.name || coApplicant?.firstName, "—");
+            }
+            if (index === 2) {
+                return getDisplayValue(coApplicant.coApplicant2?.name || coApplicant?.secondName, "—");
+            }
+            if (index === 3) {
+                return getDisplayValue(coApplicant.coApplicant3?.name || coApplicant?.thirdName, "—");
+            }
+        }
+
+        return "—";
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-[#FAF8FE] font-sans text-slate-800 flex items-center justify-center relative overflow-hidden">
@@ -387,25 +431,60 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                             Student Profile - Personal & Academic Details
                                         </h2>
 
-                                        <div className="grid grid-cols-2 gap-6">
-                                            {[
-                                                { label: "First Name", value: userData.firstName },
-                                                { label: "Last Name", value: userData.lastName },
-                                                { label: "Email", value: userData.email, lowercase: true },
-                                                { label: "Phone", value: userData.phoneNumber || userData.mobile || userData.phone },
-                                                { label: "Date of Birth", value: userData.dateOfBirth ? new Date(userData.dateOfBirth).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "" },
-                                                { label: "Nationality", value: userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian" },
-                                                { label: "Study Destination", value: userData.studyDestination, uppercase: true },
-                                                { label: "Target Intake", value: userData.intakeSeason },
-                                                { label: "Access Privilege", value: userData.role, capitalize: true },
-                                            ].map((item: any, idx) => (
-                                                <div key={idx} className={item.fullWidth ? "col-span-2" : ""}>
-                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{item.label}</p>
-                                                    <p className={`text-[14px] font-semibold text-slate-900 ${item.lowercase ? "lowercase" : item.capitalize ? "capitalize" : item.uppercase ? "uppercase" : ""}`}>
-                                                        {item.value || "—"}
-                                                    </p>
+                                        <div className="space-y-6">
+                                            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6">
+                                                <h3 className="text-sm font-black uppercase tracking-wider text-slate-700 mb-4">Personal Details</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                                    {[
+                                                        { label: "Email", value: getDisplayValue(userData.email), lowercase: true },
+                                                        { label: "Phone Number", value: getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone) },
+                                                        { label: "Date of Birth", value: userData.dateOfBirth ? new Date(userData.dateOfBirth).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "—" },
+                                                        { label: "Nationality", value: getDisplayValue(userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian") },
+                                                        { label: "Destination Country", value: getDisplayValue(userData.studyDestination || userData.countryOfEducation || userData.academic?.countryOfEducation, "—") },
+                                                    ].map((item: any, idx) => (
+                                                        <div key={idx}>
+                                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{item.label}</p>
+                                                            <p className={`text-[14px] font-semibold text-slate-900 ${item.lowercase ? "lowercase" : ""}`}>
+                                                                {item.value}
+                                                            </p>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            </div>
+
+                                            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6">
+                                                <h3 className="text-sm font-black uppercase tracking-wider text-slate-700 mb-4">Parent Details</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Father Name</p>
+                                                        <p className="text-[14px] font-semibold text-slate-900">
+                                                            {getParentName("father")}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mother Name</p>
+                                                        <p className="text-[14px] font-semibold text-slate-900">
+                                                            {getParentName("mother")}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6">
+                                                <h3 className="text-sm font-black uppercase tracking-wider text-slate-700 mb-4">Co-applicant Details</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    {[
+                                                        { label: "Co-applicant 1", value: getCoApplicantName(1) },
+                                                        { label: "Co-applicant 2", value: "-" },
+                                                        { label: "Co-applicant 3", value: "-" },
+                                                    ].map((item, idx) => (
+                                                        <div key={idx} className="rounded-xl border border-slate-200 bg-white/80 p-4">
+                                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{item.label}</p>
+                                                            <p className="text-[14px] font-semibold text-slate-900">{item.value}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                             {/* <div className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300 md:col-span-2">
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Profile Verification Status</p>
                                                 

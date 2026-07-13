@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { applicationApi, authApi, aiApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
+import { getAllCountries } from "@/lib/countriesData";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -17,7 +18,8 @@ const banks = [
 
 const loanTypes = ["Undergraduate Abroad", "Postgraduate Abroad", "Doctoral/PhD Abroad", "Professional Course"];
 const courses = ["B.Tech/B.E.", "MBA/PGDM", "MS/M.Tech", "MBBS/Medicine", "Law", "Architecture", "Arts & Humanities", "Other"];
-const countries = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "New Zealand", "Other"];
+const popularCountries = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "New Zealand", "Other"];
+const allCountries = getAllCountries();
 
 const formatIndianCurrency = (val: string): string => {
     const clean = val.replace(/\D/g, "");
@@ -110,6 +112,9 @@ export default function ApplyLoanPage() {
     const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
     const [profileLoaded, setProfileLoaded] = useState(false);
     const [validatingUniversity, setValidatingUniversity] = useState(false);
+    const [suggestedUniversities, setSuggestedUniversities] = useState<any[]>([]);
+    const [loadingUniversities, setLoadingUniversities] = useState(false);
+    const [showUniversitySuggestions, setShowUniversitySuggestions] = useState(false);
 
     // Pre-fill personal info from user profile and URL params
     useEffect(() => {
@@ -197,6 +202,72 @@ export default function ApplyLoanPage() {
         }
     };
 
+    // Fetch popular universities for the selected country using AI
+    useEffect(() => {
+        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+        if (!selectedCountry || selectedCountry.trim().length < 2) {
+            setSuggestedUniversities([]);
+            return;
+        }
+
+        const fetchUnis = async () => {
+            setLoadingUniversities(true);
+            try {
+                const res = await aiApi.aiSearch({
+                    type: "university",
+                    query: "",
+                    country: selectedCountry
+                }) as any;
+
+                if (res && res.success && res.universities) {
+                    setSuggestedUniversities(res.universities);
+                } else {
+                    setSuggestedUniversities([]);
+                }
+            } catch (err) {
+                console.error("Failed to fetch universities via AI", err);
+                setSuggestedUniversities([]);
+            } finally {
+                setLoadingUniversities(false);
+            }
+        };
+
+        fetchUnis();
+    }, [formData.country, formData.otherCountry]);
+
+    // Search universities when typing in the input field
+    useEffect(() => {
+        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+        if (!selectedCountry || !formData.university || formData.university.trim().length < 2) {
+            return;
+        }
+
+        // Avoid querying if the input matches one of the already suggested universities exactly
+        const matched = suggestedUniversities.some(u => u.name.toLowerCase() === formData.university.toLowerCase());
+        if (matched) return;
+
+        const delayDebounceFn = setTimeout(async () => {
+            setLoadingUniversities(true);
+            try {
+                const res = await aiApi.aiSearch({
+                    type: "university",
+                    query: formData.university,
+                    country: selectedCountry
+                }) as any;
+
+                if (res && res.success && res.universities) {
+                    setSuggestedUniversities(res.universities);
+                }
+            } catch (err) {
+                console.error("Failed to query universities via AI", err);
+            } finally {
+                setLoadingUniversities(false);
+            }
+        }, 800);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [formData.university, formData.country, formData.otherCountry]);
+
     const amountLakhs = (() => {
         if (!formData.amount) return 40;
         const cleanNum = Number(formData.amount.replace(/[^0-9]/g, ""));
@@ -224,7 +295,7 @@ export default function ApplyLoanPage() {
         if (!formData.country) {
             errors.country = "Please select a country";
         } else if (formData.country === "Other" && (!formData.otherCountry || !formData.otherCountry.trim())) {
-            errors.otherCountry = "Please enter the destination country";
+            errors.otherCountry = "Please specify the destination country";
         }
         if (!formData.university.trim()) {
             errors.university = "Please enter your university";
@@ -366,9 +437,16 @@ export default function ApplyLoanPage() {
             const parsedLivingCost = cleanLivingCost ? parseFloat(cleanLivingCost) : undefined;
             const parsedIncome = cleanIncome ? parseFloat(cleanIncome) : undefined;
 
+            const rel = formData.coApplicant === "other" ? formData.otherRelation : formData.coApplicant;
+            const capitalizedRelation = rel ? rel.charAt(0).toUpperCase() + rel.slice(1) : "";
+
             await applicationApi.create({
                 ...formData,
-                coApplicant: formData.coApplicant === "other" ? formData.otherRelation : formData.coApplicant,
+                hasCoApplicant: !!formData.coApplicant && formData.coApplicant !== "none",
+                coApplicantName: capitalizedRelation || null,
+                coApplicantRelation: rel || null,
+                coApplicantIncome: isNaN(parsedIncome as number) ? undefined : parsedIncome,
+                coApplicant: rel || null,
                 country: formData.country === "Other" ? formData.otherCountry : formData.country,
                 userId,
                 bank: bankName,
@@ -531,25 +609,65 @@ export default function ApplyLoanPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <SelectField label="Field of Study" icon="category" value={formData.loanType} onChange={(v) => update("loanType", v)}
                                         options={loanTypes.map((t) => ({ value: t, label: t }))} error={stepErrors.loanType} />
-                                    <SelectField label="Destination Country" icon="public" value={formData.country} onChange={(v) => update("country", v)}
-                                        options={countries.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
+                                    <SelectField label="Destination Country" icon="public" value={formData.country} onChange={(v) => {
+                                        update("country", v);
+                                        if (v !== "Other") {
+                                            update("otherCountry", "");
+                                        }
+                                    }}
+                                         options={popularCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
                                     {formData.country === "Other" && (
                                         <div className="md:col-span-2">
-                                            <InputField
-                                                label="Other Destination Country"
-                                                icon="public"
-                                                value={formData.otherCountry || ""}
-                                                onChange={(v) => update("otherCountry", v)}
-                                                placeholder="e.g. France"
-                                                error={stepErrors.otherCountry}
-                                                required
-                                            />
+                                            <SelectField label="Specify Destination Country" icon="public" value={formData.otherCountry} onChange={(v) => update("otherCountry", v)}
+                                                 options={allCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.otherCountry} />
                                         </div>
                                     )}
                                 </div>
 
                                 <div className="space-y-8">
-                                    <InputField label="Full University Name" icon="domain" value={formData.university} onChange={(v) => update("university", v.replace(/\d/g, ""))} placeholder="e.g. University of Toronto" error={stepErrors.university} />
+                                    <div className="relative" onFocus={() => setShowUniversitySuggestions(true)} onBlur={() => {
+                                        // Delay hiding suggestions so that click events on the suggestion items can register
+                                        setTimeout(() => setShowUniversitySuggestions(false), 200);
+                                    }}>
+                                        <InputField 
+                                            label="Full University Name" 
+                                            icon="domain" 
+                                            value={formData.university} 
+                                            onChange={(v) => update("university", v.replace(/\d/g, ""))} 
+                                            placeholder="e.g. University of Toronto" 
+                                            error={stepErrors.university} 
+                                        />
+                                        
+                                        {/* Loading Indicator */}
+                                        {loadingUniversities && (
+                                            <div className="absolute right-4 top-[50px] flex items-center gap-1.5 text-xs text-[#6605c7] font-bold select-none">
+                                                <div className="w-3.5 h-3.5 border-2 border-[#6605c7] border-t-transparent rounded-full animate-spin" />
+                                            </div>
+                                        )}
+
+                                        {/* Suggestions Dropdown */}
+                                        {showUniversitySuggestions && suggestedUniversities.length > 0 && (
+                                            <div className="absolute z-40 left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-purple-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-gray-150/10 animate-fade-in">
+                                                {suggestedUniversities.map((uni) => (
+                                                    <button
+                                                        key={uni.name}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            update("university", uni.name);
+                                                            setShowUniversitySuggestions(false);
+                                                        }}
+                                                        className="w-full px-5 py-3.5 text-left text-xs font-bold text-gray-700 hover:text-[#6605c7] hover:bg-purple-50/50 transition-all flex items-center justify-between"
+                                                    >
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-[13px] font-black text-gray-900 group-hover:text-[#6605c7]">{uni.name}</span>
+                                                            <span className="text-[10px] text-gray-400 font-medium">{uni.loc || uni.country || "Popular University"}</span>
+                                                        </div>
+                                                        <span className="material-symbols-outlined text-[#6605c7] text-sm opacity-0 hover:opacity-100 transition-opacity">chevron_right</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {/* Loan Amount Slider (0 - 1.5 Cr) */}
                                     <div className="bg-white/50 backdrop-blur-xl border border-gray-100 rounded-[2.5rem] p-6 md:p-8 shadow-sm space-y-5">
@@ -717,15 +835,17 @@ export default function ApplyLoanPage() {
                                                 { value: "other", label: "Other" }
                                             ]} error={stepErrors.coApplicant} required />
                                         {formData.coApplicant === "other" && (
-                                            <InputField
-                                                label="If Other, Specify Relation"
-                                                icon="people"
-                                                value={formData.otherRelation}
-                                                onChange={(v) => update("otherRelation", v)}
-                                                placeholder="e.g. Uncle"
-                                                error={stepErrors.otherRelation}
-                                                required
-                                            />
+                                            <div className="md:col-span-2">
+                                                <InputField
+                                                    label="If Other, Specify Relation"
+                                                    icon="people"
+                                                    value={formData.otherRelation}
+                                                    onChange={(v) => update("otherRelation", v)}
+                                                    placeholder="e.g. Uncle"
+                                                    error={stepErrors.otherRelation}
+                                                    required
+                                                />
+                                            </div>
                                         )}
                                     </div>
 

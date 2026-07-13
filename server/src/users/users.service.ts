@@ -379,12 +379,14 @@ export class UsersService {
       if (role === 'student') {
         query = query.or('role.eq.student,role.eq.user');
       } else if (role === 'staff') {
-        query = query.or('role.eq.staff,role.eq.staff_admin');
+        query = query.or('role.eq.staff,role.eq.staff_admin,role.eq.admin,role.eq.super_admin');
       } else if (role === 'admin') {
         query = query.or('role.eq.admin,role.eq.super_admin');
       } else {
         query = query.eq('role', role);
       }
+    } else {
+      query = query.or('role.eq.bank,role.eq.staff,role.eq.staff_admin,role.eq.admin,role.eq.super_admin');
     }
 
     if (excludeRoles && excludeRoles.length > 0) {
@@ -409,19 +411,17 @@ export class UsersService {
   }
 
   async getUserStats() {
-    const { count: total } = await this.db.from('User').select('*', { count: 'exact', head: true });
-    const { count: student } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.student,role.eq.user');
     const { count: bank } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'bank');
-    const { count: staff } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.staff,role.eq.staff_admin');
-    const { count: admin } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.admin,role.eq.super_admin');
+    const { count: staff } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.staff,role.eq.staff_admin,role.eq.admin,role.eq.super_admin');
+    const total = (bank || 0) + (staff || 0);
     
     return {
       total: total || 0,
-      student: student || 0,
+      student: 0,
       bank: bank || 0,
       staff: staff || 0,
-      admin: admin || 0,
-      other: (total || 0) - (student || 0) - (bank || 0) - (staff || 0) - (admin || 0)
+      admin: 0,
+      other: 0
     };
   }
 
@@ -670,6 +670,7 @@ export class UsersService {
       annualFee?: string;
       livingCost?: string;
       coApplicant?: string;
+      coApplicantName?: string;
       income?: string;
       collateral?: string;
       firstName?: string;
@@ -721,6 +722,7 @@ export class UsersService {
 
         address: data.address || null,
         hasCoApplicant: !!data.coApplicant && data.coApplicant !== 'none',
+        coApplicantName: data.coApplicantName || null,
         coApplicantRelation: data.coApplicant !== 'none' ? data.coApplicant : null,
         coApplicantIncome: data.income ? parseFloat(data.income) : null,
         hasCollateral: !!data.collateral && data.collateral !== 'no',

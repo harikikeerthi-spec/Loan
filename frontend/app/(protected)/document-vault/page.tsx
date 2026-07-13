@@ -188,7 +188,7 @@ export default function DocumentVaultPage() {
         const coapp = baseProfile.coApplicant || {};
         const dbRelation = appCoappRelation || baseProfile.coApplicantRelation || coapp.relation || "";
         const fallbackName = dbRelation ? dbRelation.charAt(0).toUpperCase() + dbRelation.slice(1) : "Co-applicant";
-        const coappName = coapp.name || baseProfile.coApplicantName || fallbackName;
+        const coappName = coapp.name || baseProfile.coApplicantName || activeApp?.coApplicantName || fallbackName;
 
         return {
             ...baseProfile,
@@ -837,28 +837,6 @@ export default function DocumentVaultPage() {
                     <>
                         {renderDocGroup("Student Documents", "person", studentDocs, () => handleAddOtherDocument("student"))}
                         {renderDocGroup(`Financial Co-Applicant (${activeProfile.coApplicant?.relation ? activeProfile.coApplicant.relation.charAt(0).toUpperCase() + activeProfile.coApplicant.relation.slice(1) : 'Co-applicant'})`, "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
-
-                        <div className="flex justify-end mb-6 -mt-4 mr-1">
-                            <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-2xl">
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Co-applicant:</span>
-                                <div className="flex bg-gray-100/80 p-0.5 rounded-lg border border-gray-200/30">
-                                    <button
-                                        onClick={() => handleCoappRelationChange("father")}
-                                        className={`px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all ${coappRelation === "father" ? "bg-white text-[#6605c7] shadow-sm" : "text-gray-400 hover:text-gray-500"}`}
-                                    >
-                                        Father
-                                    </button>
-                                    <button
-                                        onClick={() => handleCoappRelationChange("mother")}
-                                        className={`px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all ${coappRelation === "mother" ? "bg-white text-[#6605c7] shadow-sm" : "text-gray-400 hover:text-gray-500"}`}
-                                    >
-                                        Mother
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-
                         {renderDocGroup("Father & Mother Documents", "family_restroom", parentDocs, () => handleAddOtherDocument("parent"))}
                         {staffRequestedDocs.length > 0 && renderDocGroup("Staff Requested Documents", "assignment", staffRequestedDocs)}
                     </>

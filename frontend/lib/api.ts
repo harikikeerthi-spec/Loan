@@ -801,6 +801,12 @@ export const aiApi = {
             body: JSON.stringify({ university, country }),
         }),
 
+    correctCountryName: (countryInput: string) =>
+        apiFetch(`${API_URL}/ai/correct-country-name`, {
+            method: "POST",
+            body: JSON.stringify({ countryInput }),
+        }),
+
     saveVisaReport: (data: Record<string, unknown>) =>
         apiFetch(`${API_URL}/ai/visa-interview/save-report`, {
             method: "POST",

@@ -287,6 +287,7 @@ export class AuthController {
     annualFee?: string;
     livingCost?: string;
     coApplicant?: string;
+    coApplicantName?: string;
     income?: string;
     collateral?: string;
     firstName?: string;
@@ -334,6 +335,7 @@ export class AuthController {
         annualFee: body.annualFee,
         livingCost: body.livingCost,
         coApplicant: body.coApplicant,
+        coApplicantName: body.coApplicantName,
         income: body.income,
         collateral: body.collateral,
         firstName: body.firstName,

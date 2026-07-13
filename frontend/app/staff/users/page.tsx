@@ -87,17 +87,13 @@ export default function UserDirectoryPage() {
     };
 
     const userStatsData = useMemo(() => {
-        const total = userSectionStats?.total ?? totalItems;
-        const students = userSectionStats?.student ?? 0;
         const bankPartners = userSectionStats?.bank ?? 0;
         const staffMembers = userSectionStats?.staff ?? 0;
         return [
-            { id: 'all', label: 'Total Users', value: total, icon: 'group', color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', tag: 'ACTIVE' },
-            { id: 'student', label: 'Student Accounts', value: students, icon: 'school', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', tag: 'ROLE' },
             { id: 'bank', label: 'Bank Partners', value: bankPartners, icon: 'account_balance', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', tag: 'ROLE' },
             { id: 'staff', label: 'Staff Members', value: staffMembers, icon: 'badge', color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100', tag: 'O_ADMIN' },
         ];
-    }, [userSectionStats, totalItems]);
+    }, [userSectionStats]);
 
     const startOnboarding = () => {
         router.push("/staff/onboarding");
@@ -112,6 +108,32 @@ export default function UserDirectoryPage() {
         admin: { label: 'ADMIN', color: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
     };
 
+    const getUserDisplayName = (item: any) => {
+        const roleKey = item.role?.toLowerCase() || 'user';
+        if (roleKey === 'bank') {
+            const email = (item.email || '').toLowerCase();
+            if (email.includes('hdfc') || email.includes('credila')) return 'HDFC Credila';
+            if (email.includes('auxilo')) return 'Auxilo Finserve';
+            if (email.includes('idfc')) return 'IDFC First Bank';
+            if (email.includes('avanse')) return 'Avanse Financial';
+            if (email.includes('poonawalla')) return 'Poonawalla Fincorp';
+
+            const fullName = `${item.firstName || ''} ${item.lastName || ''}`.toLowerCase();
+            if (fullName.includes('credila') || fullName.includes('hdfc')) return 'HDFC Credila';
+            if (fullName.includes('auxilo')) return 'Auxilo Finserve';
+            if (fullName.includes('idfc')) return 'IDFC First Bank';
+            if (fullName.includes('avanse')) return 'Avanse Financial';
+            if (fullName.includes('poonawalla')) return 'Poonawalla Fincorp';
+
+            return 'Bank Partner';
+        }
+        return `${item.firstName || ''} ${item.lastName || ''}`.trim() || '—';
+    };
+
+    const bankAndStaffUsers = useMemo(() => {
+        return data.filter(item => ['bank', 'staff', 'staff_admin', 'admin', 'super_admin'].includes(item.role?.toLowerCase()));
+    }, [data]);
+
     const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
     const showingStart = (currentPage - 1) * itemsPerPage + 1;
     const showingEnd = Math.min(currentPage * itemsPerPage, totalItems);
@@ -123,12 +145,11 @@ export default function UserDirectoryPage() {
                     <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">
                         <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[11px] font-semibold text-indigo-700">
                             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                            MANAGE ALL USERS
+                            MANAGE BANK & STAFF
                         </span>
                     </p>
                     <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
-                        User Directory
-
+                        Bank & Staff Members
                     </h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -160,11 +181,11 @@ export default function UserDirectoryPage() {
             </div>
 
             {/* Metrics Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3 mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 mb-2">
                 {userStatsData.map((c, i) => (
                     <button
                         key={i}
-                        onClick={() => { setUserRoleFilter(c.id); setCurrentPage(1); }}
+                        onClick={() => { setUserRoleFilter(prev => prev === c.id ? 'all' : c.id); setCurrentPage(1); }}
                         className={`bg-white rounded-xl border ${userRoleFilter === c.id ? 'ring-2 ring-indigo-500 border-indigo-200 shadow-md' : c.border} p-4 text-left transition-all hover:shadow-md active:scale-[0.98]`}
                     >
                         <div className="flex items-start justify-between mb-3">
@@ -194,22 +215,22 @@ export default function UserDirectoryPage() {
                             <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
                         </TableHeader>
                         <tbody className={`divide-y divide-slate-50 ${loading ? 'opacity-60 pointer-events-none transition-opacity duration-300' : 'transition-opacity duration-300'}`}>
-                            {loading && data.length === 0 ? (
+                            {loading && bankAndStaffUsers.length === 0 ? (
                                 <tr>
                                     <td colSpan={10} className="px-8 py-32 text-center">
                                         <div className="flex flex-col items-center justify-center gap-4">
                                             <div className="w-10 h-10 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin" />
-                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loading directory...</p>
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loading...</p>
                                         </div>
                                     </td>
                                 </tr>
-                            ) : data.length > 0 ? (
-                                data.map((item, idx) => {
+                            ) : bankAndStaffUsers.length > 0 ? (
+                                bankAndStaffUsers.map((item, idx) => {
                                     const roleKey = item.role?.toLowerCase() || 'user';
                                     const roleInfo = roleMap[roleKey] || roleMap['user'];
-                                    const initials = `${(item.firstName || '?')[0]}${(item.lastName || '')[0] || ''}`.toUpperCase();
+                                    const initials = getUserDisplayName(item)[0] || '?';
                                     const avatarColors = ['bg-indigo-100 text-indigo-700', 'bg-emerald-100 text-emerald-700', 'bg-violet-100 text-violet-700', 'bg-amber-100 text-amber-700', 'bg-rose-100 text-rose-700', 'bg-sky-100 text-sky-700'];
-                                    const avatarColor = avatarColors[(item.firstName?.charCodeAt(0) || 0) % avatarColors.length];
+                                    const avatarColor = avatarColors[(item.email?.charCodeAt(0) || 0) % avatarColors.length];
                                     const isUserOnline = item.email && onlineEmails.map(e => e.toLowerCase()).includes(item.email.toLowerCase());
 
                                     return (
@@ -229,7 +250,7 @@ export default function UserDirectoryPage() {
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-[16px] font-bold text-[#0d1b2a] leading-tight">
-                                                            {item.firstName || '—'} {item.lastName || ''}
+                                                            {getUserDisplayName(item)}
                                                         </p>
                                                         <p className="text-[12px] text-slate-900 font-bold font-mono mt-1">
                                                             ID: {item.id || item._id || ''}
@@ -321,7 +342,7 @@ export default function UserDirectoryPage() {
                                                     </button>
                                                     <button
                                                         onClick={() => {
-                                                            if (item.email) openEmailModal(item.email, `${item.firstName || ""} ${item.lastName || ""}`.trim());
+                                                            if (item.email) openEmailModal(item.email, getUserDisplayName(item));
                                                         }}
                                                         className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
                                                         title="Send Email"

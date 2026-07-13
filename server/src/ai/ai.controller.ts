@@ -474,8 +474,63 @@ export class AiController {
       };
     } catch (error) {
       console.error('AI University Country Check Failed:', error);
-      // Fallback permissive in case AI is down
       return { success: true, valid: true, correctedCountry: null };
+    }
+  }
+
+  @Post('correct-country-name')
+  async correctCountryName(
+    @Body() data: { countryInput: string }
+  ) {
+    if (!data.countryInput) {
+      throw new BadRequestException('Country input is required');
+    }
+
+    const prompt = `You are an expert in global geography and higher education.
+    Task: Standardize and correct the spelling of the following country input: "${data.countryInput}".
+    The input might contain typos, spelling errors, abbreviations (e.g. "US", "UK"), or specific city/state names instead of a country (e.g. "London", "New York", "Toronto").
+
+    Analyze the input and return the correct, standard English name of the country.
+    Also check if this country corresponds to one of these specific study destination options:
+    - "USA"
+    - "UK"
+    - "Canada"
+    - "Australia"
+    - "Germany"
+    - "Ireland"
+    - "New Zealand"
+
+    Rules:
+    - If the input corresponds to one of the 7 options, set "isStandard" to true and "standardOption" to the exact option name (e.g. "USA").
+    - If it's a valid country but not one of the 7 options, set "isStandard" to false and "standardOption" to null.
+    - If the input is completely invalid (gibberish or doesn't map to any location), set "valid" to false.
+
+    Respond with strictly valid JSON:
+    {
+      "valid": boolean,
+      "correctedCountry": string,
+      "isStandard": boolean,
+      "standardOption": "USA" | "UK" | "Canada" | "Australia" | "Germany" | "Ireland" | "New Zealand" | null
+    }`;
+
+    try {
+      const result = await this.openRouterService.getJson<{
+        valid: boolean;
+        correctedCountry: string;
+        isStandard: boolean;
+        standardOption: string | null;
+      }>(prompt);
+
+      return {
+        success: true,
+        valid: result.valid ?? false,
+        correctedCountry: result.correctedCountry || null,
+        isStandard: result.isStandard ?? false,
+        standardOption: result.standardOption || null,
+      };
+    } catch (error) {
+      console.error('AI Correct Country Name Check Failed:', error);
+      return { success: false, valid: false, correctedCountry: null, isStandard: false, standardOption: null };
     }
   }
 
