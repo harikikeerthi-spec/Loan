@@ -282,12 +282,12 @@ export class AgentService {
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
-    const applicationNumber = await this.usersService.generateApplicationNumber();
+    // Do NOT generate application number on initial create.
+    // It will be generated when staff routes to bank (VTU-APP- format).
 
     const { data: application, error: appError } = await this.db
       .from('LoanApplication')
       .insert({
-        applicationNumber,
         userId: user.id,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -317,7 +317,7 @@ export class AgentService {
       const name = `${data.firstName || ''} ${data.lastName || ''}`.trim() || email || 'Student';
       this.eventEmitter.emit('dashboard.activity', {
         type: 'application',
-        msg: `Agent submitted lead for Student ${name} (Application #${applicationNumber || application.id.slice(-4)}) for review.`,
+        msg: `Agent submitted lead for Student ${name} (Application #${application.applicationNumber || application.id.slice(-4)}) for review.`,
         icon: 'rocket_launch',
         color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
         actorName: name,

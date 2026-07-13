@@ -90,6 +90,15 @@ export class ReferenceController {
         return this.referenceService.getUniversitiesByCountry(country);
     }
 
+    /**
+     * Get dynamic total disbursed amount across all banks
+     * GET /reference/disbursed-amount
+     */
+    @Get('disbursed-amount')
+    async getDisbursedAmount() {
+        return this.referenceService.getDisbursedAmount();
+    }
+
     // ==================== BANKS ====================
 
     /**

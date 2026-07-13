@@ -341,7 +341,7 @@ export default function ApplicationsPage() {
                         <TableHeader>
                             <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">APPLICANT PROFILE</span></th>
                             <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">COLLEGE NAME</span></th>
-                            <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">TARGET BANK</span></th>
+                            {/* <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">TARGET BANK</span></th> */}
                             <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">LAN NUMBER</span></th>
                             <th className="px-5 py-5 w-48"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">PROGRESS</span></th>
                             <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">CURRENT STATUS</span></th>
@@ -424,9 +424,9 @@ export default function ApplicationsPage() {
                                                                         title="Click to open Application Page"
                                                                     >
                                                                         <span className="material-symbols-outlined text-[12px]">description</span>
-                                                                        {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
+                                                                        {(item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-'))) ? item.applicationNumber : 'Not Generated Yet'}
                                                                     </p>
-                                                                    {(item.bank || item.targetBank) && (
+                                                                    {/* {(item.bank || item.targetBank) && (
                                                                         <button
                                                                             onClick={() => {
                                                                                 const bankParam = item.bank || item.targetBank || "";
@@ -439,7 +439,7 @@ export default function ApplicationsPage() {
                                                                             <span className="material-symbols-outlined text-[12px]">forum</span>
                                                                             Chat with Bank
                                                                         </button>
-                                                                    )}
+                                                                    )} */}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -528,11 +528,11 @@ export default function ApplicationsPage() {
                                                 })() : (
                                                     <p className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">—</p>
                                                 )}
-                                                <p className="text-[12px] text-slate-500 font-bold truncate max-w-[180px] mt-1">
+                                                {/* <p className="text-[12px] text-slate-500 font-bold truncate max-w-[180px] mt-1">
                                                     {item.courseName || item.program || item.courseLevel || '—'}
-                                                </p>
+                                                </p> */}
                                             </td>
-                                            <td className="px-6 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors min-w-[240px] w-[260px]">
+                                            {/* <td className="px-6 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors min-w-[240px] w-[260px]">
                                                 <div className="flex flex-col justify-center min-h-[60px] gap-1">
                                                     <div className="flex items-center">
                                                         {(() => {
@@ -560,7 +560,7 @@ export default function ApplicationsPage() {
                                                         })()}
                                                     </div>
                                                 </div>
-                                            </td>
+                                            </td> */}
                                             <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                 {item.lanNumber ? (
                                                     <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">

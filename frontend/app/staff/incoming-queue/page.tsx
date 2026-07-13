@@ -431,7 +431,7 @@ export default function IncomingQueuePage() {
                                                                         title="Click to open Application Page"
                                                                     >
                                                                         <span className="material-symbols-outlined text-[12px]">description</span>
-                                                                        {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
+                                                                        {(item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-') || item.applicationNumber.startsWith('VTU-BNK-') || item.applicationNumber.startsWith('VL-APP-'))) ? item.applicationNumber : 'Not Generated Yet'}
                                                                     </p>
                                                                 </div>
                                                             )}
@@ -521,9 +521,6 @@ export default function IncomingQueuePage() {
                                                 })() : (
                                                     <p className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">—</p>
                                                 )}
-                                                <p className="text-[12px] text-slate-500 font-bold truncate max-w-[180px] mt-1">
-                                                    {item.courseName || item.program || item.courseLevel || '—'}
-                                                </p>
                                             </td>
                                             <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 160 }}>
                                                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
@@ -681,7 +678,7 @@ export default function IncomingQueuePage() {
                                 {activeDockApp.firstName || activeDockApp.student?.firstName || '—'} {activeDockApp.lastName || activeDockApp.student?.lastName || ''}
                             </h4>
                             <span className="text-[10px] font-bold text-slate-400 block mt-0.5">
-                                {activeDockApp.applicationNumber || `APP-${(activeDockApp.id || activeDockApp._id || 'UNKNOWN').slice(-6)}`}
+                                {(activeDockApp.applicationNumber && (activeDockApp.applicationNumber.startsWith('VTU-APP-') || activeDockApp.applicationNumber.startsWith('VTU-BNK-') || activeDockApp.applicationNumber.startsWith('VL-APP-'))) ? activeDockApp.applicationNumber : 'Not Generated Yet'}
                             </span>
                         </div>
 

@@ -94,7 +94,7 @@ export default function PostAdmissionServicesSection() {
                             <span style={{ background: 'linear-gradient(135deg, #6605c7, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Services</span>
                         </h2>
                         <p className="text-gray-500 text-[13px] mt-4 max-w-lg leading-relaxed font-medium">
-                            Everything you need after getting your admit — banking, housing, visa & more
+                            Everything you need after getting your admit — banking, forex, and more
                         </p>
                     </div>
                     <button
@@ -210,42 +210,7 @@ export default function PostAdmissionServicesSection() {
                         </div>
                     </div>
 
-                    {/* 4 — Student Housing (bottom left) */}
-                    <div
-                        onClick={() => openModal(
-                            "student_housing",
-                            "Student Housing",
-                            "Find verified student housing near campuses",
-                            "Secure safe, high-quality, and verified accommodations close to your university. Choose from shared apartments, dorms, and private rooms."
-                        )}
-                        className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px] cursor-pointer hover:-translate-y-1.5 transition-all duration-300"
-                        style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)' }}
-                    >
-                        <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/housing.jpg') center/cover" }} />
-                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(76,29,149,0.98) 0%, rgba(76,29,149,0.3) 70%, transparent 100%)' }} />
-                        <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-purple-400/20 backdrop-blur-sm flex items-center justify-center border border-purple-400/20">
-                            <span className="text-xl">🏠</span>
-                        </div>
-                        <div className="absolute top-4 left-4 flex items-center gap-2 flex-wrap">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-400/20 backdrop-blur-sm text-purple-200 text-[10px] font-black uppercase tracking-widest border border-purple-400/20">
-                                ✅ Verified
-                            </span>
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400/20 backdrop-blur-sm text-amber-300 text-[9px] font-black uppercase tracking-wider border border-amber-400/30">
-                                🔒 Coming Soon
-                            </span>
-                        </div>
-                        <div className="relative z-10 p-6">
-                            <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="1000+" /></div>
-                            <div className="text-purple-200/50 text-[10px] uppercase tracking-widest font-black mb-2">Verified Listings</div>
-                            <h3 className="text-lg font-black text-white mb-2">Accommodation Support</h3>
-                            <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Find verified student housing near your university campus.</p>
-                            <span className="inline-flex items-center gap-2 text-purple-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                Notify Me <span className="material-symbols-outlined text-sm text-purple-300 font-black" aria-hidden="true">notifications</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* 5 — UK Bank Account (bottom middle) */}
+                    {/* 4 — UK Bank Account (bottom middle) */}
                     <div
                         onClick={() => openModal(
                             "uk_bank_account",
@@ -276,37 +241,6 @@ export default function PostAdmissionServicesSection() {
                             <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Pre-arrival UK bank account opening for Indian students — be ready before you land.</p>
                             <span className="inline-flex items-center gap-2 text-orange-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
                                 Notify Me <span className="material-symbols-outlined text-sm text-orange-300 font-black" aria-hidden="true">notifications</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* 6 — Visa Counselling (bottom right) */}
-                    <div
-                        onClick={() => openModal(
-                            "visa_counselling",
-                            "Visa Mock Interviews & Counselling",
-                            "One-on-one expert mock visa slots and prep",
-                            "Prepare with mock interviews, customized questionnaires, and full documentation reviews led by expert visa counsellors with a 98% success rate."
-                        )}
-                        className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-2xl flex flex-col justify-end min-h-[280px] cursor-pointer hover:-translate-y-1.5 transition-all duration-300"
-                        style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}
-                    >
-                        <div className="absolute inset-0 opacity-10" style={{ background: "url('/images/services/counselling.jpg') center/cover" }} />
-                        <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                            <span className="material-symbols-outlined text-5xl text-white font-light">flight</span>
-                        </div>
-                        <div className="absolute top-4 left-4 flex items-center gap-2 flex-wrap">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400/20 backdrop-blur-sm text-amber-300 text-[9px] font-black uppercase tracking-wider border border-amber-400/30">
-                                🔒 Coming Soon
-                            </span>
-                        </div>
-                        <div className="relative z-10 p-6">
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-white/20 text-white text-[10px] font-black uppercase tracking-widest mb-3">🎯 Expert Guidance</span>
-                            <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="98%" /></div>
-                            <div className="text-emerald-200/60 text-[10px] uppercase tracking-widest font-black mb-2">Success Rate</div>
-                            <h3 className="text-lg font-black text-white mb-2">Visa Counselling</h3>
-                            <span className="inline-flex items-center gap-2 text-emerald-200 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                Notify Me <span className="material-symbols-outlined text-sm text-emerald-200 font-black" aria-hidden="true">notifications</span>
                             </span>
                         </div>
                     </div>

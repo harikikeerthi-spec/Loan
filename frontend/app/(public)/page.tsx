@@ -23,6 +23,20 @@ async function getDynamicBanks() {
     return null;
 }
 
+async function getDisbursedAmount() {
+    try {
+        const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:5000";
+        const res = await fetch(`${backendUrl}/api/reference/disbursed-amount`, { next: { revalidate: 60 } });
+        const json = await res.json();
+        if (json?.success && json.data) {
+            return json.data.formatted;
+        }
+    } catch (e) {
+        console.error("Error fetching disbursed amount for homepage:", e);
+    }
+    return "₹500Cr+";
+}
+
 export const metadata: Metadata = {
     title: "Vidya Loans - Find Your Dream Education Abroad",
     description:
@@ -34,11 +48,12 @@ const heroGradient = { background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 
 export default async function HomePage() {
     const dynamicTestimonials = await fetchTopGoogleReviews();
     const dbBanks = await getDynamicBanks();
+    const disbursedAmount = await getDisbursedAmount();
     const activeLenders = dbBanks ? dbBanks.map((b: any) => ({
         name: b.name,
         slug: b.shortName || b.name.toLowerCase().replace(/[^a-z0-9]/g, ""),
         // badge: b.isPopular ? "Most Popular" : "",
-        rate: b.interestRateMin === b.interestRateMax ? `${b.interestRateMin}% p.a.` : `${b.interestRateMin}% - ${b.interestRateMax}% p.a.`,
+        rate: `${b.interestRateMin}% p.a.`,
         time: b.processingTime,
         fee: b.processingFee,
         logo: b.logoUrl || "",
@@ -178,7 +193,7 @@ export default async function HomePage() {
                                     // { val: `${activeLenders.length}+`, label: 'Lenders' },
                                     { val: '30+', label: 'Countries' },
                                     { val: '48h', label: 'Approval' },
-                                    { val: '₹500Cr+', label: 'Disbursed' },
+                                    { val: disbursedAmount, label: 'Disbursed' },
 
                                 ].map(s => (
                                     <div key={s.label} className="text-center">
@@ -443,7 +458,7 @@ export default async function HomePage() {
                         </div>
 
                         <div className="mt-12 flex flex-wrap justify-center gap-12 text-center border-t border-black/5 pt-12">
-                            {[{ num: "7", label: "AI Tools" }, { num: "3000+", label: "Universities Covered" }, { num: "98%", label: "Accuracy Rate" }, { num: "50000+", label: "Students Helped" }].map((s) => (
+                            {[{ num: "3000+", label: "Universities Covered" }, { num: "98%", label: "Accuracy Rate" }].map((s) => (
                                 <div key={s.label}>
                                     <div className="text-4xl font-bold text-gray-900"><AnimatedNumber value={s.num} duration={2.5} /></div>
                                     <div className="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">{s.label}</div>

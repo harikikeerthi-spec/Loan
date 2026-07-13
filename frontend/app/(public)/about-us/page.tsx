@@ -16,7 +16,21 @@ const values = [
     { icon: "psychology", title: "Powered by AI", desc: "We leverage AI to give every student personalized, accurate guidance." },
 ];
 
-export default function AboutPage() {
+async function getDisbursedAmount() {
+    try {
+        const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:5000";
+        const res = await fetch(`${backendUrl}/api/reference/disbursed-amount`, { next: { revalidate: 60 } });
+        const json = await res.json();
+        if (json?.success && json.data) {
+            return json.data.formatted;
+        }
+    } catch (e) {
+        console.error("Error fetching disbursed amount for about-us page:", e);
+    }
+    return "₹500Cr+";
+}
+
+export default async function AboutPage() {
     return (
         <div className="min-h-screen bg-transparent">
             {/* Hero */}
@@ -36,7 +50,7 @@ export default function AboutPage() {
             <div className="bg-white py-16 px-6">
                 <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
                     {[
-                        { num: "₹500Cr+", label: "Loans Disbursed" },
+                        { num: await getDisbursedAmount(), label: "Loans Disbursed" },
                         { num: "10,000+", label: "Students Helped" },
                         { num: "5+", label: "Premium Partners" },
                         { num: "30+", label: "Countries Covered" },

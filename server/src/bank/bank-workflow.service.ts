@@ -32,6 +32,68 @@ export class BankWorkflowService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  private async generateBankApplicationNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `VTU-APP-${year}-`;
+    
+    try {
+      const { data, error } = await this.db.client
+        .from('LoanApplication')
+        .select('applicationNumber')
+        .like('applicationNumber', `${prefix}%`)
+        .order('applicationNumber', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let nextSeq = 1;
+      if (data && data.applicationNumber) {
+        const parts = data.applicationNumber.split('-');
+        if (parts.length === 4) {
+          const currentSeq = parseInt(parts[3], 10);
+          if (!isNaN(currentSeq)) {
+            nextSeq = currentSeq + 1;
+          }
+        }
+      }
+
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    } catch (e) {
+      const rand = Math.floor(10000 + Math.random() * 90000);
+      return `${prefix}${rand}`;
+    }
+  }
+
+  private async generateApplicationNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `VL-APP-${year}-`;
+    
+    try {
+      const { data, error } = await this.db.client
+        .from('LoanApplication')
+        .select('applicationNumber')
+        .like('applicationNumber', `${prefix}%`)
+        .order('applicationNumber', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let nextSeq = 1;
+      if (data && data.applicationNumber) {
+        const parts = data.applicationNumber.split('-');
+        if (parts.length === 4) {
+          const currentSeq = parseInt(parts[3], 10);
+          if (!isNaN(currentSeq)) {
+            nextSeq = currentSeq + 1;
+          }
+        }
+      }
+
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    } catch (e) {
+      const rand = Math.floor(10000 + Math.random() * 90000);
+      return `${prefix}${rand}`;
+    }
+  }
+
   /**
    * Share application with a bank (SUBMITTED_TO_BANK)
    */
@@ -91,10 +153,17 @@ export class BankWorkflowService {
       throw submitError;
     }
 
+    let updatedAppNumber = application.applicationNumber;
+    if (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-APP-')) {
+      updatedAppNumber = await this.generateBankApplicationNumber();
+    }
+
     // Update LoanApplication with bank submission reference
     await this.db.client
       .from('LoanApplication')
       .update({
+        bank: bankName,
+        applicationNumber: updatedAppNumber,
         bankSubmissionId: submission.id,
         bankWorkflowStatus: 'SUBMITTED_TO_BANK',
         bankWorkflowStage: 'SUBMITTED_TO_BANK',
@@ -2359,9 +2428,15 @@ export class BankWorkflowService {
     }
 
     // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list
+    let updatedAppNumber = application.applicationNumber;
+    if (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-APP-')) {
+      updatedAppNumber = await this.generateBankApplicationNumber();
+    }
+
     const bankNamesStr = banks.map(b => b.bankName).join(', ');
     const updatePayload: any = {
       status: 'ROUTED_MULTIPARTY',
+      applicationNumber: updatedAppNumber,
       bankWorkflowStatus: 'SUBMITTED_TO_BANK',
       bankWorkflowStage: 'SUBMITTED_TO_BANK',
       submittedToBankAt: new Date().toISOString(),

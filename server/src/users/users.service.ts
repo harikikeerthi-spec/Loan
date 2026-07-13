@@ -487,6 +487,75 @@ export class UsersService {
         }
       }
 
+      // Automatically extract and set names for father, mother, and coapplicant documents
+      const extractedName = extractFullNameFromOcrRaw(details, docType);
+      if (extractedName && typeof extractedName === 'string' && extractedName.trim()) {
+        const nameToSave = extractedName.trim();
+        
+        let family = currentUser.family;
+        if (typeof family === 'string') {
+          try { family = JSON.parse(family); } catch { family = {}; }
+        }
+        if (!family || typeof family !== 'object') {
+          family = {};
+        }
+
+        let coApplicant = currentUser.coApplicant;
+        if (typeof coApplicant === 'string') {
+          try { coApplicant = JSON.parse(coApplicant); } catch { coApplicant = {}; }
+        }
+        if (!coApplicant || typeof coApplicant !== 'object') {
+          coApplicant = {};
+        }
+
+        let updated = false;
+
+        if (docType && docType.startsWith('father_')) {
+          family.fatherName = nameToSave;
+          payload.family = family;
+          updated = true;
+        } else if (docType && docType.startsWith('mother_')) {
+          family.motherName = nameToSave;
+          payload.family = family;
+          updated = true;
+        } else if (docType && docType.startsWith('coapplicant_')) {
+          coApplicant.name = nameToSave;
+          payload.coApplicant = coApplicant;
+          updated = true;
+        }
+        
+        if (updated) {
+          console.log(`[UsersService.updateExtractedDetails] Automatically updated name for ${docType}: ${nameToSave}`);
+          
+          // Also update any active LoanApplications for this user to keep them in sync
+          try {
+            const appUpdatePayload: any = {};
+            if (docType && docType.startsWith('father_')) {
+              appUpdatePayload.fatherName = nameToSave;
+            } else if (docType && docType.startsWith('mother_')) {
+              appUpdatePayload.motherName = nameToSave;
+            } else if (docType && docType.startsWith('coapplicant_')) {
+              appUpdatePayload.coApplicantName = nameToSave;
+            }
+
+            if (Object.keys(appUpdatePayload).length > 0) {
+              const { error: appErr } = await this.db
+                .from('LoanApplication')
+                .update(appUpdatePayload)
+                .eq('userId', userId)
+                .neq('status', 'cancelled');
+              if (appErr) {
+                console.warn(`[UsersService.updateExtractedDetails] Failed to sync name to LoanApplication: ${appErr.message}`);
+              } else {
+                console.log(`[UsersService.updateExtractedDetails] Synced name to LoanApplication for user: ${userId}`);
+              }
+            }
+          } catch (syncErr: any) {
+            console.error(`[UsersService.updateExtractedDetails] Error syncing name to LoanApplication: ${syncErr.message}`);
+          }
+        }
+      }
+
       // We no longer automatically fill firstName, lastName, dob, phone, aadhaar, pan, etc.,
       // directly on document upload. The Staff Dashboard manually handles autofill
       // by sending a PUT request after reviewing the OCR data.
@@ -693,7 +762,7 @@ export class UsersService {
 
     const now = new Date().toISOString();
     
-    // Generate application number: VL-APP-{YEAR}-{5-digit}
+    // Generate sequential local application number on creation
     const applicationNumber = await this.generateApplicationNumber();
     
     // Calculate estimated completion (14 days from now)
@@ -702,10 +771,7 @@ export class UsersService {
     
     const courseName = data.courseName || data.programFocus || data.program || data.courseType || null;
 
-    const { data: application, error } = await this.db
-      .from('LoanApplication')
-      .insert({
-        applicationNumber,
+    const insertPayload: any = {
         userId,
         bank: data.bank,
         loanType: data.loanType,
@@ -734,7 +800,14 @@ export class UsersService {
         submittedAt: now,
         estimatedCompletionAt: estimatedCompletionAt.toISOString(),
         updatedAt: now,
-      })
+    };
+    if (applicationNumber) {
+        insertPayload.applicationNumber = applicationNumber;
+    }
+
+    const { data: application, error } = await this.db
+      .from('LoanApplication')
+      .insert(insertPayload)
       .select('*, user:User!userId(id, email, firstName, lastName, tests)')
       .single();
 
@@ -1090,9 +1163,12 @@ export class UsersService {
 
       for (const app of applications) {
         const ts = app.submittedAt || app.date;
+        const bankName = app.bank && app.bank !== 'Any Bank' && app.bank !== 'ANY BANK' && app.bank !== 'Pending Partner' && app.bank !== '—'
+          ? app.bank
+          : '';
         activity.push({
           type: 'application',
-          title: `Loan Application — ${app.bank}`,
+          title: bankName ? `Loan Application — ${bankName}` : `Loan Application`,
           description: `₹${(app.amount || 0).toLocaleString('en-IN')} ${app.loanType || ''}${app.universityName ? ` for ${app.universityName}` : ''}. Status: ${app.status || 'pending'}`,
           timestamp: this.safeISO(ts),
           link: '/dashboard',

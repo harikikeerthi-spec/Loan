@@ -40,6 +40,19 @@ interface AuthUser {
     referralCode?: string;
     bankId?: string;
     bankName?: string;
+    fatherName?: string;
+    fatherPhone?: string;
+    fatherEmail?: string;
+    motherName?: string;
+    motherPhone?: string;
+    motherEmail?: string;
+    coApplicantName?: string;
+    coApplicantRelation?: string;
+    coApplicantPhone?: string;
+    coApplicantEmail?: string;
+    coApplicantIncome?: number | string;
+    family?: any;
+    coApplicant?: any;
 }
 
 interface AuthContextType {

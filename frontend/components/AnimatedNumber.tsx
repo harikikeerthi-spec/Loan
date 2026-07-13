@@ -48,6 +48,10 @@ export default function AnimatedNumber({
         return () => observer.disconnect();
     }, []);
 
+    // Parse the decimal places in the incoming value
+    const decimalMatches = strValue.match(/\.(\d+)/);
+    const decimalPlaces = decimalMatches ? decimalMatches[1].length : 0;
+
     useEffect(() => {
         let startTime: number;
         let animationFrame: number;
@@ -64,7 +68,7 @@ export default function AnimatedNumber({
                 // Ease-out cubic for snappy feel
                 const eased = 1 - Math.pow(1 - linear, 3);
 
-                setCount(Math.floor(end * eased));
+                setCount(end * eased);
 
                 if (linear < 1) {
                     animationFrame = requestAnimationFrame(animate);
@@ -84,7 +88,10 @@ export default function AnimatedNumber({
     }, [isInView, numericPart, duration]);
 
     // Format the displayed number
-    const displayNum = numericPart >= 1000 ? count.toLocaleString("en-IN") : count;
+    const displayNum = count.toLocaleString("en-IN", {
+        minimumFractionDigits: decimalPlaces,
+        maximumFractionDigits: decimalPlaces,
+    });
 
     return (
         <span ref={ref} className={`tabular-nums ${className}`}>

@@ -153,6 +153,41 @@ export class ReferenceService {
     return { success: true, data: data || [] };
   }
 
+  async getDisbursedAmount() {
+    // 1. Sum all disbursementAmount from disbursements table
+    const { data: disbursements } = await this.db
+      .from('disbursements')
+      .select('disbursementAmount');
+    const totalDisbTable = (disbursements || []).reduce((sum, d) => sum + (d.disbursementAmount || 0), 0);
+
+    // 2. Sum all amount from LoanApplication where status = 'disbursed'
+    const { data: apps } = await this.db
+      .from('LoanApplication')
+      .select('amount')
+      .eq('status', 'disbursed');
+    const totalAppsAmountDisbursed = (apps || []).reduce((sum, a) => sum + (a.amount || 0), 0);
+
+    // Take the maximum to be safe and avoid double counting
+    const actualDisbursed = Math.max(totalDisbTable, totalAppsAmountDisbursed);
+
+    // 1 Crore = 10,000,000 Rupees. Base amount = 500 Crores.
+    const baseCr = 500;
+    const actualCr = actualDisbursed / 10000000;
+    const totalCr = baseCr + actualCr;
+
+    // If totalCr has no decimals, display as integer, otherwise format to 2 decimal places
+    const formatted = totalCr % 1 === 0 ? `₹${totalCr.toFixed(0)}Cr+` : `₹${totalCr.toFixed(2)}Cr+`;
+
+    return {
+      success: true,
+      data: {
+        totalDisbursed: totalCr,
+        formatted
+      }
+    };
+  }
+
+
   // ==================== COUNTRIES ====================
 
   async getAllCountries() {

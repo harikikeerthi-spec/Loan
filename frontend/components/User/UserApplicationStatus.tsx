@@ -141,7 +141,7 @@ const UserApplicationStatus = ({ application, onViewDetails }: UserApplicationSt
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Application ID</p>
-                    <p className="font-mono font-bold text-slate-900">{application.applicationNumber}</p>
+                    <p className="font-mono font-bold text-slate-900">{(application.applicationNumber && (application.applicationNumber.startsWith('VTU-APP-') || application.applicationNumber.startsWith('VTU-BNK-'))) ? application.applicationNumber : 'Pending'}</p>
                 </div>
                 <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Bank</p>

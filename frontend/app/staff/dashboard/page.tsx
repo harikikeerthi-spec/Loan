@@ -245,6 +245,9 @@ export default function StaffDashboardPage() {
                             <button onClick={() => router.push("/staff/onboarding")} className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-1.5 shadow-sm">
                                 <span className="material-symbols-outlined text-[16px]">person_add</span> Add Student
                             </button>
+                            <button onClick={() => router.push("/staff/calendar")} className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-1.5 shadow-sm">
+                                <span className="material-symbols-outlined text-[16px]">calendar_month</span> View Calendar
+                            </button>
                         </div>
                     </div>
 
@@ -284,7 +287,7 @@ export default function StaffDashboardPage() {
                             color="text-purple-600"
                             loading={loading}
                             hint={`${stats.users?.joinedToday || 0} joined today`}
-                            footerAction="View List ➔"
+                            // footerAction="View List ➔"
                             onFooterActionClick={(e: any) => { e.stopPropagation(); router.push('/staff/users'); }}
                         />
                     </div>

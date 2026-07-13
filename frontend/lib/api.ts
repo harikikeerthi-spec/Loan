@@ -1180,6 +1180,17 @@ export const documentApi = {
             method: "POST",
             body: JSON.stringify({ userId, ...updates }),
         }),
+
+    accept: (docId: string) =>
+        apiFetch(HttpApiPaths.documents.accept(docId), {
+            method: "POST",
+        }),
+
+    reject: (docId: string, rejectionReason: string) =>
+        apiFetch(HttpApiPaths.documents.reject(docId), {
+            method: "POST",
+            body: JSON.stringify({ rejectionReason }),
+        }),
 };
 
 

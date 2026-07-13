@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -13,8 +13,14 @@ function AnimatedCounter({ value, duration = 2 }: { value: string | number; dura
     // once: false => resets and re-animates every time section enters viewport
     const isInView = useInView(ref, { once: false, amount: 0.5 });
 
-    const numericPart = typeof value === 'string' ? parseInt(value.replace(/[^0-9]/g, '')) || 0 : value;
-    const suffix = typeof value === 'string' ? value.replace(/[0-9]/g, '') : '';
+    const strValue = String(value);
+    const match = strValue.match(/^([₹$€]?)([0-9,.]+)(.*)$/);
+    const prefix = match ? match[1] : "";
+    const numericPart = match ? parseFloat(match[2].replace(/,/g, "")) : 0;
+    const suffix = match ? match[3] : "";
+
+    const decimalMatches = strValue.match(/\.(\d+)/);
+    const decimalPlaces = decimalMatches ? decimalMatches[1].length : 0;
 
     useEffect(() => {
         let startTime: number;
@@ -34,7 +40,7 @@ function AnimatedCounter({ value, duration = 2 }: { value: string | number; dura
                 const linear = Math.min(progress / (duration * 1000), 1);
                 const eased = 1 - Math.pow(1 - linear, 3);
 
-                setCount(Math.floor(end * eased));
+                setCount(end * eased);
 
                 if (linear < 1) {
                     animationFrame = requestAnimationFrame(animate);
@@ -53,9 +59,14 @@ function AnimatedCounter({ value, duration = 2 }: { value: string | number; dura
         };
     }, [isInView, numericPart, duration]);
 
+    const displayNum = count.toLocaleString("en-IN", {
+        minimumFractionDigits: decimalPlaces,
+        maximumFractionDigits: decimalPlaces,
+    });
+
     return (
         <span ref={ref} className="tabular-nums">
-            {count.toLocaleString()}{suffix}
+            {prefix}{displayNum}{suffix}
         </span>
     );
 }
@@ -266,6 +277,23 @@ const postAdmissionServices = [
     { icon: "🏦", title: "Bank Account", desc: "Global accounts with zero student fees.", color: "linear-gradient(135deg, #164e63 0%, #155e75 100%)", link: "/bank-account", img: "/images/services/bank-account.jpg" },
 ];
 export default function HomeContent() {
+    const [disbursedText, setDisbursedText] = useState("₹500Cr+");
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch("/api/reference/disbursed-amount");
+                const json = await res.json();
+                if (json?.success && json.data) {
+                    setDisbursedText(json.data.formatted);
+                }
+            } catch (e) {
+                console.error("Error fetching disbursed stats on client:", e);
+            }
+        };
+        fetchStats();
+    }, []);
+
     return (
         <div className="relative min-h-screen text-gray-900">
             <div className="relative z-10">
@@ -338,7 +366,7 @@ export default function HomeContent() {
                                 {[
                                     { val: '50+', label: 'Lenders' },
                                     { val: '48h', label: 'Approval' },
-                                    { val: '₹500Cr+', label: 'Disbursed' },
+                                    { val: disbursedText, label: 'Disbursed' },
                                 ].map(s => (
                                     <div key={s.label} className="text-left">
                                         <div className="text-[15px] font-black text-[#6605c7] leading-none mb-1">

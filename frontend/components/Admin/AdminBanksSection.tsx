@@ -302,11 +302,10 @@ export default function AdminBanksSection() {
                                         </td>
                                         <td className="px-5 py-4 font-mono text-[10px] text-slate-500">{bank.shortName}</td>
                                         <td className="px-5 py-4">
-                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                                                bank.type === "NBFC" ? "bg-amber-50 text-amber-700 border border-amber-100" :
-                                                bank.type === "Private" ? "bg-blue-50 text-blue-700 border border-blue-100" :
-                                                "bg-slate-50 text-slate-700 border border-slate-100"
-                                            }`}>
+                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${bank.type === "NBFC" ? "bg-amber-50 text-amber-700 border border-amber-100" :
+                                                    bank.type === "Private" ? "bg-blue-50 text-blue-700 border border-blue-100" :
+                                                        "bg-slate-50 text-slate-700 border border-slate-100"
+                                                }`}>
                                                 {bank.type}
                                             </span>
                                         </td>

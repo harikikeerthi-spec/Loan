@@ -71,6 +71,8 @@ export const HttpApiPaths = {
         byDocId: (docId: string) => `${HTTP_API_PREFIX}/documents/${enc(docId)}`,
         download: () => `${HTTP_API_PREFIX}/documents/download`,
         verifyByDocId: (docId: string) => `${HTTP_API_PREFIX}/documents/${enc(docId)}/verify`,
+        accept: (docId: string) => `${HTTP_API_PREFIX}/documents/${enc(docId)}/accept`,
+        reject: (docId: string) => `${HTTP_API_PREFIX}/documents/${enc(docId)}/reject`,
     },
 
     staffProfiles: {

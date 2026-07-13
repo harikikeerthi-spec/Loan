@@ -173,7 +173,7 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                     </div>
                     <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-bold text-red-900 capitalize">Application {app.status}</h3>
-                        <p className="text-red-700/60 text-xs truncate">Your {app.bank} application was {app.status}.</p>
+                        <p className="text-red-700/60 text-xs truncate">Your {getBankDisplayName(app.bank) ? `${getBankDisplayName(app.bank)} ` : ""}application was {app.status}.</p>
                     </div>
                 </div>
                 <div className="p-3 bg-white/60 rounded-lg border border-red-100">
@@ -269,7 +269,7 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                     <div className="text-[10px] font-black uppercase tracking-widest text-[#6605c7]/60 mb-1">Current Status</div>
                     <h4 className="font-bold text-gray-900 text-[14px]">{currentStage?.label.replace('<br>', ' ')}</h4>
                     <p className="text-gray-500 text-[13px] mt-1 leading-relaxed">
-                        Your {app.bank} application {app.applicationNumber ? `(#${app.applicationNumber})` : ""} is currently in the <strong>{currentStage?.label.replace('<br>', ' ')}</strong> stage.
+                        Your {getBankDisplayName(app.bank) ? `${getBankDisplayName(app.bank)} ` : ""}application {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-'))) ? `(#${app.applicationNumber})` : ""} is currently in the <strong>{currentStage?.label.replace('<br>', ' ')}</strong> stage.
                         Estimated completion: <span className="text-gray-900 font-bold">
                             {(() => {
                                 const appDate = app.date ? new Date(app.date) : new Date();
@@ -280,7 +280,7 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                         </span>
                         {app.id && (
                             <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Application ID: ${app.id}`}>
-                                App #: {app.applicationNumber || app.id}
+                                App #: {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-'))) ? app.applicationNumber : 'Pending'}
                             </span>
                         )}
                     </p>
@@ -301,6 +301,13 @@ const getDynamicProgress = (app: any) => {
     if (['docs_received', 'docs_uploaded', 'under_review'].includes(s)) return 40;
     if (['submitted', 'application_submitted'].includes(s)) return 25;
     return typeof app.progress === 'number' && app.progress > 0 ? app.progress : 10;
+};
+
+const getBankDisplayName = (bank?: string) => {
+    if (!bank || bank === "Any Bank" || bank === "ANY BANK" || bank === "Pending Partner" || bank === "—") {
+        return "";
+    }
+    return bank;
 };
 
 export default function DashboardPage() {
@@ -855,8 +862,10 @@ export default function DashboardPage() {
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-[15px] text-gray-900 truncate">{app.bank}</span>
-                                                                    {app.applicationNumber && (
+                                                                    <span className="font-bold text-[15px] text-gray-900 truncate">
+                                                                        {getBankDisplayName(app.bank) || "Loan Application"}
+                                                                    </span>
+                                                                    {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-'))) && (
                                                                         <span className="text-[17px] text-black-900 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
                                                                             #{app.applicationNumber}
                                                                         </span>
@@ -985,8 +994,10 @@ export default function DashboardPage() {
                                                     </div>
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <h3 className="font-bold text-[15px] text-gray-900 truncate">{app.bank}</h3>
-                                                            {app.applicationNumber && (
+                                                            <h3 className="font-bold text-[15px] text-gray-900 truncate">
+                                                                {getBankDisplayName(app.bank) || "Loan Application"}
+                                                            </h3>
+                                                            {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-'))) && (
                                                                 <span className="text-[15px] text-gray-400 font-semibold bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
                                                                     #{app.applicationNumber}
                                                                 </span>
@@ -1087,78 +1098,140 @@ export default function DashboardPage() {
                 )} */}
 
                 {/* Profile Tab */}
-                {activeTab === "profile" && (
-                    <div className="max-w-4xl mx-auto bg-slate-50 p-8 rounded-3xl perspective-1000">
-                        <div className="bg-white/85 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(102,5,199,0.12)] border border-white transform-gpu transition-all duration-300 hover:shadow-[0_30px_60px_rgba(102,5,199,0.22)] hover:-translate-y-2 flex flex-col md:flex-row overflow-visible">
-                            {/* Left Column */}
-                            <div className="md:w-1/3 p-6 bg-gradient-to-b from-slate-50 to-slate-100 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none flex flex-col items-center text-center relative pt-16">
-                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-[#6605c7] to-[#8b5cf6] text-white flex items-center justify-center text-3xl font-bold shadow-[0_10px_25px_rgba(102,5,199,0.35)] transform -translate-y-12 border-4 border-white mb-[-24px] hover:scale-105 transition-transform duration-300">
-                                    {user?.firstName?.[0] || ""}{user?.lastName?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
-                                </div>
-
-                                <h2 className="text-xl font-bold text-slate-800 mt-2">
-                                    {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email?.split("@")[0]}
-                                </h2>
-                                <p className="text-xs text-slate-500 mb-6 truncate max-w-full px-2">{user?.email}</p>
-
-                                <div className="w-full bg-white rounded-xl p-4 shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] border border-slate-100 mt-auto">
-                                    <div className="flex justify-between text-xs font-bold text-[#6605c7] mb-2">
-                                        <span>Profile Setup</span>
-                                        <span>{profileCompleteness}%</span>
-                                    </div>
-                                    <div className="w-full bg-slate-100 h-3 rounded-full p-0.5 overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
-                                        <div
-                                            className="bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] h-full rounded-full shadow-[0_1px_5px_rgba(102,5,199,0.3)] transition-all duration-500"
-                                            style={{ width: `${profileCompleteness}%` }}
-                                        />
-                                    </div>
-                                    <span className="inline-block mt-3 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold tracking-wider uppercase rounded-md border border-emerald-200 shadow-sm">
-                                        Active Account
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Right Column */}
-                            <div className="md:w-2/3 p-8 space-y-6 relative">
-                                <div className="absolute -top-4 right-6 bg-slate-900 text-white font-mono text-xs px-3 py-1.5 rounded-lg shadow-[0_8px_16px_rgba(0,0,0,0.2)] tracking-wide border border-slate-800 transform hover:scale-105 transition-transform select-none">
-                                    ID: {displayUserId || "—"}
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">First Name</span>
-                                        <span className="text-sm font-semibold text-slate-700">{user?.firstName || "—"}</span>
+                {activeTab === "profile" && (() => {
+                    const activeProfile = data.profile || user;
+                    return (
+                        <div className="max-w-4xl mx-auto bg-slate-50 p-8 rounded-3xl perspective-1000">
+                            <div className="bg-white/85 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(102,5,199,0.12)] border border-white transform-gpu transition-all duration-300 hover:shadow-[0_30px_60px_rgba(102,5,199,0.22)] hover:-translate-y-2 flex flex-col md:flex-row overflow-visible">
+                                {/* Left Column */}
+                                <div className="md:w-1/3 p-6 bg-gradient-to-b from-slate-50 to-slate-100 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none flex flex-col items-center text-center relative pt-16">
+                                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-[#6605c7] to-[#8b5cf6] text-white flex items-center justify-center text-3xl font-bold shadow-[0_10px_25px_rgba(102,5,199,0.35)] transform -translate-y-12 border-4 border-white mb-[-24px] hover:scale-105 transition-transform duration-300">
+                                        {activeProfile?.firstName?.[0] || ""}{activeProfile?.lastName?.[0] || activeProfile?.email?.[0]?.toUpperCase() || "U"}
                                     </div>
 
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Last Name</span>
-                                        <span className="text-sm font-semibold text-slate-700">{user?.lastName || "—"}</span>
-                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-800 mt-2">
+                                        {activeProfile?.firstName && activeProfile?.lastName ? `${activeProfile.firstName} ${activeProfile.lastName}` : activeProfile?.email?.split("@")[0]}
+                                    </h2>
+                                    <p className="text-xs text-slate-500 mb-6 truncate max-w-full px-2">{activeProfile?.email}</p>
 
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Date of Birth</span>
-                                        <span className="text-sm font-semibold text-slate-700">{user?.dateOfBirth || "—"}</span>
-                                    </div>
-
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Phone Number</span>
-                                        <span className="text-sm font-semibold text-slate-700">{user?.phoneNumber || "—"}</span>
+                                    <div className="w-full bg-white rounded-xl p-4 shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] border border-slate-100 mt-auto">
+                                        <div className="flex justify-between text-xs font-bold text-[#6605c7] mb-2">
+                                            <span>Profile Setup</span>
+                                            <span>{profileCompleteness}%</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 h-3 rounded-full p-0.5 overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
+                                            <div
+                                                className="bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] h-full rounded-full shadow-[0_1px_5px_rgba(102,5,199,0.3)] transition-all duration-500"
+                                                style={{ width: `${profileCompleteness}%` }}
+                                            />
+                                        </div>
+                                        <span className="inline-block mt-3 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold tracking-wider uppercase rounded-md border border-emerald-200 shadow-sm">
+                                            Active Account
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div className="pt-4 flex justify-end">
-                                    <Link
-                                        href="/profile?edit=1"
-                                        className="px-6 py-2.5 bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] text-white font-medium text-sm rounded-xl shadow-[0_4px_14px_rgba(102,5,199,0.3)] border-b-4 border-[#5504a8] active:border-b-0 active:translate-y-1 transition-all flex items-center gap-2"
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">edit</span>
-                                        <span>Edit Profile</span>
-                                    </Link>
+                                {/* Right Column */}
+                                <div className="md:w-2/3 p-8 space-y-6 relative">
+                                    <div className="absolute -top-4 right-6 bg-slate-900 text-white font-mono text-xs px-3 py-1.5 rounded-lg shadow-[0_8px_16px_rgba(0,0,0,0.2)] tracking-wide border border-slate-800 transform hover:scale-105 transition-transform select-none">
+                                        ID: {displayUserId || "—"}
+                                    </div>
+
+                                    <div className="space-y-6 pt-4 max-h-[500px] overflow-y-auto pr-2">
+                                        {/* Personal Info */}
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                                                <span className="material-symbols-outlined text-[16px]">person</span>
+                                                Personal Information
+                                            </h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">First Name</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.firstName || "—"}</span>
+                                                </div>
+
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Last Name</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.lastName || "—"}</span>
+                                                </div>
+
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Date of Birth</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.dateOfBirth || "—"}</span>
+                                                </div>
+
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Phone Number</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.phoneNumber || "—"}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Parent Details */}
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                                                <span className="material-symbols-outlined text-[16px]">family_history</span>
+                                                Parent Details
+                                            </h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Father's Full Name</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.family?.fatherName || activeProfile?.fatherName || "—"}</span>
+                                                </div>
+
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Mother's Full Name</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.family?.motherName || activeProfile?.motherName || "—"}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Co-Applicant Details */}
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                                                <span className="material-symbols-outlined text-[16px]">diversity_3</span>
+                                                Co-Applicant Details
+                                            </h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Name</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || "—"}</span>
+                                                </div>
+
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Relation</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation || "—"}</span>
+                                                </div>
+
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Phone</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone || "—"}</span>
+                                                </div>
+
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Monthly/Annual Income</span>
+                                                    <span className="text-sm font-semibold text-slate-700">
+                                                        {activeProfile?.coApplicant?.monthlyIncome ? `₹${Number(activeProfile.coApplicant.monthlyIncome).toLocaleString('en-IN')}/mo` : activeProfile?.coApplicantIncome ? `₹${Number(activeProfile.coApplicantIncome).toLocaleString('en-IN')}/yr` : "—"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 flex justify-end">
+                                        <Link
+                                            href="/profile?edit=1"
+                                            className="px-6 py-2.5 bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] text-white font-medium text-sm rounded-xl shadow-[0_4px_14px_rgba(102,5,199,0.3)] border-b-4 border-[#5504a8] active:border-b-0 active:translate-y-1 transition-all flex items-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                                            <span>Edit Profile</span>
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* Documents Tab */}
                 {activeTab === "documents" && (
@@ -1310,7 +1383,7 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-gray-50/50">
                             <div>
                                 <h2 className="text-lg font-bold text-gray-900 tracking-tight">Application Details</h2>
-                                <p className="text-[13px] text-gray-500 font-medium">#{selectedAppDetails.applicationNumber || selectedAppDetails.id}</p>
+                                <p className="text-[13px] text-gray-500 font-medium">#{(selectedAppDetails.applicationNumber && (selectedAppDetails.applicationNumber.startsWith('VTU-APP-') || selectedAppDetails.applicationNumber.startsWith('VTU-BNK-'))) ? selectedAppDetails.applicationNumber : 'Pending'}</p>
                             </div>
                             <button
                                 onClick={() => setSelectedAppDetails(null)}

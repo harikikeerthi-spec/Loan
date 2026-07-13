@@ -9,7 +9,6 @@ const LOAN_DATA = Object.values(banks).map(bank => ({
     bank: bank.name,
     logo: bank.logo,
     rate: bank.interestRate,
-    maxAmount: bank.maxLoan,
     fee: bank.specifications.find(s => s.label === "Processing Fee")?.value || "5.7% + GST",
     tenure: bank.specifications.find(s => s.label === "Repayment Tenure")?.value || "Up to 15 Years",
     collateral: bank.specifications.find(s => s.label === "Collateral")?.value || "Profile based",
@@ -67,10 +66,6 @@ export default function CompareLoansPage() {
                                 <div className="flex justify-between items-baseline">
                                     <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Interest Rate</span>
                                     <span className="text-xl font-bold text-[#6605c7]">{loan.rate}</span>
-                                </div>
-                                <div className="flex justify-between items-center py-2.5 border-y border-gray-50">
-                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Max Amount</span>
-                                    <span className="text-[13px] font-bold text-gray-900">{loan.maxAmount}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Processing Fee</span>
@@ -144,7 +139,6 @@ export default function CompareLoansPage() {
                                 <tbody className="divide-y divide-gray-50 text-center">
                                     {[
                                         { label: "Interest Rate", key: "rate" },
-                                        { label: "Max Amount", key: "maxAmount" },
                                         { label: "Processing Fee", key: "fee" },
                                         { label: "Tenure", key: "tenure" },
                                         { label: "Collateral", key: "collateral" }

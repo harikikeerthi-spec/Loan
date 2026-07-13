@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>EVV Test Agent · VidyaLoans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,500,0,0" />
+<style>
+  :root {
+    --ink: #0b1b2b;
+    --navy: #0f2f4d;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --accent: #0f6e56;
+    --accent-dark: #0a5a45;
+    --accent-light: #e1f5ee;
+    --gold: #f59e0b;
+    --gold-light: #fef3e2;
+    --warn: #b45309;
+    --warn-bg: #fef3c7;
+    --bad: #b91c1c;
+    --bad-bg: #fee2e2;
+    --console-bg: #0b1220;
+    --console-text: #d1d5db;
+    --console-warn: #fbbf24;
+    --console-ok: #34d399;
+  }
+  * { box-sizing: border-box; }
+  .msym {
+    font-family: 'Material Symbols Outlined';
+    font-size: 18px;
+    vertical-align: middle;
+    line-height: 1;
+  }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 24px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+
+  .brandbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 22px; flex-wrap: wrap; gap: 10px;
+  }
+  .brandbar .brand {
+    display: flex; align-items: center; gap: 9px;
+  }
+  .brandbar .logo-badge {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 14px;
+  }
+  .brandbar .brand-name { font-weight: 800; font-size: 15px; letter-spacing: -.01em; color: var(--navy); }
+  .brandbar .brand-name span { color: var(--accent); }
+  .trust-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--accent-light); color: var(--accent-dark);
+    font-size: 11.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .header .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+  }
+  h1 { font-size: 21px; margin: 0; font-weight: 800; color: var(--navy); letter-spacing: -.01em; }
+  .subtitle { color: var(--muted); font-size: 13px; margin: 4px 0 18px; }
+
+  .stat-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .stat-strip .cell {
+    background: var(--card); padding: 12px 10px; text-align: center;
+  }
+  .stat-strip .cell .n { font-size: 15px; font-weight: 800; color: var(--navy); }
+  .stat-strip .cell .l { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; margin-top: 2px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tab {
+    padding: 8px 16px; font-size: 13px; font-weight: 700;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--card);
+    color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all .15s;
+  }
+  .tab:hover { border-color: var(--accent); color: var(--accent-dark); }
+  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tab.active .msym { color: #fff; }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; margin-bottom: 16px;
+    box-shadow: 0 1px 2px rgba(15, 47, 77, 0.04);
+  }
+
+  .dropzone {
+    border: 1.5px dashed var(--line); border-radius: 10px; padding: 32px 16px;
+    text-align: center; color: var(--muted); font-size: 13px; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone:hover { border-color: var(--accent); background: var(--accent-light); }
+  .dropzone.drag { border-color: var(--accent); background: var(--accent-light); }
+  .dropzone input { display: none; }
+  .file-name { margin-top: 8px; font-weight: 600; color: var(--ink); font-size: 12.5px; }
+
+  textarea#pasteArea {
+    width: 100%; min-height: 160px; border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    resize: vertical;
+  }
+  textarea#pasteArea::placeholder { color: #94a3b8; }
+
+  .controls-row { display: flex; align-items: center; gap: 16px; margin: 16px 0 4px; flex-wrap: wrap; }
+  .control-group { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .control-group input[type="number"] {
+    width: 64px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px;
+  }
+  button.run {
+    padding: 10px 20px; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; border: none;
+    border-radius: 999px; font-weight: 700; font-size: 13.5px; cursor: pointer;
+    margin-left: auto;
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 2px 8px rgba(15, 110, 86, 0.25);
+    transition: transform .1s, box-shadow .1s;
+  }
+  button.run:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15, 110, 86, 0.32); }
+  button.run:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; transform: none; }
+
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+    border-top: 3px solid var(--accent);
+  }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  .stat-value { font-size: 20px; font-weight: 800; color: var(--navy); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+  tr:last-child td { border-bottom: none; }
+
+  .console {
+    background: var(--console-bg); color: var(--console-text); border-radius: 10px;
+    padding: 14px 16px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; max-height: 220px; overflow-y: auto; line-height: 1.6;
+  }
+  .console .line { white-space: pre-wrap; }
+  .console .warn { color: var(--console-warn); }
+  .console .ok { color: var(--console-ok); }
+  .console-title {
+    font-size: 12px; font-weight: 700; color: var(--muted); margin: 0 0 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .empty-note { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brandbar">
+    <div class="brand">
+      <div class="logo-badge">VL</div>
+      <div class="brand-name">Vidya<span>Loans</span></div>
+    </div>
+    <span class="trust-pill"><span class="msym">lock</span>Runs 100% in your browser</span>
+  </div>
+
+  <div class="header"><span class="dot"></span><h1>EVV Test Agent</h1></div>
+  <p class="subtitle">Parses a bank statement, takes balance snapshots at a fixed interval, and computes the Estimated Verified Value (EVV) — a proxy for average maintained balance used in loan-eligibility screening. Nothing is uploaded anywhere; everything runs locally.</p>
+
+  <div class="stat-strip">
+    <div class="cell"><div class="n">0</div><div class="l">Uploads</div></div>
+    <div class="cell"><div class="n">100%</div><div class="l">Local</div></div>
+    <div class="cell"><div class="n">Instant</div><div class="l">Results</div></div>
+    <div class="cell"><div class="n">4</div><div class="l">Banks Supported</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tabUpload"><span class="msym">upload_file</span>Upload PDF</div>
+    <div class="tab" id="tabPaste"><span class="msym">content_paste</span>Paste data</div>
+  </div>
+
+  <div class="panel" id="panelUpload">
+    <div class="dropzone" id="dropzone">
+      <div>Click to select a bank statement PDF</div>
+      <div style="margin-top:4px; font-size:11.5px;">Parsed locally with pdf.js — supports common SBI / ICICI / HDFC / Canara statement layouts</div>
+      <input type="file" id="fileInput" accept="application/pdf" />
+      <div class="file-name" id="fileName"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelPaste" style="display:none;">
+    <textarea id="pasteArea" placeholder="Paste statement text, e.g.:&#10;01/01/2026  UPI-XYZ-CR  2,500.00        45,120.50&#10;03/01/2026  ATM-WDL      3,000.00  42,120.50"></textarea>
+  </div>
+
+  <div class="controls-row">
+    <div class="control-group">
+      <label for="interval">Snapshot interval</label>
+      <input type="number" id="interval" value="5" min="1" max="90" />
+      <span>days</span>
+    </div>
+    <button class="run" id="runBtn"><span class="msym">bolt</span>Analyze</button>
+  </div>
+
+  <div id="resultsSection" style="display:none; margin-top: 20px;">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Overall EVV</div><div class="stat-value" id="statEVV">–</div></div>
+      <div class="stat-card"><div class="stat-label">Snapshots</div><div class="stat-value" id="statSnapshots">–</div></div>
+      <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value" id="statTx">–</div></div>
+      <div class="stat-card"><div class="stat-label">Period</div><div class="stat-value" id="statPeriod" style="font-size:14px;">–</div></div>
+    </div>
+
+    <div class="panel" id="tablePanel">
+      <table>
+        <thead><tr><th>Month</th><th>Points</th><th>Avg</th><th>Min</th><th>Max</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="console-title"><span class="msym">terminal</span>Console messages</p>
+    <div class="console" id="console"></div>
+  </div>
+
+  <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; margin: 20px 0 4px; color: var(--muted); font-size: 11.5px; font-weight: 600;">
+    <span style="display:flex; align-items:center; gap:4px;"><span class="msym" style="font-size:15px;">security</span>Bank-grade privacy</span>
+    <span style="display:flex; align-items:center; gap:4px;"><span class="msym" style="font-size:15px;">verified_user</span>No data leaves your device</span>
+    <span style="display:flex; align-items:center; gap:4px;"><span class="msym" style="font-size:15px;">handshake</span>Powered by VidyaLoans</span>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  const consoleEl = document.getElementById("console");
+  function log(msg, kind) {
+    const div = document.createElement("div");
+    div.className = "line" + (kind ? " " + kind : "");
+    const time = new Date().toLocaleTimeString();
+    div.textContent = "[" + time + "] " + msg;
+    consoleEl.appendChild(div);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+  log("EVV test agent ready. Waiting for a statement.");
+
+  const tabUpload = document.getElementById("tabUpload");
+  const tabPaste = document.getElementById("tabPaste");
+  const panelUpload = document.getElementById("panelUpload");
+  const panelPaste = document.getElementById("panelPaste");
+
+  tabUpload.onclick = () => {
+    tabUpload.classList.add("active"); tabPaste.classList.remove("active");
+    panelUpload.style.display = "block"; panelPaste.style.display = "none";
+  };
+  tabPaste.onclick = () => {
+    tabPaste.classList.add("active"); tabUpload.classList.remove("active");
+    panelPaste.style.display = "block"; panelUpload.style.display = "none";
+  };
+
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("fileInput");
+  const fileNameEl = document.getElementById("fileName");
+  let pendingPdfFile = null;
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("drag"); });
+  dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag"));
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("drag");
+    if (e.dataTransfer.files.length) handleFileSelected(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener("change", (e) => {
+    if (e.target.files.length) handleFileSelected(e.target.files[0]);
+  });
+
+  function handleFileSelected(file) {
+    pendingPdfFile = file;
+    fileNameEl.textContent = file.name;
+    log("Selected file: " + file.name);
+  }
+
+  async function extractPdfText(file) {
+    log("Loading PDF via pdf.js…");
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    log("PDF loaded — " + doc.numPages + " page(s) found.", "ok");
+    let fullText = "";
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const lines = {};
+      content.items.forEach((item) => {
+        const y = Math.round(item.transform[5]);
+        if (!lines[y]) lines[y] = [];
+        lines[y].push(item.str);
+      });
+      const sortedY = Object.keys(lines).map(Number).sort((a, b) => b - a);
+      sortedY.forEach((y) => { fullText += lines[y].join(" ") + "\n"; });
+    }
+    return fullText;
+  }
+
+  const MONTHS = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+
+  function parseDateToken(tok) {
+    let m;
+    m = tok.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m) {
+      let [, d, mo, y] = m;
+      y = y.length === 2 ? "20" + y : y;
+      return new Date(+y, +mo - 1, +d);
+    }
+    m = tok.match(/^(\d{1,2})[\-\s]([A-Za-z]{3,})[\-\s](\d{2,4})$/);
+    if (m) {
+      let [, d, mon, y] = m;
+      const mi = MONTHS[mon.slice(0, 3).toLowerCase()];
+      if (mi === undefined) return null;
+      y = y.length === 2 ? "20" + y : y;
+      return new Date(+y, mi, +d);
+    }
+    return null;
+  }
+
+  function parseTransactions(text) {
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    const dateAtStart = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\-\s][A-Za-z]{3,}[\-\s]\d{2,4})/;
+    const numberToken = /[\d,]+\.\d{1,2}/g;
+
+    const txs = [];
+    let skipped = 0;
+
+    lines.forEach((line) => {
+      const dm = line.match(dateAtStart);
+      if (!dm) return;
+      const date = parseDateToken(dm[1]);
+      if (!date || isNaN(date.getTime())) return;
+
+      const rest = line.slice(dm[1].length);
+      const numMatches = rest.match(numberToken);
+      if (!numMatches || numMatches.length === 0) { skipped++; return; }
+
+      const balance = parseFloat(numMatches[numMatches.length - 1].replace(/,/g, ""));
+      if (isNaN(balance)) { skipped++; return; }
+
+      txs.push({ date, balance, raw: line });
+    });
+
+    txs.sort((a, b) => a.date - b.date);
+    if (skipped > 0) log(skipped + " line(s) matched a date but had no readable amount — skipped.", "warn");
+    return txs;
+  }
+
+  function buildSnapshots(txs, intervalDays) {
+    if (txs.length === 0) return [];
+    const snapshots = [];
+    const start = new Date(txs[0].date);
+    const end = new Date(txs[txs.length - 1].date);
+    let cursor = new Date(start);
+    let txIdx = 0;
+    let lastKnownBalance = null;
+
+    while (cursor <= end) {
+      while (txIdx < txs.length && txs[txIdx].date <= cursor) {
+        lastKnownBalance = txs[txIdx].balance;
+        txIdx++;
+      }
+      if (lastKnownBalance !== null) {
+        snapshots.push({ date: new Date(cursor), balance: lastKnownBalance });
+      }
+      cursor.setDate(cursor.getDate() + intervalDays);
+    }
+    return snapshots;
+  }
+
+  function monthKey(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+  function monthLabel(d) {
+    return d.toLocaleString("en-US", { month: "short", year: "numeric" });
+  }
+
+  function aggregateByMonth(snapshots) {
+    const groups = {};
+    snapshots.forEach((s) => {
+      const key = monthKey(s.date);
+      if (!groups[key]) groups[key] = { label: monthLabel(s.date), values: [], sortKey: key };
+      groups[key].values.push(s.balance);
+    });
+    return Object.values(groups)
+      .sort((a, b) => (a.sortKey > b.sortKey ? 1 : -1))
+      .map((g) => ({
+        label: g.label,
+        points: g.values.length,
+        avg: g.values.reduce((a, b) => a + b, 0) / g.values.length,
+        min: Math.min(...g.values),
+        max: Math.max(...g.values),
+      }));
+  }
+
+  function fmtCurrency(n) {
+    return "₹" + Math.round(n).toLocaleString("en-IN");
+  }
+  function fmtDate(d) {
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
+  const resultsSection = document.getElementById("resultsSection");
+
+  function renderResults(txs, interval) {
+    const snapshots = buildSnapshots(txs, interval);
+    const monthly = aggregateByMonth(snapshots);
+    const overallEVV = snapshots.reduce((a, b) => a + b.balance, 0) / snapshots.length;
+
+    document.getElementById("statEVV").textContent = fmtCurrency(overallEVV);
+    document.getElementById("statSnapshots").textContent = snapshots.length;
+    document.getElementById("statTx").textContent = txs.length;
+    document.getElementById("statPeriod").textContent =
+      fmtDate(txs[0].date) + " → " + fmtDate(txs[txs.length - 1].date);
+
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+    monthly.forEach((m) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + m.label + "</td>" +
+        "<td>" + m.points + "</td>" +
+        "<td>" + fmtCurrency(m.avg) + "</td>" +
+        "<td>" + fmtCurrency(m.min) + "</td>" +
+        "<td>" + fmtCurrency(m.max) + "</td>";
+      tbody.appendChild(tr);
+    });
+
+    resultsSection.style.display = "block";
+    return overallEVV;
+  }
+
+  function generateDemoData() {
+    const start = new Date(2026, 0, 1);
+    const end = new Date(2026, 6, 1);
+    const txs = [];
+    let balance = 48000;
+    let d = new Date(start);
+    let dayCount = 0;
+    const totalDays = Math.round((end - start) / 86400000);
+
+    while (d <= end) {
+      const txToday = 3 + (dayCount % 3 === 0 ? 1 : 0);
+      for (let i = 0; i < txToday; i++) {
+        const swing = (Math.sin(dayCount * 0.37 + i) * 6000) + ((Math.random() - 0.5) * 4000);
+        balance = Math.max(4500, balance + swing * 0.15);
+        const txDate = new Date(d);
+        txDate.setHours(9 + i * 3);
+        txs.push({ date: txDate, balance: Math.round(balance * 100) / 100 });
+      }
+      d.setDate(d.getDate() + 1);
+      dayCount++;
+    }
+    return txs.slice(0, 700);
+  }
+
+  function loadDemo() {
+    log("No statement uploaded yet — showing demo data so you can see the output shape.");
+    const demoTxs = generateDemoData();
+    const interval = parseInt(document.getElementById("interval").value, 10) || 5;
+    const evv = renderResults(demoTxs, interval);
+    log("Demo loaded: " + demoTxs.length + " synthetic transactions, EVV " + fmtCurrency(evv) + ".", "ok");
+    log("Upload a real PDF or paste statement text, then click Analyze to replace this with your data.");
+  }
+
+  const runBtn = document.getElementById("runBtn");
+
+  runBtn.addEventListener("click", async () => {
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<span class="msym">progress_activity</span>Analyzing…';
+    try {
+      const interval = Math.max(1, parseInt(document.getElementById("interval").value, 10) || 5);
+      let text = "";
+
+      if (tabUpload.classList.contains("active")) {
+        if (!pendingPdfFile) { log("No PDF selected yet.", "warn"); return; }
+        text = await extractPdfText(pendingPdfFile);
+      } else {
+        text = document.getElementById("pasteArea").value;
+        log("Using pasted statement text.");
+      }
+
+      const txs = parseTransactions(text);
+      log("Parsed " + txs.length + " transaction line(s).", txs.length ? "ok" : "warn");
+
+      if (txs.length === 0) {
+        log("Nothing parsed — check the statement format or try Paste data with the raw text.", "warn");
+        return;
+      }
+
+      const evv = renderResults(txs, interval);
+      log("Analysis complete. Overall EVV: " + fmtCurrency(evv), "ok");
+    } catch (err) {
+      log("Error: " + err.message, "warn");
+      console.error(err);
+    } finally {
+      runBtn.disabled = false;
+      runBtn.innerHTML = '<span class="msym">bolt</span>Analyze';
+    }
+  });
+
+  loadDemo();
+</script>
+</body>
+</html>

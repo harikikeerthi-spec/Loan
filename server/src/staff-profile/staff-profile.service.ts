@@ -1058,8 +1058,9 @@ export class StaffProfileService {
       if (!application) {
         const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
         const isBankRecipient = body.recipientType?.toLowerCase() === 'bank';
-        const appNumber = await this.generateApplicationNumber(isBankRecipient ? 'bank' : 'default');
-        const insertApp = {
+        // Only generate VTU-APP- application number when routing to bank
+        const appNumber = isBankRecipient ? await this.generateApplicationNumber('bank') : undefined;
+        const insertApp: any = {
           id: 'la-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
           userId: studentId,
           bank: body.recipientName || 'Credila',
@@ -1070,7 +1071,6 @@ export class StaffProfileService {
           progress: 10,
           date: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          applicationNumber: appNumber,
           priorityLevel: 'medium',
           ...mappedDetails,
           firstName: mappedDetails.firstName || studentUser?.firstName || 'Student',
@@ -1078,6 +1078,9 @@ export class StaffProfileService {
           email: mappedDetails.email || studentUser?.email || null,
           phone: mappedDetails.phone || studentUser?.mobile || studentUser?.phone || null,
         };
+        if (appNumber) {
+          insertApp.applicationNumber = appNumber;
+        }
 
         const { data: newApp, error: createAppErr } = await this.db
           .from('LoanApplication')
@@ -1110,7 +1113,7 @@ export class StaffProfileService {
         // If application already exists, update it with onboarding details!
         const isBankRecipient = body.recipientType?.toLowerCase() === 'bank';
         let updatedAppNumber = application.applicationNumber;
-        if (isBankRecipient && (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-BNK-'))) {
+        if (isBankRecipient && (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-APP-'))) {
           updatedAppNumber = await this.generateApplicationNumber('bank');
         }
 
@@ -1413,7 +1416,7 @@ export class StaffProfileService {
 
   private async generateApplicationNumber(formatType: 'default' | 'bank' = 'default'): Promise<string> {
     const year = new Date().getFullYear();
-    const prefix = formatType === 'bank' ? 'VTU-BNK-' : `VL-APP-${year}-`;
+    const prefix = formatType === 'bank' ? `VTU-APP-${year}-` : `VL-APP-${year}-`;
     
     try {
       const { data, error } = await this.db

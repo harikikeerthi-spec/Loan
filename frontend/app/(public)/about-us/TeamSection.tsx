@@ -3,7 +3,7 @@ import Image from "next/image";
 
 const team = [
     { name: "Vamsi Krishna", role: "CEO & Co-Founder", photo: "/images/team/vamsi.jpg" },
-    { name: "Manohar", role: "Senior Counsellor", photo: "/images/team/manohar.jpg" },
+    // { name: "Manohar", role: "Senior Counsellor", photo: "/images/team/manohar.jpg" },
     { name: "Keerthi Naidu", role: "Team Lead", photo: "/images/team/keerthi.jpg" },
     { name: "Abhiram", role: "Developer", photo: "/images/team/abhiram.jpg" },
     { name: "Shanmuka Sai", role: "Developer", photo: "/images/team/shanmukh.jpg" },
@@ -17,7 +17,7 @@ export default function TeamSection() {
                     <h2 className="text-4xl font-bold font-display mb-4">Meet the Team</h2>
                     <p className="text-[13px] text-gray-500">Dedicated to changing education financing for the better.</p>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                     {team.map((m) => {
                         const initials = m.name
                             .split(" ")
