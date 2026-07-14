@@ -30,8 +30,10 @@ model User {
   auditLogs        AuditLog[]        @relation("AuditInitiator")
   forumPosts       ForumPost[]
   forumComments    ForumComment[]
-  referralsMade    Referral[]        @relation("Referrer")
-  referralReceived Referral?         @relation("Referee")
+  referralsMade        Referral[]        @relation("Referrer")
+  referralReceived     Referral?         @relation("Referee")
+  referralCodeRelation ReferralCode?     @relation("UserReferralCode")
+  referralAuditLogs    ReferralAuditLog[] @relation("AuditAdmin")
 
   // Onboarding & Profile Preferences
   goal                  String?
@@ -484,9 +486,36 @@ model Referral {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  auditLogs ReferralAuditLog[]
+
   @@index([referrerId])
   @@index([refereeEmail])
   @@index([status])
+  @@map("referrals")
+}
+
+model ReferralCode {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  userId    String   @unique
+  user      User     @relation("UserReferralCode", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("referral_codes")
+}
+
+model ReferralAuditLog {
+  id             String   @id @default(uuid())
+  referralId     String
+  referral       Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  previousStatus String
+  newStatus      String
+  changedBy      String
+  admin          User     @relation("AuditAdmin", fields: [changedBy], references: [id], onDelete: Cascade)
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  @@map("referral_audit_log")
 }
 
 model ReferralVisit {

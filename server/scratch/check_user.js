@@ -1,10 +1,25 @@
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
-const { Client } = require('pg');
-async function run() {
-    const client = new Client({ connectionString: process.env.DIRECT_URL });
-    await client.connect();
-    const res = await client.query('SELECT email, role, "firstName" FROM "User" WHERE role IN (\'bank\', \'partner_bank\', \'admin\', \'staff\')');
-    console.log(JSON.stringify(res.rows));
-    await client.end();
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+const db = createClient(supabaseUrl, supabaseKey);
+
+async function check() {
+  try {
+    const { data: users, error } = await db.from('User')
+      .select('id, email, role, firstName, lastName, referralCode')
+      .or('firstName.ilike.%wqedw%,lastName.ilike.%wr%,email.ilike.%wqedw%');
+    
+    if (error) {
+      console.error('Error:', error);
+    } else {
+      console.log('Matching Users:', users);
+    }
+  } catch (err) {
+    console.error(err);
+  }
 }
-run();
+
+check();

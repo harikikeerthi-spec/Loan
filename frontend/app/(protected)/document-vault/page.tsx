@@ -17,7 +17,7 @@ export default function DocumentVaultPage() {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState<string | null>(null);
     const [profileType, setProfileType] = useState<"salaried" | "self-employed">("salaried");
-    const [coappRelation, setCoappRelation] = useState<"father" | "mother">("father");
+    const [coappRelation, setCoappRelation] = useState<string>("father");
     const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
     const [rejections, setRejections] = useState<Record<string, string>>({});
     const [showConsentModal, setShowConsentModal] = useState(false);
@@ -71,12 +71,9 @@ export default function DocumentVaultPage() {
                 }
 
                 // Sync co-applicant relation toggle
-                const relation = coapp.relation || baseProfile.coApplicantRelation || "father";
-                if (relation === "mother") {
-                    setCoappRelation("mother");
-                } else {
-                    setCoappRelation("father");
-                }
+                const activeApp = res.data.applications?.[0] || null;
+                const relation = coapp.relation || baseProfile.coApplicantRelation || activeApp?.coApplicantRelation || "father";
+                setCoappRelation(relation);
             }
         } catch (e) {
             console.error("Error loading vault data:", e);
@@ -138,7 +135,7 @@ export default function DocumentVaultPage() {
         }
     };
 
-    const handleCoappRelationChange = async (relation: "father" | "mother") => {
+    const handleCoappRelationChange = async (relation: string) => {
         setCoappRelation(relation);
         if (!user?.id) return;
 
@@ -147,7 +144,7 @@ export default function DocumentVaultPage() {
         const updatedCoApplicant = {
             ...coapp,
             relation: relation,
-            name: relation === "father" ? (baseProfile.family?.fatherName || "Father") : (baseProfile.family?.motherName || "Mother")
+            name: relation === "father" ? (baseProfile.family?.fatherName || "Father") : relation === "mother" ? (baseProfile.family?.motherName || "Mother") : (coapp.name || relation.charAt(0).toUpperCase() + relation.slice(1))
         };
 
         const updatedProfile = {
@@ -182,7 +179,7 @@ export default function DocumentVaultPage() {
 
         // Extract co-applicant details from the active application if available
         const activeApp = applications && applications.length > 0 ? applications[0] : null;
-        const appCoappRelation = activeApp && activeApp.coApplicant && activeApp.coApplicant !== "none" ? activeApp.coApplicant : "";
+        const appCoappRelation = activeApp && activeApp.coApplicantRelation && activeApp.coApplicantRelation !== "none" ? activeApp.coApplicantRelation : "";
 
         // Ensure coApplicant has a default name and matches coappRelation
         const coapp = baseProfile.coApplicant || {};

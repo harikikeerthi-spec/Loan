@@ -1,11 +1,181 @@
 "use client";
 
 import { useUserDossier } from "../DossierContext";
-import { motion } from "framer-motion";
-import { formatDate } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { formatDate, parseUTCDate } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { applicationApi } from "@/lib/api";
+
+const banksList = [
+    { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
+    { id: "hdfc", name: "HDFC Credila", rate: "10.75 - 12.5%" },
+    { id: "auxilo", name: "Auxilo Finserve", rate: "11.25 - 13.5%" },
+    { id: "avanse", name: "Avanse Financial", rate: "10.99 - 13.0%" },
+    { id: "poonawalla", name: "Poonawalla Fincorp", rate: "11.5 - 14.5%" },
+];
+
+const loanTypes = ["Undergraduate Abroad", "Postgraduate Abroad", "Doctoral/PhD Abroad", "Professional Course"];
+const courseTypes = ["B.Tech/B.E.", "MBA/PGDM", "MS/M.Tech", "MBBS/Medicine", "Law", "Architecture", "Arts & Humanities", "Other"];
+const countries = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "New Zealand", "Other"];
+const relations = ["Father", "Mother", "Aunt", "Spouse", "Uncle", "Brother", "Other", "None"];
+
+function getFileAge(dateString: string | Date | undefined): string {
+    if (!dateString) return "—";
+    try {
+        const now = new Date();
+        const created = parseUTCDate(dateString);
+        const diffMs = now.getTime() - created.getTime();
+        if (diffMs < 0) return "Just now";
+        
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        if (diffMins < 60) return `${diffMins}m ago`;
+        
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays}d ago`;
+    } catch {
+        return "—";
+    }
+}
 
 export default function ApplicationsTab() {
-    const { userApplications, setRoutingApp, setIsShareModalOpen } = useUserDossier();
+    const { userId, userData, userApplications, refreshData, setRoutingApp, setIsShareModalOpen } = useUserDossier();
+    const [isAddAppOpen, setIsAddAppOpen] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState("");
+
+    const [formData, setFormData] = useState({
+        bank: "",
+        loanType: "Postgraduate Abroad",
+        amount: "4000000",
+        courseType: "MS/M.Tech",
+        country: "USA",
+        otherCountry: "",
+        university: "",
+        annualFee: "",
+        livingCost: "",
+        coApplicant: "none",
+        otherRelation: "",
+        income: "",
+        collateral: "no",
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        dateOfBirth: "",
+        address: "",
+        pincode: "",
+        notes: "",
+        admissionStatus: "waiting",
+        intakeSeason: "",
+    });
+
+    useEffect(() => {
+        if (userData && isAddAppOpen) {
+            setFormData(prev => ({
+                ...prev,
+                firstName: userData.firstName || "",
+                lastName: userData.lastName || "",
+                email: userData.email || "",
+                phone: userData.phoneNumber || userData.mobile || userData.phone || "",
+                dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : "",
+                address: userData.permanentAddress || "",
+                pincode: userData.pincode || "",
+            }));
+        }
+    }, [userData, isAddAppOpen]);
+
+    const isBankAlreadyApplied = (bankId: string) => {
+        return userApplications.some(app => {
+            const appBank = String(app.bank || '').toLowerCase().trim();
+            if (bankId === 'hdfc' && (appBank.includes('hdfc') || appBank.includes('credila'))) return true;
+            if (bankId === 'idfc' && appBank.includes('idfc')) return true;
+            if (bankId === 'auxilo' && appBank.includes('auxilo')) return true;
+            if (bankId === 'avanse' && appBank.includes('avanse')) return true;
+            if (bankId === 'poonawalla' && appBank.includes('poonawalla')) return true;
+            return false;
+        });
+    };
+
+    const handleAddApplication = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitError("");
+
+        if (!formData.bank) {
+            setSubmitError("Please select a target bank.");
+            return;
+        }
+
+        if (isBankAlreadyApplied(formData.bank)) {
+            const selectedBankName = banksList.find(b => b.id === formData.bank)?.name || formData.bank;
+            setSubmitError(`This student already has an active application with ${selectedBankName}. Direct duplicates are not allowed.`);
+            return;
+        }
+
+        setSubmitting(true);
+
+        try {
+            const bankName = banksList.find(b => b.id === formData.bank)?.name || formData.bank;
+            const rel = formData.coApplicant === "other" ? formData.otherRelation : formData.coApplicant;
+            const capitalizedRelation = rel ? rel.charAt(0).toUpperCase() + rel.slice(1) : "";
+
+            const payload = {
+                ...formData,
+                hasCoApplicant: !!formData.coApplicant && formData.coApplicant !== "none",
+                coApplicantName: capitalizedRelation || null,
+                coApplicantRelation: rel || null,
+                coApplicantIncome: formData.income ? parseFloat(formData.income) : undefined,
+                coApplicant: rel || null,
+                country: formData.country === "Other" ? formData.otherCountry : formData.country,
+                userId,
+                bank: bankName,
+                amount: parseFloat(formData.amount) || 0,
+                annualFee: formData.annualFee ? parseFloat(formData.annualFee) : undefined,
+                livingCost: formData.livingCost ? parseFloat(formData.livingCost) : undefined,
+                income: formData.income ? parseFloat(formData.income) : undefined,
+                status: "pending",
+            };
+
+            await applicationApi.create(payload);
+            await refreshData();
+            setIsAddAppOpen(false);
+            
+            // Reset state
+            setFormData({
+                bank: "",
+                loanType: "Postgraduate Abroad",
+                amount: "4000000",
+                courseType: "MS/M.Tech",
+                country: "USA",
+                otherCountry: "",
+                university: "",
+                annualFee: "",
+                livingCost: "",
+                coApplicant: "none",
+                otherRelation: "",
+                income: "",
+                collateral: "no",
+                firstName: userData?.firstName || "",
+                lastName: userData?.lastName || "",
+                email: userData?.email || "",
+                phone: userData?.phoneNumber || userData?.mobile || userData?.phone || "",
+                dateOfBirth: userData?.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : "",
+                address: userData?.permanentAddress || "",
+                pincode: userData?.pincode || "",
+                notes: "",
+                admissionStatus: "waiting",
+                intakeSeason: "",
+            });
+            alert("Loan application added successfully!");
+        } catch (err: any) {
+            console.error("Failed to add application:", err);
+            setSubmitError(err.message || "Failed to create application");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <motion.div
@@ -14,13 +184,29 @@ export default function ApplicationsTab() {
             exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
         >
+            {/* Header / Actions Card */}
+            <div className="flex justify-between items-center bg-white/40 backdrop-blur-md p-4 rounded-2xl border border-white/60">
+                <div>
+                    <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Application Node</h3>
+                    <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{userApplications.length} active loan channels</p>
+                </div>
+                <button
+                    onClick={() => setIsAddAppOpen(true)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-indigo-500/20 flex items-center gap-1.5 active:scale-95 cursor-pointer animate-pulse"
+                >
+                    <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                    Add Loan Application
+                </button>
+            </div>
+
+            {/* Applications Table Card */}
             <div className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden">
                 {userApplications.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-gray-100 bg-white/20">
-                                    {["Application ID", "Bank Node", "Loan Program", "Status", "Timestamp"].map((header, idx) => (
+                                    {["Application ID", "Bank Node", "Loan Program", "Status", "File Age", "Timestamp"].map((header, idx) => (
                                         <th key={idx} className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">{header}</th>
                                     ))}
                                 </tr>
@@ -71,7 +257,10 @@ export default function ApplicationsTab() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-xs font-semibold text-gray-500">
-                                                {formatDate(app.createdAt, "MMM d, yyyy")}
+                                                {getFileAge(app.submittedAt || app.date)}
+                                            </td>
+                                            <td className="px-6 py-4 text-xs font-semibold text-gray-500">
+                                                {app.submittedToBankAt ? formatDate(app.submittedToBankAt, "MMM d, yyyy, h:mm a") : "—"}
                                             </td>
                                         </tr>
                                     );
@@ -86,6 +275,387 @@ export default function ApplicationsTab() {
                     </div>
                 )}
             </div>
+
+            {/* Add Application Form Modal */}
+            <AnimatePresence>
+                {isAddAppOpen && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden border border-slate-100 flex flex-col"
+                        >
+                            {/* Modal Header */}
+                            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-bold text-slate-855 text-lg">Add New Loan Application</h3>
+                                    <p className="text-xs text-slate-400">Initiate a new education loan channel for this student</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsAddAppOpen(false)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+                                >
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            {/* Modal Body / Scrollable Form */}
+                            <form onSubmit={handleAddApplication} className="flex-1 overflow-y-auto p-6 space-y-6">
+                                {submitError && (
+                                    <div className="p-3.5 bg-rose-50 border border-rose-100 text-rose-700 text-xs font-semibold rounded-xl flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px]">error</span>
+                                        {submitError}
+                                    </div>
+                                )}
+
+                                {/* SECTION 1: LOAN & TARGET BANK */}
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] mb-3">1. Loan & Target Bank</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Target Partner Bank *</label>
+                                            <select
+                                                required
+                                                value={formData.bank}
+                                                onChange={e => setFormData(prev => ({ ...prev, bank: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            >
+                                                <option value="">Select a Bank</option>
+                                                {banksList.map(bank => {
+                                                    const alreadyApplied = isBankAlreadyApplied(bank.id);
+                                                    return (
+                                                        <option key={bank.id} value={bank.id} disabled={alreadyApplied}>
+                                                            {bank.name} {alreadyApplied ? "(Already Applied)" : `(${bank.rate})`}
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Loan Category *</label>
+                                            <select
+                                                required
+                                                value={formData.loanType}
+                                                onChange={e => setFormData(prev => ({ ...prev, loanType: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            >
+                                                {loanTypes.map(type => (
+                                                    <option key={type} value={type}>{type}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Requested Amount (INR) *</label>
+                                            <input
+                                                required
+                                                type="number"
+                                                placeholder="e.g. 4000000"
+                                                value={formData.amount}
+                                                onChange={e => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-bold"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* SECTION 2: ACADEMIC DETAILS */}
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] mb-3">2. Academic Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Destination Country *</label>
+                                            <select
+                                                required
+                                                value={formData.country}
+                                                onChange={e => setFormData(prev => ({ ...prev, country: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            >
+                                                {countries.map(c => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {formData.country === "Other" && (
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Specify Country Name *</label>
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    placeholder="Country"
+                                                    value={formData.otherCountry}
+                                                    onChange={e => setFormData(prev => ({ ...prev, otherCountry: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">University Name *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                placeholder="e.g. Stanford University"
+                                                value={formData.university}
+                                                onChange={e => setFormData(prev => ({ ...prev, university: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Course Program *</label>
+                                            <select
+                                                required
+                                                value={formData.courseType}
+                                                onChange={e => setFormData(prev => ({ ...prev, courseType: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            >
+                                                {courseTypes.map(t => (
+                                                    <option key={t} value={t}>{t}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Intake Season *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                placeholder="e.g. Fall 2026"
+                                                value={formData.intakeSeason}
+                                                onChange={e => setFormData(prev => ({ ...prev, intakeSeason: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Admission Status *</label>
+                                            <select
+                                                required
+                                                value={formData.admissionStatus}
+                                                onChange={e => setFormData(prev => ({ ...prev, admissionStatus: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            >
+                                                <option value="waiting">Awaiting Admit Card</option>
+                                                <option value="conditional">Conditional Offer</option>
+                                                <option value="confirmed">Confirmed Admission / Letter Received</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* SECTION 3: FINANCIAL & CO-APPLICANT DETAILS */}
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] mb-3">3. Co-Applicant & Finance details</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Annual Tuition Fee (INR)</label>
+                                            <input
+                                                type="number"
+                                                placeholder="e.g. 2500000"
+                                                value={formData.annualFee}
+                                                onChange={e => setFormData(prev => ({ ...prev, annualFee: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Living Cost (INR)</label>
+                                            <input
+                                                type="number"
+                                                placeholder="e.g. 1000000"
+                                                value={formData.livingCost}
+                                                onChange={e => setFormData(prev => ({ ...prev, livingCost: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Co-Applicant Relation *</label>
+                                            <select
+                                                required
+                                                value={formData.coApplicant}
+                                                onChange={e => setFormData(prev => ({ ...prev, coApplicant: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            >
+                                                {relations.map(r => (
+                                                    <option key={r} value={r.toLowerCase()}>{r}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {formData.coApplicant === "other" && (
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Specify Relationship *</label>
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    placeholder="e.g. Aunt"
+                                                    value={formData.otherRelation}
+                                                    onChange={e => setFormData(prev => ({ ...prev, otherRelation: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {formData.coApplicant !== "none" && (
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Co-Applicant Monthly Income (INR)</label>
+                                                <input
+                                                    type="number"
+                                                    placeholder="e.g. 150000"
+                                                    value={formData.income}
+                                                    onChange={e => setFormData(prev => ({ ...prev, income: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Collateral Available *</label>
+                                            <select
+                                                required
+                                                value={formData.collateral}
+                                                onChange={e => setFormData(prev => ({ ...prev, collateral: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            >
+                                                <option value="yes">Yes (Property, FD, etc.)</option>
+                                                <option value="no">No Collateral Required</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* SECTION 4: APPLICANT PERSONAL INFO */}
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] mb-3">4. Student Personal Details (Pre-filled)</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">First Name *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                value={formData.firstName}
+                                                onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Last Name *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                value={formData.lastName}
+                                                onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address *</label>
+                                            <input
+                                                required
+                                                type="email"
+                                                value={formData.email}
+                                                onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Phone Number *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                value={formData.phone}
+                                                onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Date of Birth *</label>
+                                            <input
+                                                required
+                                                type="date"
+                                                value={formData.dateOfBirth}
+                                                onChange={e => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pincode *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                value={formData.pincode}
+                                                onChange={e => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Permanent Address *</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                value={formData.address}
+                                                onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Internal Remarks / Staff Notes</label>
+                                            <textarea
+                                                rows={2}
+                                                placeholder="Remarks regarding eligibility, collateral details, fast-track routing..."
+                                                value={formData.notes}
+                                                onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+
+                            {/* Modal Footer */}
+                            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAddAppOpen(false)}
+                                    className="px-4 py-2 border border-slate-200 text-slate-500 hover:bg-slate-100 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleAddApplication}
+                                    disabled={submitting}
+                                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 active:scale-95 disabled:opacity-50 disabled:scale-100 cursor-pointer"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            Adding...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-symbols-outlined text-[15px]">send</span>
+                                            Create Application
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }

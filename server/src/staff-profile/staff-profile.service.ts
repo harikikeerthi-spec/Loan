@@ -1670,7 +1670,7 @@ export class StaffProfileService {
     const { data, error } = await this.db
       .from('LoanApplication')
       .select('*')
-      .or(`firstName.ilike.%${searchStr}%,lastName.ilike.%${searchStr}%,applicationNumber.ilike.%${searchStr}%,lanNumber.ilike.%${searchStr}%,email.ilike.%${searchStr}%,phone.ilike.%${searchStr}%,universityName.ilike.%${searchStr}%`);
+      .or(`firstName.ilike.%${searchStr}%,lastName.ilike.%${searchStr}%,applicationNumber.ilike.%${searchStr}%,lanNumber.ilike.%${searchStr}%,email.ilike.%${searchStr}%,phone.ilike.%${searchStr}%,universityName.ilike.%${searchStr}%,userId.ilike.%${searchStr}%`);
 
     if (error) {
       console.error('[globalSearch] Error:', error);

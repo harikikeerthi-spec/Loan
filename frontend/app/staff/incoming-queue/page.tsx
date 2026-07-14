@@ -194,6 +194,85 @@ export default function IncomingQueuePage() {
     const [rejectionReason, setRejectionReason] = useState("");
     const [appToReject, setAppToReject] = useState<any | null>(null);
 
+    const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
+    const [tempFollowUpDate, setTempFollowUpDate] = useState("");
+    const [tempFollowUpTime, setTempFollowUpTime] = useState("");
+    const [followUpDates, setFollowUpDates] = useState<Record<string, { date: string, time: string, studentName: string, appNumber: string, notes?: string }>>({});
+    const [tempFollowUpNotes, setTempFollowUpNotes] = useState("");
+    const [followUpItem, setFollowUpItem] = useState<any | null>(null);
+
+    const followUpKey = user?.id 
+        ? `staff_follow_up_dates_${user.id}` 
+        : user?.email 
+            ? `staff_follow_up_dates_${user.email}` 
+            : `staff_follow_up_dates_default`;
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem(followUpKey);
+            if (stored) {
+                try {
+                    setFollowUpDates(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse follow up dates:", e);
+                }
+            }
+        }
+    }, [followUpKey]);
+
+    const saveFollowUp = (appId: string, studentName: string, appNumber: string) => {
+        if (!tempFollowUpDate) {
+            alert("Please select a date.");
+            return;
+        }
+        const updated = {
+            ...followUpDates,
+            [appId]: {
+                date: tempFollowUpDate,
+                time: tempFollowUpTime || "10:00",
+                studentName,
+                appNumber: appNumber || `VL-APP-${appId.slice(-5).toUpperCase()}`,
+                notes: tempFollowUpNotes
+            }
+        };
+        setFollowUpDates(updated);
+        localStorage.setItem(followUpKey, JSON.stringify(updated));
+        setEditingFollowUpId(null);
+        setFollowUpItem(null);
+    };
+
+    const clearFollowUp = (appId: string) => {
+        const updated = { ...followUpDates };
+        delete updated[appId];
+        setFollowUpDates(updated);
+        localStorage.setItem(followUpKey, JSON.stringify(updated));
+        setEditingFollowUpId(null);
+        setFollowUpItem(null);
+    };
+
+    const openFollowUpModal = (rowId: string, item: any) => {
+        setEditingFollowUpId(rowId);
+        setFollowUpItem(item);
+        if (followUpDates[rowId]) {
+            setTempFollowUpDate(followUpDates[rowId].date);
+            setTempFollowUpTime(followUpDates[rowId].time);
+            setTempFollowUpNotes(followUpDates[rowId].notes || "");
+        } else {
+            setTempFollowUpDate("");
+            setTempFollowUpTime("");
+            setTempFollowUpNotes("");
+        }
+    };
+
+    const applyQuickDate = (days: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        setTempFollowUpDate(`${yyyy}-${mm}-${dd}`);
+    };
+
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
@@ -352,6 +431,7 @@ export default function IncomingQueuePage() {
                             
                             <th className="px-5 py-5 w-48"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">PROGRESS</span></th>
                             <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">CURRENT STATUS</span></th>
+                            <th className="px-5 py-5 w-52"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">FOLLOW UP</span></th>
                             <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
                         </TableHeader>
                         <tbody className={`divide-y divide-slate-50 ${loading ? 'opacity-60 pointer-events-none transition-opacity duration-300' : 'transition-opacity duration-300'}`}>
@@ -543,6 +623,38 @@ export default function IncomingQueuePage() {
                                                     </div>
                                                 </div>
                                             </td>
+                                            <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
+                                                <div className="relative">
+                                                    {followUpDates[rowId] ? (
+                                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-full text-[10px] font-black uppercase tracking-wider">
+                                                            <span>
+                                                                {(() => {
+                                                                    const dateObj = new Date(followUpDates[rowId].date + 'T00:00:00');
+                                                                    const day = String(dateObj.getDate()).padStart(2, '0');
+                                                                    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                                                                    const monthLabel = months[dateObj.getMonth()] || 'JUN';
+                                                                    return `${day} ${monthLabel} ${followUpDates[rowId].time || '__:__'}`;
+                                                                })()}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openFollowUpModal(rowId, item)}
+                                                                className="material-symbols-outlined text-[13px] text-rose-500 hover:text-rose-700 cursor-pointer border-0 bg-transparent p-0 flex items-center justify-center active:scale-95"
+                                                            >
+                                                                edit
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openFollowUpModal(rowId, item)}
+                                                            className="px-4 py-1 border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-full text-[10px] font-extrabold text-slate-400 hover:text-indigo-600 transition-colors bg-white active:scale-95 cursor-pointer"
+                                                        >
+                                                            Add +
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="px-5 py-4 text-center border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                 <button
                                                     onClick={(e) => {
@@ -606,7 +718,79 @@ export default function IncomingQueuePage() {
                 recipientName={emailModalRecipientName}
             />
 
+            {editingFollowUpId && followUpItem && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100 font-sans" onClick={e => e.stopPropagation()}>
+                        <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Create Follow-up</p>
+                                <h3 className="text-[14px] font-black text-slate-800 leading-tight">
+                                    {`${followUpItem.firstName || followUpItem.student?.firstName || ''} ${followUpItem.lastName || followUpItem.student?.lastName || ''}`.trim()}
+                                </h3>
+                                <p className="text-[10px] text-indigo-500 font-bold mt-0.5">{followUpItem.applicationNumber || '—'}</p>
+                            </div>
+                            <button type="button" onClick={() => { setEditingFollowUpId(null); setFollowUpItem(null); }} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all border-0 bg-transparent cursor-pointer mt-0.5">
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Set a due date</p>
+                                <div className="flex items-center gap-2">
+                                    {[{label: '1 Day', days: 1}, {label: '3 Days', days: 3}, {label: '1 Week', days: 7}].map(opt => {
+                                        const pd = new Date(); pd.setDate(pd.getDate() + opt.days);
+                                        const val = `${pd.getFullYear()}-${String(pd.getMonth()+1).padStart(2,'0')}-${String(pd.getDate()).padStart(2,'0')}`;
+                                        const isActive = tempFollowUpDate === val;
+                                        return (
+                                            <button key={opt.label} type="button" onClick={() => applyQuickDate(opt.days)}
+                                                className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer ${isActive ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600'}`}>
+                                                {opt.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 h-px bg-slate-100" />
+                                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Or</span>
+                                <div className="flex-1 h-px bg-slate-100" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Set a custom due date</label>
+                                    <input type="date" value={tempFollowUpDate} onChange={e => setTempFollowUpDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
+                                </div>
+                                <div>
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Set a custom due time</label>
+                                    <input type="time" value={tempFollowUpTime} onChange={e => setTempFollowUpTime(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
+                                </div>
+                            </div>
+                            {tempFollowUpDate && (
+                                <div className="px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                    <p className="text-[11px] font-bold text-emerald-700">
+                                        Due date will be <span className="font-black">{new Date(tempFollowUpDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                        {tempFollowUpTime && <> at <span className="font-black">{tempFollowUpTime}</span></>}
+                                    </p>
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Notes</label>
+                                <textarea rows={3} value={tempFollowUpNotes} onChange={e => setTempFollowUpNotes(e.target.value)} placeholder="Add a quick note..." className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
+                            </div>
+                        </div>
+                        <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+                            <button type="button" onClick={() => clearFollowUp(editingFollowUpId)} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-100 bg-white transition-all cursor-pointer">Clear</button>
+                            <div className="flex items-center gap-2">
+                                <button type="button" onClick={() => { setEditingFollowUpId(null); setFollowUpItem(null); }} className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all cursor-pointer">Cancel</button>
+                                <button type="button" onClick={() => saveFollowUp(editingFollowUpId, `${followUpItem.firstName || followUpItem.student?.firstName || ''} ${followUpItem.lastName || followUpItem.student?.lastName || ''}`.trim(), followUpItem.applicationNumber)} className="px-5 py-2 text-[10px] font-black uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition-all cursor-pointer">Create</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isRejectModalOpen && appToReject && (
+
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">

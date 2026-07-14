@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -15,7 +16,39 @@ import { UserGuard } from '../auth/user.guard';
 
 @Controller('referral')
 export class ReferralController {
-  constructor(private readonly referralService: ReferralService) { }
+  constructor(private readonly referralService: ReferralService) {}
+
+  /**
+   * GET /referral/me
+   * Get unified referral data for current user (stats, list, code)
+   */
+  @UseGuards(UserGuard)
+  @Get('me')
+  async getMyReferralData(@Req() req: any) {
+    try {
+      const userId = req.user?.sub || req.user?.id;
+      if (!userId) {
+        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      }
+      const codeResult = await this.referralService.getOrCreateReferralCode(userId);
+      const stats = await this.referralService.getReferralStats(userId);
+      const referrals = await this.referralService.getReferralList(userId);
+      return {
+        success: true,
+        referralCode: codeResult.referralCode,
+        stats: {
+          ...stats,
+          totalEarned: stats.completedReferrals * 3000,
+        },
+        referrals,
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to get referral data',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 
   /**
    * GET /referral/my-code
@@ -30,7 +63,7 @@ export class ReferralController {
         throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
       }
       const result = await this.referralService.getOrCreateReferralCode(userId);
-      return { success: true, ...result };
+      return { success: true, code: result.referralCode };
     } catch (error) {
       throw new HttpException(
         error.message || 'Failed to get referral code',
@@ -191,8 +224,94 @@ export class ReferralController {
       await this.referralService.recordVisit(code, ip, userAgent);
       return { success: true };
     } catch (error) {
-      // Don't fail the visit just because recording it failed
       return { success: false, message: error.message };
+    }
+  }
+
+  // ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────────
+
+  /**
+   * GET /referral/admin/stats
+   * Get stats for admin dashboard
+   */
+  @UseGuards(UserGuard)
+  @Get('admin/stats')
+  async getAdminStats(@Req() req: any) {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
+      throw new HttpException('Not Found', HttpStatus.NOT_FOUND);
+    }
+    try {
+      const stats = await this.referralService.getAdminStats();
+      return { success: true, stats };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to get admin stats',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * GET /referral/admin/list
+   * Get list of all referrals with status filters, search term, and pending payout filter
+   */
+  @UseGuards(UserGuard)
+  @Get('admin/list')
+  async getAdminList(
+    @Req() req: any,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('pendingPayout') pendingPayout?: string,
+  ) {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
+      throw new HttpException('Not Found', HttpStatus.NOT_FOUND);
+    }
+    try {
+      const referrals = await this.referralService.getAdminReferrals(
+        status,
+        search,
+        pendingPayout === 'true',
+      );
+      return { success: true, referrals };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to get admin referrals list',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * PATCH /referral/admin/override/:id
+   * Override referral status (writes an audit log and credits wallet if status becomes rewarded)
+   */
+  @UseGuards(UserGuard)
+  @Patch('admin/override/:id')
+  async overrideStatus(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { status: string; reason?: string },
+  ) {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
+      throw new HttpException('Not Found', HttpStatus.NOT_FOUND);
+    }
+    if (!body || !body.status) {
+      throw new HttpException('Status is required', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      const adminId = req.user?.sub || req.user?.id;
+      const updated = await this.referralService.overrideReferralStatus(
+        id,
+        body.status,
+        adminId,
+        body.reason,
+      );
+      return { success: true, referral: updated };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Failed to override referral status',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

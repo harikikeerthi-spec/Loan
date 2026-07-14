@@ -9,7 +9,10 @@ fs.readFileSync(envPath, 'utf-8').split('\n').forEach(line => {
   if (key && key.trim()) env[key.trim()] = values.join('=').trim();
 });
 
-const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+const supabaseUrl = env.SUPABASE_URL;
+const supabaseKey = env.SUPABASE_ANON_KEY || env.SUPABASE_SERVICE_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function run() {
   const { data: users, error } = await supabase

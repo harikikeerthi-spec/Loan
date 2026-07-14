@@ -324,8 +324,8 @@ export class UsersService {
     let referralCode = '';
     let exists = true;
     while (exists) {
-      let code = 'VL-';
-      for (let i = 0; i < 6; i++) {
+      let code = '';
+      for (let i = 0; i < 8; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       const { data: existing } = await this.db.from('User').select('id').eq('referralCode', code).single();
@@ -362,6 +362,16 @@ export class UsersService {
     if (error) {
       console.error('Supabase insert error:', error);
       throw error;
+    }
+
+    // Insert into referral_codes table
+    try {
+      await this.db.from('referral_codes').insert({
+        code: referralCode,
+        userId: user.id,
+      });
+    } catch (err) {
+      console.error('[UsersService.create] Failed to populate referral_codes table:', err);
     }
     
     console.log('User created in DB:', { user, keys: Object.keys(user || {}), hasId: !!user?.id, staffId: user?.staffId });
@@ -456,6 +466,33 @@ export class UsersService {
       .single();
 
     if (error) throw error;
+
+    // Sync to active LoanApplications for this user to keep their application profile details in sync
+    try {
+      if (data && data.id) {
+        const appPayload: any = {};
+        if (firstName !== undefined) appPayload.firstName = firstName;
+        if (lastName !== undefined) appPayload.lastName = lastName;
+        if (phoneNumber !== undefined) appPayload.phone = phoneNumber;
+        if (dobDate !== null && dobDate !== undefined) appPayload.dateOfBirth = dobDate;
+
+        if (Object.keys(appPayload).length > 0) {
+          const { error: appErr } = await this.db
+            .from('LoanApplication')
+            .update(appPayload)
+            .eq('userId', data.id);
+            
+          if (appErr) {
+            console.warn(`[UsersService.updateUserDetails] Failed to sync details to LoanApplication: ${appErr.message}`);
+          } else {
+            console.log(`[UsersService.updateUserDetails] Successfully synced details to LoanApplications for user: ${data.id}`);
+          }
+        }
+      }
+    } catch (syncErr: any) {
+      console.error(`[UsersService.updateUserDetails] Error syncing details to LoanApplication: ${syncErr.message}`);
+    }
+
     this.clearCache(email);
     return data;
   }
@@ -512,15 +549,16 @@ export class UsersService {
 
         if (docType && docType.startsWith('father_')) {
           family.fatherName = nameToSave;
-          payload.family = family;
+          payload.family = JSON.stringify(family);
+          payload.fatherName = nameToSave;
           updated = true;
         } else if (docType && docType.startsWith('mother_')) {
           family.motherName = nameToSave;
-          payload.family = family;
+          payload.family = JSON.stringify(family);
           updated = true;
         } else if (docType && docType.startsWith('coapplicant_')) {
           coApplicant.name = nameToSave;
-          payload.coApplicant = coApplicant;
+          payload.coApplicant = JSON.stringify(coApplicant);
           updated = true;
         }
         
@@ -1021,6 +1059,22 @@ export class UsersService {
       uploadedAt: data.uploaded ? new Date().toISOString() : null,
       updatedAt: new Date().toISOString(),
     };
+    if (data.uploaded) {
+      payload.rejectionReason = null;
+      if (mergedMetadata) {
+        delete (mergedMetadata as any).rejectionReason;
+        if ((mergedMetadata as any).details) {
+          delete (mergedMetadata as any).details.rejectionReason;
+        }
+      } else if (existingMetadata) {
+        const cleanMetadata = { ...existingMetadata };
+        delete (cleanMetadata as any).rejectionReason;
+        if ((cleanMetadata as any).details) {
+          delete (cleanMetadata as any).details.rejectionReason;
+        }
+        payload.verificationMetadata = cleanMetadata;
+      }
+    }
     if (data.digilockerTxId !== undefined) payload.digilockerTxId = data.digilockerTxId;
     if (data.verifiedAt !== undefined) payload.verifiedAt = data.verifiedAt?.toISOString();
     if (mergedMetadata !== undefined) payload.verificationMetadata = mergedMetadata;

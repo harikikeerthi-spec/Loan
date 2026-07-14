@@ -33,7 +33,6 @@ export const useStaffLayout = () => {
 
 const DASHBOARD_SECTIONS = [
     "overview",
-    "applicants",
     "incoming_queue",
     "applications",
     "tasks",
@@ -43,7 +42,6 @@ const DASHBOARD_SECTIONS = [
     "chat_customer",
     "my_profile",
     "onboarding",
-    "calendar",
 ] as const;
 
 const getDashboardSection = (section: string | null) =>
@@ -95,6 +93,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     const [incomingCount, setIncomingCount] = useState(0);
     const [pendingCount, setPendingCount] = useState(0);
     const [tasksCount, setTasksCount] = useState(0);
+    const [remindersCount, setRemindersCount] = useState(0);
 
     // F30 Global Search States
     const [searchQuery, setSearchQuery] = useState("");
@@ -130,11 +129,9 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         if (pathname.includes("/staff/incoming-queue")) return "incoming_queue";
         if (pathname.includes("/staff/applications")) return "applications";
         if (pathname.includes("/staff/users")) return "users";
-        if (pathname.includes("/staff/applicants")) return "applicants";
         if (pathname.includes("/staff/performance")) return "performance";
         if (pathname.includes("/staff/tasks")) return "tasks";
         if (pathname.includes("/staff/communications")) return "communications";
-        if (pathname.includes("/staff/calendar")) return "calendar";
         if (pathname.includes("/staff/chat-customer")) return "chat_customer";
         if (pathname.includes("/staff/my-profile")) return "my_profile";
         if (pathname.includes("/staff/onboarding")) return "onboarding";
@@ -177,6 +174,21 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     }
                 } catch {
                     setTasksCount(0);
+                }
+
+                // Count follow-up reminders for this staff member
+                try {
+                    const staffId = user?.id || user?.email || 'default';
+                    const followUpKey = `staff_follow_up_dates_${staffId}`;
+                    const savedFollowUps = localStorage.getItem(followUpKey);
+                    if (savedFollowUps) {
+                        const followUps = JSON.parse(savedFollowUps);
+                        setRemindersCount(Object.keys(followUps).length);
+                    } else {
+                        setRemindersCount(0);
+                    }
+                } catch {
+                    setRemindersCount(0);
                 }
             }
         } catch (err) {
@@ -262,17 +274,15 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
     const sectionTitles: Record<string, string> = {
         overview: 'Dashboard',
-        applicants: 'Pull & Share Documents',
         incoming_queue: 'Incoming Queue',
         applications: 'Active Pipeline',
-        tasks: 'Action Items',
+        tasks: 'Reminders',
         performance: 'Performance',
         users: 'Bank & Staff Members',
         communications: 'Outreach Center',
         my_profile: 'My Profile',
         chat_customer: 'Support Chat',
         onboarding: 'Applicant Onboarding',
-        calendar: 'Deadline Calendar',
     };
 
     const navItems = [
@@ -280,11 +290,9 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         { section: "incoming_queue", path: "/staff/incoming-queue", icon: "move_to_inbox", label: "Incoming Queue", badge: incomingCount },
         { section: "applications", path: "/staff/applications", icon: "description", label: "Active Pipeline", badge: pendingCount },
         { section: "users", path: "/staff/users", icon: "people", label: "Bank & Staff Members", badge: 0 },
-        { section: "applicants", path: "/staff/applicants", icon: "send_to_mobile", label: "Document Transfer", badge: 0 },
         { section: "performance", path: "/staff/performance", icon: "insights", label: "Performance", badge: 0 },
-        { section: "tasks", path: "/staff/tasks", icon: "check_circle", label: "Action Items", badge: tasksCount },
+        { section: "tasks", path: "/staff/tasks", icon: "notifications_active", label: "Reminders", badge: remindersCount },
         { section: "communications", path: "/staff/communications", icon: "mail", label: "Outreach Center", badge: 0 },
-        { section: "calendar", path: "/staff/calendar", icon: "calendar_month", label: "Deadline Calendar", badge: 0 },
         { section: "chat_customer", path: "/staff/chat-customer", icon: "support_agent", label: "Support Chat", badge: unreadChatCount },
         { section: "my_profile", path: "/staff/my-profile", icon: "badge", label: "My Profile", badge: 0 },
     ];
@@ -378,24 +386,24 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                             </h1>
                         </div>
 
-                        {/* Center: Search (F30) */}
-                        <div className="relative hidden md:block">
-                            {/* <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span> */}
-                            {/* <input
+                        {/* Center: Search */}
+                        <div className="relative hidden md:block w-[320px] lg:w-[400px]">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                            <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={e => handleGlobalSearch(e.target.value)}
                                 onFocus={() => { if (searchResults.length > 0) setShowSearchSuggestions(true); }}
-                                placeholder="Search applications, students, banks, IDs... (F30)"
-                                className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-white w-72 transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md hover:shadow-sm"
-                            /> */}
+                                placeholder="Search email, phone, student ID, application ID..."
+                                className="pl-10 pr-10 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white w-full transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-sm"
+                            />
                             {isSearching && (
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
                             )}
                             {showSearchSuggestions && searchResults.length > 0 && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowSearchSuggestions(false)} />
-                                    <div className="absolute left-0 mt-2 w-[400px] max-h-[300px] overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1">
+                                    <div className="absolute left-0 mt-2 w-[420px] max-h-[300px] overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1">
                                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 py-1 border-b border-slate-100">
                                             Found {searchResults.length} Results
                                         </div>
@@ -406,15 +414,16 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                                                     setShowSearchSuggestions(false);
                                                     setSearchQuery("");
                                                     setSearchResults([]);
-                                                    router.push(`/staff/applications?id=${app.id}`);
+                                                    router.push(`/staff/users/${app.userId}`);
                                                 }}
                                                 className="p-3 hover:bg-slate-50 rounded-lg flex items-center justify-between cursor-pointer transition-colors group"
                                             >
                                                 <div className="min-w-0">
                                                     <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">{app.firstName} {app.lastName}</p>
-                                                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">{app.applicationNumber || app.id} | {app.universityName || 'Tier-2 University'}</p>
+                                                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">{app.applicationNumber || app.id} • Student: {app.userId}</p>
+                                                    <p className="text-[9px] text-slate-400 font-medium truncate mt-0.5">{app.email || "—"} • {app.phone || "—"}</p>
                                                 </div>
-                                                <div className="text-right flex-shrink-0">
+                                                <div className="text-right flex-shrink-0 ml-3">
                                                     <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${['approved', 'sanctioned', 'disbursed'].includes(app.status?.toLowerCase())
                                                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                                                         : ['rejected', 'cancelled'].includes(app.status?.toLowerCase())

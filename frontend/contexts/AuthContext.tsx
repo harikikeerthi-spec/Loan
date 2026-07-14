@@ -227,6 +227,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedUser && storedToken) {
             setUser(storedUser);
             setToken(storedToken);
+            if (typeof window !== "undefined") {
+                document.cookie = `${keys.token}=${storedToken}; path=/; max-age=2592000; SameSite=Lax`;
+            }
         } else if (storedToken && !storedUser) {
             const email = localStorage.getItem(keys.email);
             const userId = localStorage.getItem(keys.userId);
@@ -315,6 +318,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (newUser.id) localStorage.setItem(keys.userId, newUser.id);
             localStorage.setItem(keys.user, JSON.stringify(newUser));
 
+            if (typeof window !== "undefined") {
+                document.cookie = `${keys.token}=${accessToken}; path=/; max-age=2592000; SameSite=Lax`;
+            }
+
             notifyTokenChange(accessToken);
 
             setToken(accessToken);
@@ -341,6 +348,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem(keys.token, newToken);
             if (data.refresh_token) {
                 localStorage.setItem(keys.refreshToken, data.refresh_token);
+            }
+            if (typeof window !== "undefined") {
+                document.cookie = `${keys.token}=${newToken}; path=/; max-age=2592000; SameSite=Lax`;
             }
             notifyTokenChange(newToken);
             setToken(newToken);
@@ -369,6 +379,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(keys.email);
         localStorage.removeItem(keys.userId);
         localStorage.removeItem(keys.user);
+
+        if (typeof window !== "undefined") {
+            document.cookie = `${keys.token}=; path=/; max-age=0;`;
+        }
 
         notifyTokenChange(null);
 

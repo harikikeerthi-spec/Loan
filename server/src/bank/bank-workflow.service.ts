@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EmailService } from '../auth/email.service';
 
 export interface BankWorkflowConfig {
   maxQueryRetries: number;
@@ -30,6 +31,7 @@ export class BankWorkflowService {
   constructor(
     private readonly db: SupabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly emailService: EmailService,
   ) {}
 
   private async generateBankApplicationNumber(): Promise<string> {
@@ -173,6 +175,48 @@ export class BankWorkflowService {
 
     // Record in workflow history
     await this.recordWorkflowHistory(submission.id, applicationId, null, 'SUBMITTED_TO_BANK', submittedBy, 'Application shared with bank');
+
+    // Fetch student's profile name
+    let studentName = 'Student';
+    try {
+      const { data: student } = await this.db.client
+        .from('User')
+        .select('firstName, lastName')
+        .eq('id', application.userId)
+        .single();
+      if (student) {
+        studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student';
+      }
+    } catch (e: any) {
+      console.warn('[BankWorkflowService] Failed to load student name for email:', e.message);
+    }
+
+    // Fetch bank registered email from Bank table
+    let bankEmail = '';
+    try {
+      const { data: bankProfile } = await this.db.client
+        .from('Bank')
+        .select('email')
+        .eq('shortName', bankId)
+        .single();
+      if (bankProfile?.email) {
+        bankEmail = bankProfile.email;
+      }
+    } catch (e: any) {
+      console.warn('[BankWorkflowService] Failed to load bank profile email:', e.message);
+    }
+
+    const fallbackEmails: Record<string, string> = {
+      avanse: 'avansebank01@gmail.com',
+      auxilo: 'auxilobank01@gmail.com',
+      idfc: 'idfcbank01@gmail.com',
+      poonawalla: 'poonawallabank01@gmail.com',
+      credila: 'credilabank01@gmail.com',
+    };
+    const targetEmail = bankEmail || fallbackEmails[bankId] || `${bankId}bank01@gmail.com`;
+
+    // Send email alert to bank
+    await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, { ...application, applicationNumber: updatedAppNumber }, studentName);
 
     // Emit event
     this.eventEmitter.emit('bank.submission.created', {
@@ -2371,6 +2415,27 @@ export class BankWorkflowService {
 
     const createdSubmissions: any[] = [];
 
+    // Pre-generate bank application number if needed
+    let updatedAppNumber = application.applicationNumber;
+    if (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-APP-')) {
+      updatedAppNumber = await this.generateBankApplicationNumber();
+    }
+
+    // Fetch student's profile name
+    let studentName = 'Student';
+    try {
+      const { data: student } = await this.db.client
+        .from('User')
+        .select('firstName, lastName')
+        .eq('id', application.userId)
+        .single();
+      if (student) {
+        studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student';
+      }
+    } catch (e: any) {
+      console.warn('[BankWorkflowService] Failed to load student name for email:', e.message);
+    }
+
     for (const bank of banks) {
       const { bankId, bankName } = bank;
 
@@ -2416,6 +2481,33 @@ export class BankWorkflowService {
       // Record in workflow history
       await this.recordWorkflowHistory(submission.id, applicationId, null, 'SUBMITTED_TO_BANK', submittedBy, 'Application shared with bank via multiparty routing');
 
+      // Fetch bank registered email from Bank table
+      let bankEmail = '';
+      try {
+        const { data: bankProfile } = await this.db.client
+          .from('Bank')
+          .select('email')
+          .eq('shortName', bankId)
+          .single();
+        if (bankProfile?.email) {
+          bankEmail = bankProfile.email;
+        }
+      } catch (e: any) {
+        console.warn('[BankWorkflowService] Failed to load bank profile email:', e.message);
+      }
+
+      const fallbackEmails: Record<string, string> = {
+        avanse: 'avansebank01@gmail.com',
+        auxilo: 'auxilobank01@gmail.com',
+        idfc: 'idfcbank01@gmail.com',
+        poonawalla: 'poonawallabank01@gmail.com',
+        credila: 'credilabank01@gmail.com',
+      };
+      const targetEmail = bankEmail || fallbackEmails[bankId] || `${bankId}bank01@gmail.com`;
+
+      // Send email alert to bank
+      await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, { ...application, applicationNumber: updatedAppNumber }, studentName);
+
       // Emit event
       this.eventEmitter.emit('bank.submission.created', {
         submissionId: submission.id,
@@ -2428,11 +2520,6 @@ export class BankWorkflowService {
     }
 
     // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list
-    let updatedAppNumber = application.applicationNumber;
-    if (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-APP-')) {
-      updatedAppNumber = await this.generateBankApplicationNumber();
-    }
-
     const bankNamesStr = banks.map(b => b.bankName).join(', ');
     const updatePayload: any = {
       status: 'ROUTED_MULTIPARTY',

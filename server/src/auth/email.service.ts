@@ -1292,6 +1292,99 @@ export class EmailService {
     }
   }
 
+  async sendNewApplicationNotificationToBank(
+    bankEmail: string,
+    bankName: string,
+    application: any,
+    studentName: string,
+  ) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const appNum = application.applicationNumber || 'N/A';
+    const loanType = application.loanType || 'Education Loan';
+    const amount = application.amount ? `₹${Number(application.amount).toLocaleString('en-IN')}` : 'N/A';
+    const university = application.universityName || 'N/A';
+    const course = application.courseType || 'N/A';
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || '"VidyaLoan" <noreply@vidyaloan.com>',
+      to: bankEmail,
+      subject: `📥 New Education Loan Application Submitted for Review - #${appNum}`,
+      text: `Dear Partner at ${bankName},\n\nA new education loan application has been forwarded to you for credit review.\n\nApplication Reference: #${appNum}\nStudent Name: ${studentName}\nRequested Amount: ${amount}\nTarget University: ${university}\nCourse: ${course}\n\nPlease log in to the VidyaLoans Bank Partner Portal to review the credit file and documents.\n\nPortal Login: ${frontendUrl}/bank/login\n\nBest regards,\nThe VidyaLoans Team`,
+      html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New Loan Application Routed - VidyaLoan</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:'Segoe UI',Arial,sans-serif;color:#334155;">
+  <div style="max-width:600px;margin:30px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+    <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:30px;text-align:center;color:#ffffff;">
+      <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
+      <p style="margin:5px 0 0;font-size:12px;opacity:0.9;text-transform:uppercase;letter-spacing:1px;">Bank Partner Portal</p>
+    </div>
+    <div style="padding:30px;line-height:1.6;">
+      <h2 style="margin:0 0 15px;font-size:18px;color:#1e293b;font-weight:700;">New Loan Application for Review</h2>
+      <p style="margin:0 0 20px;">Dear Partner at <strong>${bankName}</strong>,</p>
+      <p style="margin:0 0 25px;">A new verified student education loan application has been routed to your branch for review. Below are the primary file details:</p>
+      
+      <div style="background-color:#f1f5f9;border-radius:12px;padding:20px;margin:0 0 25px;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="font-size:14px;">
+          <tr>
+            <td style="padding:6px 0;color:#64748b;font-weight:600;width:150px;">Application No.</td>
+            <td style="padding:6px 0;color:#0f172a;font-weight:700;">#${appNum}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#64748b;font-weight:600;">Student Name</td>
+            <td style="padding:6px 0;color:#0f172a;font-weight:600;">${studentName}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#64748b;font-weight:600;">Loan Amount</td>
+            <td style="padding:6px 0;color:#0f172a;font-weight:600;">${amount}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#64748b;font-weight:600;">University</td>
+            <td style="padding:6px 0;color:#0f172a;font-weight:600;">${university}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#64748b;font-weight:600;">Course</td>
+            <td style="padding:6px 0;color:#0f172a;font-weight:600;">${course}</td>
+          </tr>
+        </table>
+      </div>
+      
+      <p style="margin:0 0 30px;">All applicant documents, co-applicant profiles, and KYC logs have been verified and are available on the bank dashboard.</p>
+      
+      <div style="text-align:center;margin-bottom:30px;">
+        <a href="${frontendUrl}/bank/login" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:8px;font-weight:700;font-size:14px;box-shadow:0 4px 10px rgba(79,70,229,0.2);">
+          Open Partner Portal
+        </a>
+      </div>
+      
+      <p style="margin:0;font-size:13px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:20px;">
+        This is an automated notification. For assistance, contact support@vidyaloan.com.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+    };
+
+    try {
+      console.log(`[EmailService] Sending application alert to bank email: ${bankEmail}`);
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        await this.transporter.sendMail(mailOptions);
+        console.log(`[EmailService] New application email sent successfully to bank: ${bankEmail}`);
+      } else {
+        console.log(`[EmailService] Email credentials not configured – logged bank notification to console`);
+      }
+    } catch (error) {
+      console.error(`[EmailService] Failed to send bank application notification to ${bankEmail}:`, error);
+    }
+  }
+
   async sendApplicationAcceptedByBankEmail(email: string, userName: string, bankName: string, application: any, details?: any) {
     const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();

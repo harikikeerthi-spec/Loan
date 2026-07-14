@@ -25,8 +25,8 @@ export class ReferralService {
 
   private generateCode(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = 'VL-';
-    for (let i = 0; i < 6; i++) {
+    let code = '';
+    for (let i = 0; i < 8; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return code;
@@ -42,7 +42,7 @@ export class ReferralService {
     if (!user) throw new Error('User not found');
     if (user.referralCode) return { referralCode: user.referralCode, user };
 
-    let code: string = '';
+    let code = '';
     let exists = true;
     while (exists) {
       code = this.generateCode();
@@ -58,6 +58,17 @@ export class ReferralService {
       .single();
 
     if (error) throw error;
+
+    // Also populate referral_codes table
+    try {
+      await this.db.from('referral_codes').insert({
+        code,
+        userId
+      });
+    } catch (e) {
+      console.warn('[ReferralService] Failed to populate referral_codes table:', e.message);
+    }
+
     return { referralCode: updated.referralCode, user: updated };
   }
 
@@ -75,10 +86,10 @@ export class ReferralService {
       { count: pendingReferrals },
       { count: totalVisits },
     ] = await Promise.all([
-      this.db.from('Referral').select('*', { count: 'exact', head: true }).eq('referrerId', userId),
-      this.db.from('Referral').select('*', { count: 'exact', head: true }).eq('referrerId', userId).eq('status', 'completed'),
-      this.db.from('Referral').select('*', { count: 'exact', head: true }).eq('referrerId', userId).eq('status', 'signed_up'),
-      this.db.from('Referral').select('*', { count: 'exact', head: true }).eq('referrerId', userId).eq('status', 'pending'),
+      this.db.from('referrals').select('*', { count: 'exact', head: true }).eq('referrerId', userId),
+      this.db.from('referrals').select('*', { count: 'exact', head: true }).eq('referrerId', userId).in('status', ['completed', 'rewarded', 'paid']),
+      this.db.from('referrals').select('*', { count: 'exact', head: true }).eq('referrerId', userId).eq('status', 'signed_up'),
+      this.db.from('referrals').select('*', { count: 'exact', head: true }).eq('referrerId', userId).eq('status', 'pending'),
       this.db.from('ReferralVisit').select('*', { count: 'exact', head: true }).eq('referrerId', userId),
     ]);
 
@@ -108,7 +119,7 @@ export class ReferralService {
 
   async getReferralList(userId: string) {
     const { data: referrals } = await this.db
-      .from('Referral')
+      .from('referrals')
       .select('*, referee:User!refereeId(firstName, lastName, email)')
       .eq('referrerId', userId)
       .order('createdAt', { ascending: false });
@@ -150,26 +161,37 @@ export class ReferralService {
       return null;
     }
 
+    // Block self-referral
+    if (referrer.id === refereeId || referrer.email.toLowerCase() === refereeEmail.toLowerCase()) {
+      this.logger.warn(`Self-referral blocked: User ${refereeEmail} tried to refer themselves.`);
+      return null;
+    }
+
     const { data: existing } = await this.db
-      .from('Referral')
-      .select('id')
+      .from('referrals')
+      .select('id, status')
       .eq('referrerId', referrer.id)
       .eq('refereeEmail', refereeEmail)
       .single();
 
     if (existing) {
       const { data, error } = await this.db
-        .from('Referral')
+        .from('referrals')
         .update({ refereeId, status: refereeId ? 'signed_up' : 'pending' })
         .eq('id', existing.id)
         .select()
         .single();
       if (error) throw error;
+
+      if (refereeId) {
+        await this.db.from('User').update({ referredById: referrer.id }).eq('id', refereeId);
+      }
+
       return data;
     }
 
     const { data: referral, error } = await this.db
-      .from('Referral')
+      .from('referrals')
       .insert({ referrerId: referrer.id, refereeEmail, refereeId, status: refereeId ? 'signed_up' : 'pending' })
       .select()
       .single();
@@ -184,36 +206,39 @@ export class ReferralService {
 
   async completeReferral(refereeId: string) {
     const { data: referral } = await this.db
-      .from('Referral')
+      .from('referrals')
       .select('*')
       .eq('refereeId', refereeId)
       .single();
 
-    if (!referral || referral.status === 'completed') return null;
+    if (!referral || ['rewarded', 'completed', 'paid'].includes(referral.status)) return null;
 
-    const { count: completedCount } = await this.db
-      .from('Referral')
-      .select('*', { count: 'exact', head: true })
+    const previousStatus = referral.status;
+
+    // Count how many rewarded/completed referrals this referrer has
+    const { data: list } = await this.db
+      .from('referrals')
+      .select('id')
       .eq('referrerId', referral.referrerId)
-      .eq('status', 'completed');
+      .in('status', ['rewarded', 'completed', 'paid']);
 
-    const newCompletedCount = (completedCount || 0) + 1;
+    const rewardedCount = (list || []).length;
+    const newRewardedCount = rewardedCount + 1;
+
     let rewardAmount = 3000;
+    let rewardStr = '₹3,000';
 
-    // Calculate milestone bonuses
-    if (newCompletedCount === 3) rewardAmount += 500;
-    else if (newCompletedCount === 5) rewardAmount += 10000;
-    else if (newCompletedCount === 10) rewardAmount += 25000;
-    else if (newCompletedCount === 25) rewardAmount += 75000;
-    else if (newCompletedCount === 50) rewardAmount += 200000;
+    // Milestone bonus logic (10k at 5 successful referrals)
+    if (newRewardedCount === 5) {
+      rewardAmount += 10000;
+      rewardStr = '₹13,000 (includes ₹10,000 bonus)';
+    }
 
-    const rewardStr = `₹${rewardAmount.toLocaleString('en-IN')}`;
-
-    // Update the Referral record with status and reward amount string
+    // Update the referral status and reward
     const { data, error } = await this.db
-      .from('Referral')
+      .from('referrals')
       .update({ 
-        status: 'completed', 
+        status: 'rewarded', 
         completedAt: new Date().toISOString(), 
         reward: rewardStr 
       })
@@ -222,6 +247,9 @@ export class ReferralService {
       .single();
 
     if (error) throw error;
+
+    // Write audit log entry
+    await this.logReferralAudit(referral.id, previousStatus, 'rewarded', referral.referrerId, 'System: Automatic reward on loan disbursement');
 
     // Credit the referrer's wallet balance
     const { data: wallet } = await this.db
@@ -245,6 +273,147 @@ export class ReferralService {
     return data;
   }
 
+  async logReferralAudit(referralId: string, prevStatus: string, newStatus: string, changedBy: string, reason?: string) {
+    try {
+      await this.db.from('referral_audit_log').insert({
+        referralId,
+        previousStatus: prevStatus,
+        newStatus,
+        changedBy,
+        reason: reason || null
+      });
+    } catch (e) {
+      console.error(`[ReferralService] Failed to write referral audit log: ${e.message}`);
+    }
+  }
+
+  async getAdminStats() {
+    const [
+      { count: totalReferrals },
+      { data: paidReferrals },
+      { count: pendingPayoutCount }
+    ] = await Promise.all([
+      this.db.from('referrals').select('*', { count: 'exact', head: true }),
+      this.db.from('referrals').select('reward').in('status', ['completed', 'paid']),
+      this.db.from('referrals').select('*', { count: 'exact', head: true }).eq('status', 'rewarded')
+    ]);
+
+    const totalPaid = (paidReferrals || []).reduce((sum: number, r: any) => {
+      if (!r.reward) return sum;
+      const num = parseInt(r.reward.replace(/[^0-9]/g, ''), 10);
+      return sum + (isNaN(num) ? 0 : num);
+    }, 0);
+
+    return {
+      totalReferrals: totalReferrals || 0,
+      totalPaidOut: totalPaid,
+      pendingPayoutCount: pendingPayoutCount || 0
+    };
+  }
+
+  async getAdminReferrals(statusFilter?: string, search?: string, pendingPayout?: boolean) {
+    let query = this.db
+      .from('referrals')
+      .select('*, referrer:User!referrerId(*), referee:User!refereeId(*)');
+
+    if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    } else if (pendingPayout) {
+      query = query.eq('status', 'rewarded');
+    }
+
+    const { data: referrals, error } = await query.order('createdAt', { ascending: false });
+    if (error) throw error;
+
+    let filtered = referrals || [];
+    if (search) {
+      const term = search.toLowerCase().trim();
+      filtered = filtered.filter((r: any) => {
+        const referrerName = `${r.referrer?.firstName || ''} ${r.referrer?.lastName || ''}`.toLowerCase();
+        const referrerPhone = (r.referrer?.mobile || r.referrer?.phoneNumber || '').toLowerCase();
+        const refereeName = `${r.referee?.firstName || ''} ${r.referee?.lastName || ''}`.toLowerCase();
+        const refereeEmail = (r.refereeEmail || r.referee?.email || '').toLowerCase();
+        return referrerName.includes(term) || referrerPhone.includes(term) || refereeName.includes(term) || refereeEmail.includes(term);
+      });
+    }
+
+    return filtered.map((r: any) => ({
+      id: r.id,
+      referrerId: r.referrerId,
+      referrerName: r.referrer ? `${r.referrer.firstName || ''} ${r.referrer.lastName || ''}`.trim() : 'Unknown User',
+      referrerEmail: r.referrer?.email || '',
+      referrerPhone: r.referrer?.mobile || r.referrer?.phoneNumber || '',
+      refereeEmail: r.refereeEmail || r.referee?.email || '',
+      refereeName: r.referee ? `${r.referee.firstName || ''} ${r.referee.lastName || ''}`.trim() : 'Not Registered',
+      refereePhone: r.referee?.mobile || r.referee?.phoneNumber || '',
+      status: r.status,
+      reward: r.reward,
+      createdAt: r.createdAt,
+      completedAt: r.completedAt,
+    }));
+  }
+
+  async overrideReferralStatus(referralId: string, status: string, adminId: string, reason?: string) {
+    const { data: referral } = await this.db
+      .from('referrals')
+      .select('*')
+      .eq('id', referralId)
+      .single();
+
+    if (!referral) throw new Error('Referral not found');
+    if (referral.status === status) return referral;
+
+    const previousStatus = referral.status;
+
+    const { data: updated, error } = await this.db
+      .from('referrals')
+      .update({
+        status,
+        completedAt: ['completed', 'rewarded', 'paid'].includes(status) ? new Date().toISOString() : referral.completedAt
+      })
+      .eq('id', referralId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Log the override audit
+    await this.logReferralAudit(referralId, previousStatus, status, adminId, reason || 'Manual admin override');
+
+    // If overridden to rewarded and not previously rewarded, credit wallet
+    if (status === 'rewarded' && !['rewarded', 'completed', 'paid'].includes(previousStatus)) {
+      const { data: list } = await this.db
+        .from('referrals')
+        .select('id')
+        .eq('referrerId', referral.referrerId)
+        .in('status', ['rewarded', 'completed', 'paid']);
+
+      const count = (list || []).length;
+      let rewardAmount = 3000;
+      if (count === 5) rewardAmount += 10000;
+
+      const { data: wallet } = await this.db
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', referral.referrerId)
+        .single();
+
+      if (!wallet) {
+        await this.db
+          .from('wallets')
+          .insert({ user_id: referral.referrerId, balance: rewardAmount });
+      } else {
+        const newBalance = Number(wallet.balance || 0) + rewardAmount;
+        await this.db
+          .from('wallets')
+          .update({ balance: newBalance, updated_at: new Date().toISOString() })
+          .eq('user_id', referral.referrerId);
+      }
+    }
+
+    return updated;
+  }
+
   async sendInvite(userId: string, email: string) {
     const { data: user } = await this.db
       .from('User')
@@ -256,7 +425,7 @@ export class ReferralService {
     if (user.email === email) throw new Error('You cannot refer yourself');
 
     const { data: existing } = await this.db
-      .from('Referral')
+      .from('referrals')
       .select('id')
       .eq('referrerId', userId)
       .eq('refereeEmail', email)
@@ -265,7 +434,7 @@ export class ReferralService {
     if (existing) throw new Error('You have already invited this person');
 
     const { data, error } = await this.db
-      .from('Referral')
+      .from('referrals')
       .insert({ referrerId: userId, refereeEmail: email, status: 'pending' })
       .select()
       .single();
@@ -274,9 +443,8 @@ export class ReferralService {
   }
 
   async getLeaderboard(limit = 10) {
-    // Supabase doesn't support groupBy like Prisma; use RPC or aggregate manually
     const { data: referrals } = await this.db
-      .from('Referral')
+      .from('referrals')
       .select('referrerId')
       .eq('status', 'completed');
 
@@ -321,14 +489,6 @@ export class ReferralService {
     if (completedCount >= 10) rewards.push({ name: 'Diamond Status + ₹5000', unlocked: true });
     else rewards.push({ name: 'Diamond Status + ₹5000', unlocked: false, at: 10 });
     return rewards;
-  }
-
-  private getRewardForCount(count: number): string {
-    if (count >= 10) return 'diamond';
-    if (count >= 7) return 'gold';
-    if (count >= 5) return 'silver';
-    if (count >= 3) return 'bronze';
-    return 'none';
   }
 
   async recordVisit(code: string, ipAddress?: string, userAgent?: string) {

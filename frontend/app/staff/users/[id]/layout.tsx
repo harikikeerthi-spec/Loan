@@ -51,6 +51,8 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
         activeTab = "applications";
     } else if (pathname.endsWith("/evv")) {
         activeTab = "evv";
+    } else if (pathname.endsWith("/calendar")) {
+        activeTab = "calendar";
     } else if (pathname.endsWith("/notes")) {
         activeTab = "notes";
     } else if (pathname.endsWith("/documents")) {
@@ -59,7 +61,7 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FAF8FE] font-sans text-slate-800 flex items-center justify-center relative overflow-hidden">
+            <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-[30%] left-[30%] w-[300px] h-[300px] bg-[#6605c7]/5 rounded-full blur-[80px] animate-pulse" />
                 </div>
@@ -77,7 +79,7 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
 
     if (!userData) {
         return (
-            <div className="min-h-screen bg-[#FAF8FE] font-sans text-slate-800 flex items-center justify-center relative">
+            <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 flex items-center justify-center relative">
                 <div className="max-w-md w-full mx-6 p-8 rounded-2xl bg-white/70 border border-white/80 backdrop-blur-xl shadow-2xl text-center relative z-10">
                     <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-6 text-rose-500">
                         <span className="material-symbols-outlined text-[32px]">face_dissatisfied</span>
@@ -99,25 +101,19 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
         { id: "profile", label: "Profile Dossier", path: `/staff/users/${userId}`, icon: "badge" },
         { id: "applications", label: "Applications Node", path: `/staff/users/${userId}/applications`, icon: "article", badge: userApplications.length > 0 ? userApplications.length : undefined },
         { id: "evv", label: "EVV Analysis", path: `/staff/users/${userId}/evv`, icon: "payments" },
+        { id: "calendar", label: "Events & Calendar", path: `/staff/users/${userId}/calendar`, icon: "calendar_month" },
         { id: "notes", label: "Internal Notes", path: `/staff/users/${userId}/notes`, icon: "sticky_note_2" },
         { id: "documents", label: "Secure Vault Documents", path: `/staff/users/${userId}/documents`, icon: "folder" }
     ];
 
     return (
-        <div className="min-h-screen bg-[#FAF8FE] font-sans text-slate-800 relative overflow-hidden pb-16">
-            {/* Glowing color blobs */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#6605c7]/5 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-500/4 rounded-full blur-[140px] animate-pulse" />
-                <div className="absolute inset-0 opacity-[0.015] bg-[radial-gradient(#6605c7_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
-            </div>
-
+        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 relative overflow-hidden pb-16">
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-10">
                 {/* Header Actions */}
                 <div className="mb-6 flex justify-between items-center">
                     <button
                         onClick={handleBack}
-                        className="flex items-center gap-2 text-slate-500 hover:text-[#6605c7] text-xs font-black uppercase tracking-widest transition-all cursor-pointer group"
+                        className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 text-xs font-black uppercase tracking-widest transition-all cursor-pointer group"
                     >
                         <span className="material-symbols-outlined text-[16px] transition-transform group-hover:-translate-x-1">arrow_back</span>
                         Back to Members
@@ -125,89 +121,64 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Profile Header Card */}
-                <div className="relative rounded-3xl bg-white border border-slate-100 shadow-xl overflow-hidden mb-8 p-6 md:p-8">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-slate-50/50 -z-10" />
-                    <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10">
-                        {/* Avatar representation */}
-                        <div className="relative">
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-500 to-[#6605c7] flex items-center justify-center text-white text-3xl font-extrabold shadow-lg shadow-indigo-500/20">
-                                {userData.avatarUrl ? (
-                                    <img src={userData.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
-                                ) : (
-                                    <span className="material-symbols-outlined text-[40px] opacity-80">person</span>
-                                )}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-xl shadow-md shadow-indigo-500/10">
+                            {userData.avatarUrl ? (
+                                <img src={userData.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                                <span>{(userData.firstName || "U").substring(0, 2).toUpperCase()}</span>
+                            )}
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+                                {userData.firstName || "—"} {userData.lastName || ""}
+                            </h1>
+                            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500 mt-1.5">
+                                <span className="font-mono">ID: {userData.id || "VL-STU-2026-00041"}</span>
+                                <span className="text-slate-300">•</span>
+                                <span>Registered: {formatDate(userData.createdAt, "MMM d, yyyy")}</span>
                             </div>
                         </div>
-
-                        {/* Title details */}
-                        <div className="flex-1 text-center md:text-left">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                                    <h1 className="text-3xl font-black text-slate-900 tracking-tight cursor-pointer hover:text-indigo-600 hover:underline transition-all inline-block" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-                                        {userData.firstName || "—"} {userData.lastName || ""}
-                                    </h1>
-                                </div>
-                                <div className="flex flex-col items-center sm:items-end gap-3">
-                                    <button
-                                        onClick={() => {
-                                            router.push(`/staff/chat-customer?id=${userData.id || userData._id}&email=${userData.email || ""}&firstName=${userData.firstName || ""}&lastName=${userData.lastName || ""}`);
-                                        }}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-[#6605c7] hover:from-indigo-700 hover:to-[#5504a7] text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer w-full sm:w-auto justify-center"
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">chat</span>
-                                        Chat with Student
-                                    </button>
-
-                                    {/* Change Co-Applicant Button */}
-                                    <button
-                                        onClick={openCoAppModal}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all shadow-sm w-full sm:w-auto justify-center cursor-pointer active:scale-95"
-                                        disabled={actionLoading}
-                                    >
-                                        <span className="material-symbols-outlined text-[16px] text-slate-500">edit_note</span>
-                                        Change Co-applicant
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 mt-5 text-xs font-semibold text-gray-700">
-                                <div className="flex items-center gap-1.5 font-mono bg-white/50 px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                                    <span className="material-symbols-outlined text-[16px] text-[#6605c7]">fingerprint</span>
-                                    <span className="text-[9px] text-gray-500 uppercase font-black">ID:</span>
-                                    <span className="text-[10px] font-bold text-gray-800 tracking-wider uppercase">{userData.id || "VL-STU-2026-00035"}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 font-mono bg-white/50 px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                                    <span className="material-symbols-outlined text-[16px] text-[#6605c7]">calendar_month</span>
-                                    <span className="text-[9px] text-gray-500 uppercase font-black">Registered:</span>
-                                    <span className="text-[10px] font-bold text-gray-800 tracking-wider uppercase">
-                                        {formatDate(userData.createdAt, "MMM d, yyyy")}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3 w-full md:w-auto justify-end">
+                        <button
+                            onClick={openCoAppModal}
+                            disabled={actionLoading}
+                            className="px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl font-semibold text-xs uppercase tracking-wider hover:bg-slate-50 transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center"
+                        >
+                            <span className="material-symbols-outlined text-[16px] text-slate-500">edit_note</span>
+                            Change Co-Applicant
+                        </button>
+                        <button
+                            onClick={() => {
+                                router.push(`/staff/chat-customer?id=${userData.id || userData._id}&email=${userData.email || ""}&firstName=${userData.firstName || ""}&lastName=${userData.lastName || ""}&phone=${userData.phoneNumber || userData.mobile || userData.phone || ""}`);
+                            }}
+                            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center shadow-sm shadow-indigo-600/10"
+                        >
+                            <span className="material-symbols-outlined text-[16px]">chat</span>
+                            Chat with Student
+                        </button>
                     </div>
                 </div>
 
                 {/* Sub-Navigation Tabs */}
-                <div className="flex flex-wrap items-center gap-2 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200/50 mb-8 max-w-fit mx-auto md:mx-0">
+                <div className="flex items-center border-b border-slate-200 mb-8 w-full overflow-x-auto scrollbar-hide">
                     {navigationTabs.map((tab) => {
                         const isActive = activeTab === tab.id;
                         return (
-                            <Link key={tab.id} href={tab.path}>
-                                <button
-                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${isActive
-                                        ? "bg-white text-[#6605c7] shadow-md border border-[#6605c7]/5 scale-102"
-                                        : "text-slate-500 hover:text-[#6605c7] hover:bg-white/50"
-                                        }`}
-                                >
-                                    <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
+                            <Link key={tab.id} href={tab.path} className="relative py-3 px-4 text-sm font-medium transition-colors hover:text-indigo-600 focus:outline-none select-none whitespace-nowrap shrink-0">
+                                <span className={`text-[11px] font-black uppercase tracking-wider ${isActive ? "text-indigo-600" : "text-slate-500 hover:text-slate-700"}`}>
                                     {tab.label}
                                     {tab.badge && (
-                                        <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black ${isActive ? "bg-[#6605c7] text-white" : "bg-slate-200 text-slate-700"}`}>
+                                        <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${isActive ? "bg-indigo-600 text-white animate-pulse" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>
                                             {tab.badge}
                                         </span>
                                     )}
-                                </button>
+                                </span>
+                                {isActive && (
+                                    <motion.div layoutId="activeTabUnderline" className="absolute bottom-0 inset-x-0 h-0.5 bg-indigo-600" />
+                                )}
                             </Link>
                         );
                     })}
@@ -360,14 +331,14 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
     );
 }
 
-export default async function UserDossierLayout({
+export default function UserDossierLayout({
     params,
     children
 }: {
     params: Promise<{ id: string }>;
     children: React.ReactNode;
 }) {
-    const { id } = await params;
+    const { id } = use(params);
     return (
         <UserDossierProvider userId={id}>
             <DossierLayoutInner>{children}</DossierLayoutInner>

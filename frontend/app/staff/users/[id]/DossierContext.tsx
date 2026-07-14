@@ -69,7 +69,14 @@ export function UserDossierProvider({ userId, children }: { userId: string; chil
             // Fetch User
             const userRes = await adminApi.getUserById(userId) as any;
             if (userRes && userRes.data) {
-                setUserData(userRes.data);
+                const userClone = { ...userRes.data };
+                if (typeof userClone.family === 'string') {
+                    try { userClone.family = JSON.parse(userClone.family); } catch {}
+                }
+                if (typeof userClone.coApplicant === 'string') {
+                    try { userClone.coApplicant = JSON.parse(userClone.coApplicant); } catch {}
+                }
+                setUserData(userClone);
             }
 
             // Fetch Applications

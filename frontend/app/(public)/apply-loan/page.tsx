@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { applicationApi, authApi, aiApi } from "@/lib/api";
@@ -615,11 +615,11 @@ export default function ApplyLoanPage() {
                                             update("otherCountry", "");
                                         }
                                     }}
-                                         options={popularCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
+                                        options={popularCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
                                     {formData.country === "Other" && (
                                         <div className="md:col-span-2">
-                                            <SelectField label="Specify Destination Country" icon="public" value={formData.otherCountry} onChange={(v) => update("otherCountry", v)}
-                                                 options={allCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.otherCountry} />
+                                            <SearchableSelectField label="Specify Destination Country" icon="public" value={formData.otherCountry} onChange={(v) => update("otherCountry", v)}
+                                                options={allCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.otherCountry} placeholder="Search countries..." />
                                         </div>
                                     )}
                                 </div>
@@ -629,15 +629,15 @@ export default function ApplyLoanPage() {
                                         // Delay hiding suggestions so that click events on the suggestion items can register
                                         setTimeout(() => setShowUniversitySuggestions(false), 200);
                                     }}>
-                                        <InputField 
-                                            label="Full University Name" 
-                                            icon="domain" 
-                                            value={formData.university} 
-                                            onChange={(v) => update("university", v.replace(/\d/g, ""))} 
-                                            placeholder="e.g. University of Toronto" 
-                                            error={stepErrors.university} 
+                                        <InputField
+                                            label="Full University Name"
+                                            icon="domain"
+                                            value={formData.university}
+                                            onChange={(v) => update("university", v.replace(/\d/g, ""))}
+                                            placeholder="e.g. University of Toronto"
+                                            error={stepErrors.university}
                                         />
-                                        
+
                                         {/* Loading Indicator */}
                                         {loadingUniversities && (
                                             <div className="absolute right-4 top-[50px] flex items-center gap-1.5 text-xs text-[#6605c7] font-bold select-none">
@@ -835,17 +835,15 @@ export default function ApplyLoanPage() {
                                                 { value: "other", label: "Other" }
                                             ]} error={stepErrors.coApplicant} required />
                                         {formData.coApplicant === "other" && (
-                                            <div className="md:col-span-2">
-                                                <InputField
-                                                    label="If Other, Specify Relation"
-                                                    icon="people"
-                                                    value={formData.otherRelation}
-                                                    onChange={(v) => update("otherRelation", v)}
-                                                    placeholder="e.g. Uncle"
-                                                    error={stepErrors.otherRelation}
-                                                    required
-                                                />
-                                            </div>
+                                            <InputField
+                                                label="If Other, Specify Relation"
+                                                icon="people"
+                                                value={formData.otherRelation}
+                                                onChange={(v) => update("otherRelation", v)}
+                                                placeholder="e.g. Uncle"
+                                                error={stepErrors.otherRelation}
+                                                required
+                                            />
                                         )}
                                     </div>
 
@@ -943,7 +941,7 @@ export default function ApplyLoanPage() {
                                                 },
                                                 { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
                                                 { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
-                                                { label: "Collateral", value: formData.collateral.split(':')[0] },
+                                                // { label: "Collateral", value: formData.collateral.split(':')[0] },
                                                 { label: "Residential Pincode", value: formData.pincode },
                                             ].filter((f) => f.value).map((f) => (
                                                 <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100/50 last:border-0">
@@ -988,8 +986,8 @@ export default function ApplyLoanPage() {
 
                             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                                 {step < 3 ? (
-                                    <button 
-                                        onClick={next} 
+                                    <button
+                                        onClick={next}
                                         disabled={step === 1 && validatingUniversity}
                                         className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-[#9B51E0] to-[#E040FB] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:brightness-110 hover:shadow-[0_0_20px_rgba(155,81,224,0.4)] transition-all flex items-center justify-center gap-3 group border border-[#e040fb]/30 active:scale-98 disabled:opacity-50 cursor-pointer"
                                     >
@@ -1103,6 +1101,127 @@ function SelectField({ label, icon, value, onChange, options, error, required }:
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <span className="material-symbols-outlined text-lg">expand_more</span>
                 </div>
+            </div>
+            {error && <p className="text-red-500 text-[10px] font-black uppercase tracking-wider pl-1">{error}</p>}
+        </div>
+    );
+}
+
+function SearchableSelectField({ label, icon, value, onChange, options, error, required, placeholder = "Search..." }: {
+    label: string; icon?: string; value: string; onChange: (v: string) => void;
+    options: { value: string; label: string }[]; error?: string; required?: boolean;
+    placeholder?: string;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Filter options based on search query
+    const filteredOptions = options.filter(o =>
+        o.label.toLowerCase().includes(search.toLowerCase())
+    );
+
+    // Selected label
+    const selectedOption = options.find(o => o.value === value);
+    const selectedLabel = selectedOption ? selectedOption.label : "Choose Option...";
+
+    // Close on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    // Reset search when dropdown opens/closes
+    useEffect(() => {
+        if (!isOpen) {
+            setSearch("");
+        }
+    }, [isOpen]);
+
+    return (
+        <div className="space-y-3" ref={dropdownRef}>
+            <label className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-500">
+                {label} {required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <div className="relative">
+                {/* Trigger Button */}
+                <button
+                    type="button"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className={`w-full text-left ${icon ? 'pl-12' : 'px-6'} pr-10 py-4 bg-white/70 border rounded-2xl shadow-sm outline-none text-sm font-bold text-gray-900 focus:bg-white transition-all cursor-pointer flex items-center justify-between ${error ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#6605c7]/50 focus:ring-4 focus:ring-purple-100 hover:border-gray-300"}`}
+                >
+                    <span className="truncate">{selectedLabel}</span>
+                    <span className="material-symbols-outlined text-lg text-gray-400">expand_more</span>
+                </button>
+
+                {icon && (
+                    <div className="absolute left-4 top-[18px] text-gray-400 pointer-events-none transition-all">
+                        <span className="material-symbols-outlined text-xl">{icon}</span>
+                    </div>
+                )}
+
+                {/* Dropdown Card */}
+                {isOpen && (
+                    <div className="absolute z-50 left-0 right-0 mt-2 bg-white border border-purple-150 rounded-2xl shadow-xl max-h-80 overflow-hidden flex flex-col animate-fade-in">
+                        {/* Search Input */}
+                        <div className="p-3 border-b border-gray-100 bg-gray-50/50 sticky top-0 z-10 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-gray-400 text-lg">search</span>
+                            <input
+                                type="text"
+                                placeholder={placeholder}
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full bg-transparent border-0 outline-none text-xs font-bold text-gray-800 placeholder:text-gray-400 py-1"
+                                autoFocus
+                            />
+                            {search && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearch("")}
+                                    className="text-gray-400 hover:text-gray-600 transition"
+                                >
+                                    <span className="material-symbols-outlined text-sm">close</span>
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Options List */}
+                        <div className="overflow-y-auto max-h-60 divide-y divide-gray-50">
+                            {filteredOptions.length > 0 ? (
+                                filteredOptions.map((o) => {
+                                    const isSelected = o.value === value;
+                                    return (
+                                        <button
+                                            key={o.value}
+                                            type="button"
+                                            onClick={() => {
+                                                onChange(o.value);
+                                                setIsOpen(false);
+                                            }}
+                                            className={`w-full px-5 py-3 text-left text-xs font-bold text-gray-700 hover:text-[#6605c7] hover:bg-purple-50/50 transition-all flex items-center justify-between ${isSelected ? 'bg-purple-50/70 text-[#6605c7]' : ''}`}
+                                        >
+                                            <span>{o.label}</span>
+                                            {isSelected && (
+                                                <span className="material-symbols-outlined text-[#6605c7] text-sm">check</span>
+                                            )}
+                                        </button>
+                                    );
+                                })
+                            ) : (
+                                <div className="px-5 py-4 text-center text-xs text-gray-400 font-medium">
+                                    No countries found
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
             {error && <p className="text-red-500 text-[10px] font-black uppercase tracking-wider pl-1">{error}</p>}
         </div>

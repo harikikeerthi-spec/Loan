@@ -886,6 +886,31 @@ export const referralApi = {
         apiFetch(`${API_URL}/referral/visit/${code}`, {
             method: 'POST',
         }),
+
+    // Get unified referral data for current user (stats, list, code)
+    getMe: () =>
+        apiFetch(`${API_URL}/referral/me`),
+
+    // Get stats for admin dashboard
+    getAdminStats: () =>
+        apiFetch(`${API_URL}/referral/admin/stats`),
+
+    // Get list of all referrals for admin
+    getAdminList: (status?: string, search?: string, pendingPayout?: boolean) => {
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (search) params.set('search', search);
+        if (pendingPayout) params.set('pendingPayout', 'true');
+        const query = params.toString();
+        return apiFetch(`${API_URL}/referral/admin/list${query ? `?${query}` : ''}`);
+    },
+
+    // Override referral status manually
+    overrideStatus: (id: string, status: string, reason?: string) =>
+        apiFetch(`${API_URL}/referral/admin/override/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, reason }),
+        }),
 };
 
 // ─── Admin ────────────────────────────────────────────────────────────

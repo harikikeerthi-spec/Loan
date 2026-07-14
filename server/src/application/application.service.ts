@@ -118,19 +118,28 @@ export class ApplicationService {
     }
 
     // 2. Check duplicate details for the same bank
-    if (bank && country && universityName) {
+    if (bank && bank !== 'Any Bank' && bank !== 'ANY BANK' && bank !== '—' && bank !== 'Pending Partner') {
       const duplicate = existingApps?.find(app => {
         if (currentAppId && app.id === currentAppId) return false;
 
-        const matchBank = app.bank && bank && app.bank.toLowerCase().trim() === bank.toLowerCase().trim();
-        const matchCountry = app.country && country && app.country.toLowerCase().trim() === country.toLowerCase().trim();
-        const matchUniversity = app.universityName && universityName && app.universityName.toLowerCase().trim() === universityName.toLowerCase().trim();
+        const normalize = (b: string) => {
+            const low = String(b || '').toLowerCase().trim();
+            if (low.includes('hdfc') || low.includes('credila')) return 'hdfc';
+            if (low.includes('idfc')) return 'idfc';
+            if (low.includes('auxilo')) return 'auxilo';
+            if (low.includes('avanse')) return 'avanse';
+            if (low.includes('poonawalla')) return 'poonawalla';
+            return low;
+        };
 
-        return matchBank && matchCountry && matchUniversity;
+        const existingNorm = normalize(app.bank || '');
+        const targetNorm = normalize(bank);
+
+        return existingNorm !== 'any bank' && existingNorm !== '—' && existingNorm !== 'pending partner' && existingNorm === targetNorm;
       });
 
       if (duplicate) {
-        throw new BadRequestException(`An active application to ${bank} for ${universityName} in ${country} already exists. To apply to the same bank, please use different details (e.g., country or university).`);
+        throw new BadRequestException(`An active application to ${bank} already exists for this student. You cannot apply to the same bank twice.`);
       }
     }
   }

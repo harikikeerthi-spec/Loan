@@ -478,13 +478,26 @@ export default function DashboardPage() {
         
         // 1. Get the requirements for this profile
         const activeProfile = data.profile || user || {};
-        const family = activeProfile.family || activeProfile.familyDetails || {};
-        const coApplicant = activeProfile.coApplicant || {};
+        let family = activeProfile.family;
+        if (typeof family === 'string') {
+            try { family = JSON.parse(family); } catch { family = {}; }
+        }
+        if (!family) family = activeProfile.familyDetails || {};
+        
+        let coApplicant = activeProfile.coApplicant;
+        if (typeof coApplicant === 'string') {
+            try { coApplicant = JSON.parse(coApplicant); } catch { coApplicant = {}; }
+        }
+        if (!coApplicant) coApplicant = {};
         
         const mergedProfile = {
             ...activeProfile,
             family,
-            coApplicant
+            coApplicant: {
+                ...coApplicant,
+                relation: (firstApp as any)?.coApplicantRelation || coApplicant.relation || activeProfile.coApplicantRelation || "",
+                name: (firstApp as any)?.coApplicantName || coApplicant.name || activeProfile.coApplicantName || ""
+            }
         };
         
         const requiredDocs = getProfileDocumentRequirements(mergedProfile);
@@ -894,6 +907,22 @@ export default function DashboardPage() {
                                                         <span className="text-[10px] font-bold text-[#6605c7] whitespace-nowrap">{getDynamicProgress(app)}%</span>
                                                     </div>
 
+                                                    {/* Overview Staff Details */}
+                                                    {app.status !== 'draft' && (
+                                                        <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                                                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                                                                <span className="material-symbols-outlined text-[15px] text-indigo-500">support_agent</span>
+                                                                <span className="font-bold text-slate-700">Assigned Support Staff:</span>
+                                                                <span className="font-semibold text-slate-800">Keerthi A.</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2.5 text-[10px] text-slate-400">
+                                                                <a href="mailto:harikikeerthi@gmail.com" className="hover:text-indigo-600 transition-colors font-medium">harikikeerthi@gmail.com</a>
+                                                                <span>•</span>
+                                                                <span className="font-semibold text-slate-500">+91 98450 12345</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     {/* Action Footer for detailed progress toggle */}
                                                     <div className="flex items-center justify-between gap-4 mt-4 pt-3 border-t border-gray-50 select-none">
                                                         <div className="flex items-center gap-3">
@@ -987,7 +1016,7 @@ export default function DashboardPage() {
                                     const submittedDate = app.submittedAt || app.date || app.createdAt;
                                     return (
                                         <div key={app.id} className="bg-white rounded-2xl p-6 border border-gray-100 hover:border-[#6605c7]/20 hover:shadow-lg transition-all group">
-                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                                 <div className="flex items-start gap-4 flex-1 min-w-0">
                                                     <div className="w-12 h-12 bg-gradient-to-br from-[#6605c7]/10 to-purple-100 rounded-xl flex items-center justify-center text-[#6605c7] shrink-0">
                                                         <span className="material-symbols-outlined text-2xl">account_balance</span>
@@ -1042,11 +1071,35 @@ export default function DashboardPage() {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col items-end gap-2 shrink-0">
-                                                    {submittedDate && (
-                                                        <span className="text-[10px] text-gray-400 font-bold">
+
+                                                {/* Staff Details Column */}
+                                                {app.status !== 'draft' && (
+                                                    <div className="flex flex-col justify-center gap-1 min-w-[210px] border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 pl-0 md:pl-6">
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block mb-1">Assigned Support Staff</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                                <span className="material-symbols-outlined text-[16px]">support_agent</span>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-slate-800">Keerthi A.</p>
+                                                                <p className="text-[9px] text-slate-400 font-semibold uppercase">Processing Officer</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-0.5 pl-9 mt-1">
+                                                            <a href="mailto:harikikeerthi@gmail.com" className="text-[10px] text-slate-500 hover:text-indigo-600 block transition-colors font-medium">harikikeerthi@gmail.com</a>
+                                                            <span className="text-[10px] text-slate-400 font-semibold block">+91 98450 12345</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex flex-col items-start md:items-end gap-1 shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 pl-0 md:pl-6 min-w-[120px]">
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Submitted On</span>
+                                                    {submittedDate ? (
+                                                        <span className="text-xs font-bold text-slate-700">
                                                             {new Date(submittedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                         </span>
+                                                    ) : (
+                                                        <span className="text-xs font-bold text-slate-400">—</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -1099,7 +1152,20 @@ export default function DashboardPage() {
 
                 {/* Profile Tab */}
                 {activeTab === "profile" && (() => {
-                    const activeProfile = data.profile || user;
+                    const baseProfile = data.profile || user || {};
+                    let familyObj = baseProfile.family;
+                    if (typeof familyObj === 'string') {
+                        try { familyObj = JSON.parse(familyObj); } catch { familyObj = {}; }
+                    }
+                    let coappObj = baseProfile.coApplicant;
+                    if (typeof coappObj === 'string') {
+                        try { coappObj = JSON.parse(coappObj); } catch { coappObj = {}; }
+                    }
+                    const activeProfile = {
+                        ...baseProfile,
+                        family: familyObj || {},
+                        coApplicant: coappObj || {}
+                    };
                     return (
                         <div className="max-w-4xl mx-auto bg-slate-50 p-8 rounded-3xl perspective-1000">
                             <div className="bg-white/85 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(102,5,199,0.12)] border border-white transform-gpu transition-all duration-300 hover:shadow-[0_30px_60px_rgba(102,5,199,0.22)] hover:-translate-y-2 flex flex-col md:flex-row overflow-visible">

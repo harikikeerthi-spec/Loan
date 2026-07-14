@@ -99,6 +99,15 @@ export default function DocumentsTab() {
             (filterStatus === "pending" && isPending);
             
         return matchesSearch && matchesFilter;
+    }).sort((a, b) => {
+        const aUploaded = !!(a.uploaded || a.filePath);
+        const bUploaded = !!(b.uploaded || b.filePath);
+        if (aUploaded !== bUploaded) {
+            return aUploaded ? -1 : 1;
+        }
+        const aTime = new Date(a.updatedAt || a.uploadedAt || a.createdAt || 0).getTime();
+        const bTime = new Date(b.updatedAt || b.uploadedAt || b.createdAt || 0).getTime();
+        return bTime - aTime;
     });
 
     const stats = {
@@ -362,7 +371,7 @@ export default function DocumentsTab() {
                                         </div>
 
                                         {/* Rejection reason */}
-                                        {doc.rejectionReason && (
+                                        {isRejected && doc.rejectionReason && (
                                             <div className="mb-3 p-2.5 bg-rose-50 rounded-lg border border-rose-100">
                                                 <p className="text-[9px] font-black text-rose-600 uppercase tracking-wider mb-1">Rejection Reason</p>
                                                 <p className="text-[10px] font-semibold text-rose-700">{doc.rejectionReason}</p>
@@ -397,7 +406,7 @@ export default function DocumentsTab() {
                                     {/* Accept / Reject actions */}
                                     <div className="flex gap-2">
                                         {/* Accept */}
-                                        {!isVerified && (
+                                        {!isVerified && !isRejected && (
                                             <button
                                                 onClick={() => handleApprove(doc)}
                                                 disabled={isActioning}
@@ -412,7 +421,7 @@ export default function DocumentsTab() {
                                             </button>
                                         )}
                                         {/* Reject */}
-                                        {!isRejected && (
+                                        {!isVerified && !isRejected && (
                                             <button
                                                 onClick={() => { setRejectDoc(doc); setRejectReason(""); }}
                                                 disabled={isActioning}

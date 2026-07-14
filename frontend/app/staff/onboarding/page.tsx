@@ -12,8 +12,6 @@ import { normalizeOcrFieldsForAutofill, normalizeGenderForForm, normalizeCountry
 import { examYearToEndDate, inferStartDate, normalizeStateName } from "@/lib/academic-ocr";
 import { format } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
-import ApplicantsSection from "@/components/staff/ApplicantsSection";
-import PullDocumentsModal from "@/components/staff/PullDocumentsModal";
 import ApplicationDetailView from "@/components/staff/ApplicationDetailView";
 import { getAllCountries, getStatesByCountry } from "@/lib/countriesData";
 import { formatPhone, formatAadhar, formatPan, isPhoneValid, isAadharValid, isPanValid } from "@/lib/validation";
@@ -32,7 +30,6 @@ import SendEmailModal from "@/components/staff/SendEmailModal";
 
 const DASHBOARD_SECTIONS = [
     "overview",
-    "applicants",
     "incoming_queue",
     "applications",
     "tasks",
@@ -353,8 +350,6 @@ export default function OnboardingPage() {
     ]);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
-    const [autoStartBank, setAutoStartBank] = useState<{ bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null>(null);
-    const [showPullModal, setShowPullModal] = useState(false);
     const [showShareProfileModal, setShowShareProfileModal] = useState(false);
     const [shareProfileData, setShareProfileData] = useState<any>(null);
 
@@ -785,7 +780,6 @@ export default function OnboardingPage() {
     const navigateToSection = useCallback((section: string) => {
         const routes: Record<string, string> = {
             overview: "/staff/dashboard",
-            applicants: "/staff/applicants",
             incoming_queue: "/staff/incoming-queue",
             applications: "/staff/applications",
             tasks: "/staff/tasks",
@@ -3175,7 +3169,6 @@ export default function OnboardingPage() {
 
     const sectionTitles: Record<string, string> = {
         overview: 'Dashboard',
-        applicants: 'Pull & Share Documents',
         incoming_queue: 'Incoming Queue',
         applications: 'Active Pipeline',
         tasks: 'Action Items',
@@ -3196,7 +3189,6 @@ export default function OnboardingPage() {
         { section: "incoming_queue", icon: "move_to_inbox", label: "Incoming Queue", badge: incomingQueueCount },
         { section: "applications", icon: "description", label: "Active Pipeline", badge: pendingCount },
         { section: "users", icon: "people", label: "Bank & Staff Members", badge: 0 },
-        { section: "applicants", icon: "send_to_mobile", label: "Document Transfer", badge: 0 },
         { section: "performance", icon: "insights", label: "Performance", badge: 0 },
         { section: "tasks", icon: "check_circle", label: "Action Items", badge: tasks.filter(t => !t.completed).length },
         { section: "communications", icon: "mail", label: "Outreach Center", badge: 0 },
@@ -6601,10 +6593,7 @@ export default function OnboardingPage() {
             )
             }
 
-            <PullDocumentsModal
-                isOpen={showPullModal}
-                onClose={() => setShowPullModal(false)}
-            />
+
 
             <SendEmailModal
                 isOpen={isEmailModalOpen}
