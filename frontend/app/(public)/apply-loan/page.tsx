@@ -7,6 +7,7 @@ import { applicationApi, authApi, aiApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
 import { getAllCountries } from "@/lib/countriesData";
+import { universities as staticUniversities } from "@/lib/universityData";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -202,11 +203,30 @@ export default function ApplyLoanPage() {
         }
     };
 
-    // Fetch popular universities for the selected country using AI
+    const getStaticUniversitiesForCountry = (country: string) => {
+        const normalizedCountry = country.trim().toLowerCase();
+        return Object.values(staticUniversities)
+            .filter((uni) => uni.country.trim().toLowerCase() === normalizedCountry)
+            .map((uni) => ({
+                name: uni.name,
+                loc: uni.location || uni.country,
+                country: uni.country,
+                slug: uni.slug,
+            }))
+            .slice(0, 10);
+    };
+
+    // Fetch popular universities for the selected country using AI or static fallback
     useEffect(() => {
         const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
         if (!selectedCountry || selectedCountry.trim().length < 2) {
             setSuggestedUniversities([]);
+            return;
+        }
+
+        const staticSuggestions = getStaticUniversitiesForCountry(selectedCountry);
+        if (!formData.university && staticSuggestions.length > 0) {
+            setSuggestedUniversities(staticSuggestions);
             return;
         }
 
@@ -219,21 +239,28 @@ export default function ApplyLoanPage() {
                     country: selectedCountry
                 }) as any;
 
-                if (res && res.success && res.universities) {
-                    setSuggestedUniversities(res.universities);
+                const universities = res?.universities || res?.results || [];
+                if (universities.length > 0) {
+                    setSuggestedUniversities(universities);
+                } else if (staticSuggestions.length > 0) {
+                    setSuggestedUniversities(staticSuggestions);
                 } else {
                     setSuggestedUniversities([]);
                 }
             } catch (err) {
                 console.error("Failed to fetch universities via AI", err);
-                setSuggestedUniversities([]);
+                if (staticSuggestions.length > 0) {
+                    setSuggestedUniversities(staticSuggestions);
+                } else {
+                    setSuggestedUniversities([]);
+                }
             } finally {
                 setLoadingUniversities(false);
             }
         };
 
         fetchUnis();
-    }, [formData.country, formData.otherCountry]);
+    }, [formData.country, formData.otherCountry, formData.university]);
 
     // Search universities when typing in the input field
     useEffect(() => {
@@ -255,15 +282,16 @@ export default function ApplyLoanPage() {
                     country: selectedCountry
                 }) as any;
 
-                if (res && res.success && res.universities) {
-                    setSuggestedUniversities(res.universities);
+                const universities = res?.universities || res?.results || [];
+                if (universities.length > 0) {
+                    setSuggestedUniversities(universities);
                 }
             } catch (err) {
                 console.error("Failed to query universities via AI", err);
             } finally {
                 setLoadingUniversities(false);
             }
-        }, 800);
+        }, 400);
 
         return () => clearTimeout(delayDebounceFn);
     }, [formData.university, formData.country, formData.otherCountry]);

@@ -788,9 +788,9 @@ export const aiApi = {
             body: JSON.stringify({ title }),
         }),
 
-    // Always use relative path; the Next.js rewrite proxy routes to the backend.
+    // Always use relative path; /api/ai-search is handled by the local Next.js frontend route.
     aiSearch: (data: Record<string, unknown>) =>
-        apiFetch(`${API_URL}/ai/search`, {
+        apiFetch(`${API_URL}/ai-search`, {
             method: 'POST',
             body: JSON.stringify(data),
         }),

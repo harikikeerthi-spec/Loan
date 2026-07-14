@@ -287,6 +287,14 @@ export class StaffProfileService {
       .single();
 
     if (fetchErr || !doc) throw new NotFoundException('Document not found in this profile');
+
+    // Always resolve the linked student's userId from the StaffProfile
+    const { data: staffProfile } = await this.db
+      .from('StaffProfile')
+      .select('linkedUserId')
+      .eq('id', profileId)
+      .maybeSingle();
+    const linkedStudentId = staffProfile?.linkedUserId || null;
     const oldStatus = doc.status;
 
     // Update staff-profile document
@@ -305,8 +313,31 @@ export class StaffProfileService {
 
     // ── Back-sync: propagate to the original UserDocument if linked ──────────
     let syncResult = 'no_user_doc';
+    const mappedStatus = body.status === 'approved' ? 'verified' : body.status;
+    let userDoc: any = null;
+
     if (doc.userDocumentId) {
-      const mappedStatus = body.status === 'approved' ? 'verified' : body.status;
+      const { data: ud } = await this.db
+        .from('UserDocument')
+        .select('*')
+        .eq('id', doc.userDocumentId)
+        .maybeSingle();
+      userDoc = ud;
+    } else if (linkedStudentId && doc.docType) {
+      // Fallback: find user doc by userId + docType
+      const { data: ud } = await this.db
+        .from('UserDocument')
+        .select('*')
+        .eq('userId', linkedStudentId)
+        .eq('docType', doc.docType)
+        .order('createdAt', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      userDoc = ud;
+    }
+
+    if (userDoc) {
+      const existingMeta = userDoc?.verificationMetadata || {};
       const syncPayload: any = {
         status: mappedStatus,
         updatedAt: new Date().toISOString(),
@@ -316,6 +347,7 @@ export class StaffProfileService {
         syncPayload.verifiedAt = new Date().toISOString();
         syncPayload.rejectionReason = null;
         syncPayload.verificationMetadata = {
+          ...(typeof existingMeta === 'object' ? existingMeta : {}),
           status: 'verified',
           verifiedAt: new Date().toISOString(),
           message: 'Document manually verified by staff profile update',
@@ -337,9 +369,75 @@ export class StaffProfileService {
       const { error: syncErr } = await this.db
         .from('UserDocument')
         .update(syncPayload)
-        .eq('id', doc.userDocumentId);
+        .eq('id', userDoc.id);
 
       syncResult = syncErr ? 'sync_failed' : 'synced';
+
+      // If approved, parse OCR details and store in the 'parents' table
+      if (mappedStatus === 'verified') {
+        const docType = doc.docType || '';
+        let relation: string | null = null;
+        if (docType.startsWith('father_')) {
+          relation = 'father';
+        } else if (docType.startsWith('mother_')) {
+          relation = 'mother';
+        } else if (docType.startsWith('coapplicant_')) {
+          relation = 'coapplicant';
+        }
+
+        if (relation) {
+          // Read OCR data from the UserDocument's verificationMetadata
+          const existingMeta = userDoc?.verificationMetadata || {};
+          const details = existingMeta.details || {};
+          const extractedFields = details.extractedFields || {};
+
+          const extractedName = extractedFields.full_name || extractedFields.name || extractedFields.holder_name || extractedFields.holderName || extractedFields.cardholderName || extractedFields.applicantName;
+          const extractedAadhaar = extractedFields.aadhaar_number || extractedFields.aadhar_number;
+          const extractedPan = extractedFields.pan_number;
+
+          // Use linkedStudentId (from StaffProfile) as the canonical student userId
+          const studentUserId = linkedStudentId || userDoc.userId;
+
+          if (studentUserId) {
+            // Fetch existing parent record
+            const { data: existingParent } = await this.db
+              .from('parents')
+              .select('*')
+              .eq('userId', studentUserId)
+              .eq('relation', relation)
+              .maybeSingle();
+
+            const parentPayload: any = {
+              userId: studentUserId,
+              relation,
+              updatedAt: new Date().toISOString(),
+            };
+
+            if (extractedName) parentPayload.name = extractedName;
+            if (extractedAadhaar) parentPayload.aadharNumber = extractedAadhaar;
+            if (extractedPan) parentPayload.panNumber = extractedPan;
+
+            if (existingParent) {
+              // Merge values (don't overwrite existing with empty)
+              parentPayload.name = parentPayload.name || existingParent.name;
+              parentPayload.aadharNumber = parentPayload.aadharNumber || existingParent.aadharNumber;
+              parentPayload.panNumber = parentPayload.panNumber || existingParent.panNumber;
+
+              const { error: parentUpdateErr } = await this.db
+                .from('parents')
+                .update(parentPayload)
+                .eq('id', existingParent.id);
+              if (parentUpdateErr) console.error('[updateDocumentStatus] parents update error:', parentUpdateErr);
+            } else {
+              parentPayload.id = `${studentUserId}_${relation}_${Date.now()}`;
+              const { error: parentInsertErr } = await this.db
+                .from('parents')
+                .insert(parentPayload);
+              if (parentInsertErr) console.error('[updateDocumentStatus] parents insert error:', parentInsertErr);
+            }
+          }
+        }
+      }
     }
 
     await this.auditLog.logAction('STATUS_UPDATED', 'staff_profile_document', docId, staffUser, {

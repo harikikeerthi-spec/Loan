@@ -1088,6 +1088,33 @@ export default function DashboardPage() {
                         family: familyObj || {},
                         coApplicant: coappObj || {}
                     };
+                    const parentsList = activeProfile.parents || [];
+                    const fatherData = parentsList.find((p: any) => p.relation === 'father');
+                    const motherData = parentsList.find((p: any) => p.relation === 'mother');
+                    const coapplicantData = parentsList.find((p: any) => p.relation === 'coapplicant');
+
+                    const userDocs = data.documents || [];
+                    const sscDoc = userDocs.find((d: any) => d.docType === 'marksheet_10' || d.docType === 'marksheet_10th');
+                    const hscDoc = userDocs.find((d: any) => d.docType === 'marksheet_12' || d.docType === 'marksheet_12th');
+                    const ugDoc = userDocs.find((d: any) => d.docType === 'marksheet_ug' || d.docType === 'ug_degree' || d.docType === 'ug_transcript' || d.docType === 'degree_certificate');
+
+                    const getExtractedField = (doc: any, fieldName: string) => {
+                        if (!doc || !doc.verificationMetadata) return null;
+                        const meta = doc.verificationMetadata;
+                        const details = meta.details || {};
+                        const ext = details.extractedFields || meta.extractedFields || {};
+                        return ext[fieldName] || null;
+                    };
+
+                    const getAcademicDetails = (doc: any) => {
+                        const inst = getExtractedField(doc, 'institution') || getExtractedField(doc, 'university') || getExtractedField(doc, 'school_name') || getExtractedField(doc, 'college_name');
+                        const pct = getExtractedField(doc, 'score') || getExtractedField(doc, 'percentage') || getExtractedField(doc, 'gpa') || getExtractedField(doc, 'cgpa');
+                        return { institute: inst || "—", percentage: pct ? `${pct}%` : "—" };
+                    };
+
+                    const sscDetails = getAcademicDetails(sscDoc);
+                    const hscDetails = getAcademicDetails(hscDoc);
+                    const ugDetails = getAcademicDetails(ugDoc);
                     return (
                         <div className="max-w-4xl mx-auto bg-slate-50 p-8 rounded-3xl perspective-1000">
                             <div className="bg-white/85 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(102,5,199,0.12)] border border-white transform-gpu transition-all duration-300 hover:shadow-[0_30px_60px_rgba(102,5,199,0.22)] hover:-translate-y-2 flex flex-col md:flex-row overflow-visible">
@@ -1164,12 +1191,32 @@ export default function DashboardPage() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
                                                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Father's Full Name</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.family?.fatherName || activeProfile?.fatherName || "—"}</span>
+                                                    <span className="text-sm font-semibold text-slate-700 block">{fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName || "—"}</span>
+                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
+                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">Aadhaar:</span>
+                                                            {fatherData?.aadharNumber || "—"}
+                                                        </span>
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
+                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">PAN:</span>
+                                                            {fatherData?.panNumber || "—"}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
                                                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Mother's Full Name</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.family?.motherName || activeProfile?.motherName || "—"}</span>
+                                                    <span className="text-sm font-semibold text-slate-700 block">{motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName || "—"}</span>
+                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
+                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">Aadhaar:</span>
+                                                            {motherData?.aadharNumber || "—"}
+                                                        </span>
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
+                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">PAN:</span>
+                                                            {motherData?.panNumber || "—"}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1183,7 +1230,17 @@ export default function DashboardPage() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
                                                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Name</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || "—"}</span>
+                                                    <span className="text-sm font-semibold text-slate-700 block">{coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || "—"}</span>
+                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
+                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">Aadhaar:</span>
+                                                            {coapplicantData?.aadharNumber || "—"}
+                                                        </span>
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
+                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">PAN:</span>
+                                                            {coapplicantData?.panNumber || "—"}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
@@ -1201,6 +1258,51 @@ export default function DashboardPage() {
                                                     <span className="text-sm font-semibold text-slate-700">
                                                         {activeProfile?.coApplicant?.monthlyIncome ? `₹${Number(activeProfile.coApplicant.monthlyIncome).toLocaleString('en-IN')}/mo` : activeProfile?.coApplicantIncome ? `₹${Number(activeProfile.coApplicantIncome).toLocaleString('en-IN')}/yr` : "—"}
                                                     </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Academic Details */}
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                                                <span className="material-symbols-outlined text-[16px]">school</span>
+                                                Academic Details
+                                            </h3>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {/* 10th Standard */}
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
+                                                    <div>
+                                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">10th Standard / SSC</span>
+                                                        <span className="text-sm font-semibold text-slate-700">{sscDetails.institute}</span>
+                                                    </div>
+                                                    <div className="sm:text-right bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
+                                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage:</span>
+                                                        {sscDetails.percentage}
+                                                    </div>
+                                                </div>
+
+                                                {/* Intermediate */}
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
+                                                    <div>
+                                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Intermediate / 12th / HSC</span>
+                                                        <span className="text-sm font-semibold text-slate-700">{hscDetails.institute}</span>
+                                                    </div>
+                                                    <div className="sm:text-right bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
+                                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage:</span>
+                                                        {hscDetails.percentage}
+                                                    </div>
+                                                </div>
+
+                                                {/* Degree */}
+                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
+                                                    <div>
+                                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Degree / Graduation</span>
+                                                        <span className="text-sm font-semibold text-slate-700">{ugDetails.institute}</span>
+                                                    </div>
+                                                    <div className="sm:text-right bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
+                                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage:</span>
+                                                        {ugDetails.percentage}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

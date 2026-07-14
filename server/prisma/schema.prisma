@@ -25,6 +25,7 @@ model User {
   blogs            Blog[]            @relation("AuthorBlogs")
   loanApplications LoanApplication[]
   documents        UserDocument[]
+  parents          Parent[]
   adminProfile     AdminProfile?     @relation("AdminUser")
   comments         Comment[]         @relation("CommentAuthor")
   auditLogs        AuditLog[]        @relation("AuditInitiator")
@@ -1142,4 +1143,21 @@ model EmailLogs {
 
   @@index([queueId])
   @@index([status])
+}
+
+model Parent {
+  id           String   @id @default(uuid())
+  userId       String
+  relation     String   // father, mother, coapplicant
+  name         String?
+  aadharNumber String?
+  panNumber    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, relation])
+  @@index([userId])
+  @@map("parents")
 }

@@ -342,7 +342,6 @@ export default function ApplicationsPage() {
                             <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">APPLICANT PROFILE</span></th>
                             <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">COLLEGE NAME</span></th>
                             {/* <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">TARGET BANK</span></th> */}
-                            <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">LAN NUMBER</span></th>
                             <th className="px-5 py-5 w-48"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">PROGRESS</span></th>
                             <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">CURRENT STATUS</span></th>
                             <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
@@ -561,17 +560,6 @@ export default function ApplicationsPage() {
                                                     </div>
                                                 </div>
                                             </td> */}
-                                            <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                {item.lanNumber ? (
-                                                    <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                        {item.lanNumber}
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                                        PENDING
-                                                    </span>
-                                                )}
-                                            </td>
                                             <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 160 }}>
                                                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
                                                     <div className={`h-1.5 rounded-full transition-all duration-700 ${progress === 100 ? 'bg-emerald-500' : 'bg-[#4f46e5]'}`} style={{ width: `${progress}%` }} />

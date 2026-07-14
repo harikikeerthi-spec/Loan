@@ -206,7 +206,7 @@ export default function ApplicationsTab() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-gray-100 bg-white/20">
-                                    {["Application ID", "Bank Node", "Loan Program", "Status", "File Age", "Timestamp"].map((header, idx) => (
+                                    {["Application ID", "LAN Number", "Bank Node", "Loan Program", "Status", "File Age", "Timestamp"].map((header, idx) => (
                                         <th key={idx} className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">{header}</th>
                                     ))}
                                 </tr>
@@ -228,6 +228,15 @@ export default function ApplicationsTab() {
                                                     app.applicationNumber
                                                 ) : (
                                                     <span className="text-gray-400 font-semibold italic">Not Generated Yet</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-xs font-mono font-semibold text-slate-800">
+                                                {app.lanNumber ? (
+                                                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
+                                                        {app.lanNumber}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-400 font-semibold italic">PENDING</span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-xs font-semibold text-gray-700">

@@ -499,4 +499,24 @@ export class UsersController {
             return { success: false, message: 'Failed to delete user', error: error?.message };
         }
     }
+
+    @UseGuards(AdminGuard)
+    @Post('admin/parents')
+    async upsertParents(@Body() body: { userId: string; relation: string; name?: string; aadharNumber?: string; panNumber?: string }) {
+        if (!body.userId || !body.relation) {
+            return { success: false, message: 'userId and relation are required' };
+        }
+        try {
+            const result = await this.usersService.upsertParentRecord(body.userId, body.relation, {
+                name: body.name,
+                aadharNumber: body.aadharNumber,
+                panNumber: body.panNumber,
+            });
+            return { success: true, data: result };
+        } catch (error) {
+            console.error('Error upserting parent record:', error);
+            return { success: false, message: 'Failed to upsert parent record', error: error?.message };
+        }
+    }
 }
+

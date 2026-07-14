@@ -15,7 +15,7 @@ export default function DocumentVaultPage() {
     const [profile, setProfile] = useState<any>(null);
     const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [uploading, setUploading] = useState<string | null>(null);
+    const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
     const [profileType, setProfileType] = useState<"salaried" | "self-employed">("salaried");
     const [coappRelation, setCoappRelation] = useState<string>("father");
     const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
@@ -34,6 +34,143 @@ export default function DocumentVaultPage() {
         type: "info",
     });
 
+    // Parallel Bulk Upload State
+    const [bulkQueue, setBulkQueue] = useState<Array<{
+        id: string;
+        file: File;
+        docType: string;
+        status: 'idle' | 'uploading' | 'success' | 'error';
+        progress: number;
+        error?: string;
+    }>>([]);
+
+    const guessDocType = (fileName: string): string => {
+        const name = fileName.toLowerCase();
+        if (name.includes("10th") || name.includes("ssc") || name.includes("marksheet_10")) return "marksheet_10";
+        if (name.includes("12th") || name.includes("hsc") || name.includes("inter") || name.includes("marksheet_12")) return "marksheet_12";
+        if (name.includes("ug") || name.includes("degree") || name.includes("univ") || name.includes("graduation")) return "ug_degree";
+        if (name.includes("passport")) return "passport";
+        if (name.includes("coapplicant") || name.includes("co_applicant")) {
+            if (name.includes("aadhar") || name.includes("aadhaar")) return "coapplicant_aadhar";
+            if (name.includes("pan")) return "coapplicant_pan";
+        }
+        if (name.includes("father")) {
+            if (name.includes("aadhar") || name.includes("aadhaar")) return "father_aadhar";
+            if (name.includes("pan")) return "father_pan";
+        }
+        if (name.includes("mother")) {
+            if (name.includes("aadhar") || name.includes("aadhaar")) return "mother_aadhar";
+            if (name.includes("pan")) return "mother_pan";
+        }
+        if (name.includes("pan")) return "pan";
+        if (name.includes("aadhar") || name.includes("aadhaar") || name.includes("national_id")) return "national_id";
+        return "";
+    };
+
+    const handleBulkFileChange = (files: FileList | null) => {
+        if (!files) return;
+        const newItems = Array.from(files).map(file => {
+            const guessed = guessDocType(file.name);
+            return {
+                id: `${file.name}-${Date.now()}-${Math.random()}`,
+                file,
+                docType: guessed,
+                status: 'idle' as const,
+                progress: 0
+            };
+        });
+        setBulkQueue(prev => [...prev, ...newItems]);
+    };
+
+    const removeQueueItem = (id: string) => {
+        setBulkQueue(prev => prev.filter(item => item.id !== id));
+    };
+
+    const updateQueueItemDocType = (id: string, docType: string) => {
+        setBulkQueue(prev => prev.map(item => item.id === id ? { ...item, docType } : item));
+    };
+
+    const clearBulkQueue = () => {
+        setBulkQueue([]);
+    };
+
+    const handleParallelUpload = async () => {
+        const itemsToUpload = bulkQueue.filter(item => item.status === 'idle' || item.status === 'error');
+        if (itemsToUpload.length === 0) return;
+
+        setBulkQueue(prev => prev.map(item => {
+            if (item.status === 'idle' || item.status === 'error') {
+                return { ...item, status: 'uploading', progress: 0 };
+            }
+            return item;
+        }));
+
+        const token = localStorage.getItem("accessToken");
+
+        const uploadPromises = itemsToUpload.map(async (item) => {
+            if (!item.docType) {
+                setBulkQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: "Select document type" } : q));
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('file', item.file);
+                formData.append('userId', user?.id || "");
+                formData.append('docType', item.docType);
+                
+                const existing = docs.find(d => d.docType === item.docType);
+                const docName = existing?.docName || existing?.verificationMetadata?.docName || getDocumentRequirementName(item.docType, item.docType, getActiveProfile());
+                if (docName) {
+                    formData.append('docName', docName);
+                }
+
+                await new Promise<void>((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/documents/upload', true);
+                    if (token) {
+                        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                    }
+
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable) {
+                            const progress = Math.round((event.loaded / event.total) * 100);
+                            setBulkQueue(prev => prev.map(q => q.id === item.id ? { ...q, progress } : q));
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            setBulkQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'success', progress: 100 } : q));
+                            resolve();
+                        } else {
+                            let errorMsg = `Server error: ${xhr.status}`;
+                            try {
+                                const responseJson = JSON.parse(xhr.responseText);
+                                errorMsg = responseJson.message || responseJson.error || errorMsg;
+                            } catch (e) {}
+                            reject(new Error(errorMsg));
+                        }
+                    };
+
+                    xhr.onerror = () => reject(new Error("Network error"));
+                    xhr.send(formData);
+                });
+            } catch (err: any) {
+                console.error("Parallel upload item error:", err);
+                setBulkQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: err.message || "Upload failed" } : q));
+            }
+        });
+
+        await Promise.all(uploadPromises);
+        await loadDocs(true);
+
+        const key = `dashboardDataUpdated_${user?.id}`;
+        localStorage.setItem(key, String(Date.now()));
+        window.dispatchEvent(new Event('dashboard-data-changed'));
+        showAlert("Upload Complete", "Selected documents uploaded in parallel!", "success");
+    };
+
     const showAlert = (title: string, message: string, type: "success" | "error" | "info" | "warning" = "info") => {
         setAlertState({
             isOpen: true,
@@ -47,12 +184,14 @@ export default function DocumentVaultPage() {
         setMounted(true);
     }, []);
 
-    const loadDocs = useCallback(async () => {
+    const loadDocs = useCallback(async (silent = false) => {
         if (!user?.id) {
             setLoading(false);
             return;
         }
-        setLoading(true);
+        if (!silent) {
+            setLoading(true);
+        }
         try {
             const res = await authApi.getDashboardData(user.id) as any;
             if (res.success) {
@@ -245,7 +384,7 @@ export default function DocumentVaultPage() {
             return;
         }
 
-        setUploading(docType);
+        setUploadingDocs(prev => ({ ...prev, [docType]: true }));
         try {
             const objectUrl = URL.createObjectURL(file);
             setPreviewUrls(prev => ({ ...prev, [docType]: objectUrl }));
@@ -297,7 +436,7 @@ export default function DocumentVaultPage() {
             const result = await response.json();
             console.log("Upload successful:", result);
 
-            await loadDocs();
+            await loadDocs(true);
 
             const key = `dashboardDataUpdated_${user.id}`;
             localStorage.setItem(key, String(Date.now()));
@@ -308,7 +447,7 @@ export default function DocumentVaultPage() {
             console.error("Upload error:", e.message || e);
             showAlert("Upload Failed", e.message || "Unknown error occurred.", "error");
         } finally {
-            setUploading(null);
+            setUploadingDocs(prev => ({ ...prev, [docType]: false }));
         }
     };
 
@@ -323,12 +462,12 @@ export default function DocumentVaultPage() {
 
     const handleSyncFromDigilocker = async (docType: string) => {
         if (!user?.id) return;
-        setUploading(docType);
+        setUploadingDocs(prev => ({ ...prev, [docType]: true }));
         try {
             const result: any = await documentApi.syncFromDigilocker(user.id, docType);
             if (result.success) {
                 showAlert("Sync Success", "Successfully synced from DigiLocker!", "success");
-                await loadDocs();
+                await loadDocs(true);
             } else {
                 showAlert("Sync Failed", result.message || "Failed to sync document.", "error");
             }
@@ -336,7 +475,7 @@ export default function DocumentVaultPage() {
             console.error(e);
             showAlert("Sync Error", "An error occurred during sync.", "error");
         } finally {
-            setUploading(null);
+            setUploadingDocs(prev => ({ ...prev, [docType]: false }));
         }
     };
 
@@ -354,20 +493,20 @@ export default function DocumentVaultPage() {
         if (!user?.id) return;
         if (!confirm(deleteCard ? "Are you sure you want to completely remove this custom document placeholder?" : "Are you sure you want to delete this uploaded document?")) return;
 
-        setUploading(docType);
+        setUploadingDocs(prev => ({ ...prev, [docType]: true }));
         try {
             if (deleteCard) {
                 await documentApi.delete(user.id, docType);
             } else {
                 await documentApi.deleteFile(user.id, docType);
             }
-            await loadDocs();
+            await loadDocs(true);
             showAlert("Delete Success", deleteCard ? "Custom document placeholder removed." : "Document deleted successfully.", "success");
         } catch (e) {
             console.error(e);
             showAlert("Delete Failed", "Failed to delete document.", "error");
         } finally {
-            setUploading(null);
+            setUploadingDocs(prev => ({ ...prev, [docType]: false }));
         }
     };
 
@@ -379,7 +518,7 @@ export default function DocumentVaultPage() {
         const sanitized = docName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').trim();
         const docType = `${category}_other_${sanitized}_${Date.now()}`;
 
-        setUploading("adding_requirement");
+        setUploadingDocs(prev => ({ ...prev, adding_requirement: true }));
         try {
             const token = localStorage.getItem("accessToken");
             const response = await fetch('/api/documents/requirement', {
@@ -405,7 +544,7 @@ export default function DocumentVaultPage() {
             }
 
             showAlert("Added Success", `Placeholder for ${docName.trim()} created successfully!`, "success");
-            await loadDocs();
+            await loadDocs(true);
 
             const key = `dashboardDataUpdated_${user?.id}`;
             localStorage.setItem(key, String(Date.now()));
@@ -414,7 +553,7 @@ export default function DocumentVaultPage() {
             console.error("Add requirement error:", e.message || e);
             showAlert("Failed", e.message || "Unknown error occurred.", "error");
         } finally {
-            setUploading(null);
+            setUploadingDocs(prev => ({ ...prev, adding_requirement: false }));
         }
     };
 
@@ -555,7 +694,7 @@ export default function DocumentVaultPage() {
                                     {req.type.includes('_other_') && !isVerified && (
                                         <button
                                             onClick={() => handleDelete(req.type, true)}
-                                            disabled={!!uploading}
+                                            disabled={!!uploadingDocs[req.type]}
                                             className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0 disabled:opacity-50"
                                             title="Remove this custom document"
                                         >
@@ -603,7 +742,7 @@ export default function DocumentVaultPage() {
                                     {!isVerified && (
                                         <button
                                             onClick={() => handleDelete(req.type)}
-                                            disabled={!!uploading}
+                                            disabled={!!uploadingDocs[req.type]}
                                             className="w-9 h-9 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition-all border border-red-100"
                                             title="Delete Document"
                                         >
@@ -622,7 +761,7 @@ export default function DocumentVaultPage() {
                                             </div>
                                             <button
                                                 onClick={() => handleSyncFromDigilocker(req.type)}
-                                                disabled={!!uploading}
+                                                disabled={!!uploadingDocs[req.type]}
                                                 className="w-full py-2.5 bg-[#6605c7] text-white text-[11px] font-bold rounded-lg hover:bg-[#5504a6] transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 border border-[#6605c7]/20"
                                             >
                                                 <span className="material-symbols-outlined text-[18px]">sync_alt</span>
@@ -631,23 +770,9 @@ export default function DocumentVaultPage() {
                                         </div>
                                     ) : (
                                         <>
-                                            {/* {([
-                                                'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
-                                                'marksheet_10', 'marksheet_12', 'passport',
-                                                'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
-                                            ].includes(req.type)) && !isUploaded && (
-                                                    <Link
-                                                        href={`/document-vault/digilocker?docType=${req.type}`}
-                                                        className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-500/20"
-                                                    >
-                                                        <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
-                                                        Upload from DigiLocker
-                                                    </Link>
-                                                )} */}
-
                                             <button
                                                 onClick={() => triggerFileInput(req.type)}
-                                                disabled={!!uploading}
+                                                disabled={!!uploadingDocs[req.type]}
                                                 className={`w-full py-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${([
                                                     'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
                                                     'marksheet_10', 'marksheet_12', 'passport',
@@ -657,12 +782,12 @@ export default function DocumentVaultPage() {
                                                     : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
                                                     }`}
                                             >
-                                                {uploading === req.type ? (
+                                                {uploadingDocs[req.type] ? (
                                                     <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
                                                 ) : (
                                                     <span className="material-symbols-outlined text-[16px]">upload</span>
                                                 )}
-                                                {uploading === req.type ? "Processing..." : ([
+                                                {uploadingDocs[req.type] ? "Processing..." : ([
                                                     'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
                                                     'marksheet_10', 'marksheet_12', 'passport',
                                                     'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
@@ -784,7 +909,7 @@ export default function DocumentVaultPage() {
                                 </div>
                             </div>
                             <button
-                                onClick={loadDocs}
+                                onClick={() => loadDocs()}
                                 className="w-10 h-10 bg-white rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#6605c7] hover:border-[#6605c7] transition-all"
                                 title="Refresh"
                             >
@@ -807,15 +932,15 @@ export default function DocumentVaultPage() {
                                         </div>
                                         <button
                                             onClick={() => handleSyncFromDigilocker(d.docType)}
-                                            disabled={!!uploading}
+                                            disabled={!!uploadingDocs[d.docType]}
                                             className="w-full py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
                                         >
-                                            {uploading === d.docType ? (
+                                            {uploadingDocs[d.docType] ? (
                                                 <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
                                             ) : (
                                                 <span className="material-symbols-outlined text-[14px]">sync</span>
                                             )}
-                                            {uploading === d.docType ? "Syncing..." : "Sync to Vault"}
+                                            {uploadingDocs[d.docType] ? "Syncing..." : "Sync to Vault"}
                                         </button>
                                     </div>
                                 );
@@ -823,6 +948,161 @@ export default function DocumentVaultPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Premium Glassmorphic Parallel Bulk Upload Zone */}
+                <div className="mb-12 bg-white/40 border border-white/60 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-[0_12px_40px_rgba(0,0,0,0.03)] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                        <span className="material-symbols-outlined text-9xl">upload_file</span>
+                    </div>
+
+                    <div className="relative z-10">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#6605c7]/[0.06] rounded-xl text-[10px] font-black uppercase tracking-wider text-[#6605c7] mb-3">
+                                    <span className="material-symbols-outlined text-[14px]">bolt</span>
+                                    Parallel Upload Engine
+                                </div>
+                                <h2 className="text-xl font-black text-gray-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+                                    Bulk Upload Center
+                                </h2>
+                                <p className="text-gray-500 text-xs font-semibold">Select and upload multiple files simultaneously in parallel</p>
+                            </div>
+
+                            {bulkQueue.length > 0 && (
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={clearBulkQueue}
+                                        disabled={bulkQueue.some(item => item.status === 'uploading')}
+                                        className="px-5 py-3 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">close</span>
+                                        Clear Queue
+                                    </button>
+                                    <button
+                                        onClick={handleParallelUpload}
+                                        disabled={bulkQueue.some(item => item.status === 'uploading') || !bulkQueue.some(item => item.status === 'idle' || item.status === 'error')}
+                                        className="px-6 py-3 bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] hover:shadow-lg hover:shadow-purple-500/20 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 disabled:opacity-50 animate-pulse"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+                                        Upload {bulkQueue.filter(item => item.status === 'idle' || item.status === 'error').length} Files
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Interactive Drag-and-Drop Area */}
+                        <div
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                handleBulkFileChange(e.dataTransfer.files);
+                            }}
+                            onClick={() => document.getElementById('bulk-file-input')?.click()}
+                            className="border-2 border-dashed border-slate-200 hover:border-[#6605c7] bg-slate-50/50 hover:bg-[#6605c7]/[0.01] rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center min-h-[140px] group"
+                        >
+                            <input
+                                id="bulk-file-input"
+                                type="file"
+                                multiple
+                                className="hidden"
+                                onChange={(e) => handleBulkFileChange(e.target.files)}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                            />
+                            <div className="w-14 h-14 bg-white border border-slate-100 shadow-sm rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-[#6605c7] group-hover:scale-105 transition-all mb-4">
+                                <span className="material-symbols-outlined text-[28px]">upload_file</span>
+                            </div>
+                            <p className="text-xs font-bold text-slate-700">
+                                Drag & drop multiple document files here, or <span className="text-[#6605c7] hover:underline">browse files</span>
+                            </p>
+                            <p className="text-[10px] text-slate-400 font-semibold mt-1">Supports PDF, JPG, PNG files up to 5MB each</p>
+                        </div>
+
+                        {/* Upload Queue List */}
+                        {bulkQueue.length > 0 && (
+                            <div className="mt-6 border-t border-slate-100 pt-6 space-y-3">
+                                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">Upload Queue ({bulkQueue.length} files)</h3>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                                    {bulkQueue.map((item) => {
+                                        const options = [
+                                            ...allRequiredDocs.map(r => ({ value: r.type, label: r.label })),
+                                            ...staffRequestedDocs.map(r => ({ value: r.type, label: r.label }))
+                                        ];
+
+                                        return (
+                                            <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:border-slate-200 transition-all">
+                                                <div className="flex items-center gap-3.5 min-w-0">
+                                                    <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                                                        <span className="material-symbols-outlined text-[18px]">
+                                                            {guessDocType(item.file.name) ? getDocIcon(guessDocType(item.file.name)) : 'description'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-xs font-bold text-slate-800 truncate max-w-[240px] sm:max-w-[320px]">{item.file.name}</h4>
+                                                        <p className="text-[9px] text-slate-400 font-semibold mt-0.5">{(item.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-4">
+                                                    {/* Target Doc Type Selector */}
+                                                    <div className="relative">
+                                                        <select
+                                                            disabled={item.status === 'uploading' || item.status === 'success'}
+                                                            value={item.docType}
+                                                            onChange={(e) => updateQueueItemDocType(item.id, e.target.value)}
+                                                            className="appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 pr-10 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-[#6605c7] transition-all cursor-pointer disabled:opacity-50"
+                                                        >
+                                                            <option value="">Select Document Type...</option>
+                                                            {options.map((opt) => (
+                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                            ))}
+                                                        </select>
+                                                        <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[16px]">expand_more</span>
+                                                    </div>
+
+                                                    {/* Status / Progress Indicator */}
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        {item.status === 'idle' && (
+                                                            <span className="px-2 py-0.5 rounded bg-slate-50 border border-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider">Ready</span>
+                                                        )}
+                                                        {item.status === 'uploading' && (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                                    <div className="h-full bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] transition-all duration-300" style={{ width: `${item.progress}%` }} />
+                                                                </div>
+                                                                <span className="text-[10px] font-mono font-bold text-purple-600">{item.progress}%</span>
+                                                            </div>
+                                                        )}
+                                                        {item.status === 'success' && (
+                                                            <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-[11px] font-black">check</span> Success
+                                                            </span>
+                                                        )}
+                                                        {item.status === 'error' && (
+                                                            <span className="px-2 py-0.5 rounded bg-rose-50 border border-rose-100 text-rose-700 text-[9px] font-black uppercase tracking-wider flex items-center gap-1" title={item.error}>
+                                                                <span className="material-symbols-outlined text-[11px] font-black">error</span> Error
+                                                            </span>
+                                                        )}
+
+                                                        {/* Action Buttons */}
+                                                        {item.status !== 'uploading' && item.status !== 'success' && (
+                                                            <button
+                                                                onClick={() => removeQueueItem(item.id)}
+                                                                className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-all border border-slate-100 hover:border-rose-100"
+                                                                title="Remove file"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[16px]">delete</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
 
                 {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

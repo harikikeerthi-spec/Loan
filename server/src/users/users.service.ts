@@ -546,20 +546,38 @@ export class UsersService {
         }
 
         let updated = false;
+        let relation: string | null = null;
 
         if (docType && docType.startsWith('father_')) {
           family.fatherName = nameToSave;
           payload.family = JSON.stringify(family);
           payload.fatherName = nameToSave;
           updated = true;
+          relation = 'father';
         } else if (docType && docType.startsWith('mother_')) {
           family.motherName = nameToSave;
           payload.family = JSON.stringify(family);
           updated = true;
+          relation = 'mother';
         } else if (docType && docType.startsWith('coapplicant_')) {
           coApplicant.name = nameToSave;
           payload.coApplicant = JSON.stringify(coApplicant);
           updated = true;
+          relation = 'coapplicant';
+        }
+        
+        if (relation) {
+          const aadharNum = details.aadhaar_number || details.aadhar_number || details.aadharNumber;
+          const panNum = details.pan_number || details.panNumber;
+          const parentName = nameToSave || details.name || details.fullName;
+          
+          await this.upsertParentRecord(userId, relation, {
+            name: parentName,
+            aadharNumber: aadharNum,
+            panNumber: panNum,
+          }).catch(err => {
+            console.error(`[UsersService.updateExtractedDetails] Failed to upsert parent record for ${relation}:`, err.message);
+          });
         }
         
         if (updated) {
@@ -1197,15 +1215,33 @@ export class UsersService {
       const applications = await this.getUserApplications(userId) || [];
       const documents = await this.getUserDocuments(userId) || [];
 
-      const { data: userWithActivity } = await this.db
+      const { data: userWithActivity, error: userErr } = await this.db
         .from('User')
         .select(
-          `*, eligibilityChecks:LoanEligibilityCheck(*), visaMockInterviews:VisaMockInterviewResult(*), forumPosts:ForumPost(*), forumComments:ForumComment(*), universityInquiries:UniversityInquiry(*)`,
+          `*, eligibilityChecks:AiEligibilityCheck(*), visaMockInterviews:AiVisaInterview(*), forumPosts:ForumPost(*), forumComments:ForumComment(*)`,
         )
         .eq('id', userId)
         .single();
 
-      const inquiries = userWithActivity?.universityInquiries || [];
+      if (userErr) {
+        console.error('[UsersService.getUserDashboardData] User fetch error:', userErr);
+      }
+
+      const { data: parentsData, error: parentsErr } = await this.db
+        .from('parents')
+        .select('*')
+        .eq('userId', userId);
+
+      if (parentsErr) {
+        console.error('[UsersService.getUserDashboardData] parents fetch error:', parentsErr);
+      }
+
+      const { data: inquiriesData } = await this.db
+        .from('UniversityInquiry')
+        .select('*')
+        .eq('userId', userId);
+
+      const inquiries = inquiriesData || [];
 
       const activity: Array<{
         type: string;
@@ -1303,7 +1339,7 @@ export class UsersService {
 
       activity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-      const sanitizedUser = userWithActivity ? { ...userWithActivity } : null;
+      const sanitizedUser = userWithActivity ? { ...userWithActivity, parents: parentsData || [] } : null;
       if (sanitizedUser) {
         delete sanitizedUser.password;
         delete sanitizedUser.refreshToken;
@@ -1356,4 +1392,37 @@ export class UsersService {
     this.clearCache();
     return data;
   }
+
+  async upsertParentRecord(userId: string, relation: string, data: { name?: string; aadharNumber?: string; panNumber?: string }) {
+    const { data: existing } = await this.db
+      .from('parents')
+      .select('*')
+      .eq('userId', userId)
+      .eq('relation', relation)
+      .maybeSingle();
+
+    const payload: any = {
+      userId,
+      relation,
+      updatedAt: new Date().toISOString(),
+    };
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.aadharNumber !== undefined) payload.aadharNumber = data.aadharNumber;
+    if (data.panNumber !== undefined) payload.panNumber = data.panNumber;
+
+    if (existing) {
+      payload.name = payload.name ?? existing.name;
+      payload.aadharNumber = payload.aadharNumber ?? existing.aadharNumber;
+      payload.panNumber = payload.panNumber ?? existing.panNumber;
+      const { data: updated, error } = await this.db.from('parents').update(payload).eq('id', existing.id).select().single();
+      if (error) throw error;
+      return updated;
+    } else {
+      payload.id = `${userId}_${relation}_${Date.now()}`;
+      const { data: inserted, error } = await this.db.from('parents').insert(payload).select().single();
+      if (error) throw error;
+      return inserted;
+    }
+  }
 }
+

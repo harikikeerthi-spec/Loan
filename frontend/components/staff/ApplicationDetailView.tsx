@@ -1850,14 +1850,6 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                             {resolveIntake(application)}
                           </p>
                         </div>
-                        {(application.bank || application.targetBank) && (
-                          <div className="space-y-0.5 col-span-2 sm:col-span-1">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">LAN NUMBER</p>
-                            <p className="text-[12px] font-bold text-slate-700 truncate">
-                              {application.lanNumber || "PENDING"}
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

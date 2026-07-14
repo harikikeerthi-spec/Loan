@@ -176,11 +176,11 @@ function BankLoginContent() {
         if (lowerEmail.includes("poonawalla")) return "poonawalla";
 
         // Fallbacks for seed test users
-        if (lowerEmail === "idfcbank01@gmail.com") return "idfc";
-        if (lowerEmail === "credilabank01@gmail.com") return "credila";
-        if (lowerEmail === "auxilobank01@gmail.com") return "auxilo";
-        if (lowerEmail === "poonawallabank01@gmail.com") return "poonawalla";
-        if (lowerEmail === "avansebank01@gmail.com") return "avanse";
+        if (lowerEmail === "idfcbank@gmail.com") return "idfc";
+        if (lowerEmail === "credilabank@gmail.com") return "credila";
+        if (lowerEmail === "auxilobank@gmail.com") return "auxilo";
+        if (lowerEmail === "poonawallabank@gmail.com") return "poonawalla";
+        if (lowerEmail === "avansebank@gmail.com") return "avanse";
 
         return null;
     };
