@@ -154,34 +154,37 @@ export class ReferenceService {
   }
 
   async getDisbursedAmount() {
-    // 1. Sum all disbursementAmount from disbursements table
+    // 1. Sum all confirmed disbursement amounts from the Disbursement table
+    // (inserted by bank-dashboard.service.ts confirmDisbursement)
     const { data: disbursements } = await this.db
-      .from('disbursements')
-      .select('disbursementAmount');
-    const totalDisbTable = (disbursements || []).reduce((sum, d) => sum + (d.disbursementAmount || 0), 0);
+      .from('Disbursement')
+      .select('amount')
+      .eq('status', 'CONFIRMED');
+    const totalDisbTable = (disbursements || []).reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
 
-    // 2. Sum all amount from LoanApplication where status = 'disbursed'
+    // 2. Cross-check: sum amount from LoanApplication where status = 'disbursed'
     const { data: apps } = await this.db
       .from('LoanApplication')
       .select('amount')
       .eq('status', 'disbursed');
-    const totalAppsAmountDisbursed = (apps || []).reduce((sum, a) => sum + (a.amount || 0), 0);
+    const totalAppsAmountDisbursed = (apps || []).reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
 
-    // Take the maximum to be safe and avoid double counting
+    // Take the maximum to avoid double counting between the two sources
     const actualDisbursed = Math.max(totalDisbTable, totalAppsAmountDisbursed);
 
     // 1 Crore = 10,000,000 Rupees. Base amount = 500 Crores.
     const baseCr = 500;
-    const actualCr = actualDisbursed / 10000000;
+    const actualCr = actualDisbursed / 10_000_000;
     const totalCr = baseCr + actualCr;
 
-    // If totalCr has no decimals, display as integer, otherwise format to 2 decimal places
+    // Round to nearest integer if whole number, else show 2 decimal places
     const formatted = totalCr % 1 === 0 ? `₹${totalCr.toFixed(0)}Cr+` : `₹${totalCr.toFixed(2)}Cr+`;
 
     return {
       success: true,
       data: {
         totalDisbursed: totalCr,
+        actualDisbursedRs: actualDisbursed,
         formatted
       }
     };

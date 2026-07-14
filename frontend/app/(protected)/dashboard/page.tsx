@@ -8,7 +8,6 @@ import { authApi, chatApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import ProgressTracker from "@/components/ProgressTracker";
 import UserActivityLog from "@/components/User/UserActivityLog";
-import StudentChatPanel from "@/components/Chat/StudentChatPanel";
 import { io } from "socket.io-client";
 import { getProfileDocumentRequirements } from "@/lib/documentRequirements";
 
@@ -318,10 +317,6 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
     const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
-    const [chatOpen, setChatOpen] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [activeToast, setActiveToast] = useState<{ sender: string; content: string } | null>(null);
-    const [conversationId, setConversationId] = useState<string | null>(null);
     const [selectedAppDetails, setSelectedAppDetails] = useState<any>(null);
     const [connectingSupport, setConnectingSupport] = useState(false);
 
@@ -367,77 +362,6 @@ export default function DashboardPage() {
         }
     }, [user?.email]);
 
-    // Fetch active conversation ID on mount for background socket listening
-    useEffect(() => {
-        if (!user) return;
-        chatApi.connect().then((res: any) => {
-            if (res?.conversation?.id) {
-                setConversationId(res.conversation.id);
-            }
-        }).catch(e => console.error("Could not fetch conversation details for notifications:", e));
-    }, [user]);
-
-    // Establish WebSocket connection for real-time notifications
-    useEffect(() => {
-        if (!token) return;
-
-        const baseApiUrl = typeof window !== "undefined" && (window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
-            ? "http://localhost:5000"
-            : (process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"));
-        const socketUrl = baseApiUrl.endsWith("/api")
-            ? baseApiUrl.replace("/api", "/chat")
-            : `${baseApiUrl.replace(/\/$/, "")}/chat`;
-
-        const sock = io(socketUrl, { auth: { token } });
-
-        sock.on("connect", () => {
-            if (conversationId) {
-                sock.emit("join_conversation", conversationId);
-            }
-        });
-
-        sock.on("new_message", (msg: any) => {
-            // Only notify if message belongs to this conversation AND is from staff/bank/system (not the student customer)
-            if (conversationId && msg.conversationId === conversationId && msg.senderType !== "customer") {
-                // If chat is open, we don't increment unread count or show toast because StudentChatPanel handles it
-                if (!chatOpen) {
-                    setUnreadCount(prev => prev + 1);
-                    setActiveToast({
-                        sender: msg.senderType === "system" ? "System Alert" : "Support Agent",
-                        content: msg.content
-                    });
-                }
-            }
-        });
-
-        sock.on("notification_received", (notif: any) => {
-            setUnreadCount(prev => prev + 1);
-            setActiveToast({
-                sender: notif.title || "System Notification",
-                content: notif.body
-            });
-            // Reload dashboard data in background (fresh documents/activities)
-            loadData();
-        });
-
-        return () => {
-            if (conversationId) {
-                sock.emit("leave_conversation", conversationId);
-            }
-            sock.disconnect();
-        };
-    }, [conversationId, token, chatOpen, loadData]);
-
-    // Auto-dismiss notification toast
-    useEffect(() => {
-        if (activeToast) {
-            const timer = setTimeout(() => {
-                setActiveToast(null);
-            }, 6000);
-            return () => clearTimeout(timer);
-        }
-    }, [activeToast]);
-
     useEffect(() => {
         loadData();
         // Set tab from hash if present
@@ -472,10 +396,10 @@ export default function DashboardPage() {
     const hasApplied = !!(data.applications && data.applications.length > 0);
     const firstApp = hasApplied ? data.applications![0] : null;
     const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
-    
+
     const allDocsUploaded = (() => {
         if (!hasApplied) return false;
-        
+
         // 1. Get the requirements for this profile
         const activeProfile = data.profile || user || {};
         let family = activeProfile.family;
@@ -483,13 +407,13 @@ export default function DashboardPage() {
             try { family = JSON.parse(family); } catch { family = {}; }
         }
         if (!family) family = activeProfile.familyDetails || {};
-        
+
         let coApplicant = activeProfile.coApplicant;
         if (typeof coApplicant === 'string') {
             try { coApplicant = JSON.parse(coApplicant); } catch { coApplicant = {}; }
         }
         if (!coApplicant) coApplicant = {};
-        
+
         const mergedProfile = {
             ...activeProfile,
             family,
@@ -499,16 +423,16 @@ export default function DashboardPage() {
                 name: (firstApp as any)?.coApplicantName || coApplicant.name || activeProfile.coApplicantName || ""
             }
         };
-        
+
         const requiredDocs = getProfileDocumentRequirements(mergedProfile);
         if (requiredDocs.length === 0) return true;
-        
+
         // 2. Get the uploaded docTypes (or those synced/uploaded)
         const uploadedDocTypes = new Set(
             (data.documents || [])
                 .map(d => d.docType)
         );
-        
+
         // 3. Verify all requiredDocs types are in uploadedDocTypes
         return requiredDocs.every(req => uploadedDocTypes.has(req.type));
     })();
@@ -533,8 +457,6 @@ export default function DashboardPage() {
 
     return (
         <div className="min-h-screen bg-transparent">
-            {/* Student in-app support chat panel */}
-            {chatOpen && <StudentChatPanel onClose={() => setChatOpen(false)} />}
             <Navbar />
 
             <div className="max-w-7xl mx-auto px-6 pt-32 pb-16">
@@ -608,7 +530,7 @@ export default function DashboardPage() {
                                 )}
                             </button>
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
-                                Speak with AI
+                                Speak with Counsellor
                             </Link>
                         </div>
                     </div>
@@ -709,8 +631,8 @@ export default function DashboardPage() {
                                 </div>
                                 <h3 className="text-base font-black text-slate-500 mb-2">Bank Review</h3>
                                 <p className="text-slate-400 text-xs font-semibold leading-relaxed mb-6">
-                                    {!hasApplied 
-                                        ? "Your loan application is under underwriting evaluation at partner banks." 
+                                    {!hasApplied
+                                        ? "Your loan application is under underwriting evaluation at partner banks."
                                         : "Your loan application review will begin once all pre-required documents have been uploaded."}
                                 </p>
                             </div>
@@ -1391,55 +1313,6 @@ export default function DashboardPage() {
                 )}
             </div>
 
-            {/* Real-time Notification Toast */}
-            {activeToast && (
-                <div className="fixed bottom-24 right-6 z-50 max-w-sm w-full bg-white/90 backdrop-blur-md border border-gray-150 rounded-3xl p-5 shadow-[0_24px_60px_rgba(102,5,199,0.12)] flex gap-4 items-start animate-in slide-in-from-bottom-5 duration-300 animate-fade-in">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#6605c7] to-[#8b3cf7] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[#6605c7]/20 border border-white/20">
-                        <span className="material-symbols-outlined text-[20px]">support_agent</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h4 className="text-gray-900 font-bold text-xs uppercase tracking-wider mb-1">{activeToast.sender}</h4>
-                        <p className="text-gray-500 text-xs line-clamp-2 leading-relaxed font-medium">{activeToast.content}</p>
-                        <button
-                            onClick={() => {
-                                setChatOpen(true);
-                                setUnreadCount(0);
-                                setActiveToast(null);
-                            }}
-                            className="mt-3 text-[10px] font-black uppercase tracking-widest text-[#6605c7] hover:underline flex items-center gap-1"
-                        >
-                            Open Chat <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
-                        </button>
-                    </div>
-                    <button
-                        onClick={() => setActiveToast(null)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-sm">close</span>
-                    </button>
-                </div>
-            )}
-
-            {/* Floating Support Chat Bubble */}
-            <div className="fixed bottom-6 right-6 z-50">
-                <button
-                    onClick={() => {
-                        setChatOpen(true);
-                        setUnreadCount(0);
-                        setActiveToast(null);
-                    }}
-                    className="relative w-14 h-14 bg-gradient-to-br from-[#6605c7] to-[#8b3cf7] hover:from-[#5504a8] hover:to-[#7a2fe0] text-white rounded-full flex items-center justify-center shadow-[0_12px_36px_rgba(102,5,199,0.3)] transition-all hover:scale-105 active:scale-95 group border border-white/10"
-                >
-                    <span className="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform duration-200">chat</span>
-
-                    {/* Unread Badge */}
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 bg-red-500 border-2 border-white text-white text-[9px] font-black w-6 h-6 rounded-full flex items-center justify-center animate-pulse shadow-md">
-                            {unreadCount}
-                        </span>
-                    )}
-                </button>
-            </div>
             {/* Application Details Modal */}
             {selectedAppDetails && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">

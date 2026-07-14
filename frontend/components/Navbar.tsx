@@ -172,7 +172,7 @@ export default function Navbar() {
                                                 </div>
                                                 <div className="flex items-center gap-2 mt-4">
                                                     <span className="material-symbols-outlined text-sm text-gray-400">record_voice_over</span>
-                                                    <span className="text-[9px] font-bold uppercase text-gray-400">VisaInterview Prep</span>
+                                                    <span className="text-[9px] font-bold uppercase text-gray-400">Visa Interview Prep</span>
                                                     <span className="text-[7px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded">SOON</span>
                                                 </div>
                                             </div>
