@@ -78,6 +78,10 @@ export async function extractPdfText(file: File): Promise<string> {
     throw new Error("PDF.js not loaded. Please wait and try again.");
   }
 
+  if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+
   const buf = await file.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buf }).promise;
   let fullText = "";
@@ -111,20 +115,21 @@ export async function extractPdfText(file: File): Promise<string> {
  */
 export function parseTransactions(text: string): { transactions: Transaction[]; skipped: number } {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const dateAtStart = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\-\s][A-Za-z]{3,}[\-\s]\d{2,4})/;
+  const dateRegex = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}[\-\s][A-Za-z]{3,}[\-\s]\d{2,4})/;
   const numberToken = /[\d,]+\.\d{1,2}/g;
 
   const txs: Transaction[] = [];
   let skipped = 0;
 
   lines.forEach((line) => {
-    const dm = line.match(dateAtStart);
+    const dm = line.match(dateRegex);
     if (!dm) return;
 
     const date = parseDateToken(dm[1]);
     if (!date || isNaN(date.getTime())) return;
 
-    const rest = line.slice(dm[1].length);
+    const dateIndex = line.indexOf(dm[1]);
+    const rest = line.slice(dateIndex + dm[1].length);
     const numMatches = rest.match(numberToken);
     if (!numMatches || numMatches.length === 0) {
       skipped++;
@@ -169,29 +174,65 @@ export function buildSnapshots(
 ): Snapshot[] {
   if (transactions.length === 0) return [];
 
-  const snapshots: Snapshot[] = [];
-  const start = new Date(transactions[0].date);
-  const end = new Date(transactions[transactions.length - 1].date);
-
-  let cursor = new Date(start);
-  let txIdx = 0;
-  let lastKnownBalance: number | null = null;
-
-  while (cursor <= end) {
-    while (txIdx < transactions.length && transactions[txIdx].date <= cursor) {
-      lastKnownBalance = transactions[txIdx].balance;
-      txIdx++;
+  // Determine standard snapshot days of the month based on intervalDays
+  let snapshotDays: number[];
+  if (intervalDays === 1) {
+    snapshotDays = Array.from({ length: 31 }, (_, i) => i + 1);
+  } else if (intervalDays === 5) {
+    snapshotDays = [5, 10, 15, 20, 25, 30];
+  } else if (intervalDays === 7) {
+    snapshotDays = [7, 14, 21, 28];
+  } else if (intervalDays === 10) {
+    snapshotDays = [10, 20, 30];
+  } else if (intervalDays === 15) {
+    snapshotDays = [15, 30];
+  } else {
+    snapshotDays = [];
+    for (let d = intervalDays; d <= 30; d += intervalDays) {
+      snapshotDays.push(d);
     }
-
-    if (lastKnownBalance !== null) {
-      snapshots.push({
-        date: new Date(cursor),
-        balance: lastKnownBalance
-      });
-    }
-
-    cursor.setDate(cursor.getDate() + intervalDays);
   }
+
+  // Group transactions by month
+  const months = new Set<string>();
+  transactions.forEach(t => {
+    const yyyymm = t.date.getFullYear() + "-" + String(t.date.getMonth() + 1).padStart(2, "0");
+    months.add(yyyymm);
+  });
+
+  const snapshots: Snapshot[] = [];
+  
+  const getBalanceAtDate = (targetDate: Date): number => {
+    let lastBalance = 0;
+    for (let i = 0; i < transactions.length; i++) {
+      if (transactions[i].date <= targetDate) {
+        lastBalance = transactions[i].balance;
+      } else {
+        break;
+      }
+    }
+    return lastBalance;
+  };
+
+  Array.from(months).sort().forEach(monthStr => {
+    const [year, monthZeroIndexed] = monthStr.split("-").map(Number);
+    const lastDayOfMonth = new Date(year, monthZeroIndexed, 0).getDate();
+    
+    const days = [...snapshotDays];
+    if (!days.includes(lastDayOfMonth)) {
+      days.push(lastDayOfMonth);
+    }
+
+    days.sort((a, b) => a - b).forEach(day => {
+      if (day > lastDayOfMonth) return;
+      const targetDate = new Date(year, monthZeroIndexed - 1, day, 23, 59, 59);
+      const balance = getBalanceAtDate(targetDate);
+      snapshots.push({
+        date: new Date(year, monthZeroIndexed - 1, day),
+        balance
+      });
+    });
+  });
 
   return snapshots;
 }

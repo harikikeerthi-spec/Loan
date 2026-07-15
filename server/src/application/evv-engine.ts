@@ -666,57 +666,65 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
   ): SnapshotBalance[] {
     if (dailyBalances.length === 0) return [];
 
-    if (Array.isArray(intervalOrDays)) {
-      const snapshotDays = intervalOrDays;
-      const balanceMap = new Map<string, number>();
-      for (const db of dailyBalances) {
-        balanceMap.set(db.date, db.balance);
-      }
-
-      const getBalance = (targetDateStr: string): number => {
-        const target = new Date(targetDateStr);
-        for (let i = 0; i <= 31; i++) {
-          const d = new Date(target);
-          d.setDate(d.getDate() - i);
-          const ds = d.toISOString().slice(0, 10);
-          if (balanceMap.has(ds)) return balanceMap.get(ds)!;
-        }
-        return dailyBalances[0]?.balance ?? 0;
-      };
-
-      const months = new Set<string>();
-      for (const db of dailyBalances) months.add(db.date.slice(0, 7));
-
-      const snapshots: SnapshotBalance[] = [];
-      for (const month of Array.from(months).sort()) {
-        const [y, m] = month.split('-').map(Number);
-        const lastDay = daysInMonth(y, m);
-        const days = [...snapshotDays, -1].map(d => d === -1 ? lastDay : d);
-
-        for (const day of days) {
-          if (day > lastDay) continue;
-          const dateStr = `${month}-${String(day).padStart(2, '0')}`;
-          const balance = getBalance(dateStr);
-          snapshots.push({ date: dateStr, balance, month, snapshotDay: day });
-        }
-      }
-      return snapshots;
-    } else {
+    let snapshotDays: number[];
+    if (typeof intervalOrDays === 'number') {
       const interval = intervalOrDays;
-      const snapshots: SnapshotBalance[] = [];
-      for (let i = 0; i < dailyBalances.length; i += interval) {
-        const db = dailyBalances[i];
-        const month = db.date.slice(0, 7);
-        const snapshotDay = new Date(db.date).getDate();
-        snapshots.push({
-          date: db.date,
-          balance: db.balance,
-          month,
-          snapshotDay,
-        });
+      if (interval === 1) {
+        snapshotDays = Array.from({ length: 31 }, (_, i) => i + 1);
+      } else if (interval === 5) {
+        snapshotDays = [5, 10, 15, 20, 25, 30];
+      } else if (interval === 7) {
+        snapshotDays = [7, 14, 21, 28];
+      } else if (interval === 10) {
+        snapshotDays = [10, 20, 30];
+      } else if (interval === 15) {
+        snapshotDays = [15, 30];
+      } else {
+        snapshotDays = [];
+        for (let d = interval; d <= 30; d += interval) {
+          snapshotDays.push(d);
+        }
       }
-      return snapshots;
+    } else {
+      snapshotDays = intervalOrDays;
     }
+
+    const balanceMap = new Map<string, number>();
+    for (const db of dailyBalances) {
+      balanceMap.set(db.date, db.balance);
+    }
+
+    const getBalance = (targetDateStr: string): number => {
+      const target = new Date(targetDateStr);
+      for (let i = 0; i <= 31; i++) {
+        const d = new Date(target);
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().slice(0, 10);
+        if (balanceMap.has(ds)) return balanceMap.get(ds)!;
+      }
+      return dailyBalances[0]?.balance ?? 0;
+    };
+
+    const months = new Set<string>();
+    for (const db of dailyBalances) months.add(db.date.slice(0, 7));
+
+    const snapshots: SnapshotBalance[] = [];
+    for (const month of Array.from(months).sort()) {
+      const [y, m] = month.split('-').map(Number);
+      const lastDay = daysInMonth(y, m);
+      const days = [...snapshotDays];
+      if (!days.includes(lastDay)) {
+        days.push(lastDay);
+      }
+
+      for (const day of days) {
+        if (day > lastDay) continue;
+        const dateStr = `${month}-${String(day).padStart(2, '0')}`;
+        const balance = getBalance(dateStr);
+        snapshots.push({ date: dateStr, balance, month, snapshotDay: day });
+      }
+    }
+    return snapshots.sort((a, b) => a.date.localeCompare(b.date));
   }
 
   // ──────────────────────────────────────────────────────────

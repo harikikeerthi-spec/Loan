@@ -155,23 +155,18 @@ export class BankWorkflowService {
       throw submitError;
     }
 
-    let updatedAppNumber = application.applicationNumber;
-    if (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-APP-')) {
-      updatedAppNumber = await this.generateBankApplicationNumber();
-    }
-
-    // Update LoanApplication with bank submission reference
+    // Update LoanApplication with bank submission reference — preserve the existing applicationNumber
     await this.db.client
       .from('LoanApplication')
       .update({
         bank: bankName,
-        applicationNumber: updatedAppNumber,
         bankSubmissionId: submission.id,
         bankWorkflowStatus: 'SUBMITTED_TO_BANK',
         bankWorkflowStage: 'SUBMITTED_TO_BANK',
         submittedToBankAt: new Date().toISOString(),
       })
       .eq('id', applicationId);
+
 
     // Record in workflow history
     await this.recordWorkflowHistory(submission.id, applicationId, null, 'SUBMITTED_TO_BANK', submittedBy, 'Application shared with bank');
@@ -216,7 +211,7 @@ export class BankWorkflowService {
     const targetEmail = bankEmail || fallbackEmails[bankId] || `${bankId}bank01@gmail.com`;
 
     // Send email alert to bank
-    await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, { ...application, applicationNumber: updatedAppNumber }, studentName);
+    await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, application, studentName);
 
     // Emit event
     this.eventEmitter.emit('bank.submission.created', {
@@ -2415,12 +2410,6 @@ export class BankWorkflowService {
 
     const createdSubmissions: any[] = [];
 
-    // Pre-generate bank application number if needed
-    let updatedAppNumber = application.applicationNumber;
-    if (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-APP-')) {
-      updatedAppNumber = await this.generateBankApplicationNumber();
-    }
-
     // Fetch student's profile name
     let studentName = 'Student';
     try {
@@ -2506,7 +2495,7 @@ export class BankWorkflowService {
       const targetEmail = bankEmail || fallbackEmails[bankId] || `${bankId}bank01@gmail.com`;
 
       // Send email alert to bank
-      await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, { ...application, applicationNumber: updatedAppNumber }, studentName);
+      await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, application, studentName);
 
       // Emit event
       this.eventEmitter.emit('bank.submission.created', {
@@ -2519,11 +2508,10 @@ export class BankWorkflowService {
       createdSubmissions.push(submission);
     }
 
-    // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list
+    // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list — preserve existing applicationNumber
     const bankNamesStr = banks.map(b => b.bankName).join(', ');
     const updatePayload: any = {
       status: 'ROUTED_MULTIPARTY',
-      applicationNumber: updatedAppNumber,
       bankWorkflowStatus: 'SUBMITTED_TO_BANK',
       bankWorkflowStage: 'SUBMITTED_TO_BANK',
       submittedToBankAt: new Date().toISOString(),

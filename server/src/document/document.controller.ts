@@ -46,7 +46,7 @@ export class DocumentController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage,
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
       fileFilter: (req, file, cb) => {
         if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
           cb(null, true);

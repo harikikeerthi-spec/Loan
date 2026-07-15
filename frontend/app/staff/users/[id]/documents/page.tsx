@@ -220,7 +220,7 @@ export default function DocumentsTab() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h2 className="text-xl font-black text-slate-900 tracking-tight" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-                        Secure Vault Documents
+                        Documents
                     </h2>
                     <p className="text-xs text-slate-500 mt-1 font-semibold">All documents uploaded by this student</p>
                 </div>

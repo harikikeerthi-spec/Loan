@@ -32,6 +32,9 @@ interface DashboardData {
         lastName?: string;
         remarks?: string;
         sanctionLetterUrl?: string;
+        coApplicantRelation?: string;
+        coApplicantPhone?: string;
+        coApplicantIncome?: number;
     }>;
     recommendedLoans?: Array<{ name: string; rate: string }>;
     documents?: Array<{ name: string; status: string; docType: string }>;
@@ -319,6 +322,11 @@ export default function DashboardPage() {
     const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
     const [selectedAppDetails, setSelectedAppDetails] = useState<any>(null);
     const [connectingSupport, setConnectingSupport] = useState(false);
+    const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
+
+    const toggleSecretVisibility = (key: string) => {
+        setVisibleSecrets(prev => ({ ...prev, [key]: !prev[key] }));
+    };
 
     const toggleAppProgress = (appId: string) => {
         setExpandedApps(prev => ({ ...prev, [appId]: !prev[appId] }));
@@ -1115,28 +1123,146 @@ export default function DashboardPage() {
                     const sscDetails = getAcademicDetails(sscDoc);
                     const hscDetails = getAcademicDetails(hscDoc);
                     const ugDetails = getAcademicDetails(ugDoc);
+
+                    const formatDob = (dobStr?: string) => {
+                        if (!dobStr) return null;
+                        try {
+                            const date = new Date(dobStr);
+                            if (isNaN(date.getTime())) return dobStr;
+                            return date.toLocaleDateString("en-GB", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric"
+                            }); // e.g. "12 Feb 2003"
+                        } catch {
+                            return dobStr;
+                        }
+                    };
+
+                    const renderValue = (val: any, label = "value") => {
+                        if (val === undefined || val === null || val === "" || val === "—") {
+                            return (
+                                <Link href="/profile?edit=1" className="text-[11px] text-slate-400 hover:text-[#6605c7] font-semibold transition-colors flex items-center gap-0.5 mt-1">
+                                    <span className="material-symbols-outlined text-[12px]">add</span> Add {label}
+                                </Link>
+                            );
+                        }
+                        return <span className="text-sm font-semibold text-slate-700 block mt-1">{val}</span>;
+                    };
+
+                    const formatAadhar = (val?: string, visible?: boolean) => {
+                        if (!val || val === "—") return null;
+                        const cleaned = val.replace(/\s+/g, '');
+                        if (visible) return val;
+                        if (cleaned.length >= 12) {
+                            return `XXXX XXXX ${cleaned.slice(-4)}`;
+                        }
+                        return `XXXX XXXX ${val.slice(-4)}`;
+                    };
+
+                    const formatPan = (val?: string, visible?: boolean) => {
+                        if (!val || val === "—") return null;
+                        const cleaned = val.replace(/\s+/g, '');
+                        if (visible) return val;
+                        if (cleaned.length >= 10) {
+                            return `${cleaned.slice(0, 5)}•••${cleaned.slice(-2)}`;
+                        }
+                        return `••••••${val.slice(-4)}`;
+                    };
+
+                    const renderSecretField = (secretKey: string, val?: string, type: "aadhar" | "pan" = "aadhar") => {
+                        if (!val || val === "—") {
+                            return (
+                                <Link href="/profile?edit=1" className="text-[11px] text-slate-400 hover:text-[#6605c7] font-semibold transition-colors flex items-center gap-0.5 mt-1">
+                                    <span className="material-symbols-outlined text-[12px]">add</span> Add {type === "aadhar" ? "Aadhaar" : "PAN"}
+                                </Link>
+                            );
+                        }
+                        const isVisible = !!visibleSecrets[secretKey];
+                        const formatted = type === "aadhar" ? formatAadhar(val, isVisible) : formatPan(val, isVisible);
+                        return (
+                            <div className="flex items-center justify-between gap-2 mt-1 min-h-[22px]">
+                                <span className="text-sm font-semibold text-slate-700 font-mono">{formatted}</span>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleSecretVisibility(secretKey);
+                                    }}
+                                    className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors border-0 bg-transparent flex items-center"
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">
+                                        {isVisible ? 'visibility_off' : 'visibility'}
+                                    </span>
+                                </button>
+                            </div>
+                        );
+                    };
+
+                    const coappIncomeVal = firstApp?.coApplicantIncome 
+                        ? `₹${Number(firstApp.coApplicantIncome).toLocaleString('en-IN')}/yr` 
+                        : activeProfile?.coApplicant?.monthlyIncome 
+                            ? `₹${Number(activeProfile.coApplicant.monthlyIncome).toLocaleString('en-IN')}/mo` 
+                            : activeProfile?.coApplicantIncome 
+                                ? `₹${Number(activeProfile.coApplicantIncome).toLocaleString('en-IN')}/yr` 
+                                : null;
+
                     return (
-                        <div className="max-w-4xl mx-auto bg-slate-50 p-8 rounded-3xl perspective-1000">
-                            <div className="bg-white/85 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(102,5,199,0.12)] border border-white transform-gpu transition-all duration-300 hover:shadow-[0_30px_60px_rgba(102,5,199,0.22)] hover:-translate-y-2 flex flex-col md:flex-row overflow-visible">
-                                {/* Left Column */}
-                                <div className="md:w-1/3 p-6 bg-gradient-to-b from-slate-50 to-slate-100 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none flex flex-col items-center text-center relative pt-16">
-                                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-[#6605c7] to-[#8b5cf6] text-white flex items-center justify-center text-3xl font-bold shadow-[0_10px_25px_rgba(102,5,199,0.35)] transform -translate-y-12 border-4 border-white mb-[-24px] hover:scale-105 transition-transform duration-300">
-                                        {activeProfile?.firstName?.[0] || ""}{activeProfile?.lastName?.[0] || activeProfile?.email?.[0]?.toUpperCase() || "U"}
+                        <div className="max-w-4xl mx-auto bg-slate-50 p-6 rounded-3xl perspective-1000">
+                            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(102,5,199,0.06)] border border-white flex flex-col md:flex-row overflow-visible">
+                                {/* Left Column (Sticky Sidebar) */}
+                                <div className="md:w-1/3 p-6 bg-gradient-to-b from-slate-50/50 to-slate-100/50 rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none flex flex-col items-center text-center relative pt-16 border-r border-slate-100/80">
+                                    {/* Avatar with Circular Completion Ring */}
+                                    <div className="relative w-28 h-28 transform -translate-y-12 mb-[-24px] flex items-center justify-center group/avatar">
+                                        <svg className="absolute w-full h-full -rotate-90">
+                                            {/* Background circle */}
+                                            <circle
+                                                cx="56"
+                                                cy="56"
+                                                r="48"
+                                                className="stroke-slate-100"
+                                                strokeWidth="4"
+                                                fill="transparent"
+                                            />
+                                            {/* Progress circle */}
+                                            <circle
+                                                cx="56"
+                                                cy="56"
+                                                r="48"
+                                                className="stroke-[#6605c7] transition-all duration-500"
+                                                strokeWidth="4"
+                                                fill="transparent"
+                                                strokeDasharray="301.6"
+                                                strokeDashoffset={301.6 - (301.6 * profileCompleteness) / 100}
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
+
+                                        {/* Initials avatar container */}
+                                        <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#6605c7] to-[#8b5cf6] text-white flex items-center justify-center text-3xl font-bold border-4 border-white shadow-md relative overflow-hidden group-hover/avatar:scale-105 transition-transform duration-300">
+                                            {activeProfile?.firstName?.[0] || ""}{activeProfile?.lastName?.[0] || activeProfile?.email?.[0]?.toUpperCase() || "U"}
+                                            
+                                            {/* Overlay update prompt on hover */}
+                                            <Link href="/profile?edit=1" className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex flex-col items-center justify-center text-white text-[8px] font-bold tracking-widest uppercase transition-opacity duration-300 cursor-pointer">
+                                                <span className="material-symbols-outlined text-sm mb-0.5">add_a_photo</span>
+                                                Update Photo
+                                            </Link>
+                                        </div>
                                     </div>
 
-                                    <h2 className="text-xl font-bold text-slate-800 mt-2">
+                                    <h2 className="text-lg font-bold text-slate-800 mt-2">
                                         {activeProfile?.firstName && activeProfile?.lastName ? `${activeProfile.firstName} ${activeProfile.lastName}` : activeProfile?.email?.split("@")[0]}
                                     </h2>
                                     <p className="text-xs text-slate-500 mb-6 truncate max-w-full px-2">{activeProfile?.email}</p>
 
-                                    <div className="w-full bg-white rounded-xl p-4 shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] border border-slate-100 mt-auto">
+                                    <div className="w-full bg-white rounded-xl p-4 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] border border-slate-100 mt-auto">
                                         <div className="flex justify-between text-xs font-bold text-[#6605c7] mb-2">
                                             <span>Profile Setup</span>
                                             <span>{profileCompleteness}%</span>
                                         </div>
-                                        <div className="w-full bg-slate-100 h-3 rounded-full p-0.5 overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
+                                        <div className="w-full bg-slate-100 h-3 rounded-full p-0.5 overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]">
                                             <div
-                                                className="bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] h-full rounded-full shadow-[0_1px_5px_rgba(102,5,199,0.3)] transition-all duration-500"
+                                                className="bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] h-full rounded-full shadow-[0_1px_5px_rgba(102,5,199,0.2)] transition-all duration-500"
                                                 style={{ width: `${profileCompleteness}%` }}
                                             />
                                         </div>
@@ -1146,176 +1272,211 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
 
-                                {/* Right Column */}
-                                <div className="md:w-2/3 p-8 space-y-6 relative">
-                                    <div className="absolute -top-4 right-6 bg-slate-900 text-white font-mono text-xs px-3 py-1.5 rounded-lg shadow-[0_8px_16px_rgba(0,0,0,0.2)] tracking-wide border border-slate-800 transform hover:scale-105 transition-transform select-none">
-                                        ID: {displayUserId || "—"}
+                                {/* Right Column (Main Content Area) */}
+                                <div className="md:w-2/3 p-6 space-y-6 relative">
+                                    {/* Copyable User ID Badge */}
+                                    <div 
+                                        onClick={() => {
+                                            if (displayUserId) {
+                                                navigator.clipboard.writeText(displayUserId);
+                                                alert("User ID copied to clipboard!");
+                                            }
+                                        }}
+                                        className="absolute -top-4 right-6 bg-slate-900 hover:bg-slate-800 text-white font-mono text-[10px] px-3 py-1.5 rounded-lg shadow-[0_8px_16px_rgba(0,0,0,0.15)] tracking-wide border border-slate-800 transform hover:scale-105 transition-transform select-none cursor-pointer flex items-center gap-1.5"
+                                        title="Click to copy User ID"
+                                    >
+                                        <span>ID: {displayUserId || "—"}</span>
+                                        <span className="material-symbols-outlined text-[12px] opacity-60">content_copy</span>
                                     </div>
 
-                                    <div className="space-y-6 pt-4 max-h-[500px] overflow-y-auto pr-2">
-                                        {/* Personal Info */}
-                                        <div>
-                                            <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                                                <span className="material-symbols-outlined text-[16px]">person</span>
-                                                Personal Information
-                                            </h3>
+                                    <div className="space-y-6 pt-4 max-h-[520px] overflow-y-auto pr-2">
+                                        {/* Card 1: Personal Information */}
+                                        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_8px_24px_rgba(102,5,199,0.04)] hover:-translate-y-0.5 transition-all duration-300 group">
+                                            <div className="flex justify-between items-center mb-3.5 border-b border-slate-100 pb-1.5">
+                                                <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-[16px]">person</span>
+                                                    Personal Information
+                                                </h3>
+                                                <Link href="/profile?edit=1" className="text-slate-400 hover:text-[#6605c7] transition-colors flex items-center" title="Edit Personal Information">
+                                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                </Link>
+                                            </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">First Name</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.firstName || "—"}</span>
+                                                <div>
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">First Name</span>
+                                                    {renderValue(activeProfile?.firstName, "First Name")}
                                                 </div>
-
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Last Name</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.lastName || "—"}</span>
+                                                <div>
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Name</span>
+                                                    {renderValue(activeProfile?.lastName, "Last Name")}
                                                 </div>
-
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Date of Birth</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.dateOfBirth || "—"}</span>
+                                                <div>
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date of Birth</span>
+                                                    {renderValue(formatDob(activeProfile?.dateOfBirth), "Date of Birth")}
                                                 </div>
-
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Phone Number</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.phoneNumber || "—"}</span>
+                                                <div>
+                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</span>
+                                                    {renderValue(activeProfile?.phoneNumber, "Phone Number")}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Parent Details */}
-                                        <div>
-                                            <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                                                <span className="material-symbols-outlined text-[16px]">family_history</span>
-                                                Parent Details
-                                            </h3>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Father's Full Name</span>
-                                                    <span className="text-sm font-semibold text-slate-700 block">{fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName || "—"}</span>
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
-                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">Aadhaar:</span>
-                                                            {fatherData?.aadharNumber || "—"}
-                                                        </span>
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
-                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">PAN:</span>
-                                                            {fatherData?.panNumber || "—"}
-                                                        </span>
+                                        {/* Card 2: Parent & Co-Applicant Details */}
+                                        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_8px_24px_rgba(102,5,199,0.04)] hover:-translate-y-0.5 transition-all duration-300 group">
+                                            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-1.5">
+                                                <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-[16px]">family_restroom</span>
+                                                    Parent & Co-Applicant Details
+                                                </h3>
+                                                <Link href="/profile?edit=1" className="text-slate-400 hover:text-[#6605c7] transition-colors flex items-center" title="Edit Parent & Co-Applicant Details">
+                                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                </Link>
+                                            </div>
+                                            
+                                            <div className="space-y-4">
+                                                {/* Father Section */}
+                                                <div>
+                                                    <h4 className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-2 flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                        Father Details
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Full Name</span>
+                                                            {renderValue(fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName, "Father Name")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Aadhaar Number</span>
+                                                            {renderSecretField("father_aadhar", fatherData?.aadharNumber, "aadhar")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">PAN Number</span>
+                                                            {renderSecretField("father_pan", fatherData?.panNumber, "pan")}
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Mother's Full Name</span>
-                                                    <span className="text-sm font-semibold text-slate-700 block">{motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName || "—"}</span>
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
-                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">Aadhaar:</span>
-                                                            {motherData?.aadharNumber || "—"}
-                                                        </span>
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
-                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">PAN:</span>
-                                                            {motherData?.panNumber || "—"}
-                                                        </span>
+                                                {/* Mother Section */}
+                                                <div>
+                                                    <h4 className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider mb-2 flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-pink-500" />
+                                                        Mother Details
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Full Name</span>
+                                                            {renderValue(motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName, "Mother Name")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Aadhaar Number</span>
+                                                            {renderSecretField("mother_aadhar", motherData?.aadharNumber, "aadhar")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">PAN Number</span>
+                                                            {renderSecretField("mother_pan", motherData?.panNumber, "pan")}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Primary Co-Applicant Section */}
+                                                <div>
+                                                    <h4 className="text-[10px] font-extrabold uppercase text-[#6605c7] tracking-wider mb-2 flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                                                        Primary Co-Applicant Details
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-indigo-50/15 p-3 rounded-xl border border-indigo-100/30">
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Co-Applicant Name</span>
+                                                            {renderValue(coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName, "Co-Applicant Name")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Co-Applicant Relation</span>
+                                                            {renderValue(firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation, "Relation")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</span>
+                                                            {renderValue(firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone, "Phone")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Monthly/Annual Income</span>
+                                                            {renderValue(coappIncomeVal, "Income")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Aadhaar Number</span>
+                                                            {renderSecretField("coapp_aadhar", coapplicantData?.aadharNumber, "aadhar")}
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">PAN Number</span>
+                                                            {renderSecretField("coapp_pan", coapplicantData?.panNumber, "pan")}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Co-Applicant Details */}
-                                        <div>
-                                            <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                                                <span className="material-symbols-outlined text-[16px]">diversity_3</span>
-                                                Co-Applicant Details
-                                            </h3>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Name</span>
-                                                    <span className="text-sm font-semibold text-slate-700 block">{coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || "—"}</span>
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
-                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">Aadhaar:</span>
-                                                            {coapplicantData?.aadharNumber || "—"}
-                                                        </span>
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 border border-slate-150 text-[10px] text-slate-500 font-mono">
-                                                            <span className="font-semibold text-[8px] uppercase tracking-wider text-slate-400">PAN:</span>
-                                                            {coapplicantData?.panNumber || "—"}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Relation</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation || "—"}</span>
-                                                </div>
-
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Phone</span>
-                                                    <span className="text-sm font-semibold text-slate-700">{activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone || "—"}</span>
-                                                </div>
-
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all group">
-                                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Co-Applicant Monthly/Annual Income</span>
-                                                    <span className="text-sm font-semibold text-slate-700">
-                                                        {activeProfile?.coApplicant?.monthlyIncome ? `₹${Number(activeProfile.coApplicant.monthlyIncome).toLocaleString('en-IN')}/mo` : activeProfile?.coApplicantIncome ? `₹${Number(activeProfile.coApplicantIncome).toLocaleString('en-IN')}/yr` : "—"}
-                                                    </span>
-                                                </div>
+                                        {/* Card 3: Academic Details */}
+                                        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_8px_24px_rgba(102,5,199,0.04)] hover:-translate-y-0.5 transition-all duration-300 group">
+                                            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-1.5">
+                                                <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-[16px]">school</span>
+                                                    Academic Details
+                                                </h3>
+                                                <Link href="/profile?edit=1" className="text-slate-400 hover:text-[#6605c7] transition-colors flex items-center" title="Edit Academic Details">
+                                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                </Link>
                                             </div>
-                                        </div>
-
-                                        {/* Academic Details */}
-                                        <div>
-                                            <h3 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                                                <span className="material-symbols-outlined text-[16px]">school</span>
-                                                Academic Details
-                                            </h3>
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {/* 10th Standard */}
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
-                                                    <div>
-                                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">10th Standard / SSC</span>
-                                                        <span className="text-sm font-semibold text-slate-700">{sscDetails.institute}</span>
+                                            
+                                            {/* Vertical Timeline Layout */}
+                                            <div className="relative border-l-2 border-slate-100 ml-3 pl-6 space-y-6">
+                                                {/* 10th Standard / SSC */}
+                                                <div className="relative">
+                                                    <div className="absolute -left-[32px] top-1 w-4 h-4 rounded-full bg-white border-2 border-indigo-500 flex items-center justify-center">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                                                     </div>
-                                                    <div className="sm:text-right bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
-                                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage:</span>
-                                                        {sscDetails.percentage}
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                                                        <div>
+                                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">10th Standard / SSC</span>
+                                                            <span className="text-sm font-semibold text-slate-700">{sscDetails.institute}</span>
+                                                        </div>
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 self-start sm:self-auto font-mono">
+                                                            {sscDetails.percentage}
+                                                        </span>
                                                     </div>
                                                 </div>
 
-                                                {/* Intermediate */}
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
-                                                    <div>
-                                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Intermediate / 12th / HSC</span>
-                                                        <span className="text-sm font-semibold text-slate-700">{hscDetails.institute}</span>
+                                                {/* Intermediate / 12th / HSC */}
+                                                <div className="relative">
+                                                    <div className="absolute -left-[32px] top-1 w-4 h-4 rounded-full bg-white border-2 border-indigo-500 flex items-center justify-center">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                                                     </div>
-                                                    <div className="sm:text-right bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
-                                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage:</span>
-                                                        {hscDetails.percentage}
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                                                        <div>
+                                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Intermediate / 12th / HSC</span>
+                                                            <span className="text-sm font-semibold text-slate-700">{hscDetails.institute}</span>
+                                                        </div>
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 self-start sm:self-auto font-mono">
+                                                            {hscDetails.percentage}
+                                                        </span>
                                                     </div>
                                                 </div>
 
-                                                {/* Degree */}
-                                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 group">
-                                                    <div>
-                                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Degree / Graduation</span>
-                                                        <span className="text-sm font-semibold text-slate-700">{ugDetails.institute}</span>
+                                                {/* Degree / Graduation */}
+                                                <div className="relative">
+                                                    <div className="absolute -left-[32px] top-1 w-4 h-4 rounded-full bg-white border-2 border-indigo-500 flex items-center justify-center">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                                                     </div>
-                                                    <div className="sm:text-right bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
-                                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage:</span>
-                                                        {ugDetails.percentage}
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                                                        <div>
+                                                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Degree / Graduation</span>
+                                                            <span className="text-sm font-semibold text-slate-700">{ugDetails.institute}</span>
+                                                        </div>
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 self-start sm:self-auto font-mono">
+                                                            {ugDetails.percentage}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div className="pt-4 flex justify-end">
-                                        <Link
-                                            href="/profile?edit=1"
-                                            className="px-6 py-2.5 bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] text-white font-medium text-sm rounded-xl shadow-[0_4px_14px_rgba(102,5,199,0.3)] border-b-4 border-[#5504a8] active:border-b-0 active:translate-y-1 transition-all flex items-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">edit</span>
-                                            <span>Edit Profile</span>
-                                        </Link>
                                     </div>
                                 </div>
                             </div>

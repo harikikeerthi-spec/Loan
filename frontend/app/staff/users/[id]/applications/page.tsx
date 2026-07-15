@@ -26,13 +26,13 @@ function getFileAge(dateString: string | Date | undefined): string {
         const created = parseUTCDate(dateString);
         const diffMs = now.getTime() - created.getTime();
         if (diffMs < 0) return "Just now";
-        
+
         const diffMins = Math.floor(diffMs / (1000 * 60));
         if (diffMins < 60) return `${diffMins}m ago`;
-        
+
         const diffHours = Math.floor(diffMins / 60);
         if (diffHours < 24) return `${diffHours}h ago`;
-        
+
         const diffDays = Math.floor(diffHours / 24);
         return `${diffDays}d ago`;
     } catch {
@@ -47,7 +47,7 @@ export default function ApplicationsTab() {
     const [submitError, setSubmitError] = useState("");
 
     const [formData, setFormData] = useState({
-        bank: "",
+        bank: "Any Bank",
         loanType: "Postgraduate Abroad",
         amount: "4000000",
         courseType: "MS/M.Tech",
@@ -80,7 +80,7 @@ export default function ApplicationsTab() {
                 lastName: userData.lastName || "",
                 email: userData.email || "",
                 phone: userData.phoneNumber || userData.mobile || userData.phone || "",
-                dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : "",
+                dateOfBirth: userData.dateOfBirth ? (() => { const d = new Date(userData.dateOfBirth); return isNaN(d.getTime()) ? "" : d.toISOString().split('T')[0]; })() : "",
                 address: userData.permanentAddress || "",
                 pincode: userData.pincode || "",
             }));
@@ -103,12 +103,7 @@ export default function ApplicationsTab() {
         e.preventDefault();
         setSubmitError("");
 
-        if (!formData.bank) {
-            setSubmitError("Please select a target bank.");
-            return;
-        }
-
-        if (isBankAlreadyApplied(formData.bank)) {
+        if (formData.bank !== "Any Bank" && isBankAlreadyApplied(formData.bank)) {
             const selectedBankName = banksList.find(b => b.id === formData.bank)?.name || formData.bank;
             setSubmitError(`This student already has an active application with ${selectedBankName}. Direct duplicates are not allowed.`);
             return;
@@ -141,10 +136,10 @@ export default function ApplicationsTab() {
             await applicationApi.create(payload);
             await refreshData();
             setIsAddAppOpen(false);
-            
+
             // Reset state
             setFormData({
-                bank: "",
+                bank: "Any Bank",
                 loanType: "Postgraduate Abroad",
                 amount: "4000000",
                 courseType: "MS/M.Tech",
@@ -161,7 +156,7 @@ export default function ApplicationsTab() {
                 lastName: userData?.lastName || "",
                 email: userData?.email || "",
                 phone: userData?.phoneNumber || userData?.mobile || userData?.phone || "",
-                dateOfBirth: userData?.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : "",
+                dateOfBirth: userData?.dateOfBirth ? (() => { const d = new Date(userData.dateOfBirth); return isNaN(d.getTime()) ? "" : d.toISOString().split('T')[0]; })() : "",
                 address: userData?.permanentAddress || "",
                 pincode: userData?.pincode || "",
                 notes: "",
@@ -187,7 +182,7 @@ export default function ApplicationsTab() {
             {/* Header / Actions Card */}
             <div className="flex justify-between items-center bg-white/40 backdrop-blur-md p-4 rounded-2xl border border-white/60">
                 <div>
-                    <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Application Node</h3>
+                    <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Bank Applications</h3>
                     <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{userApplications.length} active loan channels</p>
                 </div>
                 <button
@@ -321,27 +316,7 @@ export default function ApplicationsTab() {
                                 {/* SECTION 1: LOAN & TARGET BANK */}
                                 <div>
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] mb-3">1. Loan & Target Bank</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Target Partner Bank *</label>
-                                            <select
-                                                required
-                                                value={formData.bank}
-                                                onChange={e => setFormData(prev => ({ ...prev, bank: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            >
-                                                <option value="">Select a Bank</option>
-                                                {banksList.map(bank => {
-                                                    const alreadyApplied = isBankAlreadyApplied(bank.id);
-                                                    return (
-                                                        <option key={bank.id} value={bank.id} disabled={alreadyApplied}>
-                                                            {bank.name} {alreadyApplied ? "(Already Applied)" : `(${bank.rate})`}
-                                                        </option>
-                                                    );
-                                                })}
-                                            </select>
-                                        </div>
-
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Loan Category *</label>
                                             <select
@@ -415,32 +390,6 @@ export default function ApplicationsTab() {
                                         </div>
 
                                         <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Course Program *</label>
-                                            <select
-                                                required
-                                                value={formData.courseType}
-                                                onChange={e => setFormData(prev => ({ ...prev, courseType: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            >
-                                                {courseTypes.map(t => (
-                                                    <option key={t} value={t}>{t}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Intake Season *</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                placeholder="e.g. Fall 2026"
-                                                value={formData.intakeSeason}
-                                                onChange={e => setFormData(prev => ({ ...prev, intakeSeason: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
-
-                                        <div>
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Admission Status *</label>
                                             <select
                                                 required
@@ -459,29 +408,7 @@ export default function ApplicationsTab() {
                                 {/* SECTION 3: FINANCIAL & CO-APPLICANT DETAILS */}
                                 <div>
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] mb-3">3. Co-Applicant & Finance details</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Annual Tuition Fee (INR)</label>
-                                            <input
-                                                type="number"
-                                                placeholder="e.g. 2500000"
-                                                value={formData.annualFee}
-                                                onChange={e => setFormData(prev => ({ ...prev, annualFee: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Living Cost (INR)</label>
-                                            <input
-                                                type="number"
-                                                placeholder="e.g. 1000000"
-                                                value={formData.livingCost}
-                                                onChange={e => setFormData(prev => ({ ...prev, livingCost: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
-
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Co-Applicant Relation *</label>
                                             <select
@@ -522,19 +449,6 @@ export default function ApplicationsTab() {
                                                 />
                                             </div>
                                         )}
-
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Collateral Available *</label>
-                                            <select
-                                                required
-                                                value={formData.collateral}
-                                                onChange={e => setFormData(prev => ({ ...prev, collateral: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            >
-                                                <option value="yes">Yes (Property, FD, etc.)</option>
-                                                <option value="no">No Collateral Required</option>
-                                            </select>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -619,7 +533,7 @@ export default function ApplicationsTab() {
                                             />
                                         </div>
 
-                                        <div className="md:col-span-3">
+                                        {/* <div className="md:col-span-3">
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Internal Remarks / Staff Notes</label>
                                             <textarea
                                                 rows={2}
@@ -628,7 +542,7 @@ export default function ApplicationsTab() {
                                                 onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
                                             />
-                                        </div>
+                                        </div> */}
                                     </div>
                                 </div>
                             </form>

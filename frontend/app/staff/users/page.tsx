@@ -131,7 +131,7 @@ export default function UserDirectoryPage() {
     };
 
     const bankAndStaffUsers = useMemo(() => {
-        return data.filter(item => ['bank', 'staff', 'staff_admin', 'admin', 'super_admin'].includes(item.role?.toLowerCase()));
+        return data.filter(item => ['bank', 'staff'].includes(item.role?.toLowerCase()));
     }, [data]);
 
     const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));

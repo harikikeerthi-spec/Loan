@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { aiApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
+import { normalizeSopAnalysis } from "@/lib/sopAnalysisFormatter";
 
 export default function SOPAnalyzerPage() {
     const { isAuthenticated } = useAuth();
@@ -38,7 +39,8 @@ export default function SOPAnalyzerPage() {
         setLoading(true);
         try {
             const res = await aiApi.sopReview({ text: sopText }) as any;
-            setResult(res.analysis);
+            const analysisPayload = res?.analysis ?? res;
+            setResult(normalizeSopAnalysis(analysisPayload));
         } catch (err) {
             console.error(err);
             alert("Failed to analyze SOP. Please try again.");
@@ -64,7 +66,8 @@ export default function SOPAnalyzerPage() {
                 setSopText(res.text);
                 // Re-analyze after humanizing
                 const analysisRes = await aiApi.sopReview({ text: res.text }) as any;
-                setResult(analysisRes.analysis);
+                const analysisPayload = analysisRes?.analysis ?? analysisRes;
+                setResult(normalizeSopAnalysis(analysisPayload));
             }
         } catch (err) {
             console.error(err);
@@ -150,7 +153,7 @@ export default function SOPAnalyzerPage() {
                                                 <p className="text-gray-400 text-xs">Based on university acceptance criteria</p>
                                             </div>
                                             <div className="text-right">
-                                                <div className="text-5xl font-bold text-[#6605c7]">{result.score || result.totalScore || 0}</div>
+                                                <div className="text-5xl font-bold text-[#6605c7]">{result.score || 0}</div>
                                                 <div className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">/ 100</div>
                                             </div>
                                         </div>
@@ -168,10 +171,10 @@ export default function SOPAnalyzerPage() {
                                                     <div key={i} className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                                                         <div className="flex justify-between items-center mb-2">
                                                             <span className="font-bold text-gray-900 text-xs capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                                                            <span className="text-[10px] font-bold text-[#6605c7]">{val}%</span>
+                                                            <span className="text-[10px] font-bold text-[#6605c7]">{Number(val) || 0}%</span>
                                                         </div>
                                                         <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                                                            <div className="h-full bg-[#6605c7] transition-all duration-1000" style={{ width: `${val}%` }} />
+                                                            <div className="h-full bg-[#6605c7] transition-all duration-1000" style={{ width: `${Number(val) || 0}%` }} />
                                                         </div>
                                                     </div>
                                                 ))}
@@ -184,9 +187,9 @@ export default function SOPAnalyzerPage() {
                                                 Areas to Strengthen
                                             </h4>
                                             <ul className="space-y-3">
-                                                {(result.weakAreas || result.improvements || ["Detailed research goals could be more specific.", "Financial planning section needs better justification."]).map((w: string, i: number) => (
+                                                {(result.weakAreas || ["Detailed research goals could be more specific.", "Financial planning section needs better justification."]).map((w: any, i: number) => (
                                                     <li key={i} className="text-xs text-gray-600 flex gap-2">
-                                                        <span className="text-[#6605c7]">•</span> {w}
+                                                        <span className="text-[#6605c7]">•</span> {typeof w === 'string' ? w : (w?.recommendation || w?.issue || 'Needs improvement')}
                                                     </li>
                                                 ))}
                                             </ul>

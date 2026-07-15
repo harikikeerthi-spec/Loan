@@ -3338,53 +3338,16 @@ const OcrDocumentIntelligence = ({
   const completedAcademic = academicDocs.filter((d) => !isRejected(d) && !isActionRequired(d));
   const completedCoApplicant = coApplicantDocs.filter((d) => !isRejected(d) && !isActionRequired(d));
 
+  const verifiedAcademic = academicDocs.filter(d => ["verified", "approved"].includes(String(d.status || "").toLowerCase()));
+  const verifiedCoApplicant = coApplicantDocs.filter(d => ["verified", "approved"].includes(String(d.status || "").toLowerCase()));
+
   return (
     <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Sub-tabs for checklists */}
-      <div className="flex items-center gap-4 bg-slate-100 p-1.5 rounded-2xl w-fit border border-slate-200/50">
-        <button
-          onClick={() => setDocSubTab("action")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${docSubTab === "action"
-            ? "bg-white text-rose-600 shadow-sm border border-rose-100"
-            : "text-slate-500 hover:text-slate-800"
-            }`}
-        >
-          <span className="material-symbols-outlined text-[16px] text-rose-500">warning</span>
-          Action Required ({actionRequiredAcademic.length + actionRequiredCoApplicant.length})
-        </button>
-        <button
-          onClick={() => setDocSubTab("rejected")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${docSubTab === "rejected"
-            ? "bg-white text-red-600 shadow-sm border border-red-100"
-            : "text-slate-500 hover:text-slate-800"
-            }`}
-        >
-          <span className="material-symbols-outlined text-[16px] text-red-500">cancel</span>
-          Rejected ({rejectedAcademic.length + rejectedCoApplicant.length})
-        </button>
-        <button
-          onClick={() => setDocSubTab("completed")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${docSubTab === "completed"
-            ? "bg-white text-emerald-600 shadow-sm border border-emerald-100"
-            : "text-slate-500 hover:text-slate-800"
-            }`}
-        >
-          <span className="material-symbols-outlined text-[16px] text-emerald-500">verified</span>
-          Verified / Completed ({completedAcademic.length + completedCoApplicant.length})
-        </button>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <OcrDocumentGroup
           title="Applicant Documents"
           icon="school"
-          docs={
-            docSubTab === "action"
-              ? actionRequiredAcademic
-              : docSubTab === "rejected"
-                ? rejectedAcademic
-                : completedAcademic
-          }
+          docs={verifiedAcademic}
           loading={loading}
           onAdd={onAddAcademic}
           normalizeConfidence={normalizeConfidence}
@@ -3403,13 +3366,7 @@ const OcrDocumentIntelligence = ({
         <OcrDocumentGroup
           title="Family & Co-Applicant Documents"
           icon="group"
-          docs={
-            docSubTab === "action"
-              ? actionRequiredCoApplicant
-              : docSubTab === "rejected"
-                ? rejectedCoApplicant
-                : completedCoApplicant
-          }
+          docs={verifiedCoApplicant}
           loading={loading}
           onAdd={onAddCoApplicant}
           normalizeConfidence={normalizeConfidence}
@@ -3503,10 +3460,6 @@ const OcrDocumentGroup = ({
         <span className="material-symbols-outlined text-[22px] text-emerald-600">{icon}</span>
         <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">{title}</h3>
       </div>
-      <button onClick={onAdd} className="flex items-center gap-1.5 text-[13px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
-        <span className="material-symbols-outlined text-[18px]">upload</span>
-        Add
-      </button>
     </div>
 
     <div className="space-y-4">
@@ -3641,34 +3594,14 @@ const OcrMiniDocumentCard = ({
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {hasFile && (
-            <>
-              <button
-                type="button"
-                onClick={onPreview}
-                title={`Quick look: ${title}`}
-                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 flex items-center justify-center transition-all"
-              >
-                <span className="material-symbols-outlined text-[18px]">visibility</span>
-              </button>
-              {onDownload && (
-                <button
-                  type="button"
-                  onClick={onDownload}
-                  title={`Download ${title}`}
-                  className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 flex items-center justify-center transition-all"
-                >
-                  <span className="material-symbols-outlined text-[18px]">download</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={onDelete}
-                title={`Delete ${title}`}
-                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 flex items-center justify-center transition-all"
-              >
-                <span className="material-symbols-outlined text-[18px]">delete</span>
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={onPreview}
+              title={`Quick look: ${title}`}
+              className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 flex items-center justify-center transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">visibility</span>
+            </button>
           )}
         </div>
       </div>
@@ -3693,19 +3626,7 @@ const OcrMiniDocumentCard = ({
       )}
 
       <div className="mt-4 flex flex-col gap-3">
-        {/* Send to Bank Action Row */}
-        {/* {hasFile && onSendToBank && (
-          <button
-            type="button"
-            onClick={onSendToBank}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-md shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            <span className="material-symbols-outlined text-[16px]">account_balance</span>
-            Send to Bank
-          </button>
-        )} */}
-
-        {hasFile ? (
+        {hasFile && (
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
               <button
@@ -3716,52 +3637,8 @@ const OcrMiniDocumentCard = ({
                 <span className="material-symbols-outlined text-[17px]">open_in_new</span>
                 View file
               </button>
-
-              {onVerify && onReject && !["verified", "approved", "rejected"].includes(statusLower) && (
-                <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
-                  <button
-                    type="button"
-                    onClick={onVerify}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-extrabold uppercase tracking-wide transition-all"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">check</span>
-                    Verify
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const reason = await dialogPrompt("Please enter the reason for rejecting this document:", "Enter rejection reason...");
-                      if (reason !== null) {
-                        onReject(reason.trim());
-                      }
-                    }}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-extrabold uppercase tracking-wide transition-all"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">close</span>
-                    Reject
-                  </button>
-                </div>
-              )}
             </div>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 text-[12px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors ml-auto"
-            >
-              <span className="material-symbols-outlined text-[17px]">sync</span>
-              Re-upload
-            </button>
           </div>
-
-        ) : (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[12px] font-black uppercase tracking-widest shadow-md shadow-emerald-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
-            Upload Document
-          </button>
         )}
       </div>
     </div>

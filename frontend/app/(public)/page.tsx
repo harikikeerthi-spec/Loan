@@ -819,7 +819,7 @@ export default async function HomePage() {
                                         <div className="flex flex-wrap gap-6 mt-8 justify-center lg:justify-start">
                                             {[
                                                 { value: '₹3,000', label: 'Per Referral' },
-                                                { value: '₹10K', label: 'Bonus at 5' },
+                                                { value: '₹1000', label: 'Bonus at 5' },
                                                 { value: 'Unlimited', label: 'Earnings' },
                                             ].map(stat => (
                                                 <div key={stat.label} className="text-center lg:text-left">
@@ -856,7 +856,7 @@ export default async function HomePage() {
                             <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl -ml-32 -mb-32" />
                             <h2 className="text-3xl md:text-5xl font-bold font-display mb-8 relative z-10 uppercase tracking-tight">Ready to Fund Your Education?</h2>
                             <p className="text-[15px] text-white/80 mb-12 max-w-2xl mx-auto relative z-10 font-medium leading-relaxed">
-                                Join 10,000+ students who found their perfect education loan. <br className="hidden md:block" /> Start your journey in under 5 minutes.
+                                Join 1000+ students who found their perfect education loan. <br className="hidden md:block" /> Start your journey in under 5 minutes.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-6 justify-center relative z-10">
                                 <Link href="/apply-loan" className="px-10 py-5 bg-white text-[#6605c7] font-bold rounded-xl shadow-xl hover:-translate-y-1 transition-all text-[13px] uppercase tracking-widest">Start Application</Link>

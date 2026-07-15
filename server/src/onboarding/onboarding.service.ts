@@ -154,6 +154,35 @@ export class OnboardingService {
         user = updated;
       }
 
+      // Upsert parents details into parents table
+      if (data.parents && Array.isArray(data.parents)) {
+        for (const p of data.parents) {
+          if (p.relation) {
+            const parentPayload = {
+              userId: user.id,
+              relation: p.relation,
+              name: p.name || null,
+              aadharNumber: p.aadharNumber || null,
+              panNumber: p.panNumber || null,
+              updatedAt: new Date().toISOString()
+            };
+
+            const { data: existingParent } = await this.db
+              .from('parents')
+              .select('id')
+              .eq('userId', user.id)
+              .eq('relation', p.relation)
+              .single();
+
+            if (existingParent) {
+              await this.db.from('parents').update(parentPayload).eq('id', existingParent.id);
+            } else {
+              await this.db.from('parents').insert(parentPayload);
+            }
+          }
+        }
+      }
+
       const leadData = {
         userId: user.id,
         email: user.email,

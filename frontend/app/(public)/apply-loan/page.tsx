@@ -717,7 +717,10 @@ export default function ApplyLoanPage() {
                                                 step="5"
                                                 value={amountLakhs}
                                                 onChange={(e) => handleSliderChange(Number(e.target.value))}
-                                                className="w-full h-2.5 bg-purple-100 rounded-lg appearance-none cursor-pointer accent-[#6605c7] focus:outline-none transition-all duration-300"
+                                                className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-[#6605c7] focus:outline-none transition-all duration-300"
+                                                style={{
+                                                    background: `linear-gradient(to right, #6605c7 0%, #6605c7 ${(amountLakhs / 150) * 100}%, #f3e8ff ${(amountLakhs / 150) * 100}%, #f3e8ff 100%)`
+                                                }}
                                             />
                                             <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-wider mt-4 px-1 select-none">
                                                 <span>0</span>

@@ -2259,7 +2259,11 @@ export default function OnboardingPage() {
                             type="range" min="1200000" max="20000000" step="100000"
                             value={loanSliderValue}
                             onChange={e => setLoanSliderValue(Number(e.target.value))}
-                            style={{ width: '100%', accentColor: '#6605c7' }}
+                            style={{ 
+                                width: '100%', 
+                                accentColor: '#6605c7',
+                                background: `linear-gradient(to right, #6605c7 0%, #6605c7 ${((loanSliderValue - 1200000) / (20000000 - 1200000)) * 100}%, #f3f4f6 ${((loanSliderValue - 1200000) / (20000000 - 1200000)) * 100}%, #f3f4f6 100%)`
+                            }}
                         />
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#9ca3af', marginTop: 8 }}>
                             <span>₹12L</span><span>₹2Cr</span>

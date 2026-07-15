@@ -134,6 +134,7 @@ export const EVVTestAgent: React.FC<{
 
       if (transactions.length === 0) {
         log("Nothing parsed — check the statement format or try Paste data with the raw text.", "warn");
+        setEvvResult(null);
         return;
       }
 
@@ -147,6 +148,7 @@ export const EVVTestAgent: React.FC<{
       log(`Analysis complete. Overall EVV: ${formatCurrency(result.overallEVV)}`, "ok");
     } catch (err: any) {
       log(`Error: ${err.message}`, "error");
+      setEvvResult(null);
       console.error(err);
     } finally {
       setUploading(false);

@@ -76,6 +76,9 @@ export function UserDossierProvider({ userId, children }: { userId: string; chil
                 if (typeof userClone.coApplicant === 'string') {
                     try { userClone.coApplicant = JSON.parse(userClone.coApplicant); } catch {}
                 }
+                if (typeof userClone.academic === 'string') {
+                    try { userClone.academic = JSON.parse(userClone.academic); } catch {}
+                }
                 setUserData(userClone);
             }
 

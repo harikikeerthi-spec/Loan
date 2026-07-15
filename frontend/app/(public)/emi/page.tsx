@@ -291,7 +291,10 @@ function SliderControl({ label, value, numValue, min, max, step, onChange }: {
                     step={step}
                     value={numValue}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    className="w-full h-1.5 bg-gray-100 rounded-full appearance-none cursor-pointer accent-[#6605c7]"
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-[#6605c7]"
+                    style={{
+                        background: `linear-gradient(to right, #6605c7 0%, #6605c7 ${((numValue - min) / (max - min)) * 100}%, #f3f4f6 ${((numValue - min) / (max - min)) * 100}%, #f3f4f6 100%)`
+                    }}
                 />
                 <div className="flex justify-between mt-3 px-1">
                     <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">

@@ -154,7 +154,10 @@ export default function WeightedScorer({
                 onChange={(e) =>
                   updateWeight(factor.key, parseInt(e.target.value))
                 }
-                className="w-full h-2 bg-gray-100 rounded-xl appearance-none cursor-pointer accent-[#6605c7]"
+                className="w-full h-2 rounded-xl appearance-none cursor-pointer accent-[#6605c7]"
+                style={{
+                  background: `linear-gradient(to right, #6605c7 0%, #6605c7 ${weights[factor.key as keyof typeof weights]}%, #f3f4f6 ${weights[factor.key as keyof typeof weights]}%, #f3f4f6 100%)`
+                }}
               />
             </div>
           ))}

@@ -10,8 +10,8 @@ async function bootstrap() {
 
   // ✅ CRITICAL: Twilio sends webhooks as application/x-www-form-urlencoded
   // Without this, body.From and body.Body will always be undefined
-  app.use(express.urlencoded({ extended: true }));
-  app.use(express.json());
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(express.json({ limit: '10mb' }));
   
   const port = process.env.PORT || 5000;
   await app.listen(port, '0.0.0.0');

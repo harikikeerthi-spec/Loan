@@ -49,7 +49,6 @@ export default function ApplicationManagement() {
     const [runningAi, setRunningAi] = useState(false);
 
     // Advanced Log File Modal states (Task 9)
-    const [priority, setPriority] = useState("medium");
     const [assignedOfficer, setAssignedOfficer] = useState("Sarah Jenkins (Senior Underwriter)");
     const [confirmingLog, setConfirmingLog] = useState(false);
     const [officers] = useState<string[]>([
@@ -276,7 +275,7 @@ export default function ApplicationManagement() {
         }
 
         try {
-            const remarkText = `[Bank System - Logged]: Assigned LAN: ${lanNumber.trim()} (Priority: ${priority.toUpperCase()}) to officer ${assignedOfficer}`;
+            const remarkText = `[Bank System - Logged]: Assigned LAN: ${lanNumber.trim()} to officer ${assignedOfficer}`;
             const mergedRemarks = selectedApp.remarks
                 ? `${selectedApp.remarks}\n${remarkText}`
                 : remarkText;
@@ -868,13 +867,13 @@ export default function ApplicationManagement() {
                                 </div>
 
                                 {/* AI Underwriting Insights (F47) */}
-                                <div className="space-y-3 border-t border-gray-100 pt-5">
+                                {/* <div className="space-y-3 border-t border-gray-100 pt-5">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 block pl-1">AI Underwriting Insights</span>
                                     {aiReview ? (
                                         <div className="bg-[#6605c7]/5 rounded-2xl p-5 border border-[#6605c7]/10 space-y-4">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
-                                                    {/* Circular gauge */}
+                                                   
                                                     <div className="relative w-12 h-12 flex items-center justify-center">
                                                         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                                             <path
@@ -914,14 +913,13 @@ export default function ApplicationManagement() {
                                                 </span>
                                             </div>
 
-                                            {/* AI Summary */}
+                                           
                                             {aiReview.aiSummary && (
                                                 <p className="text-[11px] text-gray-600 leading-relaxed font-medium bg-white/50 p-3 rounded-xl border border-[#6605c7]/5">
                                                     {aiReview.aiSummary}
                                                 </p>
                                             )}
 
-                                            {/* Eligibility Flags / Risks Checklist */}
                                             {aiReview.eligibilityFlags && aiReview.eligibilityFlags.length > 0 && (
                                                 <div className="space-y-2">
                                                     <span className="text-[8px] font-black text-purple-800 uppercase tracking-widest block pl-0.5">Risk & Eligibility Factors</span>
@@ -950,7 +948,6 @@ export default function ApplicationManagement() {
                                                 </div>
                                             )}
 
-                                            {/* AI Recommendations */}
                                             {aiReview.aiRecommendations && aiReview.aiRecommendations.length > 0 && (
                                                 <div className="space-y-1">
                                                     <span className="text-[8px] font-black text-purple-800 uppercase tracking-widest block pl-0.5">Next Step Recommendations</span>
@@ -991,7 +988,7 @@ export default function ApplicationManagement() {
                                             </button>
                                         </div>
                                     )}
-                                </div>
+                                </div> */}
 
                                 {/* File Tags & Labels (F43) */}
                                 {/* <div className="space-y-3 border-t border-gray-100 pt-5">
@@ -1152,30 +1149,6 @@ export default function ApplicationManagement() {
                                         onChange={(e) => setLanNumber(e.target.value.toUpperCase())}
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
                                     />
-                                </div>
-
-                                {/* Priority Level */}
-                                <div>
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Priority Level</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {["low", "medium", "high"].map((p) => (
-                                            <button
-                                                key={p}
-                                                type="button"
-                                                onClick={() => setPriority(p)}
-                                                className={`py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${priority === p
-                                                    ? p === "high"
-                                                        ? "border-rose-500 bg-rose-50 text-rose-600"
-                                                        : p === "medium"
-                                                            ? "border-amber-500 bg-amber-50 text-amber-600"
-                                                            : "border-emerald-500 bg-emerald-50 text-emerald-600"
-                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                                    }`}
-                                            >
-                                                {p}
-                                            </button>
-                                        ))}
-                                    </div>
                                 </div>
 
                                 {/* Officer Assignment */}

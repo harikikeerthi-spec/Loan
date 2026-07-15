@@ -1539,10 +1539,10 @@ export class StaffProfileService {
           }
         }
       }
-      return `${prefix}${String(nextSeq).padStart(3, '0')}`;
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
     } catch (err) {
       console.error('[StaffProfileService] Failed to generate sequential application number, falling back to random:', err);
-      const seq = String(Math.floor(Math.random() * 1_000)).padStart(3, '0');
+      const seq = String(Math.floor(Math.random() * 100000)).padStart(5, '0');
       return `${prefix}${seq}`;
     }
   }

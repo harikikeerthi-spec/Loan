@@ -98,12 +98,12 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
     }
 
     const navigationTabs = [
-        { id: "profile", label: "Profile Dossier", path: `/staff/users/${userId}`, icon: "badge" },
-        { id: "applications", label: "Applications Node", path: `/staff/users/${userId}/applications`, icon: "article", badge: userApplications.length > 0 ? userApplications.length : undefined },
+        { id: "profile", label: "Profile Details", path: `/staff/users/${userId}`, icon: "badge" },
+        { id: "applications", label: "Bank Applications", path: `/staff/users/${userId}/applications`, icon: "article", badge: userApplications.length > 0 ? userApplications.length : undefined },
         { id: "evv", label: "EVV Analysis", path: `/staff/users/${userId}/evv`, icon: "payments" },
         { id: "calendar", label: "Events & Calendar", path: `/staff/users/${userId}/calendar`, icon: "calendar_month" },
         { id: "notes", label: "Internal Notes", path: `/staff/users/${userId}/notes`, icon: "sticky_note_2" },
-        { id: "documents", label: "Secure Vault Documents", path: `/staff/users/${userId}/documents`, icon: "folder" }
+        { id: "documents", label: "Documents", path: `/staff/users/${userId}/documents`, icon: "folder" }
     ];
 
     return (

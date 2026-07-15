@@ -862,7 +862,7 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 9999px;
-  background: linear-gradient(to right, #6605c7 0%, rgba(102, 5, 199, 0.3) 100%);
+  background: transparent;
 }
 
 input[type="range"]::-moz-range-track {

@@ -15,12 +15,8 @@ async function testFindAll() {
   }
   
   console.log(`Found ${data.length} users.`);
-  try {
-    const sorted = data.map(u => ({ id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role, createdAt: u.createdAt }));
-    console.log('Success mapping users.');
-  } catch (e) {
-    console.error('Error mapping users:', e);
-  }
+  const sorted = data.map(u => ({ id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role, createdAt: u.createdAt }));
+  console.log(JSON.stringify(sorted, null, 2));
 }
 
 testFindAll();

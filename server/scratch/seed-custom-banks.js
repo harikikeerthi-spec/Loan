@@ -25,10 +25,10 @@ const banksToSeed = [
         maxLoanAmount: "₹40 Lakhs",
         collateralRequired: false,
         collateralFreeLimit: "₹40 Lakhs",
-        processingFee: "5.7% + GST",
+        processingFee: "1% + GST",
         processingTime: "48 hours",
         features: [
-            "Competitive Rates: Starting at 10.5% p.a. with flexible tenure options",
+            "Competitive Rates: Starting at 10.25% p.a. with flexible tenure options",
             "High Loan Amount: Up to ₹40 lakhs without collateral",
             "Quick Processing: Sanction letter in as quick as 48 hours",
             "Flexible Repayment: Moratorium period during course + 1 year"
@@ -38,7 +38,7 @@ const banksToSeed = [
         isPopular: true
     },
     {
-        name: "Auxilo Finserve",
+        name: "Auxilo",
         shortName: "auxilo",
         country: "India",
         type: "NBFC",
@@ -49,8 +49,8 @@ const banksToSeed = [
         maxLoanAmount: "No Limit",
         collateralRequired: false,
         collateralFreeLimit: "₹50 Lakhs",
-        processingFee: "5.7% + GST",
-        processingTime: "72 hours",
+        processingFee: "1% + GST",
+        processingTime: "48 hours",
         features: [
             "100% Financing: Covering tuition, living, travel and even laptop costs",
             "Customized Loans: Tailored to your specific course and financial needs",
@@ -73,8 +73,8 @@ const banksToSeed = [
         maxLoanAmount: "No Limit",
         collateralRequired: false,
         collateralFreeLimit: "₹50 Lakhs",
-        processingFee: "5.7% + GST",
-        processingTime: "72 hours",
+        processingFee: "1% + GST",
+        processingTime: "48 hours",
         features: [
             "Fast Sanctions: Get conditional approval in just 3 working days",
             "100% Funding: Covers tuition fees, living costs, and travel expenses",
@@ -97,8 +97,8 @@ const banksToSeed = [
         maxLoanAmount: "No Limit",
         collateralRequired: false,
         collateralFreeLimit: "₹50 Lakhs",
-        processingFee: "5.7% + GST",
-        processingTime: "5 days",
+        processingFee: "1% + GST",
+        processingTime: "48 hours",
         features: [
             "Dedicated Specialist: Specialized team dealing only with education loans",
             "No Upper Limit: Higher loan amounts sanctioned based on profile",
@@ -121,8 +121,8 @@ const banksToSeed = [
         maxLoanAmount: "₹50 Lakhs",
         collateralRequired: false,
         collateralFreeLimit: "₹50 Lakhs",
-        processingFee: "5.7% + GST",
-        processingTime: "3 days",
+        processingFee: "1% + GST",
+        processingTime: "48 hours",
         features: [
             "Paperless Process: 100% digital journey from application to approval",
             "Attractive Rates: Flexible rates based on candidate profile",
@@ -139,11 +139,11 @@ async function seed() {
     console.log("Upserting default bank partners with timestamps...");
     const now = new Date().toISOString();
     for (const bank of banksToSeed) {
-        // Upsert by name
+        // Upsert by shortName
         const { data: existing } = await supabase
             .from('Bank')
             .select('id')
-            .eq('name', bank.name)
+            .eq('shortName', bank.shortName)
             .maybeSingle();
 
         if (existing) {

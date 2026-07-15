@@ -212,7 +212,7 @@ export class UsersController {
 
         try {
             if (body.isBulk && body.role) {
-                const users = await this.usersService.findAll();
+                const users = await this.usersService.findAll(undefined, undefined, undefined, body.role);
                 const filteredUsers = users.data.filter(u => u.role === body.role);
 
                 for (const u of filteredUsers) {
@@ -472,6 +472,7 @@ export class UsersController {
                     tests: safeJsonParse(user.tests),
                     family: safeJsonParse(user.family),
                     coApplicant: safeJsonParse(user.coApplicant),
+                    parents: user.parents || [],
                     createdAt: user.createdAt || user.created_at || '',
                 },
             };

@@ -423,7 +423,7 @@ export default function ApplicationsPage() {
                                                                         title="Click to open Application Page"
                                                                     >
                                                                         <span className="material-symbols-outlined text-[12px]">description</span>
-                                                                        {(item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-'))) ? item.applicationNumber : 'Not Generated Yet'}
+                                                                        {item.applicationNumber ? item.applicationNumber : 'Not Generated Yet'}
                                                                     </p>
                                                                     {/* {(item.bank || item.targetBank) && (
                                                                         <button

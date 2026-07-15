@@ -118,7 +118,7 @@ export default function DocumentVaultPage() {
                 formData.append('file', item.file);
                 formData.append('userId', user?.id || "");
                 formData.append('docType', item.docType);
-                
+
                 const existing = docs.find(d => d.docType === item.docType);
                 const docName = existing?.docName || existing?.verificationMetadata?.docName || getDocumentRequirementName(item.docType, item.docType, getActiveProfile());
                 if (docName) {
@@ -148,7 +148,7 @@ export default function DocumentVaultPage() {
                             try {
                                 const responseJson = JSON.parse(xhr.responseText);
                                 errorMsg = responseJson.message || responseJson.error || errorMsg;
-                            } catch (e) {}
+                            } catch (e) { }
                             reject(new Error(errorMsg));
                         }
                     };
@@ -837,28 +837,28 @@ export default function DocumentVaultPage() {
                     <>
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
                             <div className="flex items-center gap-4">
-                        <Link href="/dashboard" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm hover:border-gray-200 transition-all">
-                            <span className="material-symbols-outlined text-gray-400 text-[20px]">arrow_back</span>
-                        </Link>
-                        <div>
-                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Document Vault</h1>
-                            <p className="text-gray-500 text-[13px] font-medium">Securely store and manage your loan documents</p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-3 p-2.5 px-4 bg-emerald-50 rounded-2xl border border-emerald-100/50">
-                            <div className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                <span className="material-symbols-outlined text-[16px] font-black">verified</span>
+                                <Link href="/dashboard" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm hover:border-gray-200 transition-all">
+                                    <span className="material-symbols-outlined text-gray-400 text-[20px]">arrow_back</span>
+                                </Link>
+                                <div>
+                                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Document Vault</h1>
+                                    <p className="text-gray-500 text-[13px] font-medium">Securely store and manage your loan documents</p>
+                                </div>
                             </div>
-                            <div className="text-[13px] font-black text-emerald-700 tracking-tight">
-                                {uploadedCount} / {allRequiredDocs.length + staffRequestedDocs.length} Verified
+
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="flex items-center gap-3 p-2.5 px-4 bg-emerald-50 rounded-2xl border border-emerald-100/50">
+                                    <div className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                        <span className="material-symbols-outlined text-[16px] font-black">verified</span>
+                                    </div>
+                                    <div className="text-[13px] font-black text-emerald-700 tracking-tight">
+                                        {uploadedCount} / {allRequiredDocs.length + staffRequestedDocs.length} Verified
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* <div className="mb-12">
+                        {/* <div className="mb-12">
                     <div className="bg-gradient-to-br from-[#004791] to-[#0b84ff] rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-500/20">
                         <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
                         <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-900/30 rounded-full blur-3xl" />
@@ -896,258 +896,103 @@ export default function DocumentVaultPage() {
                     </div>
                 </div> */}
 
-                {docs.some(d => d.status === 'available_in_digilocker' && !d.uploaded) && (
-                    <div className="mb-12 bg-gray-50/50 rounded-[32px] p-8 border border-dashed border-gray-200">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-emerald-600">folder_zip</span>
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-black text-gray-900">Fetched from DigiLocker</h2>
-                                    <p className="text-gray-500 text-[11px] font-medium uppercase tracking-widest">Select documents to sync with your vault</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => loadDocs()}
-                                className="w-10 h-10 bg-white rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#6605c7] hover:border-[#6605c7] transition-all"
-                                title="Refresh"
-                            >
-                                <span className="material-symbols-outlined text-[18px]">refresh</span>
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {docs.filter(d => d.status === 'available_in_digilocker' && !d.uploaded).map(d => {
-                                const req = allRequiredDocs.find(rd => rd.type === d.docType);
-                                return (
-                                    <div key={d.id || d.docType} className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm flex flex-col items-center text-center group hover:shadow-md transition-all">
-                                        <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                            <span className="material-symbols-outlined text-emerald-500">{getDocIcon(d.docType)}</span>
+                        {docs.some(d => d.status === 'available_in_digilocker' && !d.uploaded) && (
+                            <div className="mb-12 bg-gray-50/50 rounded-[32px] p-8 border border-dashed border-gray-200">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-emerald-600">folder_zip</span>
                                         </div>
-                                        <h3 className="text-[13px] font-bold text-gray-900 mb-1 line-clamp-1">{req?.label || d.docType}</h3>
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[8px] font-black uppercase tracking-tighter mb-4">
-                                            <span className="material-symbols-outlined text-[10px]">verified</span>
-                                            Verified Source
+                                        <div>
+                                            <h2 className="text-xl font-black text-gray-900">Fetched from DigiLocker</h2>
+                                            <p className="text-gray-500 text-[11px] font-medium uppercase tracking-widest">Select documents to sync with your vault</p>
                                         </div>
-                                        <button
-                                            onClick={() => handleSyncFromDigilocker(d.docType)}
-                                            disabled={!!uploadingDocs[d.docType]}
-                                            className="w-full py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            {uploadingDocs[d.docType] ? (
-                                                <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
-                                            ) : (
-                                                <span className="material-symbols-outlined text-[14px]">sync</span>
-                                            )}
-                                            {uploadingDocs[d.docType] ? "Syncing..." : "Sync to Vault"}
-                                        </button>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* Premium Glassmorphic Parallel Bulk Upload Zone */}
-                <div className="mb-12 bg-white/40 border border-white/60 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-[0_12px_40px_rgba(0,0,0,0.03)] relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                        <span className="material-symbols-outlined text-9xl">upload_file</span>
-                    </div>
-
-                    <div className="relative z-10">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-                            <div>
-                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#6605c7]/[0.06] rounded-xl text-[10px] font-black uppercase tracking-wider text-[#6605c7] mb-3">
-                                    <span className="material-symbols-outlined text-[14px]">bolt</span>
-                                    Parallel Upload Engine
-                                </div>
-                                <h2 className="text-xl font-black text-gray-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
-                                    Bulk Upload Center
-                                </h2>
-                                <p className="text-gray-500 text-xs font-semibold">Select and upload multiple files simultaneously in parallel</p>
-                            </div>
-
-                            {bulkQueue.length > 0 && (
-                                <div className="flex items-center gap-3">
                                     <button
-                                        onClick={clearBulkQueue}
-                                        disabled={bulkQueue.some(item => item.status === 'uploading')}
-                                        className="px-5 py-3 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 disabled:opacity-50"
+                                        onClick={() => loadDocs()}
+                                        className="w-10 h-10 bg-white rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#6605c7] hover:border-[#6605c7] transition-all"
+                                        title="Refresh"
                                     >
-                                        <span className="material-symbols-outlined text-[16px]">close</span>
-                                        Clear Queue
-                                    </button>
-                                    <button
-                                        onClick={handleParallelUpload}
-                                        disabled={bulkQueue.some(item => item.status === 'uploading') || !bulkQueue.some(item => item.status === 'idle' || item.status === 'error')}
-                                        className="px-6 py-3 bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] hover:shadow-lg hover:shadow-purple-500/20 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 disabled:opacity-50 animate-pulse"
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
-                                        Upload {bulkQueue.filter(item => item.status === 'idle' || item.status === 'error').length} Files
+                                        <span className="material-symbols-outlined text-[18px]">refresh</span>
                                     </button>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Interactive Drag-and-Drop Area */}
-                        <div
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                                e.preventDefault();
-                                handleBulkFileChange(e.dataTransfer.files);
-                            }}
-                            onClick={() => document.getElementById('bulk-file-input')?.click()}
-                            className="border-2 border-dashed border-slate-200 hover:border-[#6605c7] bg-slate-50/50 hover:bg-[#6605c7]/[0.01] rounded-3xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center min-h-[140px] group"
-                        >
-                            <input
-                                id="bulk-file-input"
-                                type="file"
-                                multiple
-                                className="hidden"
-                                onChange={(e) => handleBulkFileChange(e.target.files)}
-                                accept=".pdf,.jpg,.jpeg,.png"
-                            />
-                            <div className="w-14 h-14 bg-white border border-slate-100 shadow-sm rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-[#6605c7] group-hover:scale-105 transition-all mb-4">
-                                <span className="material-symbols-outlined text-[28px]">upload_file</span>
-                            </div>
-                            <p className="text-xs font-bold text-slate-700">
-                                Drag & drop multiple document files here, or <span className="text-[#6605c7] hover:underline">browse files</span>
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-semibold mt-1">Supports PDF, JPG, PNG files up to 5MB each</p>
-                        </div>
-
-                        {/* Upload Queue List */}
-                        {bulkQueue.length > 0 && (
-                            <div className="mt-6 border-t border-slate-100 pt-6 space-y-3">
-                                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">Upload Queue ({bulkQueue.length} files)</h3>
-                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                                    {bulkQueue.map((item) => {
-                                        const options = [
-                                            ...allRequiredDocs.map(r => ({ value: r.type, label: r.label })),
-                                            ...staffRequestedDocs.map(r => ({ value: r.type, label: r.label }))
-                                        ];
-
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {docs.filter(d => d.status === 'available_in_digilocker' && !d.uploaded).map(d => {
+                                        const req = allRequiredDocs.find(rd => rd.type === d.docType);
                                         return (
-                                            <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:border-slate-200 transition-all">
-                                                <div className="flex items-center gap-3.5 min-w-0">
-                                                    <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
-                                                        <span className="material-symbols-outlined text-[18px]">
-                                                            {guessDocType(item.file.name) ? getDocIcon(guessDocType(item.file.name)) : 'description'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <h4 className="text-xs font-bold text-slate-800 truncate max-w-[240px] sm:max-w-[320px]">{item.file.name}</h4>
-                                                        <p className="text-[9px] text-slate-400 font-semibold mt-0.5">{(item.file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                                    </div>
+                                            <div key={d.id || d.docType} className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm flex flex-col items-center text-center group hover:shadow-md transition-all">
+                                                <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                                    <span className="material-symbols-outlined text-emerald-500">{getDocIcon(d.docType)}</span>
                                                 </div>
-
-                                                <div className="flex flex-wrap items-center gap-4">
-                                                    {/* Target Doc Type Selector */}
-                                                    <div className="relative">
-                                                        <select
-                                                            disabled={item.status === 'uploading' || item.status === 'success'}
-                                                            value={item.docType}
-                                                            onChange={(e) => updateQueueItemDocType(item.id, e.target.value)}
-                                                            className="appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 pr-10 text-[11px] font-bold text-slate-700 focus:outline-none focus:border-[#6605c7] transition-all cursor-pointer disabled:opacity-50"
-                                                        >
-                                                            <option value="">Select Document Type...</option>
-                                                            {options.map((opt) => (
-                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                            ))}
-                                                        </select>
-                                                        <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[16px]">expand_more</span>
-                                                    </div>
-
-                                                    {/* Status / Progress Indicator */}
-                                                    <div className="flex items-center gap-3 shrink-0">
-                                                        {item.status === 'idle' && (
-                                                            <span className="px-2 py-0.5 rounded bg-slate-50 border border-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-wider">Ready</span>
-                                                        )}
-                                                        {item.status === 'uploading' && (
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                                    <div className="h-full bg-gradient-to-r from-[#6605c7] to-[#8b5cf6] transition-all duration-300" style={{ width: `${item.progress}%` }} />
-                                                                </div>
-                                                                <span className="text-[10px] font-mono font-bold text-purple-600">{item.progress}%</span>
-                                                            </div>
-                                                        )}
-                                                        {item.status === 'success' && (
-                                                            <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
-                                                                <span className="material-symbols-outlined text-[11px] font-black">check</span> Success
-                                                            </span>
-                                                        )}
-                                                        {item.status === 'error' && (
-                                                            <span className="px-2 py-0.5 rounded bg-rose-50 border border-rose-100 text-rose-700 text-[9px] font-black uppercase tracking-wider flex items-center gap-1" title={item.error}>
-                                                                <span className="material-symbols-outlined text-[11px] font-black">error</span> Error
-                                                            </span>
-                                                        )}
-
-                                                        {/* Action Buttons */}
-                                                        {item.status !== 'uploading' && item.status !== 'success' && (
-                                                            <button
-                                                                onClick={() => removeQueueItem(item.id)}
-                                                                className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-all border border-slate-100 hover:border-rose-100"
-                                                                title="Remove file"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[16px]">delete</span>
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                <h3 className="text-[13px] font-bold text-gray-900 mb-1 line-clamp-1">{req?.label || d.docType}</h3>
+                                                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[8px] font-black uppercase tracking-tighter mb-4">
+                                                    <span className="material-symbols-outlined text-[10px]">verified</span>
+                                                    Verified Source
                                                 </div>
+                                                <button
+                                                    onClick={() => handleSyncFromDigilocker(d.docType)}
+                                                    disabled={!!uploadingDocs[d.docType]}
+                                                    className="w-full py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    {uploadingDocs[d.docType] ? (
+                                                        <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
+                                                    ) : (
+                                                        <span className="material-symbols-outlined text-[14px]">sync</span>
+                                                    )}
+                                                    {uploadingDocs[d.docType] ? "Syncing..." : "Sync to Vault"}
+                                                </button>
                                             </div>
                                         );
                                     })}
                                 </div>
                             </div>
                         )}
-                    </div>
-                </div>
 
-                {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {[...Array(6)].map((_, i) => (
-                            <div key={i} className="h-40 bg-gray-50 rounded-xl animate-pulse" />
-                        ))}
-                    </div>
-                ) : (
-                    <>
-                        {renderDocGroup("Student Documents", "person", studentDocs, () => handleAddOtherDocument("student"))}
-                        {renderDocGroup(`Financial Co-Applicant (${activeProfile.coApplicant?.relation ? activeProfile.coApplicant.relation.charAt(0).toUpperCase() + activeProfile.coApplicant.relation.slice(1) : 'Co-applicant'})`, "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
-                        {renderDocGroup("Father & Mother Documents", "family_restroom", parentDocs, () => handleAddOtherDocument("parent"))}
-                        {staffRequestedDocs.length > 0 && renderDocGroup("Staff Requested Documents", "assignment", staffRequestedDocs)}
+                        {loading ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="h-40 bg-gray-50 rounded-xl animate-pulse" />
+                                ))}
+                            </div>
+                        ) : (
+                            <>
+                                {renderDocGroup("Student Documents", "person", studentDocs, () => handleAddOtherDocument("student"))}
+                                {renderDocGroup(`Financial Co-Applicant (${activeProfile.coApplicant?.relation ? activeProfile.coApplicant.relation.charAt(0).toUpperCase() + activeProfile.coApplicant.relation.slice(1) : 'Co-applicant'})`, "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
+                                {renderDocGroup("Father & Mother Documents", "family_restroom", parentDocs, () => handleAddOtherDocument("parent"))}
+                                {staffRequestedDocs.length > 0 && renderDocGroup("Staff Requested Documents", "assignment", staffRequestedDocs)}
+                            </>
+                        )}
+
+                        <div className="mt-12 bg-[#1a1a2e] rounded-xl p-8 text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5">
+                                <span className="material-symbols-outlined text-9xl">shield_lock</span>
+                            </div>
+                            <div className="relative z-10 max-w-2xl">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest mb-4 border border-white/5">
+                                    <span className="material-symbols-outlined text-[14px] text-emerald-400">lock</span>
+                                    Security Choice
+                                </div>
+                                <h2 className="text-xl font-bold mb-4">Privacy & Data Protection</h2>
+                                <p className="text-gray-400 text-[13px] leading-relaxed mb-6">
+                                    Your documents are encrypted using AES-256 military-grade encryption before being stored.
+                                    Only authorized bank officials can access them during your application review process.
+                                    We never share your personal data with third parties.
+                                </p>
+                                <div className="flex flex-wrap gap-3">
+                                    <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                                        <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> 256-bit SSL
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                                        <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> GDPR Compliant
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                                        <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> ISO 27001
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </>
-                )}
-
-                <div className="mt-12 bg-[#1a1a2e] rounded-xl p-8 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <span className="material-symbols-outlined text-9xl">shield_lock</span>
-                    </div>
-                    <div className="relative z-10 max-w-2xl">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest mb-4 border border-white/5">
-                            <span className="material-symbols-outlined text-[14px] text-emerald-400">lock</span>
-                            Security Choice
-                        </div>
-                        <h2 className="text-xl font-bold mb-4">Privacy & Data Protection</h2>
-                        <p className="text-gray-400 text-[13px] leading-relaxed mb-6">
-                            Your documents are encrypted using AES-256 military-grade encryption before being stored.
-                            Only authorized bank officials can access them during your application review process.
-                            We never share your personal data with third parties.
-                        </p>
-                        <div className="flex flex-wrap gap-3">
-                            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
-                                <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> 256-bit SSL
-                            </div>
-                            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
-                                <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> GDPR Compliant
-                            </div>
-                            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
-                                <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> ISO 27001
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </>
                 )}
             </div>
 

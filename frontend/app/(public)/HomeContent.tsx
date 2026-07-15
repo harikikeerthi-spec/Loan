@@ -235,8 +235,8 @@ function TestimonialsCarousel() {
                             key={idx}
                             onClick={() => setCurrentIndex(idx)}
                             className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === currentIndex
-                                    ? 'bg-[#6605c7] w-8'
-                                    : 'bg-[#6605c7]/20 hover:bg-[#6605c7]/40'
+                                ? 'bg-[#6605c7] w-8'
+                                : 'bg-[#6605c7]/20 hover:bg-[#6605c7]/40'
                                 }`}
                         />
                     ))}
@@ -645,10 +645,9 @@ export default function HomeContent() {
                             className="mt-12 flex flex-wrap justify-center gap-12 text-center border-t border-black/5 pt-12"
                         >
                             {[
-                                { num: "7", label: "AI Tools" },
                                 { num: "3,000+", label: "Universities Covered" },
                                 { num: "98%", label: "Accuracy Rate" },
-                                { num: "50,000+", label: "Students Helped" }
+                                { num: "1000+", label: "Students Helped" }
                             ].map((s, idx) => (
                                 <motion.div
                                     key={s.label}

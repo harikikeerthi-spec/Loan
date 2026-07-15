@@ -4,6 +4,7 @@ import { useUserDossier } from "../DossierContext";
 import { EVVTestAgent } from "@/components/staff/EVVTestAgent";
 import { motion } from "framer-motion";
 import { type EVVResult } from "@/lib/evv-parser";
+import { adminApi } from "@/lib/api";
 
 export default function EvvTab() {
     const { userApplications, refreshData } = useUserDossier();
@@ -12,9 +13,26 @@ export default function EvvTab() {
     const activeApp = userApplications && userApplications.length > 0 ? userApplications[0] : null;
 
     const handleEVVComplete = async (result: EVVResult) => {
-        // Optionally send the result to the backend to save
-        console.log("EVV Analysis Complete:", result);
-        refreshData();
+        if (!activeApp) return;
+        try {
+            const payload = {
+                evvOverall: result.overallEVV,
+                evvStatus: "COMPUTED",
+                evvMonthlyBreakdown: result.monthlyMetrics.map(m => ({
+                    label: m.label,
+                    points: m.points,
+                    averageBalance: m.avg,
+                    min: m.min,
+                    max: m.max,
+                    evv: m.avg
+                }))
+            };
+            await adminApi.updateApplication(activeApp.id || activeApp._id, payload);
+            console.log("EVV Analysis Complete and stored on DB:", result);
+            await refreshData();
+        } catch (err) {
+            console.error("Failed to save EVV analysis to DB:", err);
+        }
     };
 
     return (
