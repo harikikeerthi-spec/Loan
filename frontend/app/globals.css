@@ -1014,3 +1014,15 @@ input[type="range"]::-moz-range-thumb:hover {
 .divider:not(:empty)::after {
   margin-left: .5em;
 }
+
+/* Premium Card (Dashboard) */
+.premium-card {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.premium-card:hover {
+  box-shadow: 
+    0 25px 50px rgba(139, 92, 246, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.8);
+}

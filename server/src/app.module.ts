@@ -28,6 +28,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { CampaignModule } from './campaign/campaign.module';
 import { AgentModule } from './agent/agent.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { AgentModule } from './agent/agent.module';
     NotificationModule,
     CampaignModule,
     AgentModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

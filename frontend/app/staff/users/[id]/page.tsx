@@ -262,7 +262,11 @@ export default function ProfileTab() {
             lastName: userData?.lastName || "",
             email: userData?.email || "",
             phoneNumber: userData?.phoneNumber || userData?.mobile || userData?.phone || "",
-            dateOfBirth: userData?.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : "",
+            dateOfBirth: (() => {
+                if (!userData?.dateOfBirth) return "";
+                const d = new Date(userData.dateOfBirth);
+                return isNaN(d.getTime()) ? "" : d.toISOString().split('T')[0];
+            })(),
             nationality: typeof userData?.nationality === 'object' ? (userData?.nationality?.name || "") : (userData?.nationality || "Indian"),
             studyDestination: userData?.studyDestination || userData?.countryOfEducation || "",
 

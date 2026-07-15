@@ -689,6 +689,8 @@ export class KycService {
     }
 
     private parseAiResponse(response: string, docType: string): KycExtractionResult {
+        console.log("=== RAW AI RESPONSE ===");
+        console.log(response);
         try {
             const cleaned = response.replace(/```json/gi, '').replace(/```/g, '').trim();
             const jsonStart = cleaned.indexOf('{');

@@ -76,13 +76,13 @@ export class AuthService {
 
     const domainLower = domain.toLowerCase();
     return tempEmailDomains.some(d => domainLower === d || domainLower.endsWith('.' + d)) ||
-                        domainLower.includes('tempmail') ||
-                        domainLower.includes('temp-mail') ||
-                        domainLower.includes('disposable') ||
-                        domainLower.includes('throwaway') ||
-                        domainLower.includes('10minutemail') ||
-                        domainLower.includes('fakeinbox') ||
-                        domainLower.includes('yopmail');
+      domainLower.includes('tempmail') ||
+      domainLower.includes('temp-mail') ||
+      domainLower.includes('disposable') ||
+      domainLower.includes('throwaway') ||
+      domainLower.includes('10minutemail') ||
+      domainLower.includes('fakeinbox') ||
+      domainLower.includes('yopmail');
   }
 
   constructor(
@@ -104,11 +104,11 @@ export class AuthService {
   private resolveBankIdFromEmail(email: string): { bankId: string | null; bankName: string | null } {
     if (!email) return { bankId: null, bankName: null };
     const lower = email.toLowerCase().trim();
-    if (lower.includes('auxilo') || lower === 'luharika28@gmail.com')         return { bankId: 'auxilo',     bankName: 'Auxilo Finserve' };
-    if (lower.includes('avanse') || lower === 'ropayi2211@aspensif.com')      return { bankId: 'avanse',     bankName: 'Avanse Financial' };
+    if (lower.includes('auxilo') || lower === 'luharika28@gmail.com') return { bankId: 'auxilo', bankName: 'Auxilo Finserve' };
+    if (lower.includes('avanse') || lower === 'ropayi2211@aspensif.com') return { bankId: 'avanse', bankName: 'Avanse Financial' };
     if (lower.includes('credila') || lower.includes('hdfc') || lower === 'keerthichinnu0728@gmail.com') return { bankId: 'credila', bankName: 'HDFC Credila' };
-    if (lower.includes('idfc') || lower === 'abhimadasu4@gmail.com')          return { bankId: 'idfc',       bankName: 'IDFC FIRST Bank' };
-    if (lower.includes('poonawalla') || lower === 'farmatech@gmail.com')      return { bankId: 'poonawalla', bankName: 'Poonawalla Fincorp' };
+    if (lower.includes('idfc') || lower === 'abhimadasu4@gmail.com') return { bankId: 'idfc', bankName: 'IDFC FIRST Bank' };
+    if (lower.includes('poonawalla') || lower === 'farmatech@gmail.com') return { bankId: 'poonawalla', bankName: 'Poonawalla Fincorp' };
     return { bankId: null, bankName: null };
   }
 
@@ -351,8 +351,8 @@ export class AuthService {
     } catch (emailError) {
       console.warn(`[AuthService] SMTP failed to send email but OTP is generated: ${otp}`, emailError);
     }
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: 'OTP sent successfully',
       ...(process.env.NODE_ENV === 'development' ? { otp } : {})
     };
@@ -463,7 +463,7 @@ export class AuthService {
   async verifyOtpUnified(email: string, otp: string) {
     // Verify OTP (with '123456' E2E master bypass for automated staff validation)
     const stored = this.otps.get(email);
-    
+
     if (otp !== '123456') {
       if (!stored || stored.otp !== otp) {
         throw new BadRequestException('Invalid OTP. Please enter the right one to login.');
@@ -511,11 +511,11 @@ export class AuthService {
 
       // Notify other modules (like Chat) about user activity
       this.eventEmitter.emit('user.login', {
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phoneNumber: user.phoneNumber,
-          isNewUser
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phoneNumber: user.phoneNumber,
+        isNewUser
       });
 
       // Format date of birth if it exists
@@ -556,7 +556,7 @@ export class AuthService {
       };
     }
   }
-  
+
   /**
    * Handle Firebase Authentication
    * Verifies Firebase token, syncs user with DB, and returns internal JWT
@@ -624,11 +624,11 @@ export class AuthService {
       const tokens = await this.generateTokens(user);
 
       this.eventEmitter.emit('user.login', {
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phoneNumber: user.phoneNumber,
-          isNewUser
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phoneNumber: user.phoneNumber,
+        isNewUser
       });
 
       // Format date of birth if it exists

@@ -220,11 +220,25 @@ export default function IncomingQueuePage() {
         }
     }, [followUpKey]);
 
-    const saveFollowUp = (appId: string, studentName: string, appNumber: string) => {
+    const saveFollowUp = async (appId: string, studentName: string, appNumber: string) => {
         if (!tempFollowUpDate) {
             alert("Please select a date.");
             return;
         }
+
+        if (tempFollowUpNotes.trim()) {
+            try {
+                await adminApi.addRemark(appId, {
+                    type: "note",
+                    content: tempFollowUpNotes.trim(),
+                    authorName: "Staff Member",
+                    isInternal: true,
+                } as any);
+            } catch (err) {
+                console.error("Failed to add follow-up notes as internal note:", err);
+            }
+        }
+
         const updated = {
             ...followUpDates,
             [appId]: {

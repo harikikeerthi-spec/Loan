@@ -1161,3 +1161,218 @@ model Parent {
   @@index([userId])
   @@map("parents")
 }
+
+// ─── Support Ticket Management ────────────────────────────────────────────────
+
+model SupportTicket {
+  id           String @id @default(uuid())
+  ticketNumber String @unique // TKT-00001 format
+
+  subject     String
+  description String @db.Text
+  category    String // Loan Application, OCR, EVV, Payment, etc.
+  priority    String @default("medium") // critical, high, medium, low
+  status      String @default("open") // open, assigned, in_progress, waiting_customer, resolved, closed
+  source      String @default("web")
+
+  // Creator
+  createdById    String
+  createdByName  String
+  createdByEmail String
+  createdByRole  String // user, agent, staff, bank, admin
+
+  // Assignment
+  assignedToId   String?
+  assignedToName String?
+  teamId         String?
+  teamName       String?
+  departmentId   String?
+  departmentName String?
+
+  // Related loan context
+  loanApplicationId  String?
+  loanApplicationNum String?
+  loanStage          String?
+  studentId          String?
+  studentName        String?
+  assignedAgentId    String?
+  assignedBankerId   String?
+  universityName     String?
+
+  // SLA
+  slaBreached     Boolean   @default(false)
+  slaResponseAt   DateTime?
+  slaResolveAt    DateTime?
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  reopenedAt      DateTime?
+
+  // Satisfaction
+  satisfactionScore Int?
+  satisfactionNote  String?
+
+  tags String[]
+
+  comments      SupportComment[]
+  attachments   SupportAttachment[]
+  activityLogs  SupportActivityLog[]
+  notifications SupportNotification[]
+  watchers      SupportWatcher[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@index([slaBreached])
+  @@index([ticketNumber])
+}
+
+model SupportComment {
+  id       String        @id @default(uuid())
+  ticketId String
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  authorId   String
+  authorName String
+  authorRole String
+  content    String  @db.Text
+  type       String  @default("public") // public, internal_note
+  isInternal Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ticketId])
+  @@index([authorId])
+}
+
+model SupportAttachment {
+  id       String        @id @default(uuid())
+  ticketId String
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  fileName       String
+  filePath       String
+  fileSize       Int?
+  mimeType       String?
+  uploadedBy     String
+  uploadedByName String
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model SupportActivityLog {
+  id       String        @id @default(uuid())
+  ticketId String
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  actorId   String
+  actorName String
+  action    String // created, status_changed, priority_changed, assigned, commented, resolved, closed, reopened
+  oldValue  String?
+  newValue  String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+model SupportNotification {
+  id       String         @id @default(uuid())
+  ticketId String?
+  ticket   SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  userId   String
+  title    String
+  message  String
+  type     String // new_ticket, assigned, status_changed, comment_added, resolved
+  isRead   Boolean   @default(false)
+  readAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([ticketId])
+  @@index([isRead])
+}
+
+model SupportWatcher {
+  id       String        @id @default(uuid())
+  ticketId String
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId   String
+  userName String
+
+  createdAt DateTime @default(now())
+
+  @@unique([ticketId, userId])
+}
+
+model SupportCategory {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  color       String?
+  teamId      String?
+  isActive    Boolean @default(true)
+  isDefault   Boolean @default(false)
+  sortOrder   Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model SupportTeam {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+  email       String?
+  color       String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SupportSLA {
+  id              String  @id @default(uuid())
+  priority        String  @unique // critical, high, medium, low
+  responseMinutes Int
+  resolveMinutes  Int
+  isActive        Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+
+model KnowledgeBaseArticle {
+  id          String  @id @default(uuid())
+  title       String
+  slug        String  @unique
+  content     String  @db.Text
+  category    String
+  tags        String[]
+  isPublished Boolean @default(false)
+  views       Int     @default(0)
+
+  authorId   String
+  authorName String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPublished])
+}

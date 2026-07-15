@@ -56,21 +56,21 @@ export class AuthController {
         message: 'Access Denied: Agent privileges required.',
       };
     }
-    
+
     const result = await this.authService.sendOtpUnified(body.email);
-    
+
     let businessName = `${user.firstName || 'Partner'} Agency`;
     try {
       const fs = require('fs');
       const path = require('path');
       const profilePath = path.join(process.cwd(), 'scratch', 'agent_profiles.json');
       if (fs.existsSync(profilePath)) {
-         const data = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
-         if (data[user.id] && data[user.id].businessName) {
-            businessName = data[user.id].businessName;
-         }
+        const data = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+        if (data[user.id] && data[user.id].businessName) {
+          businessName = data[user.id].businessName;
+        }
       }
-    } catch(e) {}
+    } catch (e) { }
 
     return {
       ...result,
@@ -107,7 +107,7 @@ export class AuthController {
       };
     }
     const result = await this.authService.verifyOtpUnified(body.email, body.otp);
-    
+
     // Read referral code from body OR request cookie
     let referralCode = body.referralCode;
     if (!referralCode && req.headers?.cookie) {
@@ -126,7 +126,7 @@ export class AuthController {
         console.error('Failed to record referral during signup:', error);
       }
     }
-    
+
     return result;
   }
 

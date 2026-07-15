@@ -164,6 +164,7 @@ export function normalizeAcademicScore(score?: string | number, grading?: string
 export function percentageFromTotalMarks(
     secured?: string | number,
     maximum?: string | number,
+    level?: AcademicLevel,
 ): string | undefined {
     const sec = parseFloat(String(secured ?? '').replace(/[^\d.]/g, ''));
     const max = parseFloat(String(maximum ?? '').replace(/[^\d.]/g, ''));
@@ -171,7 +172,14 @@ export function percentageFromTotalMarks(
         return String(Math.round((sec / max) * 1000) / 10);
     }
     if (!isNaN(sec) && sec > 100 && sec < 1200) {
-        const inferredMax = 1000;
+        let inferredMax = 1000;
+        if (level === 'grade10') {
+            inferredMax = sec <= 500 ? 500 : 600;
+        } else if (level === 'grade12') {
+            inferredMax = sec <= 600 ? 600 : 1000;
+        } else {
+            inferredMax = sec <= 500 ? 500 : sec <= 600 ? 600 : 1000;
+        }
         return String(Math.round((sec / inferredMax) * 1000) / 10);
     }
     return undefined;
@@ -304,7 +312,7 @@ export function canonicalizeAcademicFields(
     let score: string | number | undefined =
         raw.percentage ||
         raw.overall_percentage ||
-        percentageFromTotalMarks(marksSecured, marksMaximum);
+        percentageFromTotalMarks(marksSecured, marksMaximum, level);
 
     if (!score && hasGpa) {
         score = raw.overall_gpa ?? raw.gpa ?? raw.cgpa;
@@ -320,7 +328,7 @@ export function canonicalizeAcademicFields(
 
     let converted = false;
     if (marksSecured != null && marksSecured !== '') {
-        const pctFromMarks = percentageFromTotalMarks(marksSecured, marksMaximum);
+        const pctFromMarks = percentageFromTotalMarks(marksSecured, marksMaximum, level);
         if (pctFromMarks) {
             score = pctFromMarks;
             grading = 'Percentage';

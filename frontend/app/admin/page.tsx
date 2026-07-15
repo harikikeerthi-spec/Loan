@@ -9,6 +9,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import CampaignsDashboard from "@/components/Admin/CampaignsDashboard";
 import AdminBanksSection from "@/components/Admin/AdminBanksSection";
+import SupportCenter from "@/components/Admin/SupportCenter";
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -184,6 +185,7 @@ export default function AdminDashboardPage() {
     const [filterToDate, setFilterToDate] = useState("");
     const [filterBlogTime, setFilterBlogTime] = useState("all");
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [supportExpanded, setSupportExpanded] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [pendingCount, setPendingCount] = useState(0);
 
@@ -687,6 +689,24 @@ export default function AdminDashboardPage() {
         { section: "audit_logs", icon: "policy", label: "Audit Logs", badge: 0 },
     ];
 
+    // Support Center sub-nav items
+    const supportNavItems = [
+        { section: "support_dashboard", icon: "dashboard", label: "Dashboard" },
+        { section: "support_all", icon: "confirmation_number", label: "All Tickets" },
+        { section: "support_open", icon: "radio_button_unchecked", label: "Open Tickets" },
+        { section: "support_assigned", icon: "person", label: "Assigned To Me" },
+        { section: "support_waiting", icon: "hourglass_empty", label: "Waiting Customer" },
+        { section: "support_resolved", icon: "check_circle", label: "Resolved" },
+        { section: "support_closed", icon: "lock", label: "Closed" },
+        { section: "support_high", icon: "priority_high", label: "High Priority" },
+        { section: "support_sla", icon: "timer", label: "SLA Monitor" },
+        { section: "support_categories", icon: "category", label: "Categories" },
+        { section: "support_teams", icon: "groups", label: "Teams" },
+        { section: "support_analytics", icon: "bar_chart", label: "Analytics" },
+        { section: "support_kb", icon: "menu_book", label: "Knowledge Base" },
+        { section: "support_settings", icon: "settings", label: "Settings" },
+    ];
+
     // ─── Section Title Map ──────────────────────────────────────────────────────
     const sectionTitles: Record<string, string> = {
         overview: 'Dashboard',
@@ -700,6 +720,21 @@ export default function AdminDashboardPage() {
         chat: 'Student Chat',
         community: 'Community Forum',
         audit_logs: 'Audit Logs',
+        // Support Center
+        support_dashboard: 'Support Center · Dashboard',
+        support_all: 'Support Center · All Tickets',
+        support_open: 'Support Center · Open Tickets',
+        support_assigned: 'Support Center · Assigned To Me',
+        support_waiting: 'Support Center · Waiting For Customer',
+        support_resolved: 'Support Center · Resolved',
+        support_closed: 'Support Center · Closed',
+        support_high: 'Support Center · High Priority',
+        support_sla: 'Support Center · SLA Monitor',
+        support_categories: 'Support Center · Categories',
+        support_teams: 'Support Center · Teams',
+        support_analytics: 'Support Center · Analytics',
+        support_kb: 'Support Center · Knowledge Base',
+        support_settings: 'Support Center · Settings',
     };
 
     // Helper component for rendering detail rows in the drawer
@@ -735,6 +770,35 @@ export default function AdminDashboardPage() {
                     {navItems.map(item => (
                         <NavItem key={item.section} {...item} active={activeSection} onClick={setActiveSection} />
                     ))}
+
+                    {/* ── Support Center ── */}
+                    <div className="px-2 mt-4 mb-1">
+                        <div className="border-t border-slate-800 pt-3" />
+                        <button
+                            onClick={() => { setSupportExpanded(e => !e); if (!supportExpanded) setActiveSection('support_dashboard'); }}
+                            className={`w-full text-left px-3 py-1.5 rounded flex items-center gap-3 transition-colors text-xs font-medium ${activeSection.startsWith('support_') ? 'bg-violet-500/10 text-violet-400' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                        >
+                            <span className={`material-symbols-outlined text-[16px] ${activeSection.startsWith('support_') ? 'text-violet-400' : 'text-slate-500'}`}>support_agent</span>
+                            <span className="flex-1">Support Center</span>
+                            <span className="material-symbols-outlined text-[14px] opacity-50">{supportExpanded || activeSection.startsWith('support_') ? 'expand_less' : 'expand_more'}</span>
+                        </button>
+                        {(supportExpanded || activeSection.startsWith('support_')) && (
+                            <div className="ml-3 mt-0.5 space-y-0.5 border-l border-slate-700/50 pl-2">
+                                {supportNavItems.map(item => (
+                                    <button
+                                        key={item.section}
+                                        onClick={() => setActiveSection(item.section)}
+                                        className={`w-full text-left px-2 py-1 rounded flex items-center gap-2 transition-colors text-[11px] ${
+                                            activeSection === item.section ? 'bg-violet-500/10 text-violet-400' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-300'
+                                        }`}
+                                    >
+                                        <span className={`material-symbols-outlined text-[13px] ${activeSection === item.section ? 'text-violet-400' : 'text-slate-500'}`}>{item.icon}</span>
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </nav>
 
                 <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex-shrink-0">
@@ -802,6 +866,17 @@ export default function AdminDashboardPage() {
                 </header>
 
                 <div className="p-6 lg:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/50">
+                    {/* ─── Support Center ─── */}
+                    {activeSection.startsWith('support_') && (
+                        <div className="max-w-[1400px] mx-auto">
+                            <SupportCenter
+                                activeView={activeSection}
+                                setActiveSection={setActiveSection}
+                                user={user}
+                            />
+                        </div>
+                    )}
+
                     {activeSection === "overview" && (
                         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in">
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

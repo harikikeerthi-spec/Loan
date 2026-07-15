@@ -1119,7 +1119,7 @@ export const documentApi = {
         apiFetch(HttpApiPaths.documents.byUserIdAndDocType(userId, docType), {
             method: "DELETE",
         }),
-        
+
     deleteFile: (userId: string, docType: string) =>
         apiFetch(`${HttpApiPaths.documents.byUserIdAndDocType(userId, docType)}/file`, {
             method: "DELETE",
@@ -1531,5 +1531,63 @@ export const campaignApi = {
     cancel: (id: string) => apiFetch(`${API_URL}/campaigns/${id}/cancel`, { method: "POST" }),
 };
 
+// ─── Support Ticket API ───────────────────────────────────────────────────────
+
+export const supportApi = {
+    // Tickets
+    getTickets: (params: Record<string, any> = {}) => {
+        const q = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '' && v !== null) q.set(k, String(v)); });
+        return apiFetch(`${API_URL}/support/tickets?${q.toString()}`);
+    },
+    getTicket: (id: string) => apiFetch(`${API_URL}/support/tickets/${id}`),
+    createTicket: (data: any) => apiFetch(`${API_URL}/support/tickets`, { method: "POST", body: JSON.stringify(data) }),
+    updateTicket: (id: string, data: any) => apiFetch(`${API_URL}/support/tickets/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    updateStatus: (id: string, status: string, reason?: string) =>
+        apiFetch(`${API_URL}/support/tickets/${id}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
+    updatePriority: (id: string, priority: string) =>
+        apiFetch(`${API_URL}/support/tickets/${id}/priority`, { method: "PATCH", body: JSON.stringify({ priority }) }),
+    assignTicket: (id: string, data: any) =>
+        apiFetch(`${API_URL}/support/tickets/${id}/assign`, { method: "PATCH", body: JSON.stringify(data) }),
+    addComment: (id: string, content: string) =>
+        apiFetch(`${API_URL}/support/tickets/${id}/comment`, { method: "POST", body: JSON.stringify({ content, isInternal: false }) }),
+    addInternalNote: (id: string, content: string) =>
+        apiFetch(`${API_URL}/support/tickets/${id}/internal-note`, { method: "POST", body: JSON.stringify({ content, isInternal: true }) }),
+
+    // Dashboard & Analytics
+    getDashboard: () => apiFetch(`${API_URL}/support/dashboard`),
+    getAnalytics: (params: Record<string, any> = {}) => {
+        const q = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => { if (v) q.set(k, String(v)); });
+        return apiFetch(`${API_URL}/support/analytics?${q.toString()}`);
+    },
+
+    // Categories
+    getCategories: () => apiFetch(`${API_URL}/support/categories`),
+    createCategory: (data: any) => apiFetch(`${API_URL}/support/categories`, { method: "POST", body: JSON.stringify(data) }),
+
+    // Teams
+    getTeams: () => apiFetch(`${API_URL}/support/teams`),
+    createTeam: (data: any) => apiFetch(`${API_URL}/support/teams`, { method: "POST", body: JSON.stringify(data) }),
+
+    // SLA
+    getSLA: () => apiFetch(`${API_URL}/support/sla`),
+    updateSLA: (priority: string, data: any) =>
+        apiFetch(`${API_URL}/support/sla/${priority}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+    // Knowledge Base
+    getKBArticles: (params: Record<string, any> = {}) => {
+        const q = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => { if (v) q.set(k, String(v)); });
+        return apiFetch(`${API_URL}/support/knowledge-base?${q.toString()}`);
+    },
+    createKBArticle: (data: any) => apiFetch(`${API_URL}/support/knowledge-base`, { method: "POST", body: JSON.stringify(data) }),
+
+    // Notifications
+    getNotifications: () => apiFetch(`${API_URL}/support/notifications`),
+    markNotificationRead: (id: string) => apiFetch(`${API_URL}/support/notifications/${id}/read`, { method: "PATCH" }),
+};
+
 /** Shared REST path builders + staff-dashboard catalog (single source for URLs). */
 export { HTTP_API_PREFIX, HttpApiPaths, staffDashboardApiCatalog } from "./http-api-paths";
+

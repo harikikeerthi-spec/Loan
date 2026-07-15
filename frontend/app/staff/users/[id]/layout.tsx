@@ -51,8 +51,8 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
         activeTab = "applications";
     } else if (pathname.endsWith("/evv")) {
         activeTab = "evv";
-    } else if (pathname.endsWith("/calendar")) {
-        activeTab = "calendar";
+    } else if (pathname.endsWith("/follow-ups")) {
+        activeTab = "follow-ups";
     } else if (pathname.endsWith("/notes")) {
         activeTab = "notes";
     } else if (pathname.endsWith("/documents")) {
@@ -101,7 +101,7 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
         { id: "profile", label: "Profile Details", path: `/staff/users/${userId}`, icon: "badge" },
         { id: "applications", label: "Bank Applications", path: `/staff/users/${userId}/applications`, icon: "article", badge: userApplications.length > 0 ? userApplications.length : undefined },
         { id: "evv", label: "EVV Analysis", path: `/staff/users/${userId}/evv`, icon: "payments" },
-        { id: "calendar", label: "Events & Calendar", path: `/staff/users/${userId}/calendar`, icon: "calendar_month" },
+        { id: "follow-ups", label: "Follow-ups", path: `/staff/users/${userId}/follow-ups`, icon: "assignment_turned_in" },
         { id: "notes", label: "Internal Notes", path: `/staff/users/${userId}/notes`, icon: "sticky_note_2" },
         { id: "documents", label: "Documents", path: `/staff/users/${userId}/documents`, icon: "folder" }
     ];

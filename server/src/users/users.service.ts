@@ -55,14 +55,14 @@ export class UsersService {
    */
   private convertToIndiaTime(utcDate: string | Date | null | undefined): string | null {
     if (!utcDate) return null;
-    
+
     try {
       const date = utcDate instanceof Date ? utcDate : new Date(utcDate);
       if (isNaN(date.getTime())) return null;
 
       // Convert to IST (UTC+5:30)
       const istDate = new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
-      
+
       const year = istDate.getUTCFullYear();
       const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
       const day = String(istDate.getUTCDate()).padStart(2, '0');
@@ -259,13 +259,13 @@ export class UsersService {
   private generateNonStudentUserId(role?: string, email?: string): string {
     if (email) {
       if (role === 'agent') return `VL-AGT-${this.emailToNum(email, 5)}`;
-      if (role === 'bank')  return `VL-BNK-${this.emailToNum(email, 3)}`;
+      if (role === 'bank') return `VL-BNK-${this.emailToNum(email, 3)}`;
     }
 
     // Fallback: random (no email supplied)
     const seq5 = String(randomInt(0, 100_000)).padStart(5, '0');
     if (role === 'agent') return `VL-AGT-${seq5}`;
-    if (role === 'bank')  return `VL-BNK-${String(randomInt(0, 1_000)).padStart(3, '0')}`;
+    if (role === 'bank') return `VL-BNK-${String(randomInt(0, 1_000)).padStart(3, '0')}`;
     return `VL-AGT-${seq5}`; // default fallback
   }
 
@@ -377,14 +377,14 @@ export class UsersService {
     } catch (err) {
       console.error('[UsersService.create] Failed to populate referral_codes table:', err);
     }
-    
+
     console.log('User created in DB:', { user, keys: Object.keys(user || {}), hasId: !!user?.id, staffId: user?.staffId });
     return user;
   }
 
   async findAll(limit?: number, offset?: number, search?: string, role?: string, excludeRoles?: string[]) {
     let query = this.db.from('User').select('*', { count: 'exact' });
-    
+
     if (search) {
       query = query.or(`firstName.ilike.%${search}%,lastName.ilike.%${search}%,email.ilike.%${search}%`);
     }
@@ -414,10 +414,10 @@ export class UsersService {
       const to = from + limit - 1;
       query = query.range(from, to);
     }
-    
+
     const { data, count, error } = await query;
     if (error) throw error;
-    
+
     return {
       data: data || [],
       total: count || 0
@@ -428,7 +428,7 @@ export class UsersService {
     const { count: bank } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'bank');
     const { count: staff } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.staff,role.eq.staff_admin');
     const total = (bank || 0) + (staff || 0);
-    
+
     return {
       total: total || 0,
       student: 0,
@@ -485,7 +485,7 @@ export class UsersService {
             .from('LoanApplication')
             .update(appPayload)
             .eq('userId', data.id);
-            
+
           if (appErr) {
             console.warn(`[UsersService.updateUserDetails] Failed to sync details to LoanApplication: ${appErr.message}`);
           } else {
@@ -504,7 +504,7 @@ export class UsersService {
   async updateExtractedDetails(userId: string, details: any, docType?: string) {
     try {
       console.log(`[UsersService.updateExtractedDetails] Updating details for user: ${userId}`);
-      
+
       const currentUser = await this.findById(userId);
       if (!currentUser) {
         console.warn(`[UsersService.updateExtractedDetails] User not found: ${userId}`);
@@ -512,7 +512,7 @@ export class UsersService {
       }
 
       const payload: any = {};
-      
+
       const compareAndSet = (currentVal: any, newVal: any, key: string) => {
         if (newVal === undefined || newVal === null) return;
         const cleanCurrent = String(currentVal || '').trim().toLowerCase();
@@ -521,7 +521,7 @@ export class UsersService {
           payload[key] = newVal;
         }
       };
-      
+
       if (details.documentVerified !== undefined) {
         if (currentUser.documentVerified !== details.documentVerified) {
           payload.documentVerified = details.documentVerified;
@@ -532,7 +532,7 @@ export class UsersService {
       const extractedName = extractFullNameFromOcrRaw(details, docType);
       if (extractedName && typeof extractedName === 'string' && extractedName.trim()) {
         const nameToSave = extractedName.trim();
-        
+
         let family = currentUser.family;
         if (typeof family === 'string') {
           try { family = JSON.parse(family); } catch { family = {}; }
@@ -569,12 +569,12 @@ export class UsersService {
           updated = true;
           relation = 'coapplicant';
         }
-        
+
         if (relation) {
           const aadharNum = details.aadhaar_number || details.aadhar_number || details.aadharNumber;
           const panNum = details.pan_number || details.panNumber;
           const parentName = nameToSave || details.name || details.fullName;
-          
+
           await this.upsertParentRecord(userId, relation, {
             name: parentName,
             aadharNumber: aadharNum,
@@ -583,10 +583,10 @@ export class UsersService {
             console.error(`[UsersService.updateExtractedDetails] Failed to upsert parent record for ${relation}:`, err.message);
           });
         }
-        
+
         if (updated) {
           console.log(`[UsersService.updateExtractedDetails] Automatically updated name for ${docType}: ${nameToSave}`);
-          
+
           // Also update any active LoanApplications for this user to keep them in sync
           try {
             const appUpdatePayload: any = {};
@@ -636,18 +636,18 @@ export class UsersService {
         // If it's a "column does not exist" error (PGRST204), log it but don't fail
         if (error.code === 'PGRST204' || error.message.includes('column')) {
           console.warn(`[UsersService.updateExtractedDetails] Could not update some fields because columns are missing in DB: ${error.message}`);
-          
+
           // Try updating ONLY the verified columns we know exist
           const safePayload: any = {};
           if (payload.firstName) safePayload.firstName = payload.firstName;
           if (payload.lastName) safePayload.lastName = payload.lastName;
           if (payload.dateOfBirth) safePayload.dateOfBirth = payload.dateOfBirth;
           if (payload.gender) safePayload.gender = payload.gender;
-          
+
           if (Object.keys(safePayload).length > 0) {
             await this.db.from('User').update(safePayload).eq('id', userId);
           }
-          
+
           return { success: true, warning: 'Some fields skipped due to missing columns' };
         }
         throw error;
@@ -677,7 +677,7 @@ export class UsersService {
   async updateUserRole(email: string, role: 'admin' | 'user' | 'staff' | 'super_admin' | 'agent' | 'bank' | 'student') {
     // If changing to staff role, generate a staff ID if not already present
     let updatePayload: any = { role };
-    
+
     if (role === 'staff') {
       // Check if user already has a staff ID
       const existingUser = await this.findOne(email);
@@ -748,7 +748,7 @@ export class UsersService {
   public async generateApplicationNumber(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `VL-APP-${year}-`;
-    
+
     try {
       const { data, error } = await this.db
         .from('LoanApplication')
@@ -821,48 +821,48 @@ export class UsersService {
     await this.validateApplicationConstraints(userId, bank, country, universityName);
 
     const now = new Date().toISOString();
-    
+
     // Generate sequential local application number on creation
     const applicationNumber = await this.generateApplicationNumber();
-    
+
     // Calculate estimated completion (14 days from now)
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
-    
+
     const courseName = data.courseName || data.programFocus || data.program || data.courseType || null;
 
     const insertPayload: any = {
-        userId,
-        bank: data.bank,
-        loanType: data.loanType,
-        amount: data.amount,
-        purpose: data.purpose || null,
-        universityName,
-        country: data.country || null,
-        courseName,
-        firstName: data.firstName || null,
-        lastName: data.lastName || null,
-        email: data.email || null,
-        phone: data.phone || null,
-        dateOfBirth: this.parseDate(data.dateOfBirth),
+      userId,
+      bank: data.bank,
+      loanType: data.loanType,
+      amount: data.amount,
+      purpose: data.purpose || null,
+      universityName,
+      country: data.country || null,
+      courseName,
+      firstName: data.firstName || null,
+      lastName: data.lastName || null,
+      email: data.email || null,
+      phone: data.phone || null,
+      dateOfBirth: this.parseDate(data.dateOfBirth),
 
-        address: data.address || null,
-        hasCoApplicant: !!data.coApplicant && data.coApplicant !== 'none',
-        coApplicantName: data.coApplicantName || null,
-        coApplicantRelation: data.coApplicant !== 'none' ? data.coApplicant : null,
-        coApplicantIncome: data.income ? parseFloat(data.income) : null,
-        hasCollateral: !!data.collateral && data.collateral !== 'no',
-        collateralType: data.collateral !== 'no' ? data.collateral : null,
-        remarks: data.notes || null,
-        status: 'submitted',
-        stage: 'application_submitted',
-        progress: 10,
-        submittedAt: now,
-        estimatedCompletionAt: estimatedCompletionAt.toISOString(),
-        updatedAt: now,
+      address: data.address || null,
+      hasCoApplicant: !!data.coApplicant && data.coApplicant !== 'none',
+      coApplicantName: data.coApplicantName || null,
+      coApplicantRelation: data.coApplicant !== 'none' ? data.coApplicant : null,
+      coApplicantIncome: data.income ? parseFloat(data.income) : null,
+      hasCollateral: !!data.collateral && data.collateral !== 'no',
+      collateralType: data.collateral !== 'no' ? data.collateral : null,
+      remarks: data.notes || null,
+      status: 'submitted',
+      stage: 'application_submitted',
+      progress: 10,
+      submittedAt: now,
+      estimatedCompletionAt: estimatedCompletionAt.toISOString(),
+      updatedAt: now,
     };
     if (applicationNumber) {
-        insertPayload.applicationNumber = applicationNumber;
+      insertPayload.applicationNumber = applicationNumber;
     }
 
     const { data: application, error } = await this.db
@@ -1067,11 +1067,11 @@ export class UsersService {
     const incomingMetadata = data.verificationMetadata;
     const mergedMetadata = incomingMetadata !== undefined
       ? {
-          ...(typeof incomingMetadata === 'object' && incomingMetadata !== null ? incomingMetadata : {}),
-          ...((existingMetadata as any)?.docName && !(incomingMetadata as any)?.docName
-            ? { docName: (existingMetadata as any).docName }
-            : {}),
-        }
+        ...(typeof incomingMetadata === 'object' && incomingMetadata !== null ? incomingMetadata : {}),
+        ...((existingMetadata as any)?.docName && !(incomingMetadata as any)?.docName
+          ? { docName: (existingMetadata as any).docName }
+          : {}),
+      }
       : undefined;
 
     const payload: any = {
@@ -1148,31 +1148,39 @@ export class UsersService {
     return { success: true };
   }
   async updateDocumentStatus(docId: string, status: string, rejectionReason?: string) {
+    const { data: currentDoc } = await this.db
+      .from('UserDocument')
+      .select('*')
+      .eq('id', docId)
+      .maybeSingle();
+
+    const existingMeta = currentDoc?.verificationMetadata || {};
+
     const payload: any = {
       status,
       updatedAt: new Date().toISOString(),
     };
-    
+
     if (status === 'verified') {
       payload.verifiedAt = new Date().toISOString();
       payload.rejectionReason = null;
-      // Clear any previous rejection data
       payload.verificationMetadata = {
+        ...(typeof existingMeta === 'object' ? existingMeta : {}),
         status: 'verified',
         verifiedAt: new Date().toISOString(),
         message: 'Document manually verified by staff',
       };
     }
-    
-    if (status === 'rejected' && rejectionReason) {
+
+    if (status === 'rejected') {
       payload.verifiedAt = null;
-      payload.rejectionReason = rejectionReason;
-      // Store rejection reason inside the existing verificationMetadata JSON column
+      payload.rejectionReason = rejectionReason || null;
       payload.verificationMetadata = {
+        ...(typeof existingMeta === 'object' ? existingMeta : {}),
         status: 'rejected',
         rejectedAt: new Date().toISOString(),
-        rejectionReason: rejectionReason,
-        message: `Document rejected by staff: ${rejectionReason}`,
+        rejectionReason: rejectionReason || null,
+        message: rejectionReason ? `Document rejected by staff: ${rejectionReason}` : 'Document rejected by staff',
       };
     }
 
@@ -1186,6 +1194,23 @@ export class UsersService {
     if (error) {
       console.error(`[UsersService.updateDocumentStatus] Error updating document ${docId}:`, error);
       throw error;
+    }
+
+    if (status === 'verified' && data) {
+      try {
+        const details = existingMeta.details || {};
+        const extractedFields = details.extractedFields || existingMeta.extractedFields || {};
+
+        if (extractedFields && Object.keys(extractedFields).length > 0) {
+          console.log(`[UsersService.updateDocumentStatus] Auto-updating details for user ${data.userId} from verified docType ${data.docType}`);
+          await this.updateExtractedDetails(data.userId, {
+            documentVerified: true,
+            ...extractedFields
+          }, data.docType);
+        }
+      } catch (err: any) {
+        console.error(`[UsersService.updateDocumentStatus] Error in auto-updating extracted details:`, err.message);
+      }
     }
 
     // Emit events for real-time student notifications
@@ -1367,12 +1392,12 @@ export class UsersService {
       .from('User')
       .delete()
       .eq('id', userId);
-    
+
     if (error) {
       console.error(`[UsersService.deleteUser] Error deleting user ${userId}:`, error);
       throw error;
     }
-    
+
     return { success: true };
   }
 

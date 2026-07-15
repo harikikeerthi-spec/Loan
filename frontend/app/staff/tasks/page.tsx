@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { adminApi } from "@/lib/api";
 
 interface FollowUp {
     date: string;
@@ -19,6 +21,118 @@ export default function RemindersPage() {
     // Follow-up reminders
     const [followUps, setFollowUps] = useState<Record<string, FollowUp>>({});
     const [filterUpcoming, setFilterUpcoming] = useState<"all" | "today" | "upcoming" | "overdue">("all");
+
+    // Notes modal state
+    const [selectedFollowUp, setSelectedFollowUp] = useState<any | null>(null);
+    const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+    const [notesList, setNotesList] = useState<any[]>([]);
+    const [loadingNotes, setLoadingNotes] = useState(false);
+    const [newNoteText, setNewNoteText] = useState("");
+    const [savingNote, setSavingNote] = useState(false);
+
+    // Fetch comments/notes from active application
+    const fetchApplicationNotes = async (appId: string, currentFuNotes?: string) => {
+        setLoadingNotes(true);
+        try {
+            const res = await adminApi.getRemarks(appId) as any;
+            let backendNotes: any[] = [];
+            if (res && res.success && Array.isArray(res.data)) {
+                backendNotes = res.data.filter((r: any) => r.type === "note" && r.isInternal === true);
+            } else if (Array.isArray(res)) {
+                backendNotes = res.filter((r: any) => r.type === "note" && r.isInternal === true);
+            }
+
+            // Sync current local follow-up notes to backend if they are missing
+            if (currentFuNotes && currentFuNotes.trim()) {
+                const alreadyExists = backendNotes.some(
+                    (note: any) => (note.content || note.remark || "").trim() === currentFuNotes.trim()
+                );
+                if (!alreadyExists) {
+                    try {
+                        await adminApi.addRemark(appId, {
+                            type: "note",
+                            content: currentFuNotes.trim(),
+                            authorName: "Staff Member",
+                            isInternal: true,
+                        } as any);
+
+                        // Re-fetch remarks after syncing
+                        const reRes = await adminApi.getRemarks(appId) as any;
+                        if (reRes && reRes.success && Array.isArray(reRes.data)) {
+                            backendNotes = reRes.data.filter((r: any) => r.type === "note" && r.isInternal === true);
+                        } else if (Array.isArray(reRes)) {
+                            backendNotes = reRes.filter((r: any) => r.type === "note" && r.isInternal === true);
+                        }
+                    } catch (syncErr) {
+                        console.error("Failed to auto-sync local notes to backend:", syncErr);
+                    }
+                }
+            }
+
+            setNotesList(backendNotes);
+        } catch (err) {
+            console.error("Failed to fetch application notes:", err);
+            setNotesList([]);
+        } finally {
+            setLoadingNotes(false);
+        }
+    };
+
+    const handleOpenNotes = (fu: any) => {
+        setSelectedFollowUp(fu);
+        setIsNotesModalOpen(true);
+        setNewNoteText("");
+        fetchApplicationNotes(fu.appId, fu.notes);
+    };
+
+    const handleSaveNote = async () => {
+        if (!selectedFollowUp || !newNoteText.trim()) return;
+        setSavingNote(true);
+        try {
+            // Save note to the application via backend
+            await adminApi.addRemark(selectedFollowUp.appId, {
+                type: "note",
+                content: newNoteText.trim(),
+                authorName: "Staff Member",
+                isInternal: true,
+            } as any);
+
+            // Sync with local storage follow-up notes
+            const updated = {
+                ...followUps,
+                [selectedFollowUp.appId]: {
+                    ...followUps[selectedFollowUp.appId],
+                    notes: newNoteText.trim()
+                }
+            };
+            setFollowUps(updated);
+            localStorage.setItem(followUpKey, JSON.stringify(updated));
+
+            // Reload notes in the modal view
+            setNewNoteText("");
+            await fetchApplicationNotes(selectedFollowUp.appId);
+        } catch (err) {
+            console.error("Failed to save note:", err);
+            alert("Failed to save note. Please try again.");
+        } finally {
+            setSavingNote(false);
+        }
+    };
+
+    const formatNoteTime = (dateStr: string) => {
+        try {
+            return new Date(dateStr).toLocaleString("en-US", {
+                timeZone: "Asia/Kolkata",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+        } catch {
+            return dateStr;
+        }
+    };
 
     // Calendar state
     const [calendarDate, setCalendarDate] = useState(new Date());
@@ -316,8 +430,28 @@ export default function RemindersPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            {fu.notes && (
-                                                <p className="text-[10px] text-slate-400 italic mb-3 truncate">{fu.notes}</p>
+                                            {fu.notes ? (
+                                                <div 
+                                                    onClick={() => handleOpenNotes(fu)}
+                                                    className="bg-slate-50 border border-slate-100 hover:border-indigo-200 rounded-xl p-2.5 mb-3 cursor-pointer group transition-all"
+                                                >
+                                                    <div className="flex items-center justify-between gap-1 mb-1">
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-[12px] text-indigo-500 font-bold">sticky_note_2</span>
+                                                            Follow-up Notes
+                                                        </span>
+                                                        <span className="material-symbols-outlined text-[12px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-600 font-semibold leading-relaxed line-clamp-2">{fu.notes}</p>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleOpenNotes(fu)}
+                                                    className="flex items-center gap-1 px-2.5 py-1.5 border border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/20 text-slate-400 hover:text-indigo-600 rounded-xl text-[9px] font-bold mb-3 transition-all cursor-pointer"
+                                                >
+                                                    <span className="material-symbols-outlined text-[12px]">add_comment</span>
+                                                    Add Note
+                                                </button>
                                             )}
                                             <div className="flex items-center gap-2">
                                                 <button
@@ -326,6 +460,14 @@ export default function RemindersPage() {
                                                 >
                                                     View
                                                     <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleOpenNotes(fu)}
+                                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1"
+                                                    title="Internal Notes"
+                                                >
+                                                    <span className="material-symbols-outlined text-[12px]">sticky_note_2</span>
+                                                    Notes
                                                 </button>
                                                 <button
                                                     onClick={() => clearFollowUp(fu.appId)}
@@ -343,6 +485,91 @@ export default function RemindersPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Internal Notes Modal */}
+            <AnimatePresence>
+                {isNotesModalOpen && selectedFollowUp && (
+                    <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]"
+                        >
+                            {/* Modal Header */}
+                            <div className="bg-gradient-to-r from-[#6605c7]/5 to-[#8b24e5]/5 border-b border-[#6605c7]/10 px-6 py-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-[#6605c7]/10 flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-[18px] text-[#6605c7]">sticky_note_2</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-wider">Internal Notes</h3>
+                                        <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                                            {selectedFollowUp.studentName} — {selectedFollowUp.appNumber}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsNotesModalOpen(false)}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">close</span>
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="p-6 overflow-y-auto space-y-5 flex-1" style={{ scrollbarWidth: 'thin' }}>
+                                {/* Add Note Area */}
+                                <div className="space-y-3 bg-slate-50/50 p-4 border border-slate-100 rounded-xl">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block font-sans">Add New Note</label>
+                                    <textarea
+                                        value={newNoteText}
+                                        onChange={(e) => setNewNoteText(e.target.value)}
+                                        placeholder="Type a new internal note (only visible to staff)..."
+                                        rows={3}
+                                        className="w-full p-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] resize-none placeholder:text-slate-400 placeholder:font-medium transition-all"
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            onClick={handleSaveNote}
+                                            disabled={savingNote || !newNoteText.trim()}
+                                            className="px-4 py-1.5 text-[9px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-[#6605c7] to-[#8b24e5] hover:opacity-90 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-purple-500/20"
+                                        >
+                                            {savingNote ? "Saving..." : "Save Note"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* History Area */}
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block font-sans">Note History</label>
+                                    
+                                    {loadingNotes ? (
+                                        <div className="flex flex-col items-center justify-center py-8 gap-2">
+                                            <div className="w-6 h-6 border-2 border-[#6605c7]/20 border-t-[#6605c7] rounded-full animate-spin" />
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Loading history...</span>
+                                        </div>
+                                    ) : notesList.length === 0 ? (
+                                        <p className="text-[10px] text-slate-400 italic py-2 pl-1 font-semibold">No internal notes added yet.</p>
+                                    ) : (
+                                        <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                                            {notesList.map((note, idx) => (
+                                                <div key={note.id || note._id || idx} className="bg-slate-50/30 border border-slate-100 rounded-xl p-3 space-y-2">
+                                                    <div className="flex items-center justify-between text-[8px] font-bold text-slate-400">
+                                                        <span>{note.authorName || "Staff Member"}</span>
+                                                        <span>{note.createdAt || note.created_at ? formatNoteTime(note.createdAt || note.created_at) : ""}</span>
+                                                    </div>
+                                                    <p className="text-[11px] font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap">{note.content || note.remark || ""}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

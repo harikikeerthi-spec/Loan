@@ -860,9 +860,11 @@ export default function ApplyLoanPage() {
                                             }
                                         }}
                                             options={[
-                                                { value: "parent", label: "Parent" },
+                                                { value: "mother", label: "Mother" },
+                                                { value: "father", label: "Father" },
                                                 { value: "spouse", label: "Spouse" },
-                                                { value: "sibling", label: "Sibling" },
+                                                { value: "brother", label: "Brother" },
+                                                { value: "sister", label: "Sister" },
                                                 { value: "other", label: "Other" }
                                             ]} error={stepErrors.coApplicant} required />
                                         {formData.coApplicant === "other" && (
