@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -33,23 +34,85 @@ export class CampaignController {
   async getCampaigns(
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
+    @Query('status') status?: string,
   ) {
     return this.campaignService.getCampaigns(
       limit ? parseInt(limit, 10) : 50,
       offset ? parseInt(offset, 10) : 0,
+      status,
     );
   }
 
+  // --- Audience Builder Filters ---
   @Get('audience')
   @UseGuards(StaffGuard)
-  async getTargetAudience(
-    @Query('studyDestination') studyDestination?: string,
-    @Query('targetUniversity') targetUniversity?: string,
-  ) {
-    return this.campaignService.getTargetAudience({
-      studyDestination,
-      targetUniversity,
-    });
+  async getTargetAudience(@Query() filters: any) {
+    return this.campaignService.getTargetAudience(filters);
+  }
+
+  @Post('audience/save')
+  @UseGuards(StaffGuard)
+  async saveAudience(@Body() body: any) {
+    return this.campaignService.saveAudience(body);
+  }
+
+  @Get('audience/saved')
+  @UseGuards(StaffGuard)
+  async getSavedAudiences() {
+    return this.campaignService.getSavedAudiences();
+  }
+
+  // --- Campaign Templates ---
+  @Get('templates')
+  @UseGuards(StaffGuard)
+  async getTemplates() {
+    return this.campaignService.getTemplates();
+  }
+
+  @Post('templates')
+  @UseGuards(StaffGuard)
+  async createTemplate(@Body() body: any) {
+    return this.campaignService.createTemplate(body);
+  }
+
+  // --- Automation Rules ---
+  @Get('automation')
+  @UseGuards(StaffGuard)
+  async getAutomationRules() {
+    return this.campaignService.getAutomationRules();
+  }
+
+  @Post('automation')
+  @UseGuards(StaffGuard)
+  async createAutomationRule(@Body() body: any) {
+    return this.campaignService.createAutomationRule(body);
+  }
+
+  // --- Prompt & Logs ---
+  @Get('prompt-history')
+  @UseGuards(StaffGuard)
+  async getPromptHistory() {
+    return this.campaignService.getPromptHistory();
+  }
+
+  // --- Analytics Overview ---
+  @Get('analytics/overview')
+  @UseGuards(StaffGuard)
+  async getOverviewStats() {
+    return this.campaignService.getOverviewStats();
+  }
+
+  // --- Pre-send Validation & AI scoring ---
+  @Post(':id/validate')
+  @UseGuards(StaffGuard)
+  async validateCampaign(@Param('id') id: string) {
+    return this.campaignService.validateCampaign(id);
+  }
+
+  @Post(':id/test-email')
+  @UseGuards(StaffGuard)
+  async sendTestEmail(@Param('id') id: string, @Body('email') email: string) {
+    return this.campaignService.sendTestEmail(id, email);
   }
 
   // --- Public Tracking Endpoints ---
@@ -88,6 +151,12 @@ export class CampaignController {
   @UseGuards(StaffGuard)
   async getCampaignById(@Param('id') id: string) {
     return this.campaignService.getCampaignById(id);
+  }
+
+  @Patch(':id')
+  @UseGuards(StaffGuard)
+  async updateCampaign(@Param('id') id: string, @Body() body: any) {
+    return this.campaignService.updateCampaign(id, body);
   }
 
   @Delete(':id')

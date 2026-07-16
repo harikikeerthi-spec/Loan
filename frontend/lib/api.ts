@@ -1517,18 +1517,34 @@ export const bankApi = {
 // ─── Campaigns ─────────────────────────────────────────────────────────
 export const campaignApi = {
     create: (data: any) => apiFetch(`${API_URL}/campaigns`, { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => apiFetch(`${API_URL}/campaigns/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     generate: (data: any) => apiFetch(`${API_URL}/campaigns/generate`, { method: "POST", body: JSON.stringify(data) }),
-    getAll: (limit = 50, offset = 0) => apiFetch(`${API_URL}/campaigns?limit=${limit}&offset=${offset}`),
-    getAudience: (filters: { studyDestination?: string; targetUniversity?: string } = {}) => {
+    getAll: (limit = 50, offset = 0, status?: string) => {
+        let url = `${API_URL}/campaigns?limit=${limit}&offset=${offset}`;
+        if (status) url += `&status=${status}`;
+        return apiFetch(url);
+    },
+    getAudience: (filters: Record<string, any> = {}) => {
         const q = new URLSearchParams();
-        if (filters.studyDestination) q.set('studyDestination', filters.studyDestination);
-        if (filters.targetUniversity) q.set('targetUniversity', filters.targetUniversity);
+        Object.entries(filters).forEach(([k, v]) => {
+            if (v !== undefined && v !== '' && v !== null) q.set(k, String(v));
+        });
         return apiFetch(`${API_URL}/campaigns/audience?${q.toString()}`);
     },
+    saveAudience: (data: any) => apiFetch(`${API_URL}/campaigns/audience/save`, { method: "POST", body: JSON.stringify(data) }),
+    getSavedAudiences: () => apiFetch(`${API_URL}/campaigns/audience/saved`),
     getById: (id: string) => apiFetch(`${API_URL}/campaigns/${id}`),
     delete: (id: string) => apiFetch(`${API_URL}/campaigns/${id}`, { method: "DELETE" }),
     queue: (id: string, recipientIds: string[]) => apiFetch(`${API_URL}/campaigns/${id}/queue`, { method: "POST", body: JSON.stringify({ recipientIds }) }),
     cancel: (id: string) => apiFetch(`${API_URL}/campaigns/${id}/cancel`, { method: "POST" }),
+    validate: (id: string) => apiFetch(`${API_URL}/campaigns/${id}/validate`, { method: "POST" }),
+    sendTest: (id: string, email: string) => apiFetch(`${API_URL}/campaigns/${id}/test-email`, { method: "POST", body: JSON.stringify({ email }) }),
+    getTemplates: () => apiFetch(`${API_URL}/campaigns/templates`),
+    createTemplate: (data: any) => apiFetch(`${API_URL}/campaigns/templates`, { method: "POST", body: JSON.stringify(data) }),
+    getAutomationRules: () => apiFetch(`${API_URL}/campaigns/automation`),
+    createAutomationRule: (data: any) => apiFetch(`${API_URL}/campaigns/automation`, { method: "POST", body: JSON.stringify(data) }),
+    getPromptHistory: () => apiFetch(`${API_URL}/campaigns/prompt-history`),
+    getOverviewStats: () => apiFetch(`${API_URL}/campaigns/analytics/overview`),
 };
 
 // ─── Support Ticket API ───────────────────────────────────────────────────────

@@ -13,10 +13,14 @@ interface FollowUp {
     notes: string;
     status: "pending" | "completed" | "cancelled";
     createdAt: string;
+    studentId?: string;
+    studentName?: string;
+    appNumber?: string;
+    appId?: string;
 }
 
 export default function FollowUpsTab() {
-    const { userData } = useUserDossier();
+    const { userData, userApplications } = useUserDossier();
     const { user: staffUser } = useAuth();
     
     const [followUps, setFollowUps] = useState<FollowUp[]>([]);
@@ -36,17 +40,44 @@ export default function FollowUpsTab() {
 
     useEffect(() => {
         const key = getStorageKey();
-        if (key && typeof window !== "undefined") {
+        if (key && typeof window !== "undefined" && userData) {
             const stored = localStorage.getItem(key);
             if (stored) {
                 try {
-                    setFollowUps(JSON.parse(stored));
+                    const parsed = JSON.parse(stored) as FollowUp[];
+                    let modified = false;
+                    const activeApp = userApplications?.[0];
+                    const name = `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim();
+                    const appNum = activeApp?.appNumber || userData?.studentId || userData?.id || "VL-STU";
+                    const studId = userData.id || userData._id || "unknown";
+                    const activeAppId = activeApp?.id || activeApp?._id;
+
+                    const updated = parsed.map(f => {
+                        if (!f.studentName || !f.studentId || !f.appNumber) {
+                            modified = true;
+                            return {
+                                ...f,
+                                studentName: f.studentName || name,
+                                studentId: f.studentId || studId,
+                                appNumber: f.appNumber || appNum,
+                                appId: f.appId || activeAppId
+                            };
+                        }
+                        return f;
+                    });
+                    
+                    if (modified) {
+                        localStorage.setItem(key, JSON.stringify(updated));
+                        setFollowUps(updated);
+                    } else {
+                        setFollowUps(parsed);
+                    }
                 } catch (e) {
                     console.error("Failed to parse follow ups:", e);
                 }
             }
         }
-    }, [staffUser, userData]);
+    }, [staffUser, userData, userApplications]);
 
     const saveFollowUps = (newFollowUps: FollowUp[]) => {
         const key = getStorageKey();
@@ -60,13 +91,23 @@ export default function FollowUpsTab() {
         e.preventDefault();
         if (!date || !time) return;
         
+        const activeApp = userApplications?.[0];
+        const studentId = userData?.id || userData?._id || "unknown";
+        const studentName = `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim();
+        const appNumber = activeApp?.appNumber || userData?.studentId || userData?.id || "VL-STU";
+        const appId = activeApp?.id || activeApp?._id;
+
         const newFollowUp: FollowUp = {
             id: Date.now().toString(),
             date,
             time,
             notes,
             status: "pending",
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            studentId,
+            studentName,
+            appNumber,
+            appId
         };
         
         saveFollowUps([...followUps, newFollowUp]);

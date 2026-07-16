@@ -186,6 +186,7 @@ export default function AdminDashboardPage() {
     const [filterBlogTime, setFilterBlogTime] = useState("all");
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [supportExpanded, setSupportExpanded] = useState(false);
+    const [marketingExpanded, setMarketingExpanded] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [pendingCount, setPendingCount] = useState(0);
 
@@ -677,16 +678,29 @@ export default function AdminDashboardPage() {
 
     const navItems = [
         { section: "overview", icon: "dashboard", label: "Dashboard", badge: 0 },
-        { section: "analytics", icon: "analytics", label: "Analytics", badge: 0 },
+        { section: "analytics", icon: "analytics", label: "Platform Analytics", badge: 0 },
         { section: "applications", icon: "description", label: "Applications", badge: pendingCount },
         { section: "system", icon: "admin_panel_settings", label: "System Control", badge: announcements.length },
         { section: "users", icon: "people", label: "Users", badge: 0 },
         { section: "banks", icon: "account_balance", label: "Bank Partners", badge: 0 },
-        { section: "campaigns", icon: "campaign", label: "Email Campaigns", badge: 0 },
         { section: "blogs", icon: "article", label: "Blogs", badge: 0 },
         { section: "chat", icon: "forum", label: "Student Chat", badge: 0 },
         { section: "community", icon: "groups", label: "Community", badge: 0 },
         { section: "audit_logs", icon: "policy", label: "Audit Logs", badge: 0 },
+    ];
+
+    // Marketing sub-nav items
+    const marketingNavItems = [
+        { section: "campaigns_dashboard", icon: "dashboard", label: "Dashboard" },
+        { section: "campaigns_create", icon: "add_circle", label: "Create Campaign" },
+        { section: "campaigns_templates", icon: "style", label: "Campaign Templates" },
+        { section: "campaigns_audience", icon: "group", label: "Audience Builder" },
+        { section: "campaigns_scheduled", icon: "schedule", label: "Scheduled Campaigns" },
+        { section: "campaigns_queued", icon: "hourglass_empty", label: "Queued Campaigns" },
+        { section: "campaigns_sent", icon: "send", label: "Sent Campaigns" },
+        { section: "campaigns_analytics", icon: "bar_chart", label: "Analytics" },
+        { section: "campaigns_prompts", icon: "history", label: "AI Prompt History" },
+        { section: "campaigns_settings", icon: "settings", label: "Settings" },
     ];
 
     // Support Center sub-nav items
@@ -715,11 +729,21 @@ export default function AdminDashboardPage() {
         system: 'System Control',
         users: 'User Management',
         banks: 'Bank Partners Management',
-        campaigns: 'Email Campaigns',
         blogs: 'Blog Management',
         chat: 'Student Chat',
         community: 'Community Forum',
         audit_logs: 'Audit Logs',
+        // Marketing/Campaigns
+        campaigns_dashboard: 'Email Campaigns · Dashboard',
+        campaigns_create: 'Email Campaigns · Create Campaign',
+        campaigns_templates: 'Email Campaigns · Templates',
+        campaigns_audience: 'Email Campaigns · Audience Builder',
+        campaigns_scheduled: 'Email Campaigns · Scheduled',
+        campaigns_queued: 'Email Campaigns · Queued',
+        campaigns_sent: 'Email Campaigns · Sent',
+        campaigns_analytics: 'Email Campaigns · Analytics',
+        campaigns_prompts: 'Email Campaigns · AI Prompt History',
+        campaigns_settings: 'Email Campaigns · Settings',
         // Support Center
         support_dashboard: 'Support Center · Dashboard',
         support_all: 'Support Center · All Tickets',
@@ -770,6 +794,35 @@ export default function AdminDashboardPage() {
                     {navItems.map(item => (
                         <NavItem key={item.section} {...item} active={activeSection} onClick={setActiveSection} />
                     ))}
+
+                    {/* ── Marketing & Email Campaigns ── */}
+                    <div className="px-2 mt-4 mb-1">
+                        <div className="border-t border-slate-800 pt-3" />
+                        <button
+                            onClick={() => { setMarketingExpanded(e => !e); if (!marketingExpanded) setActiveSection('campaigns_dashboard'); }}
+                            className={`w-full text-left px-3 py-1.5 rounded flex items-center gap-3 transition-colors text-xs font-medium ${activeSection.startsWith('campaigns_') ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                        >
+                            <span className={`material-symbols-outlined text-[16px] ${activeSection.startsWith('campaigns_') ? 'text-indigo-400' : 'text-slate-500'}`}>campaign</span>
+                            <span className="flex-1">Email Campaigns</span>
+                            <span className="material-symbols-outlined text-[14px] opacity-50">{marketingExpanded || activeSection.startsWith('campaigns_') ? 'expand_less' : 'expand_more'}</span>
+                        </button>
+                        {(marketingExpanded || activeSection.startsWith('campaigns_')) && (
+                            <div className="ml-3 mt-0.5 space-y-0.5 border-l border-slate-700/50 pl-2">
+                                {marketingNavItems.map(item => (
+                                    <button
+                                        key={item.section}
+                                        onClick={() => setActiveSection(item.section)}
+                                        className={`w-full text-left px-2 py-1 rounded flex items-center gap-2 transition-colors text-[11px] ${
+                                            activeSection === item.section ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-300'
+                                        }`}
+                                    >
+                                        <span className={`material-symbols-outlined text-[13px] ${activeSection === item.section ? 'text-indigo-400' : 'text-slate-500'}`}>{item.icon}</span>
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     {/* ── Support Center ── */}
                     <div className="px-2 mt-4 mb-1">
@@ -1415,7 +1468,9 @@ export default function AdminDashboardPage() {
                     {activeSection === "chat" && <ChatInterface role="staff" />}
 
                     {/* ─── CAMPAIGNS ──────────────────────────────────────────────── */}
-                    {activeSection === "campaigns" && <CampaignsDashboard />}
+                    {activeSection.startsWith("campaigns_") && (
+                        <CampaignsDashboard activeSubmenu={activeSection} setActiveSubmenu={setActiveSection} />
+                    )}
 
                     {/* ─── COMMUNITY FORUM MANAGEMENT ────────────────────────── */}
                     {activeSection === "community" && (

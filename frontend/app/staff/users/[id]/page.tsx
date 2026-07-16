@@ -93,9 +93,13 @@ export default function ProfileTab() {
         ugScore: "",
     });
 
-    const getDisplayValue = (value: any, fallback = "—") => {
-        if (value === undefined || value === null || value === "") return fallback;
-        if (typeof value === "string" && value.trim() === "") return fallback;
+    const getDisplayValue = (value: any, fallback = "Pending") => {
+        if (value === undefined || value === null || value === "") {
+            return <span className="text-[#94A3B8] font-normal">{fallback}</span>;
+        }
+        if (typeof value === "string" && value.trim() === "") {
+            return <span className="text-[#94A3B8] font-normal">{fallback}</span>;
+        }
         return value;
     };
 
@@ -126,22 +130,22 @@ export default function ProfileTab() {
         const coApplicant = (userData as any)?.coApplicant;
 
         if (Array.isArray(coApplicant)) {
-            return getDisplayValue(coApplicant[index - 1]?.name, "—");
+            return getDisplayValue(coApplicant[index - 1]?.name, "Pending");
         }
 
         if (coApplicant && typeof coApplicant === "object") {
             if (index === 1) {
-                return getDisplayValue(coApplicant.name || coApplicant?.coApplicant1?.name || coApplicant?.firstName, "—");
+                return getDisplayValue(coApplicant.name || coApplicant?.coApplicant1?.name || coApplicant?.firstName, "Pending");
             }
             if (index === 2) {
-                return getDisplayValue(coApplicant.coApplicant2?.name || coApplicant?.secondName, "—");
+                return getDisplayValue(coApplicant.coApplicant2?.name || coApplicant?.secondName, "Pending");
             }
             if (index === 3) {
-                return getDisplayValue(coApplicant.coApplicant3?.name || coApplicant?.thirdName, "—");
+                return getDisplayValue(coApplicant.coApplicant3?.name || coApplicant?.thirdName, "Pending");
             }
         }
 
-        return "—";
+        return <span className="text-[#94A3B8] font-normal">Pending</span>;
     };
 
     const parentsList = userData?.parents || [];
@@ -166,7 +170,10 @@ export default function ProfileTab() {
         const fallback = userData?.academic?.[key] || {};
         const inst = getExtractedField(doc, 'institution') || getExtractedField(doc, 'university') || getExtractedField(doc, 'school_name') || getExtractedField(doc, 'college_name') || fallback.institute;
         const pct = getExtractedField(doc, 'score') || getExtractedField(doc, 'percentage') || getExtractedField(doc, 'gpa') || getExtractedField(doc, 'cgpa') || fallback.percentage;
-        return { institute: inst || "—", percentage: pct ? (pct.toString().includes('%') ? pct : `${pct}%`) : "—" };
+        return { 
+            institute: inst ? inst : <span className="text-[#94A3B8] font-normal">Not Uploaded</span>, 
+            percentage: pct ? (pct.toString().includes('%') ? pct : `${pct}%`) : <span className="text-[#94A3B8] font-normal">Pending</span> 
+        };
     };
 
     const sscDetails = getAcademicDetails(sscDoc, 'ssc');
@@ -354,15 +361,15 @@ export default function ProfileTab() {
         >
             {/* Personal Information Glass-Card */}
             <div className="lg:col-span-2 space-y-6">
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-sm space-y-6">
+                <div className="bg-[#FFFFFF] rounded-2xl border border-[#E2E8F0] p-8 shadow-sm space-y-6">
                     <div className="flex justify-between items-center gap-4">
                         <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-indigo-600">person</span>
+                            <span className="material-symbols-outlined text-[#7C3AED]">person</span>
                             Student Profile - Personal & Academic Details
                         </h2>
                         <button
                             onClick={handleOpenEdit}
-                            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-md hover:shadow-indigo-500/10 active:scale-95 border-0"
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-[#FFFFFF] rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-md hover:shadow-[#7C3AED]/10 active:scale-95 border-0"
                         >
                             <span className="material-symbols-outlined text-[16px]">edit</span>
                             Edit
@@ -370,19 +377,24 @@ export default function ProfileTab() {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-6">
-                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-4">Personal Details</h3>
+                        <div className="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 shadow-sm">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
+                                    <span className="material-symbols-outlined text-[16px]">person</span>
+                                </div>
+                                <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Personal Details</h3>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</label>
-                                    <span className="text-sm font-medium text-slate-700 block mt-1 lowercase">{getDisplayValue(userData.email)}</span>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Email Address</label>
+                                    <span className="text-sm font-medium text-[#0F172A] block mt-1 lowercase">{getDisplayValue(userData.email)}</span>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone Number</label>
-                                    <span className="text-sm font-medium text-slate-700 block mt-1">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Phone Number</label>
+                                    <span className="text-sm font-medium text-[#0F172A] block mt-1">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Date of Birth</label>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Date of Birth</label>
                                     {(() => {
                                         const raw = (userData as any).dateOfBirth;
                                         let dobDate: Date | null = null;
@@ -398,27 +410,27 @@ export default function ProfileTab() {
                                         const isDobValid = dobDate && !isNaN(dobDate.getTime());
                                         if (isDobValid) {
                                             return (
-                                                <span className="text-sm font-medium text-slate-700 block mt-1">
+                                                <span className="text-sm font-medium text-[#0F172A] block mt-1">
                                                     {dobDate!.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                                                 </span>
                                             );
                                         } else {
                                             return (
-                                                <span className="text-sm font-medium text-slate-400 block mt-1">—</span>
+                                                <span className="text-sm font-medium text-[#94A3B8] block mt-1">Pending</span>
                                             );
                                         }
                                     })()}
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Nationality</label>
-                                    <span className="text-sm font-medium text-slate-700 block mt-1">
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Nationality</label>
+                                    <span className="text-sm font-medium text-[#0F172A] block mt-1">
                                         {getDisplayValue(userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian")}
                                     </span>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Destination Country</label>
-                                    <span className="text-sm font-medium text-slate-700 block mt-1">
-                                        {getDisplayValue(userData.studyDestination || userData.countryOfEducation || userData.academic?.countryOfEducation, "—")}
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Destination Country</label>
+                                    <span className="text-sm font-medium text-[#0F172A] block mt-1">
+                                        {getDisplayValue(userData.studyDestination || userData.countryOfEducation || userData.academic?.countryOfEducation, "Pending")}
                                     </span>
                                 </div>
                             </div>
@@ -434,68 +446,73 @@ export default function ProfileTab() {
                             const coApp3Name = getCoApplicantName(3);
 
                             return (
-                                <div className="w-full bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden font-sans">
-                                    <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-                                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Family & Co-Applicant Details</h3>
+                                <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden font-sans">
+                                    <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center bg-[#FFFFFF]">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
+                                                <span className="material-symbols-outlined text-[16px]">groups</span>
+                                            </div>
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Family & Co-Applicant Details</h3>
+                                        </div>
                                     </div>
 
                                     <div className="overflow-x-auto">
-                                        <table className="min-w-full divide-y divide-slate-200 text-sm">
-                                            <thead className="bg-slate-50">
+                                        <table className="min-w-full divide-y divide-[#E2E8F0] text-sm">
+                                            <thead className="bg-[#F8FAFC]">
                                                 <tr>
-                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs">Role</th>
-                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs">Name</th>
-                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs">KYC Details</th>
+                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">Role</th>
+                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">Name</th>
+                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">KYC Details</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-100 bg-white">
+                                            <tbody className="divide-y divide-[#E2E8F0] bg-[#FFFFFF]">
                                                 {/* Father */}
-                                                <tr className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-700">Father</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-slate-700">{fatherName}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
-                                                        <div className="mb-1 text-slate-500">Aadhaar: <span className={fatherData?.aadharNumber ? "text-slate-700 font-medium" : "text-slate-400 font-normal"}>{fatherData?.aadharNumber || "—"}</span></div>
-                                                        <div className="text-slate-500">PAN: <span className={fatherData?.panNumber ? "text-slate-700 font-medium" : "text-slate-400 font-normal"}>{fatherData?.panNumber || "—"}</span></div>
+                                                <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Father</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{fatherName}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
+                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className={fatherData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{fatherData?.aadharNumber || "Pending"}</span></div>
+                                                        <div className="text-[#64748B]">PAN: <span className={fatherData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{fatherData?.panNumber || "Pending"}</span></div>
                                                     </td>
                                                 </tr>
 
                                                 {/* Mother */}
-                                                <tr className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-700">Mother</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-slate-700">{motherName}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
-                                                        <div className="mb-1 text-slate-500">Aadhaar: <span className={motherData?.aadharNumber ? "text-slate-700 font-medium" : "text-slate-400 font-normal"}>{motherData?.aadharNumber || "—"}</span></div>
-                                                        <div className="text-slate-500">PAN: <span className={motherData?.panNumber ? "text-slate-700 font-medium" : "text-slate-400 font-normal"}>{motherData?.panNumber || "—"}</span></div>
+                                                <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Mother</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{motherName}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
+                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className={motherData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{motherData?.aadharNumber || "Pending"}</span></div>
+                                                        <div className="text-[#64748B]">PAN: <span className={motherData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{motherData?.panNumber || "Pending"}</span></div>
                                                     </td>
                                                 </tr>
 
                                                 {/* Primary Co-Applicant */}
-                                                <tr className="bg-indigo-50/30 hover:bg-indigo-50/60 transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-indigo-700">Primary Co-Applicant</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-900">{coApp1Name}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-600 font-medium">
-                                                        <div className="mb-1 text-slate-500">Aadhaar: <span className={coapplicantData?.aadharNumber ? "text-slate-700 font-medium" : "text-slate-400 font-normal"}>{coapplicantData?.aadharNumber || "—"}</span></div>
-                                                        <div className="text-slate-500">PAN: <span className={coapplicantData?.panNumber ? "text-slate-700 font-medium" : "text-slate-400 font-normal"}>{coapplicantData?.panNumber || "—"}</span></div>
+                                                <tr className="bg-[#F3E8FF]/20 hover:bg-[#F3E8FF]/30 transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#7C3AED]">Primary Co-Applicant</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#0F172A]">{coApp1Name}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] font-medium">
+                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className={coapplicantData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.aadharNumber || "Pending"}</span></div>
+                                                        <div className="text-[#64748B]">PAN: <span className={coapplicantData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.panNumber || "Pending"}</span></div>
                                                     </td>
                                                 </tr>
 
                                                 {/* Co-Applicant 2 */}
-                                                <tr className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-700">Co-Applicant 2</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-slate-700">{coApp2Name}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
-                                                        <div className="mb-1">Aadhaar: <span className="text-slate-400">—</span></div>
-                                                        <div>PAN: <span className="text-slate-400">—</span></div>
+                                                <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Co-Applicant 2</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{coApp2Name}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
+                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className="text-[#94A3B8] font-normal">Pending</span></div>
+                                                        <div className="text-[#64748B]">PAN: <span className="text-[#94A3B8] font-normal">Pending</span></div>
                                                     </td>
                                                 </tr>
 
                                                 {/* Co-Applicant 3 */}
-                                                <tr className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-700">Co-Applicant 3</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-slate-700">{coApp3Name}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
-                                                        <div className="mb-1">Aadhaar: <span className="text-slate-400">—</span></div>
-                                                        <div>PAN: <span className="text-slate-400">—</span></div>
+                                                <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Co-Applicant 3</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{coApp3Name}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
+                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className="text-[#94A3B8] font-normal">Pending</span></div>
+                                                        <div className="text-[#64748B]">PAN: <span className="text-[#94A3B8] font-normal">Pending</span></div>
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -506,39 +523,44 @@ export default function ProfileTab() {
                         })()}
 
                         {/* Academic Details Card */}
-                        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-6">
-                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-4">Academic Details</h3>
+                        <div className="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 shadow-sm">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
+                                    <span className="material-symbols-outlined text-[16px]">school</span>
+                                </div>
+                                <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Academic Details</h3>
+                            </div>
                             <div className="space-y-4">
                                 {/* SSC */}
-                                <div className="bg-white p-4 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">10th Standard / SSC</label>
-                                        <span className="text-sm font-medium text-slate-700 block mt-1">{sscDetails.institute}</span>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">10th Standard / SSC</label>
+                                        <span className="text-sm font-semibold text-[#0F172A] block mt-1">{sscDetails.institute}</span>
                                     </div>
-                                    <div className="sm:text-right bg-slate-50 border border-slate-200/80 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
-                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage:</span>
+                                    <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                        <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
                                         {sscDetails.percentage}
                                     </div>
                                 </div>
                                 {/* HSC */}
-                                <div className="bg-white p-4 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Intermediate / 12th / HSC</label>
-                                        <span className="text-sm font-medium text-slate-700 block mt-1">{hscDetails.institute}</span>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Intermediate / 12th / HSC</label>
+                                        <span className="text-sm font-semibold text-[#0F172A] block mt-1">{hscDetails.institute}</span>
                                     </div>
-                                    <div className="sm:text-right bg-slate-50 border border-slate-200/80 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
-                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage:</span>
+                                    <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                        <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
                                         {hscDetails.percentage}
                                     </div>
                                 </div>
                                 {/* Graduation */}
-                                <div className="bg-white p-4 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Graduation / Bachelors Degree</label>
-                                        <span className="text-sm font-medium text-slate-700 block mt-1">{ugDetails.institute}</span>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Graduation / Bachelors Degree</label>
+                                        <span className="text-sm font-semibold text-[#0F172A] block mt-1">{ugDetails.institute}</span>
                                     </div>
-                                    <div className="sm:text-right bg-slate-50 border border-slate-200/80 rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-slate-500">
-                                        <span className="font-bold text-[9px] uppercase tracking-wider text-slate-400 block sm:inline mr-1">Percentage/CGPA:</span>
+                                    <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                        <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage/CGPA:</span>
                                         {ugDetails.percentage}
                                     </div>
                                 </div>

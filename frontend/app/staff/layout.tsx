@@ -179,14 +179,41 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                 // Count follow-up reminders for this staff member
                 try {
                     const staffId = user?.id || user?.email || 'default';
+                    let count = 0;
+
+                    // Count application follow-ups
                     const followUpKey = `staff_follow_up_dates_${staffId}`;
                     const savedFollowUps = localStorage.getItem(followUpKey);
                     if (savedFollowUps) {
-                        const followUps = JSON.parse(savedFollowUps);
-                        setRemindersCount(Object.keys(followUps).length);
-                    } else {
-                        setRemindersCount(0);
+                        try {
+                            const followUps = JSON.parse(savedFollowUps);
+                            count += Object.keys(followUps).length;
+                        } catch (e) {
+                            console.error(e);
+                        }
                     }
+
+                    // Count student follow-ups
+                    if (typeof window !== "undefined") {
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key && key.startsWith(`follow_ups_${staffId}_`)) {
+                                const stored = localStorage.getItem(key);
+                                if (stored) {
+                                    try {
+                                        const parsed = JSON.parse(stored);
+                                        if (Array.isArray(parsed)) {
+                                            count += parsed.filter((fu: any) => fu.status === "pending").length;
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    setRemindersCount(count);
                 } catch {
                     setRemindersCount(0);
                 }

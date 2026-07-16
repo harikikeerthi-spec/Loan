@@ -822,8 +822,8 @@ export class UsersService {
 
     const now = new Date().toISOString();
 
-    // Generate sequential local application number on creation
-    const applicationNumber = await this.generateApplicationNumber();
+    // Generate sequential local application number on creation - disabled to defer until bank submission
+    const applicationNumber = null;
 
     // Calculate estimated completion (14 days from now)
     const estimatedCompletionAt = new Date();
@@ -946,9 +946,12 @@ export class UsersService {
     try {
       const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
       const targetUni = application.universityName || 'Target University';
+      const appNumLabel = (application.applicationNumber && (application.applicationNumber.startsWith('VTU-APP-') || application.applicationNumber.startsWith('VTU-BNK-') || application.applicationNumber.startsWith('VL-APP-')))
+        ? ` #${application.applicationNumber}`
+        : '';
       this.eventEmitter.emit('dashboard.activity', {
         type: 'application',
-        msg: `Student ${name} submitted a new Loan Application #${application.applicationNumber} for ${targetUni}.`,
+        msg: `Student ${name} submitted a new Loan Application${appNumLabel} for ${targetUni}.`,
         icon: 'assignment',
         color: 'bg-indigo-50 text-indigo-700 border-indigo-100',
         actorName: name,
@@ -1247,7 +1250,7 @@ export class UsersService {
       const { data: userWithActivity, error: userErr } = await this.db
         .from('User')
         .select(
-          `*, eligibilityChecks:AiEligibilityCheck(*), visaMockInterviews:AiVisaInterview(*), forumPosts:ForumPost(*), forumComments:ForumComment(*)`,
+          `*, eligibilityChecks:LoanEligibilityCheck(*), visaMockInterviews:VisaMockInterviewResult(*), forumPosts:ForumPost(*), forumComments:ForumComment(*)`,
         )
         .eq('id', userId)
         .single();

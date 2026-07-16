@@ -163,7 +163,7 @@ export const EVVTestAgent: React.FC<{
       {/* Header */}
       <div className="border-b border-slate-200 px-6 py-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-8 h-8 rounded-md bg-gradient-to-br from-teal-600 to-teal-700 flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-8 h-8 rounded-md bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center text-white font-bold text-sm">
             VL
           </div>
           <h2 className="text-lg font-bold text-slate-900">EVV Test Agent</h2>
@@ -181,8 +181,8 @@ export const EVVTestAgent: React.FC<{
             onClick={() => setActiveTab("upload")}
             className={`px-4 py-2 rounded-full font-semibold text-sm transition-colors flex items-center gap-2 ${
               activeTab === "upload"
-                ? "bg-teal-600 text-white"
-                : "border border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-300"
+                ? "bg-indigo-600 text-white"
+                : "border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-300"
             }`}
           >
             <span className="text-base">📤</span>
@@ -192,8 +192,8 @@ export const EVVTestAgent: React.FC<{
             onClick={() => setActiveTab("paste")}
             className={`px-4 py-2 rounded-full font-semibold text-sm transition-colors flex items-center gap-2 ${
               activeTab === "paste"
-                ? "bg-teal-600 text-white"
-                : "border border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-300"
+                ? "bg-indigo-600 text-white"
+                : "border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-300"
             }`}
           >
             <span className="text-base">📋</span>
@@ -204,7 +204,7 @@ export const EVVTestAgent: React.FC<{
         {/* Upload Panel */}
         {activeTab === "upload" && (
           <div
-            className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer transition-all hover:border-teal-500 hover:bg-teal-50"
+            className="border-2 border-dashed border-slate-300 rounded-lg p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:border-indigo-500 hover:bg-indigo-50"
             onClick={() => fileInputRef.current?.click()}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -226,7 +226,7 @@ export const EVVTestAgent: React.FC<{
               }}
             />
             {fileNameDisplay && (
-              <div className="mt-4 text-sm font-medium text-teal-600">{fileNameDisplay}</div>
+              <div className="mt-4 text-sm font-medium text-indigo-600">{fileNameDisplay}</div>
             )}
           </div>
         )}
@@ -237,7 +237,7 @@ export const EVVTestAgent: React.FC<{
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
             placeholder={`Paste statement text, e.g.:\n01/01/2026  UPI-XYZ-CR  2,500.00        45,120.50\n03/01/2026  ATM-WDL      3,000.00  42,120.50`}
-            className="w-full min-h-40 p-4 border border-slate-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+            className="w-full min-h-40 p-4 border border-slate-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           />
         )}
 
@@ -254,7 +254,7 @@ export const EVVTestAgent: React.FC<{
               max="90"
               value={intervalDays}
               onChange={(e) => setIntervalDays(parseInt(e.target.value) || 5)}
-              className="w-16 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-16 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <span className="text-sm text-slate-600">days</span>
           </div>
@@ -265,7 +265,7 @@ export const EVVTestAgent: React.FC<{
             className={`ml-auto px-6 py-2 rounded-full font-semibold text-sm text-white flex items-center gap-2 transition-all ${
               uploading
                 ? "bg-slate-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-teal-600 to-teal-700 hover:shadow-lg hover:scale-105"
+                : "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:shadow-lg hover:scale-[1.02]"
             }`}
           >
             <span className="text-base">⚡</span>
@@ -276,40 +276,47 @@ export const EVVTestAgent: React.FC<{
         {/* Results Section */}
         {evvResult && (
           <div className="space-y-6 border-t border-slate-200 pt-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-lg p-4 border-t-4 border-t-teal-600">
-                <div className="text-xs font-bold text-teal-600 uppercase tracking-wide mb-2">
-                  Overall EVV
-                </div>
-                <div className="text-2xl font-bold text-slate-900">
-                  {displayCurrency(evvResult.overallEVV)}
-                </div>
+            {/* Hero Overall EVV Card */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50/40 border border-indigo-150 rounded-2xl p-6 border-l-4 border-l-indigo-600 shadow-sm relative overflow-hidden">
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
+                <span className="material-symbols-outlined text-[72px] text-indigo-900">payments</span>
               </div>
+              <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1.5">
+                Estimated Verified Value (EVV)
+              </div>
+              <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {displayCurrency(evvResult.overallEVV)}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2 font-medium">
+                Verified average maintained balance based on bank statement snapshots.
+              </p>
+            </div>
 
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 border-t-4 border-t-blue-600">
-                <div className="text-xs font-bold text-blue-600 uppercase tracking-wide mb-2">
-                  Snapshots
+            {/* Other Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-50/50 border border-slate-200/80 rounded-xl p-4">
+                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                  Snapshots Count
                 </div>
-                <div className="text-2xl font-bold text-slate-900">
+                <div className="text-xl font-bold text-slate-800">
                   {evvResult.snapshots.length}
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4 border-t-4 border-t-purple-600">
-                <div className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-2">
-                  Transactions
+              <div className="bg-slate-50/50 border border-slate-200/80 rounded-xl p-4">
+                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                  Transactions Processed
                 </div>
-                <div className="text-2xl font-bold text-slate-900">
+                <div className="text-xl font-bold text-slate-800">
                   {evvResult.transactions.length}
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4 border-t-4 border-t-amber-600">
-                <div className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-2">
-                  Period
+              <div className="bg-slate-50/50 border border-slate-200/80 rounded-xl p-4">
+                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                  Analysis Period
                 </div>
-                <div className="text-xs font-bold text-slate-900">
+                <div className="text-[11px] font-bold text-slate-700 leading-tight">
                   {formatDate(evvResult.period.start)} →<br />
                   {formatDate(evvResult.period.end)}
                 </div>
@@ -323,7 +330,7 @@ export const EVVTestAgent: React.FC<{
                   onClick={() => setActiveDetailTab("results")}
                   className={`px-4 py-3 font-semibold text-sm transition-colors ${
                     activeDetailTab === "results"
-                      ? "text-teal-600 border-b-2 border-teal-600"
+                      ? "text-indigo-600 border-b-2 border-indigo-600"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
@@ -333,7 +340,7 @@ export const EVVTestAgent: React.FC<{
                   onClick={() => setActiveDetailTab("console")}
                   className={`px-4 py-3 font-semibold text-sm transition-colors ${
                     activeDetailTab === "console"
-                      ? "text-teal-600 border-b-2 border-teal-600"
+                      ? "text-indigo-600 border-b-2 border-indigo-600"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
@@ -344,10 +351,10 @@ export const EVVTestAgent: React.FC<{
 
             {/* Monthly Metrics Table */}
             {activeDetailTab === "results" && (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto border border-slate-200 rounded-xl">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200">
+                    <tr className="border-b border-slate-200 bg-slate-50/75">
                       <th className="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase">
                         Month
                       </th>
@@ -367,7 +374,7 @@ export const EVVTestAgent: React.FC<{
                   </thead>
                   <tbody>
                     {evvResult.monthlyMetrics.map((metric: MonthlyMetric, idx: number) => (
-                      <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                      <tr key={idx} className="border-b border-slate-150 even:bg-slate-50/30 hover:bg-slate-100/50 transition-colors">
                         <td className="px-4 py-3 text-slate-900 font-medium">{metric.label}</td>
                         <td className="px-4 py-3 text-right text-slate-600">{metric.points}</td>
                         <td className="px-4 py-3 text-right text-slate-900 font-semibold">

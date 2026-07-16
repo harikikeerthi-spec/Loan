@@ -1,6 +1,5 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -53,6 +52,7 @@ model User {
   pincode               String?
   loanAmount            String?
   admitStatus           String?
+  tests                 Json?
   onboardingApplication OnboardingApplication?
   studyPreference       UserStudyPreference?
   academicProfile       UserAcademicProfile?
@@ -136,7 +136,6 @@ model Blog {
 
   comments  Comment[]
   tags      BlogTag[]
-  auditLogs AuditLog[] @relation("BlogAuditLogs")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -304,6 +303,7 @@ model LoanApplication {
   documents     ApplicationDocument[]
   statusHistory ApplicationStatusHistory[]
   notes         ApplicationNote[]
+  ProcessingFee ProcessingFee?
 
   @@index([userId])
   @@index([status])
@@ -411,8 +411,6 @@ model AuditLog {
   changes   Json
   ipAddress String?
   userAgent String?
-
-  blog Blog? @relation("BlogAuditLogs", fields: [entityId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 
@@ -1058,9 +1056,9 @@ model UniversityInquiry {
 
 model Campaign {
   id               String              @id @default(uuid())
-  name             String
+  name             String              @map("title")
   subject          String
-  body             String              @db.Text
+  body             String              @db.Text @map("bodyTemplate")
   status           String              @default("draft") // draft, queued, sending, completed, cancelled, paused
   scheduledAt      DateTime            @default(now())
   priority         String              @default("medium") // low, medium, high
@@ -1071,36 +1069,47 @@ model Campaign {
   emailQueues      EmailQueue[]
 
   // Campaign configurations
-  campaignType     String              @default("newsletter") // newsletter, product_update, event_invite, promotional, onboarding, retention, custom
-  tone             String              @default("friendly") // friendly, professional, urgent, premium
+  campaignType     String              @default("newsletter") @map("templateType")
+  tone             String              @default("friendly") // friendly, professional, formal, conversational, premium, encouraging, urgent
   optimizationGoal String?
   primaryObjective String?
   targetContext    String?
   totalCount       Int                 @default(0)
   sentCount        Int                 @default(0)
   failedCount      Int                 @default(0)
+  openCount        Int                 @default(0)
+  clickCount       Int                 @default(0)
 
+  // Relationships
+  campaignQueues   CampaignQueue[]
+  emailLogs        EmailLog[]
+  aiEmails         AIEmail[]
+  schedules        CampaignSchedule[]
+  analytics        CampaignAnalytics?
+
+  @@map("EmailCampaign")
   @@index([status])
   @@index([scheduledAt])
 }
 
 model CampaignRecipient {
-  id             String      @id @default(uuid())
+  id             String         @id @default(uuid())
   campaignId     String
-  campaign       Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaign       Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   userId         String?
   recipientEmail String
   recipientName  String?
-  variables      Json?       // dynamic variables (e.g. firstName, lastName)
-  status         String      @default("pending") // pending, queued, sent, failed, opened, clicked, bounced
+  variables      Json?          // dynamic variables (e.g. firstName, lastName)
+  status         String         @default("pending") // pending, queued, sent, failed, opened, clicked, bounced
   sentAt         DateTime?
   openedAt       DateTime?
   clickedAt      DateTime?
   bouncedAt      DateTime?
   errorMessage   String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   emailQueue     EmailQueue?
+  campaignQueue  CampaignQueue?
 
   @@unique([campaignId, recipientEmail])
   @@index([campaignId])
@@ -1143,6 +1152,122 @@ model EmailLogs {
 
   @@index([queueId])
   @@index([status])
+}
+
+model CampaignTemplate {
+  id           String   @id @default(uuid())
+  name         String
+  subject      String
+  bodyTemplate String   @db.Text
+  type         String // newsletter, scholarship, promotion, onboarding, custom
+  tone         String // friendly, professional, formal, conversational, premium, encouraging, urgent
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model CampaignQueue {
+  id                String             @id @default(uuid())
+  campaignId        String
+  campaign          Campaign           @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  recipientId       String             @unique
+  recipient         CampaignRecipient  @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  email             String
+  status            String             @default("pending") // pending, queued, generating, sending, sent, failed, cancelled, paused
+  attempts          Int                @default(0)
+  lastError         String?
+  scheduledFor      DateTime           @default(now())
+  processingStarted DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+model CampaignAnalytics {
+  id             String   @id @default(uuid())
+  campaignId     String   @unique
+  campaign       Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  totalSent      Int      @default(0)
+  totalOpened    Int      @default(0)
+  totalClicked   Int      @default(0)
+  totalBounced   Int      @default(0)
+  totalFailed    Int      @default(0)
+  totalReplied   Int      @default(0)
+  totalUnsubscribed Int   @default(0)
+  totalSpam      Int      @default(0)
+  conversionRate Float    @default(0.0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model EmailLog {
+  id             String    @id @default(uuid())
+  campaignId     String?
+  campaign       Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  recipientEmail String
+  subject        String
+  status         String // sent, failed, bounced, opened, clicked, unsubscribed, spam
+  errorMessage   String?
+  smtpProvider   String    @default("nodemailer")
+  sentAt         DateTime  @default(now())
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([campaignId])
+  @@index([status])
+}
+
+model AIEmail {
+  id              String   @id @default(uuid())
+  campaignId      String
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subject         String
+  previewText     String?
+  body            String   @db.Text
+  cta             String?
+  footer          String?
+  spamScore       Float    @default(0.0)
+  confidenceScore Float    @default(0.0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AutomationRule {
+  id           String   @id @default(uuid())
+  name         String
+  triggerEvent String // e.g. "Application Submitted", "Loan Approved", "Missing Passport", "Offer Letter Uploaded", "Visa Approved", "EMI Due"
+  templateId   String
+  priority     String   @default("medium") // low, medium, high
+  tone         String   @default("friendly")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model CampaignAudience {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  filters     Json // Store structured filters for Country, University, Course, Intake, Loan Status, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CampaignSchedule {
+  id             String    @id @default(uuid())
+  campaignId     String
+  campaign       Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  scheduledAt    DateTime
+  cronExpression String?   // standard 5-field cron expression for recurring campaigns
+  status         String    @default("pending") // pending, executed, cancelled
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+  @@index([scheduledAt])
 }
 
 model Parent {
@@ -1375,4 +1500,22 @@ model KnowledgeBaseArticle {
 
   @@index([category])
   @@index([isPublished])
+}
+
+model ProcessingFee {
+  applicationId String    @id
+  lanNumber     String?
+  feeAmount     Float
+  gstAmount     Float
+  totalAmount   Float
+  mode          String
+  status        String
+  waivedBy      String?
+  waiverReason  String?
+  paidAt        DateTime?
+  paymentMode   String?
+  paymentRef    String?
+  createdAt     DateTime  @default(now())
+
+  application   LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 }

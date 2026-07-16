@@ -313,7 +313,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const status = (application.status || "APPROVED").toUpperCase();
   const appId = (application.applicationNumber && (application.applicationNumber.startsWith('VTU-APP-') || application.applicationNumber.startsWith('VTU-BNK-') || application.applicationNumber.startsWith('VL-APP-')))
     ? application.applicationNumber
-    : "Not Generated Yet";
+    : "";
   const studentId = application.studentId || application.userId || "—";
   const studentId10 = application.studentId || application.userId || "—";
   const [conversationId, setConversationId] = useState<string | null>(null);

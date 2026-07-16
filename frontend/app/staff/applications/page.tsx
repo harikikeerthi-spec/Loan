@@ -417,14 +417,16 @@ export default function ApplicationsPage() {
                                                             </p>
                                                             {isExpanded && (
                                                                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                                    <p
-                                                                        onClick={() => router.push(`/staff/applications/${item.id || item._id}`)}
-                                                                        className="text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-indigo-700 cursor-pointer transition-all font-bold uppercase tracking-widest inline-flex items-center gap-1.5 px-2 py-1 rounded whitespace-nowrap border border-slate-200"
-                                                                        title="Click to open Application Page"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-[12px]">description</span>
-                                                                        {item.applicationNumber ? item.applicationNumber : 'Not Generated Yet'}
-                                                                    </p>
+                                                                    {(item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-') || item.applicationNumber.startsWith('VTU-BNK-') || item.applicationNumber.startsWith('VL-APP-'))) && (
+                                                                        <p
+                                                                            onClick={() => router.push(`/staff/applications/${item.id || item._id}`)}
+                                                                            className="text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-indigo-700 cursor-pointer transition-all font-bold uppercase tracking-widest inline-flex items-center gap-1.5 px-2 py-1 rounded whitespace-nowrap border border-slate-200"
+                                                                            title="Click to open Application Page"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[12px]">description</span>
+                                                                            {item.applicationNumber}
+                                                                        </p>
+                                                                    )}
                                                                     {/* {(item.bank || item.targetBank) && (
                                                                         <button
                                                                             onClick={() => {

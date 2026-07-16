@@ -1,59 +1,80 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { PrismaService } from '../prisma/prisma.service';
 import { OpenRouterService } from '../ai/services/openrouter.service';
+import { EmailService } from '../auth/email.service';
 
 @Injectable()
 export class CampaignService {
+  private readonly logger = new Logger(CampaignService.name);
+
   constructor(
-    private readonly supabase: SupabaseService,
-    private readonly openRouterService: OpenRouterService,
+    private readonly prisma: PrismaService,
+    private readonly openRouter: OpenRouterService,
+    private readonly emailService: EmailService,
+    @InjectQueue('campaign') private readonly campaignQueue: Queue,
   ) { }
 
+  // ─── Campaign CRUD Operations ──────────────────────────────────────────────
+
   async createCampaign(data: any) {
-    const { data: campaign, error } = await this.supabase
-      .from('EmailCampaign')
-      .insert([{
-        title: data.title,
-        templateType: data.templateType,
-        tone: data.tone,
+    this.logger.log(`Creating campaign: ${data.title}`);
+    const campaign = await this.prisma.campaign.create({
+      data: {
+        name: data.title,
+        campaignType: data.templateType || 'newsletter',
+        tone: data.tone || 'friendly',
         optimizationGoal: data.optimizationGoal || '',
-        primaryObjective: data.primaryObjective,
+        primaryObjective: data.primaryObjective || '',
         targetContext: data.targetContext || '',
         subject: data.subject,
-        bodyTemplate: data.bodyTemplate,
+        body: data.bodyTemplate || '',
         status: 'draft',
         priority: data.priority || 'medium',
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : new Date(),
         totalCount: 0,
         sentCount: 0,
         failedCount: 0,
-      }])
-      .select()
-      .single();
+        openCount: 0,
+        clickCount: 0,
+      },
+    });
 
-    if (error) {
-      throw new Error(`Failed to create campaign: ${error.message}`);
-    }
+    // Initialize Campaign Analytics
+    await this.prisma.campaignAnalytics.create({
+      data: {
+        campaignId: campaign.id,
+      },
+    });
 
     return { success: true, data: campaign };
   }
 
-  async getCampaigns(limit = 50, offset = 0) {
-    const { data, error, count } = await this.supabase
-      .from('EmailCampaign')
-      .select('*', { count: 'exact' })
-      .order('createdAt', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) {
-      throw new Error(`Failed to fetch campaigns: ${error.message}`);
+  async getCampaigns(limit = 50, offset = 0, status?: string) {
+    const where: any = {};
+    if (status) {
+      where.status = status;
     }
+
+    const [data, total] = await Promise.all([
+      this.prisma.campaign.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+        include: {
+          analytics: true,
+        },
+      }),
+      this.prisma.campaign.count({ where }),
+    ]);
 
     return {
       success: true,
       data,
       pagination: {
-        total: count || 0,
+        total,
         limit,
         offset,
       },
@@ -61,275 +82,789 @@ export class CampaignService {
   }
 
   async getCampaignById(id: string) {
-    const { data: campaign, error } = await this.supabase
-      .from('EmailCampaign')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id },
+      include: {
+        analytics: true,
+        aiEmails: { take: 5 },
+        recipients: { take: 10 },
+      },
+    });
 
-    if (error || !campaign) {
+    if (!campaign) {
       throw new NotFoundException(`Campaign with ID ${id} not found`);
     }
 
-    // Also get recipient counts grouped by status
-    const { data: recipients, error: recError } = await this.supabase
-      .from('CampaignRecipient')
-      .select('status');
-
-    let pendingCount = 0;
-    let sentCount = 0;
-    let failedCount = 0;
-
-    if (!recError && recipients) {
-      const filtered = recipients.filter((r: any) => r.campaignId === id); // fallback local filter if eq not used
-      // Let's do a proper DB count instead
-    }
-
-    const { count: pending } = await this.supabase
-      .from('CampaignRecipient')
-      .select('*', { count: 'exact', head: true })
-      .eq('campaignId', id)
-      .eq('status', 'pending');
-
-    const { count: sent } = await this.supabase
-      .from('CampaignRecipient')
-      .select('*', { count: 'exact', head: true })
-      .eq('campaignId', id)
-      .eq('status', 'sent');
-
-    const { count: failed } = await this.supabase
-      .from('CampaignRecipient')
-      .select('*', { count: 'exact', head: true })
-      .eq('campaignId', id)
-      .eq('status', 'failed');
+    // Get live status stats
+    const [pendingCount, queuedCount, sentCount, failedCount] = await Promise.all([
+      this.prisma.campaignRecipient.count({ where: { campaignId: id, status: 'pending' } }),
+      this.prisma.campaignRecipient.count({ where: { campaignId: id, status: 'queued' } }),
+      this.prisma.campaignRecipient.count({ where: { campaignId: id, status: 'sent' } }),
+      this.prisma.campaignRecipient.count({ where: { campaignId: id, status: 'failed' } }),
+    ]);
 
     return {
       success: true,
       data: {
         ...campaign,
         stats: {
-          pending: pending || 0,
-          sent: sent || 0,
-          failed: failed || 0,
-        }
+          pending: pendingCount,
+          queued: queuedCount,
+          sent: sentCount,
+          failed: failedCount,
+        },
       },
     };
   }
 
-  async deleteCampaign(id: string) {
-    const { error } = await this.supabase
-      .from('EmailCampaign')
-      .delete()
-      .eq('id', id);
+  async updateCampaign(id: string, data: any) {
+    const campaign = await this.prisma.campaign.update({
+      where: { id },
+      data: {
+        name: data.title,
+        campaignType: data.templateType,
+        tone: data.tone,
+        optimizationGoal: data.optimizationGoal,
+        primaryObjective: data.primaryObjective,
+        targetContext: data.targetContext,
+        subject: data.subject,
+        body: data.bodyTemplate,
+        priority: data.priority,
+        scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
+        status: data.status,
+      },
+    });
 
-    if (error) {
-      throw new Error(`Failed to delete campaign: ${error.message}`);
-    }
-
-    return { success: true, message: 'Campaign deleted successfully' };
+    return { success: true, data: campaign };
   }
+
+  async deleteCampaign(id: string) {
+    await this.prisma.campaign.delete({ where: { id } });
+    return { success: true, message: 'Campaign and associated logs deleted successfully' };
+  }
+
+  // ─── Audience Builder & Advanced Filters ───────────────────────────────────
 
   async getTargetAudience(filters: any = {}) {
-    let query = this.supabase.from('User').select('id, email, firstName, lastName, role');
+    const queryConditions: any = {
+      role: 'student', // only target students
+    };
 
-    // Default to only target students unless specified
-    query = query.eq('role', 'student');
+    // If advanced filter object is provided
+    if (filters) {
+      const andConditions: any[] = [];
 
-    if (filters.studyDestination) {
-      query = query.eq('studyDestination', filters.studyDestination);
+      if (filters.studyDestination) {
+        andConditions.push({ studyDestination: { equals: filters.studyDestination, mode: 'insensitive' } });
+      }
+
+      if (filters.targetUniversity) {
+        andConditions.push({ targetUniversity: { contains: filters.targetUniversity, mode: 'insensitive' } });
+      }
+
+      if (filters.courseName) {
+        andConditions.push({ courseName: { contains: filters.courseName, mode: 'insensitive' } });
+      }
+
+      if (filters.intakeSeason) {
+        andConditions.push({ intakeSeason: { contains: filters.intakeSeason, mode: 'insensitive' } });
+      }
+
+      // Filter by Loan Application details
+      if (filters.loanStatus || filters.applicationStage || filters.loanAmountMin || filters.loanAmountMax) {
+        const loanWhere: any = {};
+        if (filters.loanStatus) {
+          loanWhere.status = filters.loanStatus;
+        }
+        if (filters.applicationStage) {
+          loanWhere.stage = filters.applicationStage;
+        }
+        if (filters.loanAmountMin || filters.loanAmountMax) {
+          loanWhere.amount = {};
+          if (filters.loanAmountMin) loanWhere.amount.gte = parseFloat(filters.loanAmountMin);
+          if (filters.loanAmountMax) loanWhere.amount.lte = parseFloat(filters.loanAmountMax);
+        }
+
+        andConditions.push({
+          loanApplications: {
+            some: loanWhere,
+          },
+        });
+      }
+
+      // Filter by missing documents
+      if (filters.missingDocuments && Array.isArray(filters.missingDocuments) && filters.missingDocuments.length > 0) {
+        andConditions.push({
+          documents: {
+            some: {
+              docType: { in: filters.missingDocuments },
+              uploaded: false,
+            },
+          },
+        });
+      }
+
+      // Mobile/Email verification status
+      if (filters.emailVerified !== undefined) {
+        andConditions.push({ emailVerified: filters.emailVerified === 'true' || filters.emailVerified === true });
+      }
+
+      if (filters.mobileVerified !== undefined) {
+        andConditions.push({ mobileVerified: filters.mobileVerified === 'true' || filters.mobileVerified === true });
+      }
+
+      // Admission Status
+      if (filters.admitStatus) {
+        andConditions.push({ admitStatus: filters.admitStatus });
+      }
+
+      // Risk score or AI eligibility score matches (joins)
+      if (filters.minEligibilityScore) {
+        andConditions.push({
+          eligibilityChecks: {
+            some: {
+              score: { gte: parseFloat(filters.minEligibilityScore) },
+            },
+          },
+        });
+      }
+
+      // Apply AND block if contains any conditions
+      if (andConditions.length > 0) {
+        queryConditions.AND = andConditions;
+      }
     }
 
-    if (filters.targetUniversity) {
-      query = query.eq('targetUniversity', filters.targetUniversity);
-    }
+    const users = await this.prisma.user.findMany({
+      where: queryConditions,
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        mobile: true,
+        studyDestination: true,
+        targetUniversity: true,
+        courseName: true,
+        loanAmount: true,
+        admitStatus: true,
+        createdAt: true,
+      },
+    });
 
-    const { data: users, error } = await query;
-    if (error) {
-      throw new Error(`Failed to fetch audience: ${error.message}`);
-    }
-
-    return users || [];
+    return users;
   }
 
-  async queueCampaign(id: string, recipientIds: string[]) {
-    // 1. Fetch Campaign
-    const { data: campaign, error: campError } = await this.supabase
-      .from('EmailCampaign')
-      .select('*')
-      .eq('id', id)
-      .single();
+  async saveAudience(data: any) {
+    const audience = await this.prisma.campaignAudience.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        filters: data.filters || {},
+      },
+    });
+    return { success: true, data: audience };
+  }
 
-    if (campError || !campaign) {
+  async getSavedAudiences() {
+    const audiences = await this.prisma.campaignAudience.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, data: audiences };
+  }
+
+  // ─── Campaign Enqueuing & Scheduling ───────────────────────────────────────
+
+  async queueCampaign(id: string, recipientIds: string[]) {
+    // 1. Fetch Campaign details
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id },
+    });
+
+    if (!campaign) {
       throw new NotFoundException(`Campaign with ID ${id} not found`);
     }
 
-    // 2. Fetch selected users
-    const { data: users, error: usersError } = await this.supabase
-      .from('User')
-      .select('id, email, firstName, lastName')
-      .in('id', recipientIds);
+    // 2. Fetch users by selected ID list
+    const users = await this.prisma.user.findMany({
+      where: {
+        id: { in: recipientIds },
+      },
+    });
 
-    if (usersError || !users || users.length === 0) {
-      throw new Error('No valid recipients selected');
+    if (users.length === 0) {
+      throw new BadRequestException('No valid recipients selected.');
     }
 
-    console.log(`Queueing campaign ${id} for ${users.length} recipients...`);
-
-    // 3. Clear any existing recipients for this campaign
-    await this.supabase
-      .from('CampaignRecipient')
-      .delete()
-      .eq('campaignId', id);
+    // 3. Delete any previous queue records for this campaign
+    await this.prisma.campaignRecipient.deleteMany({
+      where: { campaignId: id },
+    });
 
     // 4. Batch insert recipients
-    const recipientRecords = users.map(user => ({
+    const recipientData = users.map(u => ({
       campaignId: id,
-      recipientEmail: user.email,
-      recipientName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      userId: u.id,
+      recipientEmail: u.email,
+      recipientName: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+      status: 'queued',
       variables: {
-        firstName: user.firstName || 'Student',
-        lastName: user.lastName || '',
+        studentName: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+        country: u.studyDestination || 'your study destination',
+        course: u.courseName || 'your course',
+        university: u.targetUniversity || 'your university',
+        loanAmount: u.loanAmount || 'required amount',
+        dashboardUrl: 'https://vidyaloan.com/dashboard',
       },
-      status: 'pending',
     }));
 
-    const { error: insertError } = await this.supabase
-      .from('CampaignRecipient')
-      .insert(recipientRecords);
+    await this.prisma.campaignRecipient.createMany({
+      data: recipientData,
+    });
 
-    if (insertError) {
-      throw new Error(`Failed to queue recipients: ${insertError.message}`);
-    }
+    // Fetch the generated recipients to queue jobs
+    const recipients = await this.prisma.campaignRecipient.findMany({
+      where: { campaignId: id },
+    });
 
-    // 5. Update Campaign Status
-    const { error: updateError } = await this.supabase
-      .from('EmailCampaign')
-      .update({
+    // 5. Update campaign status
+    await this.prisma.campaign.update({
+      where: { id },
+      data: {
         status: 'queued',
-        totalCount: users.length,
+        totalCount: recipients.length,
         sentCount: 0,
         failedCount: 0,
-        updatedAt: new Date().toISOString(),
-      })
-      .eq('id', id);
+        updatedAt: new Date(),
+      },
+    });
 
-    if (updateError) {
-      throw new Error(`Failed to update campaign status: ${updateError.message}`);
-    }
+    // 6. Push individual personalizing/sending jobs to BullMQ
+    const jobs = recipients.map(r => ({
+      name: 'send-personal-email',
+      data: { campaignId: id, recipientId: r.id },
+      opts: {
+        priority: campaign.priority === 'high' ? 1 : campaign.priority === 'medium' ? 5 : 10,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+      },
+    }));
+
+    await this.campaignQueue.addBulk(jobs);
+
+    this.logger.log(`Enqueued ${recipients.length} sending jobs for campaign ${campaign.name}`);
 
     return {
       success: true,
-      message: 'Campaign queued successfully',
-      queuedCount: users.length,
+      message: 'Campaign recipients queued successfully',
+      queuedCount: recipients.length,
     };
   }
 
   async cancelCampaign(id: string) {
-    const { error } = await this.supabase
-      .from('EmailCampaign')
-      .update({
+    // Update campaign status
+    await this.prisma.campaign.update({
+      where: { id },
+      data: {
         status: 'cancelled',
-        updatedAt: new Date().toISOString(),
-      })
-      .eq('id', id);
+        updatedAt: new Date(),
+      },
+    });
 
-    if (error) {
-      throw new Error(`Failed to cancel campaign: ${error.message}`);
-    }
+    // Update queued recipients to cancelled
+    await this.prisma.campaignRecipient.updateMany({
+      where: { campaignId: id, status: 'queued' },
+      data: { status: 'cancelled' },
+    });
 
-    return { success: true, message: 'Campaign cancelled successfully' };
+    return { success: true, message: 'Campaign sending cancelled successfully' };
   }
 
-  async generateCampaignEmail(data: any) {
-    const prompt = `You are an expert email marketer for VidyaLoan, an education loan platform in India.
-Generate a high-converting email campaign with the following parameters:
-- Template Type: ${data.templateType || 'newsletter'}
-- Tone: ${data.tone || 'friendly_casual'}
-- Primary Objective: ${data.primaryObjective || 'Visit our website'}
-- Target Context: ${data.targetContext || ''}
-- Optimization Goal: ${data.optimizationGoal || ''}
+  async sendTestEmail(campaignId: string, adminEmail: string) {
+    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!campaign) throw new NotFoundException('Campaign not found');
 
-Requirements:
-1. Subject line: Write a highly engaging, relevant subject line. It can include personalization like {{firstName}}.
-2. HTML Body: Write a beautiful, clean, responsive HTML email body template using inline styling. Use a professional color scheme (deep indigo #6605c7, slate, white). Include a clear, styled Call-To-Action (CTA) button linked to the objective.
-3. Placeholders: Use {{firstName}} and {{lastName}} inside the body where appropriate.
-4. Output format: You must return a JSON object with exactly two keys: "subject" and "bodyTemplate". Do not include markdown code block syntax.`;
+    const subject = `[TEST PREVIEW] ${campaign.subject}`;
+    const body = campaign.body.replace(/{{studentName}}/g, 'Test Admin');
+
+    await this.emailService.sendMail(adminEmail, subject, body, 'Test preview text fallback.');
+    return { success: true, message: `Test email sent to ${adminEmail}` };
+  }
+
+  // ─── AI Engines: Personalization, Prompt Building & Context Building ───────
+
+  async processRecipientEmail(campaignId: string, recipientId: string) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+    });
+    if (!campaign || campaign.status === 'cancelled') {
+      return { success: false, reason: 'Campaign cancelled or not found' };
+    }
+
+    const recipient = await this.prisma.campaignRecipient.findUnique({
+      where: { id: recipientId },
+    });
+    if (!recipient || recipient.status !== 'queued') {
+      return { success: false, reason: 'Recipient not ready or already processed' };
+    }
+
+    // Update status to generating
+    await this.prisma.campaignRecipient.update({
+      where: { id: recipientId },
+      data: { status: 'generating' },
+    });
 
     try {
-      const result = await this.openRouterService.getJson<{ subject: string; bodyTemplate: string }>(prompt);
-      return { success: true, data: result };
+      // 1. Build Student Profile Context Automatically
+      const studentContext = await this.buildStudentContext(recipient.userId);
+
+      // 2. Personalize Subject & Email Body with AI
+      const prompt = `
+      You are an elite educational financing copywriter for VidyaLoan (India's leading study abroad loan platform).
+      You are writing a personalized campaign email to:
+      ${JSON.stringify(studentContext, null, 2)}
+
+      Campaign Parameters:
+      - Goal: ${campaign.optimizationGoal}
+      - Objective: ${campaign.primaryObjective}
+      - Tone: ${campaign.tone}
+      - Template Subject: ${campaign.subject}
+      - Template Body: ${campaign.body}
+
+      Instructions:
+      1. Write a highly tailored email subject. It should feel conversational yet professional, using variables like ${studentContext.firstName}.
+      2. Write a highly personalized email body content based on the provided template and student's context.
+         - Mention their specific target university (${studentContext.targetUniversity || 'chosen university'}) and country (${studentContext.country || 'destination country'}).
+         - Refer to their current loan status (${studentContext.loanStatus}) or missing documents (${studentContext.pendingDocuments.join(', ') || 'none'}).
+         - Inject helpful assistance from their assigned advisor (${studentContext.assignedStaff || 'our staff'}).
+         - Maintain the tone: ${campaign.tone}.
+      3. Format output as a JSON object containing keys: "subject", "previewText", "body", "ctaText", "footerText".
+      4. Ensure the body contains valid, spam-safe inline HTML. Do not include markdown code block characters.
+      `;
+
+      const aiResponse = await this.openRouter.getJson<{
+        subject: string;
+        previewText: string;
+        body: string;
+        ctaText: string;
+        footerText: string;
+      }>(prompt);
+
+      // 3. Save generated AI email
+      const aiRecord = await this.prisma.aIEmail.create({
+        data: {
+          campaignId,
+          subject: aiResponse.subject || campaign.subject,
+          previewText: aiResponse.previewText || 'Exclusive updates for you.',
+          body: aiResponse.body || campaign.body,
+          cta: aiResponse.ctaText || 'Visit Portal',
+          footer: aiResponse.footerText || 'VidyaLoan Tech.',
+          spamScore: 1.2, // mock spam score
+          confidenceScore: 94.5,
+        },
+      });
+
+      // 4. Inject open and click tracking
+      const trackedBody = this.injectTracking(aiRecord.body, recipientId);
+
+      // 5. Send via SMTP
+      await this.emailService.sendMail(
+        recipient.recipientEmail,
+        aiRecord.subject,
+        trackedBody,
+        `Dear ${recipient.recipientName},\n\nPlease view this email in an HTML compatible client.`,
+      );
+
+      // 6. Update recipient status and logs
+      await this.prisma.campaignRecipient.update({
+        where: { id: recipientId },
+        data: {
+          status: 'sent',
+          sentAt: new Date(),
+        },
+      });
+
+      // Create log record
+      await this.prisma.emailLog.create({
+        data: {
+          campaignId,
+          recipientEmail: recipient.recipientEmail,
+          subject: aiRecord.subject,
+          status: 'sent',
+        },
+      });
+
+      // Increment campaign counters
+      await this.prisma.campaign.update({
+        where: { id: campaignId },
+        data: {
+          sentCount: { increment: 1 },
+        },
+      });
+
+      // Update analytics
+      await this.prisma.campaignAnalytics.update({
+        where: { campaignId },
+        data: {
+          totalSent: { increment: 1 },
+        },
+      });
+
+      return { success: true };
     } catch (error: any) {
-      throw new Error(`AI generation failed: ${error.message}`);
+      this.logger.error(`Failed to process campaign email for ${recipient.recipientEmail}: ${error.message}`);
+      
+      await this.prisma.campaignRecipient.update({
+        where: { id: recipientId },
+        data: {
+          status: 'failed',
+          errorMessage: error.message,
+        },
+      });
+
+      await this.prisma.emailLog.create({
+        data: {
+          campaignId,
+          recipientEmail: recipient.recipientEmail,
+          subject: campaign.subject,
+          status: 'failed',
+          errorMessage: error.message,
+        },
+      });
+
+      await this.prisma.campaign.update({
+        where: { id: campaignId },
+        data: {
+          failedCount: { increment: 1 },
+        },
+      });
+
+      await this.prisma.campaignAnalytics.update({
+        where: { campaignId },
+        data: {
+          totalFailed: { increment: 1 },
+        },
+      });
+
+      throw error; // Let BullMQ retry
     }
   }
 
-  async trackOpen(recipientId: string) {
-    // Set openedAt if not already set
-    const { data, error } = await this.supabase
-      .from('CampaignRecipient')
-      .update({ openedAt: new Date().toISOString() })
-      .eq('id', recipientId)
-      .is('openedAt', null)
-      .select('campaignId')
-      .single();
-
-    if (error) {
-      console.error(`[CampaignService.trackOpen] Error updating recipient ${recipientId}:`, error.message);
-      return;
+  private async buildStudentContext(userId: string | null) {
+    if (!userId) {
+      return {
+        firstName: 'Student',
+        lastName: '',
+        country: '',
+        university: '',
+        course: '',
+        loanAmount: '',
+        loanStatus: 'Applied',
+        pendingDocuments: [],
+        assignedStaff: 'VidyaLoan Team',
+      };
     }
 
-    if (data) {
-      // Increment openCount on Campaign
-      const { data: campaign, error: campErr } = await this.supabase
-        .from('EmailCampaign')
-        .select('openCount')
-        .eq('id', data.campaignId)
-        .single();
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        loanApplications: { orderBy: { date: 'desc' }, take: 1 },
+        documents: { where: { uploaded: false } },
+      },
+    });
 
-      if (campaign && !campErr) {
-        await this.supabase
-          .from('EmailCampaign')
-          .update({
-            openCount: (campaign.openCount || 0) + 1,
-            updatedAt: new Date().toISOString(),
-          })
-          .eq('id', data.campaignId);
-      }
+    if (!user) {
+      return {
+        firstName: 'Student',
+        lastName: '',
+        country: '',
+        university: '',
+        course: '',
+        loanAmount: '',
+        loanStatus: 'Applied',
+        pendingDocuments: [],
+        assignedStaff: 'VidyaLoan Team',
+      };
+    }
+
+    const latestApplication = user.loanApplications[0];
+    const missingDocs = user.documents.map(d => d.docType);
+
+    return {
+      firstName: user.firstName || 'Student',
+      lastName: user.lastName || '',
+      country: user.studyDestination || '',
+      targetUniversity: user.targetUniversity || '',
+      course: user.courseName || '',
+      loanAmount: user.loanAmount || '',
+      loanStatus: latestApplication ? latestApplication.status : 'Prospect',
+      applicationStage: latestApplication ? latestApplication.stage : 'New Lead',
+      pendingDocuments: missingDocs,
+      assignedStaff: 'VidyaLoan Support Team',
+    };
+  }
+
+  private injectTracking(html: string, recipientId: string): string {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000/api';
+    
+    // Inject open tracking pixel
+    const trackingPixel = `<img src="${backendUrl}/campaigns/track/open/${recipientId}" width="1" height="1" style="display:none;" />`;
+    let body = html;
+    if (body.includes('</body>')) {
+      body = body.replace('</body>', `${trackingPixel}</body>`);
+    } else {
+      body = body + trackingPixel;
+    }
+
+    // Inject click tracking redirects
+    const anchorRegex = /<a\s+([^>]*?)href=(["'])(https?:\/\/[^"'\s>]+)(["'])([^>]*?)>/gi;
+    body = body.replace(anchorRegex, (match, before, quote1, url, quote2, after) => {
+      const trackingUrl = `${backendUrl}/campaigns/track/click/${recipientId}?redirect=${encodeURIComponent(url)}`;
+      return `<a ${before}href=${quote1}${trackingUrl}${quote2}${after}>`;
+    });
+
+    return body;
+  }
+
+  // ─── Tracking Webhooks ─────────────────────────────────────────────────────
+
+  async trackOpen(recipientId: string) {
+    const recipient = await this.prisma.campaignRecipient.findUnique({
+      where: { id: recipientId },
+    });
+    if (recipient && !recipient.openedAt) {
+      await this.prisma.campaignRecipient.update({
+        where: { id: recipientId },
+        data: { openedAt: new Date(), status: 'opened' },
+      });
+
+      await this.prisma.campaign.update({
+        where: { id: recipient.campaignId },
+        data: { openCount: { increment: 1 } },
+      });
+
+      await this.prisma.campaignAnalytics.update({
+        where: { campaignId: recipient.campaignId },
+        data: { totalOpened: { increment: 1 } },
+      });
     }
   }
 
   async trackClick(recipientId: string) {
-    // Set clickedAt if not already set
-    const { data, error } = await this.supabase
-      .from('CampaignRecipient')
-      .update({ clickedAt: new Date().toISOString() })
-      .eq('id', recipientId)
-      .is('clickedAt', null)
-      .select('campaignId')
-      .single();
+    const recipient = await this.prisma.campaignRecipient.findUnique({
+      where: { id: recipientId },
+    });
+    if (recipient && !recipient.clickedAt) {
+      await this.prisma.campaignRecipient.update({
+        where: { id: recipientId },
+        data: { clickedAt: new Date(), status: 'clicked' },
+      });
 
-    if (error) {
-      console.error(`[CampaignService.trackClick] Error updating recipient ${recipientId}:`, error.message);
-      return;
+      await this.prisma.campaign.update({
+        where: { id: recipient.campaignId },
+        data: { clickCount: { increment: 1 } },
+      });
+
+      await this.prisma.campaignAnalytics.update({
+        where: { campaignId: recipient.campaignId },
+        data: { totalClicked: { increment: 1 } },
+      });
     }
+  }
 
-    if (data) {
-      // Increment clickCount on Campaign
-      const { data: campaign, error: campErr } = await this.supabase
-        .from('EmailCampaign')
-        .select('clickCount')
-        .eq('id', data.campaignId)
-        .single();
+  // ─── AI Pre-send Validation Checklist ──────────────────────────────────────
 
-      if (campaign && !campErr) {
-        await this.supabase
-          .from('EmailCampaign')
-          .update({
-            clickCount: (campaign.clickCount || 0) + 1,
-            updatedAt: new Date().toISOString(),
-          })
-          .eq('id', data.campaignId);
-      }
+  async validateCampaign(campaignId: string) {
+    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!campaign) throw new NotFoundException('Campaign not found');
+
+    const prompt = `
+    Analyze this email subject and body template for spam risks, formatting, variable alignment, and deliverability.
+    Subject: ${campaign.subject}
+    Body: ${campaign.body}
+
+    Check:
+    1. Typographical issues.
+    2. Grammar errors.
+    3. Missing variables (like mismatched brackets).
+    4. Spam triggers (heavy sales language, excessive uppercase).
+    5. Mobile responsiveness hints.
+
+    Return JSON format containing:
+    - isValid: boolean
+    - scores: { subjectScore: number (0-100), ctaScore: number (0-100), spamScore: number (0-10) }
+    - warnings: string[] (empty if no issues found)
+    `;
+
+    const validation = await this.openRouter.getJson<{
+      isValid: boolean;
+      scores: { subjectScore: number; ctaScore: number; spamScore: number };
+      warnings: string[];
+    }>(prompt);
+
+    return { success: true, data: validation };
+  }
+
+  // ─── AI Content Templates & Automation Rules CRUD ─────────────────────────
+
+  async getTemplates() {
+    const templates = await this.prisma.campaignTemplate.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, data: templates };
+  }
+
+  async createTemplate(data: any) {
+    const template = await this.prisma.campaignTemplate.create({
+      data: {
+        name: data.name,
+        subject: data.subject,
+        bodyTemplate: data.bodyTemplate,
+        type: data.type || 'newsletter',
+        tone: data.tone || 'friendly',
+      },
+    });
+    return { success: true, data: template };
+  }
+
+  async getAutomationRules() {
+    const rules = await this.prisma.automationRule.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, data: rules };
+  }
+
+  async createAutomationRule(data: any) {
+    const rule = await this.prisma.automationRule.create({
+      data: {
+        name: data.name,
+        triggerEvent: data.triggerEvent,
+        templateId: data.templateId,
+        priority: data.priority || 'medium',
+        tone: data.tone || 'friendly',
+        isActive: data.isActive !== undefined ? data.isActive : true,
+      },
+    });
+    return { success: true, data: rule };
+  }
+
+  async getPromptHistory() {
+    // Fetch logs of AI emails generated historically
+    const prompts = await this.prisma.aIEmail.findMany({
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        campaign: { select: { name: true } },
+      },
+    });
+    return { success: true, data: prompts };
+  }
+
+  async generateCampaignEmail(data: any) {
+    const prompt = `You are a professional study abroad education loan email generator.
+    Draft a personalized email for standard campaigns:
+    Goal: ${data.optimizationGoal || ''}
+    Objective: ${data.primaryObjective || ''}
+    Context: ${data.targetContext || ''}
+    Tone: ${data.tone || 'friendly'}
+    Length: ${data.emailLength || 'medium'}
+    CTA text: ${data.cta || 'Visit Portal'}
+    Language: ${data.language || 'English'}
+    Brand identity: ${data.brand || 'VidyaLoan'}
+
+    Requirements:
+    1. Compose subject line.
+    2. Write beautifully responsive HTML email template using basic inline styles. Include deep violet colors (#6605c7), clean text hierarchy.
+    3. Include placeholders like {{studentName}} and {{loanAmount}} where appropriate.
+    4. Return JSON with keys: "subject", "bodyTemplate". No markdown markup.`;
+
+    const aiRes = await this.openRouter.getJson<{ subject: string; bodyTemplate: string }>(prompt);
+    return { success: true, data: aiRes };
+  }
+
+  async handleAutomationTrigger(event: string, userId: string, context?: any) {
+    this.logger.log(`Handling automation rule: ${event} for user: ${userId}`);
+    const activeRules = await this.prisma.automationRule.findMany({
+      where: { triggerEvent: event, isActive: true },
+    });
+
+    for (const rule of activeRules) {
+      const template = await this.prisma.campaignTemplate.findUnique({
+        where: { id: rule.templateId },
+      });
+      if (!template) continue;
+
+      // Create an instant transactional campaign for this single automation trigger
+      const campaign = await this.prisma.campaign.create({
+        data: {
+          name: `Automation Rule - ${rule.name} - ${userId}`,
+          campaignType: template.type,
+          tone: rule.tone,
+          subject: template.subject,
+          body: template.bodyTemplate,
+          status: 'queued',
+          priority: rule.priority,
+          totalCount: 1,
+        },
+      });
+
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) continue;
+
+      const recipient = await this.prisma.campaignRecipient.create({
+        data: {
+          campaignId: campaign.id,
+          userId: user.id,
+          recipientEmail: user.email,
+          recipientName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          status: 'queued',
+          variables: {
+            studentName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+            dashboardUrl: 'https://vidyaloan.com/dashboard',
+            ...context,
+          },
+        },
+      });
+
+      // Add sending job to BullMQ immediately
+      await this.campaignQueue.add('send-personal-email', {
+        campaignId: campaign.id,
+        recipientId: recipient.id,
+      }, {
+        priority: rule.priority === 'high' ? 1 : rule.priority === 'medium' ? 5 : 10,
+      });
     }
+  }
+
+  // ─── Analytics Dashboard Overview ─────────────────────────────────────────
+
+  async getOverviewStats() {
+    const campaignsCount = await this.prisma.campaign.count();
+    const recipientsCount = await this.prisma.campaignRecipient.count();
+    const sentCount = await this.prisma.campaignRecipient.count({ where: { status: 'sent' } });
+    const openedCount = await this.prisma.campaignRecipient.count({ where: { status: 'opened' } });
+    const clickedCount = await this.prisma.campaignRecipient.count({ where: { status: 'clicked' } });
+    const failedCount = await this.prisma.campaignRecipient.count({ where: { status: 'failed' } });
+
+    // Open/Click conversion ratios
+    const openRate = sentCount > 0 ? Math.round((openedCount / sentCount) * 100) : 0;
+    const clickRate = sentCount > 0 ? Math.round((clickedCount / sentCount) * 100) : 0;
+
+    return {
+      success: true,
+      data: {
+        totalCampaigns: campaignsCount,
+        totalRecipients: recipientsCount,
+        sent: sentCount,
+        opened: openedCount,
+        clicked: clickedCount,
+        failed: failedCount,
+        openRate,
+        clickRate,
+      },
+    };
   }
 }

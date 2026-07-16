@@ -20,6 +20,7 @@ export default function RemindersPage() {
 
     // Follow-up reminders
     const [followUps, setFollowUps] = useState<Record<string, FollowUp>>({});
+    const [studentFollowUps, setStudentFollowUps] = useState<any[]>([]);
     const [filterUpcoming, setFilterUpcoming] = useState<"all" | "today" | "upcoming" | "overdue">("all");
 
     // Notes modal state
@@ -31,7 +32,12 @@ export default function RemindersPage() {
     const [savingNote, setSavingNote] = useState(false);
 
     // Fetch comments/notes from active application
-    const fetchApplicationNotes = async (appId: string, currentFuNotes?: string) => {
+    const fetchApplicationNotes = async (appId?: string, currentFuNotes?: string) => {
+        if (!appId) {
+            setNotesList([]);
+            setLoadingNotes(false);
+            return;
+        }
         setLoadingNotes(true);
         try {
             const res = await adminApi.getRemarks(appId) as any;
@@ -89,24 +95,49 @@ export default function RemindersPage() {
         if (!selectedFollowUp || !newNoteText.trim()) return;
         setSavingNote(true);
         try {
-            // Save note to the application via backend
-            await adminApi.addRemark(selectedFollowUp.appId, {
-                type: "note",
-                content: newNoteText.trim(),
-                authorName: "Staff Member",
-                isInternal: true,
-            } as any);
+            if (selectedFollowUp.appId) {
+                // Save note to the application via backend
+                await adminApi.addRemark(selectedFollowUp.appId, {
+                    type: "note",
+                    content: newNoteText.trim(),
+                    authorName: "Staff Member",
+                    isInternal: true,
+                } as any);
+            }
 
-            // Sync with local storage follow-up notes
-            const updated = {
-                ...followUps,
-                [selectedFollowUp.appId]: {
-                    ...followUps[selectedFollowUp.appId],
-                    notes: newNoteText.trim()
+            if (selectedFollowUp.isStudent) {
+                // Update the note in the student's follow-up list in local storage
+                const staffId = user?.id || user?.email || "default";
+                const studentId = selectedFollowUp.studentId;
+                const key = `follow_ups_${staffId}_${studentId}`;
+                const stored = localStorage.getItem(key);
+                if (stored) {
+                    try {
+                        const parsed = JSON.parse(stored) as any[];
+                        const updated = parsed.map(f => {
+                            if (f.id === selectedFollowUp.id) {
+                                return { ...f, notes: newNoteText.trim() };
+                            }
+                            return f;
+                        });
+                        localStorage.setItem(key, JSON.stringify(updated));
+                    } catch (e) {
+                        console.error(e);
+                    }
                 }
-            };
-            setFollowUps(updated);
-            localStorage.setItem(followUpKey, JSON.stringify(updated));
+                loadAllReminders();
+            } else {
+                // Sync with local storage follow-up notes
+                const updated = {
+                    ...followUps,
+                    [selectedFollowUp.appId]: {
+                        ...followUps[selectedFollowUp.appId],
+                        notes: newNoteText.trim()
+                    }
+                };
+                setFollowUps(updated);
+                localStorage.setItem(followUpKey, JSON.stringify(updated));
+            }
 
             // Reload notes in the modal view
             setNewNoteText("");
@@ -145,18 +176,86 @@ export default function RemindersPage() {
             : `staff_follow_up_dates_default`;
 
     // Load follow-up reminders
-    useEffect(() => {
+    const loadAllReminders = () => {
         try {
             const saved = localStorage.getItem(followUpKey);
-            if (saved) setFollowUps(JSON.parse(saved));
-        } catch (e) { console.error(e); }
+            if (saved) {
+                setFollowUps(JSON.parse(saved));
+            } else {
+                setFollowUps({});
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        try {
+            const staffId = user?.id || user?.email || "default";
+            const tempStudentFus: any[] = [];
+            if (typeof window !== "undefined") {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(`follow_ups_${staffId}_`)) {
+                        const studentId = key.substring(`follow_ups_${staffId}_`.length);
+                        const stored = localStorage.getItem(key);
+                        if (stored) {
+                            try {
+                                const parsed = JSON.parse(stored);
+                                if (Array.isArray(parsed)) {
+                                    parsed.forEach((fu: any) => {
+                                        if (fu.status === "pending") {
+                                            tempStudentFus.push({
+                                                ...fu,
+                                                studentId,
+                                                isStudent: true
+                                            });
+                                        }
+                                    });
+                                }
+                            } catch (e) {
+                                console.error("Failed to parse student follow up:", e);
+                            }
+                        }
+                    }
+                }
+            }
+            setStudentFollowUps(tempStudentFus);
+        } catch (e) {
+            console.error("Failed to load student follow ups:", e);
+        }
+    };
+
+    useEffect(() => {
+        loadAllReminders();
     }, [followUpKey]);
 
-    const clearFollowUp = (appId: string) => {
-        const updated = { ...followUps };
-        delete updated[appId];
-        setFollowUps(updated);
-        localStorage.setItem(followUpKey, JSON.stringify(updated));
+    const clearFollowUp = (fu: any) => {
+        if (fu.isStudent) {
+            const staffId = user?.id || user?.email || "default";
+            const studentId = fu.studentId;
+            const key = `follow_ups_${staffId}_${studentId}`;
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored) as any[];
+                    const updated = parsed.map(f => {
+                        if (f.id === fu.id) {
+                            return { ...f, status: "completed" };
+                        }
+                        return f;
+                    });
+                    localStorage.setItem(key, JSON.stringify(updated));
+                } catch (e) {
+                    console.error("Failed to update student follow-up status:", e);
+                }
+            }
+            loadAllReminders();
+        } else {
+            const appId = fu.appId || fu.id;
+            const updated = { ...followUps };
+            delete updated[appId];
+            setFollowUps(updated);
+            localStorage.setItem(followUpKey, JSON.stringify(updated));
+        }
     };
 
     // Classify follow-ups
@@ -165,13 +264,41 @@ export default function RemindersPage() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const allFollowUpEntries = Object.entries(followUps).map(([appId, fu]) => {
+    const appEntries = Object.entries(followUps).map(([appId, fu]) => {
         const d = new Date(fu.date + "T00:00:00");
         const isToday = d.getTime() === today.getTime();
         const isOverdue = d < today;
         const isUpcoming = d >= tomorrow;
-        return { appId, ...fu, dateObj: d, isToday, isOverdue, isUpcoming };
-    }).sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+        return {
+            id: appId,
+            appId,
+            ...fu,
+            dateObj: d,
+            isToday,
+            isOverdue,
+            isUpcoming,
+            isStudent: false
+        };
+    });
+
+    const studEntries = studentFollowUps.map((fu) => {
+        const d = new Date(fu.date + "T00:00:00");
+        const isToday = d.getTime() === today.getTime();
+        const isOverdue = d < today;
+        const isUpcoming = d >= tomorrow;
+        return {
+            id: fu.id,
+            studentId: fu.studentId,
+            ...fu,
+            dateObj: d,
+            isToday,
+            isOverdue,
+            isUpcoming,
+            isStudent: true
+        };
+    });
+
+    const allFollowUpEntries = [...appEntries, ...studEntries].sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
 
     const filteredFollowUps = allFollowUpEntries.filter(fu => {
         if (filterUpcoming === "today") return fu.isToday;
@@ -350,13 +477,19 @@ export default function RemindersPage() {
                                         <div className="space-y-0.5">
                                             {events.slice(0, 2).map(ev => (
                                                 <button
-                                                    key={ev.appId}
-                                                    onClick={() => router.push(`/staff/applications/${ev.appId}`)}
-                                                    title={`${ev.studentName} — ${ev.appNumber || ev.appId}`}
+                                                    key={ev.id}
+                                                    onClick={() => {
+                                                        if (ev.isStudent) {
+                                                            router.push(`/staff/users/${ev.studentId}/follow-ups`);
+                                                        } else {
+                                                            router.push(`/staff/applications/${ev.appId}`);
+                                                        }
+                                                    }}
+                                                    title={`${ev.studentName} — ${ev.appNumber || ev.id}`}
                                                     className="w-full text-left px-1.5 py-0.5 rounded text-[9px] font-bold truncate flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all"
                                                 >
                                                     <span className="material-symbols-outlined text-[9px]">calendar_today</span>
-                                                    {ev.appNumber || ev.appId}
+                                                    {ev.appNumber || ev.id}
                                                 </button>
                                             ))}
                                             {events.length > 2 && (
@@ -408,13 +541,13 @@ export default function RemindersPage() {
                                     const chip = statusChip(fu);
                                     return (
                                         <div
-                                            key={fu.appId}
+                                            key={fu.id}
                                             className={`p-3.5 border rounded-2xl transition-all hover:shadow-sm ${fu.isOverdue ? 'border-rose-100 bg-rose-50/30' : fu.isToday ? 'border-amber-100 bg-amber-50/20' : 'border-slate-200 bg-white hover:border-indigo-100'}`}
                                         >
                                             <div className="flex items-start justify-between gap-2 mb-2">
                                                 <div className="min-w-0">
                                                     <p className="text-[13px] font-bold text-slate-800 truncate">{fu.studentName || "—"}</p>
-                                                    <p className="text-[10px] text-indigo-500 font-bold">{fu.appNumber || fu.appId}</p>
+                                                    <p className="text-[10px] text-indigo-500 font-bold">{fu.appNumber || fu.id}</p>
                                                 </div>
                                                 <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase border flex-shrink-0 ${chip.cls}`}>{chip.label}</span>
                                             </div>
@@ -455,7 +588,13 @@ export default function RemindersPage() {
                                             )}
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => router.push(`/staff/applications/${fu.appId}`)}
+                                                    onClick={() => {
+                                                        if (fu.isStudent) {
+                                                            router.push(`/staff/users/${fu.studentId}/follow-ups`);
+                                                        } else {
+                                                            router.push(`/staff/applications/${fu.appId}`);
+                                                        }
+                                                    }}
                                                     className="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-1"
                                                 >
                                                     View
@@ -470,7 +609,7 @@ export default function RemindersPage() {
                                                     Notes
                                                 </button>
                                                 <button
-                                                    onClick={() => clearFollowUp(fu.appId)}
+                                                    onClick={() => clearFollowUp(fu)}
                                                     className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg border border-slate-200 hover:border-rose-100 transition-all"
                                                     title="Clear reminder"
                                                 >

@@ -52,6 +52,11 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"
         />
+        <link
+          rel="stylesheet"
+          type="text/css"
+          href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/style.css"
+        />
         {/* PDF.js for EVV Test Agent */}
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" />
         <script

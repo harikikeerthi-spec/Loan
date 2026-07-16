@@ -145,7 +145,7 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                         <button
                             onClick={openCoAppModal}
                             disabled={actionLoading}
-                            className="px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl font-semibold text-xs uppercase tracking-wider hover:bg-slate-50 transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center"
+                            className="px-4 py-2.5 bg-[#FFFFFF] border border-[#E2E8F0] text-[#475569] hover:bg-[#F8FAFC] rounded-xl font-semibold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center"
                         >
                             <span className="material-symbols-outlined text-[16px] text-slate-500">edit_note</span>
                             Change Co-Applicant
@@ -154,7 +154,7 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                             onClick={() => {
                                 router.push(`/staff/chat-customer?id=${userData.id || userData._id}&email=${userData.email || ""}&firstName=${userData.firstName || ""}&lastName=${userData.lastName || ""}&phone=${userData.phoneNumber || userData.mobile || userData.phone || ""}`);
                             }}
-                            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center shadow-sm shadow-indigo-600/10"
+                            className="px-4 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-[#FFFFFF] rounded-xl font-semibold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center shadow-sm shadow-[#7C3AED]/10"
                         >
                             <span className="material-symbols-outlined text-[16px]">chat</span>
                             Chat with Student
@@ -163,25 +163,29 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {/* Sub-Navigation Tabs */}
-                <div className="flex items-center border-b border-slate-200 mb-8 w-full overflow-x-auto scrollbar-hide">
-                    {navigationTabs.map((tab) => {
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <Link key={tab.id} href={tab.path} className="relative py-3 px-4 text-sm font-medium transition-colors hover:text-indigo-600 focus:outline-none select-none whitespace-nowrap shrink-0">
-                                <span className={`text-[11px] font-black uppercase tracking-wider ${isActive ? "text-indigo-600" : "text-slate-500 hover:text-slate-700"}`}>
-                                    {tab.label}
-                                    {tab.badge && (
-                                        <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${isActive ? "bg-indigo-600 text-white animate-pulse" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>
-                                            {tab.badge}
-                                        </span>
+                <div className="relative border-b border-slate-200 mb-8 w-full">
+                    <div className="flex items-center w-full overflow-x-auto scrollbar-hide pr-12">
+                        {navigationTabs.map((tab) => {
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <Link key={tab.id} href={tab.path} className="relative py-3 px-4 text-sm font-medium transition-colors hover:text-indigo-600 focus:outline-none select-none whitespace-nowrap shrink-0">
+                                    <span className={`text-[11px] font-black uppercase tracking-wider ${isActive ? "text-indigo-600" : "text-slate-500 hover:text-slate-700"}`}>
+                                        {tab.label}
+                                        {tab.badge && (
+                                            <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${isActive ? "bg-indigo-600 text-white animate-pulse" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>
+                                                {tab.badge}
+                                            </span>
+                                        )}
+                                    </span>
+                                    {isActive && (
+                                        <motion.div layoutId="activeTabUnderline" className="absolute bottom-0 inset-x-0 h-0.5 bg-indigo-600" />
                                     )}
-                                </span>
-                                {isActive && (
-                                    <motion.div layoutId="activeTabUnderline" className="absolute bottom-0 inset-x-0 h-0.5 bg-indigo-600" />
-                                )}
-                            </Link>
-                        );
-                    })}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                    {/* Visual fade overlay indicating horizontal scrollability */}
+                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#F8FAFC] to-transparent pointer-events-none z-10" />
                 </div>
 
                 {/* Nested Page Render */}

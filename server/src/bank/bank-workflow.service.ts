@@ -155,7 +155,12 @@ export class BankWorkflowService {
       throw submitError;
     }
 
-    // Update LoanApplication with bank submission reference — preserve the existing applicationNumber
+    // Update LoanApplication with bank submission reference — preserve the existing applicationNumber, or generate new VTU-APP sequential one if it's missing/not bank format.
+    let appNumber = application.applicationNumber;
+    if (!appNumber || (!appNumber.startsWith('VTU-APP-') && !appNumber.startsWith('VL-APP-') && !appNumber.startsWith('VTU-BNK-'))) {
+      appNumber = await this.generateBankApplicationNumber();
+    }
+
     await this.db.client
       .from('LoanApplication')
       .update({
@@ -164,6 +169,7 @@ export class BankWorkflowService {
         bankWorkflowStatus: 'SUBMITTED_TO_BANK',
         bankWorkflowStage: 'SUBMITTED_TO_BANK',
         submittedToBankAt: new Date().toISOString(),
+        applicationNumber: appNumber,
       })
       .eq('id', applicationId);
 
@@ -2508,7 +2514,12 @@ export class BankWorkflowService {
       createdSubmissions.push(submission);
     }
 
-    // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list — preserve existing applicationNumber
+    // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list — preserve existing applicationNumber, or generate new VTU-APP sequential one if it's missing/not bank format.
+    let appNumber = application.applicationNumber;
+    if (!appNumber || (!appNumber.startsWith('VTU-APP-') && !appNumber.startsWith('VL-APP-') && !appNumber.startsWith('VTU-BNK-'))) {
+      appNumber = await this.generateBankApplicationNumber();
+    }
+
     const bankNamesStr = banks.map(b => b.bankName).join(', ');
     const updatePayload: any = {
       status: 'ROUTED_MULTIPARTY',
@@ -2516,6 +2527,7 @@ export class BankWorkflowService {
       bankWorkflowStage: 'SUBMITTED_TO_BANK',
       submittedToBankAt: new Date().toISOString(),
       bank: bankNamesStr,
+      applicationNumber: appNumber,
     };
 
     if (createdSubmissions.length > 0) {

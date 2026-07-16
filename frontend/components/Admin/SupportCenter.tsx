@@ -447,10 +447,10 @@ const TicketTable = ({
   useEffect(() => { load(); }, [load]);
 
   // Debounce search
-  const searchRef = useRef<NodeJS.Timeout>();
+  const searchRef = useRef<NodeJS.Timeout | null>(null);
   const handleSearch = (v: string) => {
     setSearch(v);
-    clearTimeout(searchRef.current);
+    if (searchRef.current) clearTimeout(searchRef.current);
     searchRef.current = setTimeout(() => setPage(1), 400);
   };
 

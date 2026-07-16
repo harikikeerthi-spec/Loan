@@ -187,7 +187,7 @@ export default function ApplicationsTab() {
                 </div>
                 <button
                     onClick={() => setIsAddAppOpen(true)}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-indigo-500/20 flex items-center gap-1.5 active:scale-95 cursor-pointer animate-pulse"
+                    className="px-4 py-2 bg-[#0F766E] hover:bg-[#115E59] text-[#FFFFFF] text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg hover:shadow-[#0F766E]/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
                 >
                     <span className="material-symbols-outlined text-[16px]">add_circle</span>
                     Add Loan Application
@@ -222,7 +222,7 @@ export default function ApplicationsTab() {
                                                 {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-') || app.applicationNumber.startsWith('VL-APP-'))) ? (
                                                     app.applicationNumber
                                                 ) : (
-                                                    <span className="text-gray-400 font-semibold italic">Not Generated Yet</span>
+                                                    ""
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-xs font-mono font-semibold text-slate-800">
@@ -241,7 +241,7 @@ export default function ApplicationsTab() {
                                                             setRoutingApp(app);
                                                             setIsShareModalOpen(true);
                                                         }}
-                                                        className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md hover:shadow-purple-500/20 active:scale-95 cursor-pointer"
+                                                        className="px-3 py-1.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-[#FFFFFF] text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md hover:shadow-[#0F766E]/20 active:scale-95 cursor-pointer"
                                                     >
                                                         <span className="material-symbols-outlined text-[14px]">account_balance</span>
                                                         Apply to Bank
@@ -452,99 +452,8 @@ export default function ApplicationsTab() {
                                     </div>
                                 </div>
 
-                                {/* SECTION 4: APPLICANT PERSONAL INFO */}
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] mb-3">4. Student Personal Details (Pre-filled)</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">First Name *</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={formData.firstName}
-                                                onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
 
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Last Name *</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={formData.lastName}
-                                                onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
 
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address *</label>
-                                            <input
-                                                required
-                                                type="email"
-                                                value={formData.email}
-                                                onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Phone Number *</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={formData.phone}
-                                                onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Date of Birth *</label>
-                                            <input
-                                                required
-                                                type="date"
-                                                value={formData.dateOfBirth}
-                                                onChange={e => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pincode *</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={formData.pincode}
-                                                onChange={e => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
-
-                                        <div className="md:col-span-3">
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Permanent Address *</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={formData.address}
-                                                onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div>
-
-                                        {/* <div className="md:col-span-3">
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Internal Remarks / Staff Notes</label>
-                                            <textarea
-                                                rows={2}
-                                                placeholder="Remarks regarding eligibility, collateral details, fast-track routing..."
-                                                value={formData.notes}
-                                                onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            />
-                                        </div> */}
-                                    </div>
-                                </div>
                             </form>
 
                             {/* Modal Footer */}
