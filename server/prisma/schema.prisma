@@ -294,6 +294,7 @@ model LoanApplication {
 
   // Timestamps
   submittedAt           DateTime?
+  reviewStartedAt       DateTime?
   estimatedCompletionAt DateTime?
   date                  DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
