@@ -135,8 +135,6 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                                 {userData.firstName || "—"} {userData.lastName || ""}
                             </h1>
                             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500 mt-1.5">
-                                <span className="font-mono">ID: {userData.id || "VL-STU-2026-00041"}</span>
-                                <span className="text-slate-300">•</span>
                                 <span>Registered: {formatDate(userData.createdAt, "MMM d, yyyy")}</span>
                             </div>
                         </div>

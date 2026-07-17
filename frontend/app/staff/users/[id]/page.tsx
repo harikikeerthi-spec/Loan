@@ -386,54 +386,58 @@ export default function ProfileTab() {
                                 </div>
                                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Personal Details</h3>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Email Address</label>
-                                    <span className="text-sm font-medium text-[#0F172A] block mt-1 lowercase">{getDisplayValue(userData.email)}</span>
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Email Address</label>
+                                        <span className="text-sm font-medium text-[#0F172A] block mt-1 lowercase">{getDisplayValue(userData.email)}</span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Phone Number</label>
+                                        <span className="text-sm font-medium text-[#0F172A] block mt-1">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Phone Number</label>
-                                    <span className="text-sm font-medium text-[#0F172A] block mt-1">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Date of Birth</label>
-                                    {(() => {
-                                        const raw = (userData as any).dateOfBirth;
-                                        let dobDate: Date | null = null;
-                                        if (raw) {
-                                            // Handle DD-MM-YYYY (server format)
-                                            if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) {
-                                                const [dd, mm, yyyy] = raw.split('-');
-                                                dobDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
-                                            } else {
-                                                dobDate = new Date(raw);
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Date of Birth</label>
+                                        {(() => {
+                                            const raw = (userData as any).dateOfBirth;
+                                            let dobDate: Date | null = null;
+                                            if (raw) {
+                                                // Handle DD-MM-YYYY (server format)
+                                                if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) {
+                                                    const [dd, mm, yyyy] = raw.split('-');
+                                                    dobDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+                                                } else {
+                                                    dobDate = new Date(raw);
+                                                }
                                             }
-                                        }
-                                        const isDobValid = dobDate && !isNaN(dobDate.getTime());
-                                        if (isDobValid) {
-                                            return (
-                                                <span className="text-sm font-medium text-[#0F172A] block mt-1">
-                                                    {dobDate!.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                                </span>
-                                            );
-                                        } else {
-                                            return (
-                                                <span className="text-sm font-medium text-[#94A3B8] block mt-1">Pending</span>
-                                            );
-                                        }
-                                    })()}
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Nationality</label>
-                                    <span className="text-sm font-medium text-[#0F172A] block mt-1">
-                                        {getDisplayValue(userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian")}
-                                    </span>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Destination Country</label>
-                                    <span className="text-sm font-medium text-[#0F172A] block mt-1">
-                                        {getDisplayValue(userData.studyDestination || userData.countryOfEducation || userData.academic?.countryOfEducation, "Pending")}
-                                    </span>
+                                            const isDobValid = dobDate && !isNaN(dobDate.getTime());
+                                            if (isDobValid) {
+                                                return (
+                                                    <span className="text-sm font-medium text-[#0F172A] block mt-1">
+                                                        {dobDate!.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                                    </span>
+                                                );
+                                            } else {
+                                                return (
+                                                    <span className="text-sm font-medium text-[#94A3B8] block mt-1">Pending</span>
+                                                );
+                                            }
+                                        })()}
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Nationality</label>
+                                        <span className="text-sm font-medium text-[#0F172A] block mt-1">
+                                            {getDisplayValue(userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian")}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Destination Country</label>
+                                        <span className="text-sm font-medium text-[#0F172A] block mt-1">
+                                            {getDisplayValue(userData.studyDestination || userData.countryOfEducation || userData.academic?.countryOfEducation, "Pending")}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

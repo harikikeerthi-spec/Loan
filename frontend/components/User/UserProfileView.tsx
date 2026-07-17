@@ -422,22 +422,6 @@ export default function UserProfileView({
                             <p className="text-xs text-slate-500 font-semibold truncate">
                                 {activeProfile?.email}
                             </p>
-                            <div className="flex items-center gap-2 mt-2 select-none">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID</span>
-                                <div
-                                    onClick={() => {
-                                        if (displayUserId) {
-                                            navigator.clipboard.writeText(displayUserId);
-                                            alert("User ID copied to clipboard!");
-                                        }
-                                    }}
-                                    className="bg-slate-50 hover:bg-slate-100 text-[#0F172A] font-mono text-[10px] px-2.5 py-1 rounded-lg border border-slate-200 transition-all cursor-pointer flex items-center gap-1.5"
-                                    title="Click to copy User ID"
-                                >
-                                    <span>{displayUserId || "—"}</span>
-                                    <i className="ph ph-copy text-xs opacity-60" />
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -559,13 +543,16 @@ export default function UserProfileView({
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            {renderBentoField("Email Address", activeProfile?.email, startPersonalEdit)}
-                            {renderBentoField("Phone Number", activeProfile?.phoneNumber, startPersonalEdit)}
-                            {renderBentoField("Date of Birth", formatDob(activeProfile?.dateOfBirth), startPersonalEdit)}
-                            {renderBentoField("Nationality", activeProfile?.nationality || "Indian", startPersonalEdit)}
-                            {renderBentoField("Destination Country", activeProfile?.studyDestination, startPersonalEdit)}
-                            {renderBentoField("User ID", activeProfile?.id?.split('-').pop(), startPersonalEdit)}
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {renderBentoField("Email Address", activeProfile?.email, startPersonalEdit)}
+                                {renderBentoField("Phone Number", activeProfile?.phoneNumber, startPersonalEdit)}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                {renderBentoField("Date of Birth", formatDob(activeProfile?.dateOfBirth), startPersonalEdit)}
+                                {renderBentoField("Nationality", activeProfile?.nationality || "Indian", startPersonalEdit)}
+                                {renderBentoField("Destination Country", activeProfile?.studyDestination, startPersonalEdit)}
+                            </div>
                         </div>
                     )}
                 </div>
