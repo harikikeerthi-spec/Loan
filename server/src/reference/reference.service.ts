@@ -172,13 +172,21 @@ export class ReferenceService {
     // Take the maximum to avoid double counting between the two sources
     const actualDisbursed = Math.max(totalDisbTable, totalAppsAmountDisbursed);
 
-    // 1 Crore = 10,000,000 Rupees. Base amount = 500 Crores.
-    const baseCr = 500;
+    // 1 Crore = 10,000,000 Rupees. Minimum display baseline = 100 Crores.
+    const baseCr = 100;
     const actualCr = actualDisbursed / 10_000_000;
     const totalCr = baseCr + actualCr;
 
-    // Round to nearest integer if whole number, else show 2 decimal places
-    const formatted = totalCr % 1 === 0 ? `₹${totalCr.toFixed(0)}Cr+` : `₹${totalCr.toFixed(2)}Cr+`;
+    // Show "₹100Cr+" as floor until real disbursements push above 100Cr.
+    // Once total exceeds 100Cr, show the precise live figure.
+    let formatted: string;
+    if (actualCr <= 0) {
+      formatted = `₹100Cr+`;
+    } else if (totalCr % 1 === 0) {
+      formatted = `₹${totalCr.toFixed(0)}Cr+`;
+    } else {
+      formatted = `₹${totalCr.toFixed(1)}Cr+`;
+    }
 
     return {
       success: true,

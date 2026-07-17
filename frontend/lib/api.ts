@@ -407,11 +407,18 @@ async function handleResponse<T>(res: Response, url?: string, alreadyRetried = f
 
     if (!res.ok) {
         console.error(`API Error: ${res.status} ${res.url}`, body);
-        let err;
+        let err: any;
         try {
             err = typeof body === 'string' ? JSON.parse(body) : body;
         } catch (e) {
-            err = { message: body || res.statusText };
+            // Check if response is HTML or contains HTML markup to avoid leaking raw HTML into the UI
+            const isHtml = (contentType && contentType.includes("text/html")) || 
+                           (typeof body === 'string' && (body.trim().startsWith('<') || body.toLowerCase().includes('<html')));
+            err = { 
+                message: isHtml 
+                    ? `An unexpected server error occurred (Status ${res.status}). Please try again.` 
+                    : (body || res.statusText) 
+            };
         }
 
         // Session expired — soft redirect via AuthContext (no full page reload)

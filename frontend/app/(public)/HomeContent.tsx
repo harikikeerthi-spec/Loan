@@ -277,7 +277,7 @@ const postAdmissionServices = [
     { icon: "🏦", title: "Bank Account", desc: "Global accounts with zero student fees.", color: "linear-gradient(135deg, #164e63 0%, #155e75 100%)", link: "/bank-account", img: "/images/services/bank-account.jpg" },
 ];
 export default function HomeContent() {
-    const [disbursedText, setDisbursedText] = useState("₹500Cr+");
+    const [disbursedText, setDisbursedText] = useState("₹100Cr+");
 
     useEffect(() => {
         const fetchStats = async () => {

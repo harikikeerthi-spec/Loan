@@ -27,7 +27,7 @@ async function getDisbursedAmount() {
     } catch (e) {
         console.error("Error fetching disbursed amount for about-us page:", e);
     }
-    return "₹500Cr+";
+    return "₹100Cr+";
 }
 
 export default async function AboutPage() {

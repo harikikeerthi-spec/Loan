@@ -171,6 +171,8 @@ export default function ProfileTab() {
         const inst = getExtractedField(doc, 'institution') || getExtractedField(doc, 'university') || getExtractedField(doc, 'school_name') || getExtractedField(doc, 'college_name') || fallback.institute;
         const pct = getExtractedField(doc, 'score') || getExtractedField(doc, 'percentage') || getExtractedField(doc, 'gpa') || getExtractedField(doc, 'cgpa') || fallback.percentage;
         return { 
+            rawInstitute: inst || "",
+            rawPercentage: pct || "",
             institute: inst ? inst : <span className="text-[#94A3B8] font-normal">Not Uploaded</span>, 
             percentage: pct ? (pct.toString().includes('%') ? pct : `${pct}%`) : <span className="text-[#94A3B8] font-normal">Pending</span> 
         };
@@ -291,12 +293,12 @@ export default function ProfileTab() {
             coappAadhar: coapplicantData?.aadharNumber || "",
             coappPan: coapplicantData?.panNumber || "",
 
-            sscSchool: sscDetails.institute === "—" ? "" : sscDetails.institute,
-            sscScore: sscDetails.percentage === "—" ? "" : sscDetails.percentage.replace('%', ''),
-            hscCollege: hscDetails.institute === "—" ? "" : hscDetails.institute,
-            hscScore: hscDetails.percentage === "—" ? "" : hscDetails.percentage.replace('%', ''),
-            ugCollege: ugDetails.institute === "—" ? "" : ugDetails.institute,
-            ugScore: ugDetails.percentage === "—" ? "" : ugDetails.percentage.replace('%', ''),
+            sscSchool: sscDetails.rawInstitute,
+            sscScore: sscDetails.rawPercentage ? sscDetails.rawPercentage.toString().replace('%', '') : "",
+            hscCollege: hscDetails.rawInstitute,
+            hscScore: hscDetails.rawPercentage ? hscDetails.rawPercentage.toString().replace('%', '') : "",
+            ugCollege: ugDetails.rawInstitute,
+            ugScore: ugDetails.rawPercentage ? ugDetails.rawPercentage.toString().replace('%', '') : "",
         });
         setIsEditOpen(true);
     };

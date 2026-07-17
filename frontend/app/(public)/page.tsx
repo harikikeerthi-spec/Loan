@@ -34,7 +34,7 @@ async function getDisbursedAmount() {
     } catch (e) {
         console.error("Error fetching disbursed amount for homepage:", e);
     }
-    return "₹500Cr+";
+    return "₹100Cr+";
 }
 
 export const metadata: Metadata = {
