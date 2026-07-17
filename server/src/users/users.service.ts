@@ -822,8 +822,8 @@ export class UsersService {
 
     const now = new Date().toISOString();
 
-    // Generate sequential local application number on creation
-    const applicationNumber = await this.generateApplicationNumber();
+    // Generate sequential local application number on creation — Postponed until routing to bank.
+    const applicationNumber = null;
 
     // Calculate estimated completion (14 days from now)
     const estimatedCompletionAt = new Date();

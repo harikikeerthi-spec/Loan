@@ -522,12 +522,17 @@ export default function ApplyLoanPage() {
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6 relative overflow-hidden">
+            <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' }}>
                 {/* Bright Success Decorations matching Homepage aesthetic */}
-                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-white/20 z-0" />
-                <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-[#3A2EAB]/10 blur-[150px] rounded-full z-0" />
-                <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-[#9B51E0]/5 blur-[150px] rounded-full z-0" />
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #3A2EAB 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-50 z-0" style={{ background: 'radial-gradient(circle, #d8b4fe, transparent)' }} />
+                    <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-40 z-0" style={{ background: 'radial-gradient(circle, #fed7aa, transparent)' }} />
+                    <div className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full blur-[80px] opacity-20 z-0" style={{ background: 'radial-gradient(circle, #c4b5fd, transparent)' }} />
+                    <div className="absolute inset-0 opacity-[0.04] z-0" style={{ backgroundImage: 'radial-gradient(circle, #6605c7 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                </div>
+
+                <div className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full border border-purple-200/40 pointer-events-none z-0" />
+                <div className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full border border-purple-100/30 pointer-events-none z-0" />
 
                 <div className="relative z-10 max-w-xl w-full text-center animate-fade-in-up">
                     <div className="mb-10 relative inline-block">
@@ -561,17 +566,17 @@ export default function ApplyLoanPage() {
     }
 
     return (
-        <div className="min-h-screen text-gray-900 overflow-hidden relative" style={{ backgroundColor: '#F8FAFC' }}>
+        <div className="min-h-screen text-gray-900 overflow-hidden relative" style={{ background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' }}>
             {/* Bright Aesthetic Background Decorations mimicking the Homepage */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-30 z-0" style={{ background: 'radial-gradient(circle, #3A2EAB/10, transparent)' }} />
-                <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-20 z-0" style={{ background: 'radial-gradient(circle, #9B51E0/10, transparent)' }} />
-                <div className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full blur-[80px] opacity-20 z-0" style={{ background: 'radial-gradient(circle, #3A2EAB/5, transparent)' }} />
-                <div className="absolute inset-0 opacity-[0.02] z-0" style={{ backgroundImage: 'radial-gradient(circle, #3A2EAB 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-50 z-0" style={{ background: 'radial-gradient(circle, #d8b4fe, transparent)' }} />
+                <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-40 z-0" style={{ background: 'radial-gradient(circle, #fed7aa, transparent)' }} />
+                <div className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full blur-[80px] opacity-20 z-0" style={{ background: 'radial-gradient(circle, #c4b5fd, transparent)' }} />
+                <div className="absolute inset-0 opacity-[0.04] z-0" style={{ backgroundImage: 'radial-gradient(circle, #6605c7 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
             </div>
 
-            <div className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full border border-indigo-100/40 pointer-events-none z-0" />
-            <div className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full border border-indigo-50/30 pointer-events-none z-0" />
+            <div className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full border border-purple-200/40 pointer-events-none z-0" />
+            <div className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full border border-purple-100/30 pointer-events-none z-0" />
 
             <div className="relative z-10 pt-32 pb-24 px-6 md:px-12">
                 <div className="max-w-4xl mx-auto">

@@ -151,8 +151,8 @@ export class ApplicationService {
 
     await this.validateApplicationConstraints(userId, null, targetBank, targetCountry, targetUniversity);
 
-    // Generate sequential local application number on creation
-    const applicationNumber = await this.generateApplicationNumber();
+    // Generate sequential local application number on creation — Postponed until routing to bank.
+    // const applicationNumber = await this.generateApplicationNumber();
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
@@ -209,9 +209,6 @@ export class ApplicationService {
         submittedAt: data.status === 'draft' ? null : new Date().toISOString(),
         estimatedCompletionAt: estimatedCompletionAt.toISOString(),
     };
-    if (applicationNumber) {
-        insertPayload.applicationNumber = applicationNumber;
-    }
 
     const { data: application, error } = await this.db
       .from('LoanApplication')
