@@ -30,7 +30,6 @@ import { CampaignModule } from './campaign/campaign.module';
 import { AgentModule } from './agent/agent.module';
 import { SupportModule } from './support/support.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -42,12 +41,6 @@ import { BullModule } from '@nestjs/bullmq';
       serveRoot: '/uploads',
     }),
     PrismaModule,
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      },
-    }),
     SupabaseModule,
     AuthModule,
     UsersModule,

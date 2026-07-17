@@ -1,6 +1,4 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { OpenRouterService } from '../ai/services/openrouter.service';
 import { EmailService } from '../auth/email.service';
@@ -13,7 +11,6 @@ export class CampaignService {
     private readonly prisma: PrismaService,
     private readonly openRouter: OpenRouterService,
     private readonly emailService: EmailService,
-    @InjectQueue('campaign') private readonly campaignQueue: Queue,
   ) { }
 
   // ─── Campaign CRUD Operations ──────────────────────────────────────────────
@@ -339,23 +336,30 @@ export class CampaignService {
       },
     });
 
-    // 6. Push individual personalizing/sending jobs to BullMQ
-    const jobs = recipients.map(r => ({
-      name: 'send-personal-email',
-      data: { campaignId: id, recipientId: r.id },
-      opts: {
-        priority: campaign.priority === 'high' ? 1 : campaign.priority === 'medium' ? 5 : 10,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 5000,
-        },
-      },
-    }));
+    // 6. Process recipients in the background asynchronously
+    (async () => {
+      // Transition campaign status to 'sending'
+      await this.prisma.campaign.update({
+        where: { id },
+        data: { status: 'sending', updatedAt: new Date() },
+      }).catch(e => this.logger.error(`Error updating campaign status to sending: ${e.message}`));
 
-    await this.campaignQueue.addBulk(jobs);
+      for (const r of recipients) {
+        try {
+          await this.processRecipientEmail(id, r.id);
+        } catch (err: any) {
+          this.logger.error(`Error processing email for recipient ${r.id}: ${err.message}`);
+        }
+      }
 
-    this.logger.log(`Enqueued ${recipients.length} sending jobs for campaign ${campaign.name}`);
+      // Transition campaign status to 'completed'
+      await this.prisma.campaign.update({
+        where: { id },
+        data: { status: 'completed', updatedAt: new Date() },
+      }).catch(e => this.logger.error(`Error updating campaign status to completed: ${e.message}`));
+    })();
+
+    this.logger.log(`Started background processing for ${recipients.length} recipients for campaign ${campaign.name}`);
 
     return {
       success: true,
@@ -829,13 +833,26 @@ export class CampaignService {
         },
       });
 
-      // Add sending job to BullMQ immediately
-      await this.campaignQueue.add('send-personal-email', {
-        campaignId: campaign.id,
-        recipientId: recipient.id,
-      }, {
-        priority: rule.priority === 'high' ? 1 : rule.priority === 'medium' ? 5 : 10,
-      });
+      // Process in background asynchronously
+      (async () => {
+        // Transition campaign status to 'sending'
+        await this.prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { status: 'sending', updatedAt: new Date() },
+        }).catch(e => this.logger.error(`Error updating campaign status to sending: ${e.message}`));
+
+        try {
+          await this.processRecipientEmail(campaign.id, recipient.id);
+        } catch (err: any) {
+          this.logger.error(`Error processing automated email for recipient ${recipient.id}: ${err.message}`);
+        }
+
+        // Transition campaign status to 'completed'
+        await this.prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { status: 'completed', updatedAt: new Date() },
+        }).catch(e => this.logger.error(`Error updating campaign status to completed: ${e.message}`));
+      })();
     }
   }
 
