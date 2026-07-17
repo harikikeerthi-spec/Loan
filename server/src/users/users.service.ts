@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { randomInt } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -822,8 +822,8 @@ export class UsersService {
 
     const now = new Date().toISOString();
 
-    // Generate sequential local application number on creation - disabled to defer until bank submission
-    const applicationNumber = null;
+    // Generate sequential local application number on creation
+    const applicationNumber = await this.generateApplicationNumber();
 
     // Calculate estimated completion (14 days from now)
     const estimatedCompletionAt = new Date();
@@ -832,6 +832,7 @@ export class UsersService {
     const courseName = data.courseName || data.programFocus || data.program || data.courseType || null;
 
     const insertPayload: any = {
+      id: randomUUID(),
       userId,
       bank: data.bank,
       loanType: data.loanType,

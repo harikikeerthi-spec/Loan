@@ -680,6 +680,7 @@ export default function ApplyLoanPage() {
                                                     <button
                                                         key={uni.name}
                                                         type="button"
+                                                        onMouseDown={(e) => e.preventDefault()}
                                                         onClick={() => {
                                                             update("university", uni.name);
                                                             setShowUniversitySuggestions(false);
