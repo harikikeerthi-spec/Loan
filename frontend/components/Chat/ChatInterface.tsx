@@ -88,6 +88,7 @@ interface ChatInterfaceProps {
     initialUser?: any;
     initialBank?: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null;
     initialConversation?: Conversation | null;
+    initialConversationId?: string;
     portalTitle?: string;
     className?: string;
     hideSidebar?: boolean;
@@ -108,7 +109,7 @@ interface StudentDocument {
 }
 
 
-export default function ChatInterface({ role, initialUser, initialBank, initialConversation = null, portalTitle, className, hideSidebar = false, chatContext = 'student', initialStudentId, autoSendLead = true }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, initialBank, initialConversation = null, initialConversationId, portalTitle, className, hideSidebar = false, chatContext = 'student', initialStudentId, autoSendLead = true }: ChatInterfaceProps) {
 
         const { token, user } = useAuth();
         const isMessageFromMe = (msg: Message) => {
@@ -457,23 +458,48 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
             }
         }, [initialStudentId, token, autoSendLead]);
 
-        // Auto-select conversation if conversationId is passed in URL query
+        // Auto-select conversation if initialConversationId or conversationId URL query is present
         useEffect(() => {
-            if (typeof window !== 'undefined') {
-                const params = new URLSearchParams(window.location.search);
-                const queryConvId = params.get('conversationId');
-                if (queryConvId && conversations.some(c => c.id === queryConvId)) {
-                    setActiveConversation(queryConvId);
+            const queryConvId = initialConversationId || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('conversationId') : null);
+            if (!queryConvId) return;
 
-                    // Clear the conversationId from the URL to prevent resetting
-                    const newParams = new URLSearchParams(window.location.search);
-                    newParams.delete('conversationId');
-                    const newQuery = newParams.toString();
-                    const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '');
-                    window.history.replaceState({}, '', newUrl);
-                }
+            // Set active conversation immediately
+            setActiveConversation(queryConvId);
+
+            // Find matching conversation in current list
+            const existing = conversations.find(c => c.id === queryConvId);
+            if (existing) {
+                if (existing.metadata?.type === 'bank') setChatTypeFilter('bank');
+                else if (existing.metadata?.type === 'customer') setChatTypeFilter('student');
+            } else if (token) {
+                // Fetch targeted single conversation if not present in current list
+                fetch(HttpApiPaths.chat.singleConversation(queryConvId), {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        const conv = data?.conversation || data;
+                        if (conv && conv.id) {
+                            setConversations(prev => {
+                                if (prev.some(c => c.id === conv.id)) return prev;
+                                return [conv, ...prev];
+                            });
+                            if (conv.metadata?.type === 'bank') setChatTypeFilter('bank');
+                            else if (conv.metadata?.type === 'customer') setChatTypeFilter('student');
+                        }
+                    })
+                    .catch(e => console.error("Could not load targeted conversation", e));
             }
-        }, [conversations]);
+
+            // Clear conversationId from URL query to avoid sticking
+            if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('conversationId')) {
+                const newParams = new URLSearchParams(window.location.search);
+                newParams.delete('conversationId');
+                const newQuery = newParams.toString();
+                const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '');
+                window.history.replaceState({}, '', newUrl);
+            }
+        }, [initialConversationId, conversations.length, token]);
 
         // Handle active conversation change
         useEffect(() => {

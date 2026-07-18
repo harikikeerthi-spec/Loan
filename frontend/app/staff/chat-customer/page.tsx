@@ -96,12 +96,15 @@ export default function SupportChatPage() {
         );
     }
 
+    const conversationId = searchParams.get("conversationId");
+
     return (
         <div className="h-[calc(100vh-56px)] flex flex-col bg-white">
             <ChatInterface
                 role="staff"
                 initialUser={resolvedUser}
                 initialBank={initialBank}
+                initialConversationId={conversationId || undefined}
                 className="flex flex-1 h-full border-0 rounded-none overflow-hidden bg-white shadow-none mt-0 animate-fade-in text-gray-900"
             />
         </div>

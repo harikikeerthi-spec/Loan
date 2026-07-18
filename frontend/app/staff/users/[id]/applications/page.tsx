@@ -3,8 +3,10 @@
 import { useUserDossier } from "../DossierContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDate, parseUTCDate } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import { applicationApi } from "@/lib/api";
+import { useState, useEffect, useRef } from "react";
+import { applicationApi, aiApi } from "@/lib/api";
+import { universities as staticUniversities } from "@/lib/universityData";
+
 
 const banksList = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -72,6 +74,103 @@ export default function ApplicationsTab() {
         intakeSeason: "",
     });
 
+    const [suggestedUniversities, setSuggestedUniversities] = useState<any[]>([]);
+    const [loadingUniversities, setLoadingUniversities] = useState(false);
+    const [showUniversitySuggestions, setShowUniversitySuggestions] = useState(false);
+
+    const getStaticUniversitiesForCountry = (country: string) => {
+        const normalizedCountry = country.trim().toLowerCase();
+        return Object.values(staticUniversities)
+            .filter((uni: any) => uni.country.trim().toLowerCase() === normalizedCountry)
+            .map((uni: any) => ({
+                name: uni.name,
+                loc: uni.location || uni.country,
+                country: uni.country,
+                slug: uni.slug,
+            }))
+            .slice(0, 10);
+    };
+
+    // Fetch popular universities for the selected country using AI or static fallback
+    useEffect(() => {
+        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+        if (!selectedCountry || selectedCountry.trim().length < 2) {
+            setSuggestedUniversities([]);
+            return;
+        }
+
+        const staticSuggestions = getStaticUniversitiesForCountry(selectedCountry);
+        if (!formData.university && staticSuggestions.length > 0) {
+            setSuggestedUniversities(staticSuggestions);
+            return;
+        }
+
+        const fetchUnis = async () => {
+            setLoadingUniversities(true);
+            try {
+                const res = await aiApi.aiSearch({
+                    type: "university",
+                    query: "",
+                    country: selectedCountry
+                }) as any;
+
+                const universities = res?.universities || res?.results || [];
+                if (universities.length > 0) {
+                    setSuggestedUniversities(universities);
+                } else if (staticSuggestions.length > 0) {
+                    setSuggestedUniversities(staticSuggestions);
+                } else {
+                    setSuggestedUniversities([]);
+                }
+            } catch (err) {
+                console.error("Failed to fetch universities via AI", err);
+                if (staticSuggestions.length > 0) {
+                    setSuggestedUniversities(staticSuggestions);
+                } else {
+                    setSuggestedUniversities([]);
+                }
+            } finally {
+                setLoadingUniversities(false);
+            }
+        };
+
+        fetchUnis();
+    }, [formData.country, formData.otherCountry, formData.university]);
+
+    // Search universities when typing in the input field
+    useEffect(() => {
+        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+        if (!selectedCountry || !formData.university || formData.university.trim().length < 2) {
+            return;
+        }
+
+        // Avoid querying if the input matches one of the already suggested universities exactly
+        const matched = suggestedUniversities.some(u => u.name.toLowerCase() === formData.university.toLowerCase());
+        if (matched) return;
+
+        const delayDebounceFn = setTimeout(async () => {
+            setLoadingUniversities(true);
+            try {
+                const res = await aiApi.aiSearch({
+                    type: "university",
+                    query: formData.university,
+                    country: selectedCountry
+                }) as any;
+
+                const universities = res?.universities || res?.results || [];
+                if (universities.length > 0) {
+                    setSuggestedUniversities(universities);
+                }
+            } catch (err) {
+                console.error("Failed to query universities via AI", err);
+            } finally {
+                setLoadingUniversities(false);
+            }
+        }, 400);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [formData.university, formData.country, formData.otherCountry]);
+
     useEffect(() => {
         if (userData && isAddAppOpen) {
             setFormData(prev => ({
@@ -106,6 +205,12 @@ export default function ApplicationsTab() {
         if (formData.bank !== "Any Bank" && isBankAlreadyApplied(formData.bank)) {
             const selectedBankName = banksList.find(b => b.id === formData.bank)?.name || formData.bank;
             setSubmitError(`This student already has an active application with ${selectedBankName}. Direct duplicates are not allowed.`);
+            return;
+        }
+
+        const parsedAmount = parseFloat(formData.amount) || 0;
+        if (parsedAmount > 15000000) {
+            setSubmitError("Maximum loan amount cannot exceed ₹1,50,00,000 (1.5 Crore)");
             return;
         }
 
@@ -336,6 +441,7 @@ export default function ApplicationsTab() {
                                             <input
                                                 required
                                                 type="number"
+                                                max="15000000"
                                                 placeholder="e.g. 4000000"
                                                 value={formData.amount}
                                                 onChange={e => setFormData(prev => ({ ...prev, amount: e.target.value }))}
@@ -354,7 +460,14 @@ export default function ApplicationsTab() {
                                             <select
                                                 required
                                                 value={formData.country}
-                                                onChange={e => setFormData(prev => ({ ...prev, country: e.target.value }))}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        country: val,
+                                                        otherCountry: val !== "Other" ? "" : prev.otherCountry
+                                                    }));
+                                                }}
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
                                             >
                                                 {countries.map(c => (
@@ -377,16 +490,50 @@ export default function ApplicationsTab() {
                                             </div>
                                         )}
 
-                                        <div>
+                                        <div
+                                            className="relative"
+                                            onFocus={() => setShowUniversitySuggestions(true)}
+                                            onBlur={() => {
+                                                setTimeout(() => setShowUniversitySuggestions(false), 200);
+                                            }}
+                                        >
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">University Name *</label>
                                             <input
                                                 required
                                                 type="text"
                                                 placeholder="e.g. Stanford University"
                                                 value={formData.university}
-                                                onChange={e => setFormData(prev => ({ ...prev, university: e.target.value }))}
+                                                onChange={e => setFormData(prev => ({ ...prev, university: e.target.value.replace(/\d/g, "") }))}
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
                                             />
+
+                                            {/* Loading Indicator */}
+                                            {loadingUniversities && (
+                                                <div className="absolute right-3 top-[32px] flex items-center gap-1.5 text-xs text-[#6605c7] font-bold select-none">
+                                                    <div className="w-3.5 h-3.5 border-2 border-[#6605c7] border-t-transparent rounded-full animate-spin" />
+                                                </div>
+                                            )}
+
+                                            {/* Suggestions Dropdown */}
+                                            {showUniversitySuggestions && suggestedUniversities.length > 0 && (
+                                                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-100 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100">
+                                                    {suggestedUniversities.map((uni) => (
+                                                        <button
+                                                            key={uni.name}
+                                                            type="button"
+                                                            onMouseDown={(e) => e.preventDefault()}
+                                                            onClick={() => {
+                                                                setFormData(prev => ({ ...prev, university: uni.name }));
+                                                                setShowUniversitySuggestions(false);
+                                                            }}
+                                                            className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:text-[#6605c7] hover:bg-slate-50 transition-all flex flex-col"
+                                                        >
+                                                            <span className="font-bold text-slate-900">{uni.name}</span>
+                                                            <span className="text-[10px] text-slate-400 font-normal">{uni.loc || uni.country || "Popular University"}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div>

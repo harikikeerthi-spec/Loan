@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { formatDate } from "@/lib/utils";
+import { checkFollowUpConflict, DEFAULT_TIME_SLOTS, formatSlot12Hr } from "@/lib/followUpUtils";
 
 interface FollowUp {
     id: string;
@@ -96,6 +97,19 @@ export default function FollowUpsTab() {
         const studentName = `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim();
         const appNumber = activeApp?.appNumber || userData?.studentId || userData?.id || "VL-STU";
         const appId = activeApp?.id || activeApp?._id;
+        const staffId = staffUser?.id || staffUser?.email || "default";
+
+        // Check if date and time slot is already assigned
+        const conflict = checkFollowUpConflict({
+            staffId,
+            date,
+            time
+        });
+
+        if (conflict) {
+            alert(`⚠️ Schedule Conflict!\n\nThe slot (${date} at ${formatSlot12Hr(time) || time}) is already assigned to ${conflict.studentName}.\n\nEach date and time slot can only be assigned once. Please select a different time slot.`);
+            return;
+        }
 
         const newFollowUp: FollowUp = {
             id: Date.now().toString(),
@@ -169,14 +183,30 @@ export default function FollowUpsTab() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1.5">Time</label>
-                                    <input
-                                        type="time"
+                                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1.5">Time Slot</label>
+                                    <select
                                         required
                                         value={time}
                                         onChange={(e) => setTime(e.target.value)}
                                         className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                                    />
+                                    >
+                                        <option value="">Select Time Slot...</option>
+                                        {DEFAULT_TIME_SLOTS.map(slot => {
+                                            const staffId = staffUser?.id || staffUser?.email || "default";
+
+                                            const conflict = date ? checkFollowUpConflict({
+                                                staffId,
+                                                date,
+                                                time: slot
+                                            }) : null;
+
+                                            return (
+                                                <option key={slot} value={slot} disabled={!!conflict}>
+                                                    {formatSlot12Hr(slot)} {conflict ? `❌ (Booked - ${conflict.studentName})` : '✓ (Available)'}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
                                 </div>
                             </div>
                             <div className="mb-4">
@@ -232,7 +262,7 @@ export default function FollowUpsTab() {
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-sm font-bold text-slate-800">{formatDate(followUp.date, "MMM d, yyyy")}</span>
                                             <span className="text-xs font-semibold text-slate-400">•</span>
-                                            <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">{followUp.time}</span>
+                                            <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">{formatSlot12Hr(followUp.time) || followUp.time}</span>
                                             
                                             <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ml-2 ${
                                                 followUp.status === "completed" ? "bg-emerald-50 text-emerald-600 border border-emerald-200" :

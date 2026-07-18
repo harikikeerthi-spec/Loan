@@ -234,9 +234,9 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, moduleName = "Bank Portal", icon = "folder_shared", actionSlot }: PageHeaderProps) {
     return (
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-8">
-            <div className="space-y-2">
-                <h1 className="text-3xl lg:text-4xl font-bold text-[#0A2540] tracking-tight font-sans">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-6">
+            <div className="space-y-1.5">
+                <h1 className="mt-0 text-3xl lg:text-4xl font-bold text-[#0A2540] tracking-tight font-sans">
                     {title}
                 </h1>
                 {description && (

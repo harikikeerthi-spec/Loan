@@ -1796,11 +1796,10 @@ export class StaffProfileService {
     const cibil = app.creditScore || 725;
     let cibilDelta = 0;
     if (cibil >= 750) cibilDelta = 30;
-    else if (cibil >= 700) cibilDelta = 20;
-    else if (cibil < 650) cibilDelta = -15;
-    else cibilDelta = 10;
+    else if (cibil > 700) cibilDelta = 20;
+    else cibilDelta = -30;
     score += cibilDelta;
-    rulesRun.push({ rule: 'CIBIL Credit Score Check', passed: cibil >= 700, scoreDelta: cibilDelta, details: `Score is ${cibil}.` });
+    rulesRun.push({ rule: 'CIBIL Credit Score Check', passed: cibil > 700, scoreDelta: cibilDelta, details: `Score is ${cibil}. Minimum > 700 required for eligibility.` });
 
     const isTier1 = ['harvard', 'stanford', 'mit', 'oxford', 'cambridge', 'columbia', 'nus', 'iit', 'iim', 'bits'].some(t => app.universityName?.toLowerCase().includes(t));
     const tierDelta = isTier1 ? 20 : 10;

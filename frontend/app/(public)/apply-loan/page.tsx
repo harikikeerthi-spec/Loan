@@ -7,7 +7,7 @@ import { applicationApi, authApi, aiApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
 import { getAllCountries } from "@/lib/countriesData";
-import { universities as staticUniversities } from "@/lib/universityData";
+import { universities as staticUniversities, searchMasterUniversities } from "@/lib/universityData";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -203,20 +203,17 @@ export default function ApplyLoanPage() {
         }
     };
 
-    const getStaticUniversitiesForCountry = (country: string) => {
-        const normalizedCountry = country.trim().toLowerCase();
-        return Object.values(staticUniversities)
-            .filter((uni) => uni.country.trim().toLowerCase() === normalizedCountry)
-            .map((uni) => ({
-                name: uni.name,
-                loc: uni.location || uni.country,
-                country: uni.country,
-                slug: uni.slug,
-            }))
-            .slice(0, 10);
+    const getStaticUniversitiesForCountry = (country: string, query?: string) => {
+        const results = searchMasterUniversities(query || "", country);
+        return results.map((uni) => ({
+            name: uni.name,
+            loc: uni.loc || uni.country,
+            country: uni.country,
+            slug: uni.slug || uni.name.toLowerCase().replace(/\s+/g, '-'),
+        })).slice(0, 15);
     };
 
-    // Fetch popular universities for the selected country using AI or static fallback
+    // Fetch popular universities for the selected country using master dataset + AI
     useEffect(() => {
         const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
         if (!selectedCountry || selectedCountry.trim().length < 2) {
@@ -224,10 +221,9 @@ export default function ApplyLoanPage() {
             return;
         }
 
-        const staticSuggestions = getStaticUniversitiesForCountry(selectedCountry);
-        if (!formData.university && staticSuggestions.length > 0) {
+        const staticSuggestions = getStaticUniversitiesForCountry(selectedCountry, formData.university);
+        if (staticSuggestions.length > 0) {
             setSuggestedUniversities(staticSuggestions);
-            return;
         }
 
         const fetchUnis = async () => {
@@ -235,24 +231,27 @@ export default function ApplyLoanPage() {
             try {
                 const res = await aiApi.aiSearch({
                     type: "university",
-                    query: "",
+                    query: formData.university || "",
                     country: selectedCountry
                 }) as any;
 
                 const universities = res?.universities || res?.results || [];
                 if (universities.length > 0) {
-                    setSuggestedUniversities(universities);
+                    // Combine AI results with static master matches
+                    const combined = [...staticSuggestions];
+                    universities.forEach((u: any) => {
+                        if (!combined.some(c => c.name.toLowerCase() === u.name.toLowerCase())) {
+                            combined.push(u);
+                        }
+                    });
+                    setSuggestedUniversities(combined);
                 } else if (staticSuggestions.length > 0) {
                     setSuggestedUniversities(staticSuggestions);
-                } else {
-                    setSuggestedUniversities([]);
                 }
             } catch (err) {
                 console.error("Failed to fetch universities via AI", err);
                 if (staticSuggestions.length > 0) {
                     setSuggestedUniversities(staticSuggestions);
-                } else {
-                    setSuggestedUniversities([]);
                 }
             } finally {
                 setLoadingUniversities(false);
@@ -260,38 +259,46 @@ export default function ApplyLoanPage() {
         };
 
         fetchUnis();
-    }, [formData.country, formData.otherCountry, formData.university]);
+    }, [formData.country, formData.otherCountry]);
 
-    // Search universities when typing in the input field
+    // Real-time Search universities when typing in the input field
     useEffect(() => {
         const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
-        if (!selectedCountry || !formData.university || formData.university.trim().length < 2) {
+        const queryText = (formData.university || "").trim();
+
+        // Always update master local suggestions immediately while typing
+        const masterMatches = getStaticUniversitiesForCountry(selectedCountry, queryText);
+        setSuggestedUniversities(masterMatches);
+
+        if (!selectedCountry || queryText.length < 2) {
             return;
         }
-
-        // Avoid querying if the input matches one of the already suggested universities exactly
-        const matched = suggestedUniversities.some(u => u.name.toLowerCase() === formData.university.toLowerCase());
-        if (matched) return;
 
         const delayDebounceFn = setTimeout(async () => {
             setLoadingUniversities(true);
             try {
                 const res = await aiApi.aiSearch({
                     type: "university",
-                    query: formData.university,
+                    query: queryText,
                     country: selectedCountry
                 }) as any;
 
-                const universities = res?.universities || res?.results || [];
-                if (universities.length > 0) {
-                    setSuggestedUniversities(universities);
+                const aiUnis = res?.universities || res?.results || [];
+                if (aiUnis.length > 0) {
+                    const merged = [...masterMatches];
+                    aiUnis.forEach((u: any) => {
+                        if (!merged.some(m => m.name.toLowerCase() === u.name.toLowerCase())) {
+                            merged.push(u);
+                        }
+                    });
+                    setSuggestedUniversities(merged);
                 }
             } catch (err) {
                 console.error("Failed to query universities via AI", err);
             } finally {
                 setLoadingUniversities(false);
             }
-        }, 400);
+        }, 300);
 
         return () => clearTimeout(delayDebounceFn);
     }, [formData.university, formData.country, formData.otherCountry]);
@@ -679,27 +686,54 @@ export default function ApplyLoanPage() {
                                         )}
 
                                         {/* Suggestions Dropdown */}
-                                        {showUniversitySuggestions && suggestedUniversities.length > 0 && (
-                                            <div className="absolute z-40 left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-purple-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-gray-150/10 animate-fade-in">
-                                                {suggestedUniversities.map((uni) => (
-                                                    <button
-                                                        key={uni.name}
-                                                        type="button"
-                                                        onMouseDown={(e) => e.preventDefault()}
-                                                        onClick={() => {
-                                                            update("university", uni.name);
-                                                            setShowUniversitySuggestions(false);
-                                                        }}
-                                                        className="w-full px-5 py-3.5 text-left text-xs font-bold text-gray-700 hover:text-[#6605c7] hover:bg-purple-50/50 transition-all flex items-center justify-between"
-                                                    >
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <span className="text-[13px] font-black text-gray-900 group-hover:text-[#6605c7]">{uni.name}</span>
-                                                            <span className="text-[10px] text-gray-400 font-medium">{uni.loc || uni.country || "Popular University"}</span>
-                                                        </div>
-                                                        <span className="material-symbols-outlined text-[#6605c7] text-sm opacity-0 hover:opacity-100 transition-opacity">chevron_right</span>
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        {showUniversitySuggestions && (
+                                            (() => {
+                                                const queryText = (formData.university || "").trim().toLowerCase();
+                                                const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+                                                
+                                                // Filter suggestedUniversities by typed query
+                                                let filtered = suggestedUniversities.filter(uni => 
+                                                    !queryText || 
+                                                    uni.name.toLowerCase().includes(queryText) || 
+                                                    (uni.loc && uni.loc.toLowerCase().includes(queryText))
+                                                );
+
+                                                // If user typed something and it's not an exact match, prepend the user's typed name as top option
+                                                if (queryText.length >= 2) {
+                                                    const exactMatch = filtered.some(u => u.name.toLowerCase() === queryText);
+                                                    if (!exactMatch) {
+                                                        filtered = [
+                                                            { name: formData.university.trim(), loc: selectedCountry || "Target University" },
+                                                            ...filtered
+                                                        ];
+                                                    }
+                                                }
+
+                                                if (filtered.length === 0) return null;
+
+                                                return (
+                                                    <div className="absolute z-40 left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-purple-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-gray-150/10 animate-fade-in">
+                                                        {filtered.map((uni, idx) => (
+                                                            <button
+                                                                key={`${uni.name}-${idx}`}
+                                                                type="button"
+                                                                onMouseDown={(e) => e.preventDefault()}
+                                                                onClick={() => {
+                                                                    update("university", uni.name);
+                                                                    setShowUniversitySuggestions(false);
+                                                                }}
+                                                                className="w-full px-5 py-3.5 text-left text-xs font-bold text-gray-700 hover:text-[#6605c7] hover:bg-purple-50/50 transition-all flex items-center justify-between group"
+                                                            >
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <span className="text-[13px] font-black text-gray-900 group-hover:text-[#6605c7]">{uni.name}</span>
+                                                                    <span className="text-[10px] text-gray-400 font-medium">{uni.loc || uni.country || "Target University"}</span>
+                                                                </div>
+                                                                <span className="material-symbols-outlined text-[#6605c7] text-sm opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()
                                         )}
                                     </div>
 

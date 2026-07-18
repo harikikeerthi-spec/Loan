@@ -78,6 +78,60 @@ export class S3Service {
   }
 
   /**
+   * Fetch file buffer directly from S3.
+   * Returns null if key does not exist or fetch fails.
+   */
+  async getFileBuffer(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+    if (!key || key.startsWith('in.gov.')) return null;
+    this.logger.log(`[S3Service] Fetching file buffer for key: ${key}`);
+
+    const keyWithoutExt = key.replace(/\.[^/.]+$/, '');
+    const keysToTry = Array.from(
+      new Set([
+        key,
+        `${keyWithoutExt}.pdf`,
+        `${keyWithoutExt}.jpeg`,
+        `${keyWithoutExt}.jpg`,
+        `${keyWithoutExt}.png`,
+        keyWithoutExt,
+      ]),
+    );
+
+    for (const tryKey of keysToTry) {
+      try {
+        const command = new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: tryKey,
+        });
+        const response = await this.client.send(command);
+        if (!response.Body) continue;
+
+        const stream = response.Body as any;
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of stream) {
+          chunks.push(chunk);
+        }
+        const buffer = Buffer.concat(chunks);
+        let contentType = response.ContentType || 'application/pdf';
+        if (!response.ContentType || response.ContentType === 'binary/octet-stream' || response.ContentType === 'application/octet-stream') {
+          if (tryKey.endsWith('.jpg') || tryKey.endsWith('.jpeg')) contentType = 'image/jpeg';
+          else if (tryKey.endsWith('.png')) contentType = 'image/png';
+          else if (tryKey.endsWith('.pdf')) contentType = 'application/pdf';
+        }
+        return {
+          buffer,
+          contentType,
+        };
+      } catch (err: any) {
+        // Try next candidate key
+      }
+    }
+
+    this.logger.warn(`[S3Service] getFileBuffer failed for all candidate keys of: ${key}`);
+    return null;
+  }
+
+  /**
    * Delete an object from S3 by its key.
    */
   async delete(key: string): Promise<void> {

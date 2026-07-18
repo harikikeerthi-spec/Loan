@@ -31,6 +31,13 @@ export class ChatController {
     return this.chatService.getConversations('active', userWithBank);
   }
 
+  @Get('conversations/single/:id')
+  async getSingleConversation(@Param('id') id: string) {
+    const conv = await this.chatService.getConversationById(id);
+    if (!conv) throw new NotFoundException('Conversation not found');
+    return { success: true, conversation: conv };
+  }
+
   @Get('messages/:conversationId')
   async getMessages(@Param('conversationId') conversationId: string) {
     return this.chatService.getMessages(conversationId);

@@ -299,7 +299,8 @@ export default function IncomingQueuePage() {
                 status: "file_logged",
                 remarks: mergedRemarks
             };
-            const res: any = await adminApi.updateApplication(selectedApp.id, payload);
+            const appId = selectedApp.id || selectedApp._id;
+            const res: any = await adminApi.updateApplication(appId, payload);
             if (res && res.success) {
                 setShowLogModal(false);
                 setSelectedApp(null);

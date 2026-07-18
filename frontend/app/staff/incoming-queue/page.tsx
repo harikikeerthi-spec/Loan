@@ -10,6 +10,7 @@ import SendEmailModal from "@/components/staff/SendEmailModal";
  
 import { useDialog } from "@/contexts/DialogContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { checkFollowUpConflict, DEFAULT_TIME_SLOTS, formatSlot12Hr } from "@/lib/followUpUtils";
 
 const IST_OFFSET = 5.5 * 60 * 60 * 1000;
 
@@ -226,6 +227,22 @@ export default function IncomingQueuePage() {
             return;
         }
 
+        const selectedTime = tempFollowUpTime || "10:00";
+        const staffId = user?.id || user?.email || "default";
+
+        // Check if date and time slot is already assigned to another student
+        const conflict = checkFollowUpConflict({
+            staffId,
+            date: tempFollowUpDate,
+            time: selectedTime,
+            currentAppId: appId
+        });
+
+        if (conflict) {
+            alert(`⚠️ Schedule Conflict!\n\nThe slot (${tempFollowUpDate} at ${selectedTime}) is already assigned to ${conflict.studentName} (${conflict.appNumber || 'Student'}).\n\nThe same date and time cannot be assigned to two different students. Please choose a different date or time slot.`);
+            return;
+        }
+
         if (tempFollowUpNotes.trim()) {
             try {
                 await adminApi.addRemark(appId, {
@@ -243,7 +260,7 @@ export default function IncomingQueuePage() {
             ...followUpDates,
             [appId]: {
                 date: tempFollowUpDate,
-                time: tempFollowUpTime || "10:00",
+                time: selectedTime,
                 studentName,
                 appNumber: appNumber || `VL-APP-${appId.slice(-5).toUpperCase()}`,
                 notes: tempFollowUpNotes
@@ -777,8 +794,29 @@ export default function IncomingQueuePage() {
                                     <input type="date" value={tempFollowUpDate} onChange={e => setTempFollowUpDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
                                 </div>
                                 <div>
-                                    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Set a custom due time</label>
-                                    <input type="time" value={tempFollowUpTime} onChange={e => setTempFollowUpTime(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
+                                    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Select time slot</label>
+                                    <select
+                                        value={tempFollowUpTime}
+                                        onChange={e => setTempFollowUpTime(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                    >
+                                        <option value="">Select Time Slot...</option>
+                                        {DEFAULT_TIME_SLOTS.map(slot => {
+                                            const staffId = user?.id || user?.email || "default";
+                                            const conflict = tempFollowUpDate ? checkFollowUpConflict({
+                                                staffId,
+                                                date: tempFollowUpDate,
+                                                time: slot,
+                                                currentAppId: editingFollowUpId
+                                            }) : null;
+
+                                            return (
+                                                <option key={slot} value={slot} disabled={!!conflict}>
+                                                    {formatSlot12Hr(slot)} {conflict ? `❌ (Booked - ${conflict.studentName})` : '✓ (Available)'}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
                                 </div>
                             </div>
                             {tempFollowUpDate && (

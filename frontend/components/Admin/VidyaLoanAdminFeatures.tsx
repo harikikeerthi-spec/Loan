@@ -118,7 +118,7 @@ const VidyaLoanAdminFeatures = () => {
                             { criteria: "Age between 18-40 years", status: "pass" },
                             { criteria: "Valid admission from recognized institution", status: "pass" },
                             { criteria: "Co-applicant annual income > 3 LPA", status: "pass" },
-                            { criteria: "CIBIL score > 650", status: "warning" },
+                            { criteria: "CIBIL score > 700", status: "warning" },
                             { criteria: "No existing defaults/CCJs", status: "pass" },
                             { criteria: "Course duration >= 6 months", status: "pass" },
                             { criteria: "Institution accreditation verified", status: "pass" },

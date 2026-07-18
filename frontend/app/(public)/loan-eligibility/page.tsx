@@ -99,6 +99,17 @@ export default function LoanEligibilityPage() {
                             <div className="space-y-2">
                                 <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">CIBIL Score</label>
                                 <input name="credit" type="number" value={formData.credit} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border-gray-100 focus:border-[#6605c7] focus:ring-0 transition-all font-medium text-gray-900 bg-gray-50/50 text-[13px]" />
+                                {formData.credit <= 700 ? (
+                                    <p className="text-[10px] font-bold text-rose-500 flex items-center gap-1 mt-1">
+                                        <span className="material-symbols-outlined text-[13px]">warning</span>
+                                        CIBIL score must be &gt; 700 for loan eligibility
+                                    </p>
+                                ) : (
+                                    <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
+                                        <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                                        CIBIL score meets minimum threshold (&gt; 700)
+                                    </p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Annual Income (₹)</label>

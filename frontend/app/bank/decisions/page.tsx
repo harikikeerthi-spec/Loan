@@ -583,14 +583,15 @@ export default function DecisionsHub() {
         if (!newNoteText.trim() || !selectedApp) return;
 
         try {
-            const res: any = await adminApi.addRemark(selectedApp.id, {
+            const appId = selectedApp.id || selectedApp._id;
+            const res: any = await adminApi.addRemark(appId, {
                 type: 'remark',
                 content: newNoteText.trim()
             });
             if (res && res.success) {
                 setNewNoteText("");
-                await fetchRemarks(selectedApp.id);
-                await fetchTimeline(selectedApp.id);
+                await fetchRemarks(appId);
+                await fetchTimeline(appId);
             }
         } catch (err) {
             console.error("Failed to add remark:", err);
@@ -802,11 +803,12 @@ export default function DecisionsHub() {
         setSubmitting(true);
         try {
             let res: any;
+            const appId = selectedApp.id || selectedApp._id;
             const updatedRemarks = `${selectedApp.remarks || ""}\n[Appraisal - ${format(new Date(), "MMM dd, HH:mm")}]: Type: ${activeDecisionTab.toUpperCase()} | ROI: ${interestRate}% (${roiType}) | Processing Fee: ₹${totalFeeValue}`;
 
             // Save officer remarks as an internal note if filled
             if (officerRemarks.trim()) {
-                await adminApi.addRemark(selectedApp.id, {
+                await adminApi.addRemark(appId, {
                     type: 'remark',
                     content: `[Underwriting Verdict Comments]: ${officerRemarks.trim()}`
                 }).catch(err => console.error("Error saving verdict comments:", err));
@@ -816,7 +818,7 @@ export default function DecisionsHub() {
                 const sanctionVal = parseFloat(sanctionAmount) || selectedApp.amount;
 
                 // 1. Set ROI
-                await bankApi.setRoi(selectedApp.id, {
+                await bankApi.setRoi(appId, {
                     roiType: roiType,
                     roiBase: parseFloat(interestRate),
                     roiEffective: hasSubsidy ? (parseFloat(interestRate) - parseFloat(subsidyPercentage)) : parseFloat(interestRate),
@@ -832,13 +834,13 @@ export default function DecisionsHub() {
                     paymentMode: feePaymentMode,
                     waiverReason: hasWaiver ? waiverReason : null
                 };
-                await bankApi.setProcessingFee(selectedApp.id, feePayload).catch(async () => {
-                    await bankApi.updateProcessingFee(selectedApp.id, feePayload).catch(err => console.error("Error updating fee:", err));
+                await bankApi.setProcessingFee(appId, feePayload).catch(async () => {
+                    await bankApi.updateProcessingFee(appId, feePayload).catch(err => console.error("Error updating fee:", err));
                 });
 
                 // 3. Submit Decision
                 res = await bankApi.submitDecision({
-                    applicationId: selectedApp.id,
+                    applicationId: appId,
                     decisionType: "sanction",
                     details: {
                         sanctionAmount: sanctionVal,
@@ -851,7 +853,7 @@ export default function DecisionsHub() {
 
             } else if (activeDecisionTab === "conditional") {
                 res = await bankApi.conditionalSanction({
-                    applicationId: selectedApp.id,
+                    applicationId: appId,
                     conditions: conditions,
                     deadline: newConditionDeadline,
                     remarks: officerRemarks
@@ -860,7 +862,7 @@ export default function DecisionsHub() {
             } else if (activeDecisionTab === "counter_offer") {
                 const counterAmtVal = parseFloat(counterAmount) || selectedApp.amount * 0.95;
                 res = await bankApi.counterOffer({
-                    applicationId: selectedApp.id,
+                    applicationId: appId,
                     offeredAmount: counterAmtVal,
                     offeredRate: parseFloat(counterRate),
                     offeredTenure: parseInt(counterTenure),
@@ -869,7 +871,7 @@ export default function DecisionsHub() {
 
             } else if (activeDecisionTab === "reject") {
                 res = await bankApi.submitDecision({
-                    applicationId: selectedApp.id,
+                    applicationId: appId,
                     decisionType: "reject",
                     details: {
                         reason: rejectionReason,
@@ -983,7 +985,7 @@ export default function DecisionsHub() {
     if (!mounted) return null;
 
     return (
-        <div className="p-8 lg:p-12 space-y-8 max-w-[1500px] mx-auto relative z-10">
+        <div className="px-6 py-6 lg:px-10 lg:py-8 space-y-6 max-w-[1500px] mx-auto relative z-10">
             {/* Header */}
             <PageHeader 
                 title="Underwriting Appraisal Workspace" 

@@ -427,20 +427,18 @@ export default function ApplicationsPage() {
                                                                             {item.applicationNumber}
                                                                         </p>
                                                                     )}
-                                                                    {/* {(item.bank || item.targetBank) && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                const bankParam = item.bank || item.targetBank || "";
-                                                                                const appNo = item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`;
-                                                                                router.push(`/staff/chat-customer?bankName=${encodeURIComponent(bankParam)}&applicationId=${item.id || item._id}&applicationNumber=${encodeURIComponent(appNo)}`);
-                                                                            }}
-                                                                            className="text-[10px] bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 cursor-pointer transition-all font-bold uppercase tracking-widest inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-indigo-200 shadow-sm whitespace-nowrap"
-                                                                            title={`Chat with ${item.bank || item.targetBank}`}
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-[12px]">forum</span>
-                                                                            Chat with Bank
-                                                                        </button>
-                                                                    )} */}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const bankParam = item.bank || item.targetBank || item.lender || item.assignedBank || "Poonawalla Fincorp";
+                                                                            const appNo = item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`;
+                                                                            router.push(`/staff/chat-customer?bankName=${encodeURIComponent(bankParam)}&applicationId=${item.id || item._id}&applicationNumber=${encodeURIComponent(appNo)}`);
+                                                                        }}
+                                                                        className="text-[10px] bg-indigo-50 hover:bg-[#6605c7] hover:text-white text-[#6605c7] cursor-pointer transition-all font-black uppercase tracking-widest inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-indigo-200 shadow-sm whitespace-nowrap"
+                                                                        title={`Chat with ${item.bank || item.targetBank || item.lender || 'Bank'}`}
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-[13px]">forum</span>
+                                                                        Chat with Bank
+                                                                    </button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -448,6 +446,17 @@ export default function ApplicationsPage() {
                                                         {isExpanded && (
                                                             <div className="flex flex-col items-end shrink-0 pt-1">
                                                                 <div className="flex items-center gap-2 relative">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const bankParam = item.bank || item.targetBank || item.lender || item.assignedBank || "Poonawalla Fincorp";
+                                                                            const appNo = item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`;
+                                                                            router.push(`/staff/chat-customer?bankName=${encodeURIComponent(bankParam)}&applicationId=${item.id || item._id}&applicationNumber=${encodeURIComponent(appNo)}`);
+                                                                        }}
+                                                                        className="w-7 h-7 rounded bg-white border border-indigo-200 shadow-sm hover:border-indigo-400 hover:bg-indigo-50 flex items-center justify-center text-indigo-600 hover:text-indigo-800 transition-all"
+                                                                        title={`Chat with ${item.bank || item.targetBank || item.lender || 'Bank'}`}
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-[14px]">account_balance</span>
+                                                                    </button>
                                                                     <button
                                                                         onClick={() => setActiveContactPopup(popup?.id === rowId && popup?.type === 'phone' ? null : { id: rowId, type: 'phone' })}
                                                                         className="w-7 h-7 rounded bg-white border border-slate-200 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all"
@@ -529,39 +538,7 @@ export default function ApplicationsPage() {
                                                 })() : (
                                                     <p className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">—</p>
                                                 )}
-                                                {/* <p className="text-[12px] text-slate-500 font-bold truncate max-w-[180px] mt-1">
-                                                    {item.courseName || item.program || item.courseLevel || '—'}
-                                                </p> */}
                                             </td>
-                                            {/* <td className="px-6 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors min-w-[240px] w-[260px]">
-                                                <div className="flex flex-col justify-center min-h-[60px] gap-1">
-                                                    <div className="flex items-center">
-                                                        {(() => {
-                                                            const bStr = item.bank || item.targetBank || '';
-                                                            if (bStr.includes(',') || (item.status || '').toLowerCase() === 'routed_multiparty') {
-                                                                const banksList = bStr.split(',').map((s: string) => s.trim()).filter(Boolean);
-                                                                return (
-                                                                    <div className="flex flex-wrap items-center gap-1.5">
-                                                                        {banksList.map((bankName: string, index: number) => (
-                                                                            <div key={index} className="h-9 px-2 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-sm">
-                                                                                {renderBankLogo(bankName, "h-7 max-w-[80px]")}
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                );
-                                                            }
-                                                            const bName = bStr.toLowerCase();
-                                                            if (bName.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC FIRST Bank" className="h-12 max-w-[190px] w-auto object-contain" />;
-                                                            if (bName.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className="h-14 max-w-[190px] w-auto object-contain" />;
-                                                            if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-24 max-w-[240px] w-auto object-contain" />;
-                                                            if (bName.includes('credila') || bName.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className="h-11 max-w-[190px] w-auto object-contain" />;
-                                                            if (bName.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className="h-[52px] max-w-[190px] w-auto object-contain" />;
-                                                            if (bName.includes('incred')) return <span className="px-3 py-1.5 rounded-lg bg-purple-100 text-purple-800 text-[12px] font-black border border-purple-200">InCred</span>;
-                                                            return <div className="text-[#0d1b2a] font-black text-[14px] uppercase truncate max-w-[200px]">{item.bank || item.targetBank || '—'}</div>;
-                                                        })()}
-                                                    </div>
-                                                </div>
-                                            </td> */}
                                             <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 160 }}>
                                                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
                                                     <div className={`h-1.5 rounded-full transition-all duration-700 ${progress === 100 ? 'bg-emerald-500' : 'bg-[#4f46e5]'}`} style={{ width: `${progress}%` }} />
@@ -608,6 +585,19 @@ export default function ApplicationsPage() {
                                                                 className="fixed w-56 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 py-3 animate-in fade-in zoom-in-95 duration-200 font-sans"
                                                                 style={{ top: menuPosition.top, right: menuPosition.right }}
                                                             >
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const bankParam = item.bank || item.targetBank || item.lender || item.assignedBank || "Poonawalla Fincorp";
+                                                                        const appNo = item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`;
+                                                                        router.push(`/staff/chat-customer?bankName=${encodeURIComponent(bankParam)}&applicationId=${item.id || item._id}&applicationNumber=${encodeURIComponent(appNo)}`);
+                                                                        setActiveMenuId(null);
+                                                                        setMenuPosition(null);
+                                                                    }}
+                                                                    className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-[#6605c7] hover:bg-purple-50 transition-colors"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[18px] text-[#6605c7]">forum</span>
+                                                                    Chat with Bank
+                                                                </button>
                                                                 <button
                                                                     onClick={() => { setSelectedApp(item); setActiveMenuId(null); setMenuPosition(null); }}
                                                                     className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"

@@ -287,7 +287,8 @@ export default function ApplicationManagement() {
                 status: "file_logged",
                 remarks: mergedRemarks
             };
-            const res: any = await adminApi.updateApplication(selectedApp.id, payload);
+            const appId = selectedApp.id || selectedApp._id;
+            const res: any = await adminApi.updateApplication(appId, payload);
             if (res && res.success) {
                 setShowLanModal(false);
                 setLanNumber("");
@@ -483,14 +484,14 @@ export default function ApplicationManagement() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen p-8 lg:p-12 transition-all duration-300">
-            <div className="max-w-7xl mx-auto space-y-8">
+        <div className="px-6 py-6 lg:px-10 lg:py-8 transition-all duration-300">
+            <div className="max-w-7xl mx-auto space-y-6">
 
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
                     <div>
-                        <h1 className="text-4xl font-display font-bold text-gray-900 tracking-tight">Application Management</h1>
-                        <p className="text-sm text-gray-500 mt-2 font-medium">Verify documents, log file numbers, and record credit underwriting decisions.</p>
+                        <h1 className="mt-0 text-3xl lg:text-4xl font-display font-bold text-gray-900 tracking-tight">Application Management</h1>
+                        <p className="text-sm text-gray-500 mt-1.5 font-medium">Verify documents, log file numbers, and record credit underwriting decisions.</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
                         {/* <select

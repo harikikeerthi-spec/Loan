@@ -31,10 +31,27 @@ export class EligibilityService {
   ) {}
 
   async calculateEligibilityScore(data: EligibilityCheckDto): Promise<EligibilityResult> {
+    // Mandatory requirement: CIBIL score must be > 700 for loan eligibility to apply
+    if (data.credit <= 700) {
+      return {
+        score: Math.min(35, Math.max(10, Math.round((data.credit / 700) * 35))),
+        status: 'unlikely',
+        ratio: 0,
+        rateRange: 'N/A',
+        coverage: 'Not Applicable',
+        summary: `Loan eligibility is not applicable because your CIBIL credit score (${data.credit}) is 700 or below. A minimum CIBIL score of more than 700 (> 700) is mandatory for loan eligibility.`,
+        recommendations: [
+          'Improve your CIBIL score to above 700 by settling outstanding dues and credit card balances',
+          'Ensure zero late payments or loan defaults on active credit accounts',
+          'Re-check loan eligibility once your CIBIL score exceeds 700'
+        ],
+      };
+    }
+
     const prompt = `
     Evaluate the loan eligibility for the following applicant:
     - Age: ${data.age}
-    - Credit Score: ${data.credit}
+    - Credit Score: ${data.credit} (Mandatory requirement: CIBIL score > 700)
     - Annual Income: ${data.income} (in INR)
     - Loan Amount Requested: ${data.loan} (in INR)
     - Employment: ${data.employment}
@@ -61,7 +78,7 @@ export class EligibilityService {
       "recommendations": ["string"]
     }
 
-    Note: Credit score < 600 is generally risky. High loan vs low income is risky.
+    Note: Credit score must be > 700 for eligibility. High loan vs low income is risky.
     `;
 
     try {

@@ -135,29 +135,32 @@ export class DocumentController {
         );
       }
 
-      // ── 2. Verified! Proceed to Upload to S3 (with Local Fallback) ───────
+      // ── 2. Verified! Save locally & upload to S3 ───────
       const fileExt = path.extname(file.originalname);
       const s3Key = `vault/${userId}/${docType}${fileExt}`;
-      let previewUrl = '';
+      const previewUrl = `/api/documents/view/${userId}/${docType}`;
+
+      // ALWAYS save original uploaded file buffer to local disk
+      try {
+        const localDir = path.join(process.cwd(), 'uploads', userId, docType);
+        await fs.promises.mkdir(localDir, { recursive: true });
+        const existingFiles = await fs.promises.readdir(localDir).catch(() => []);
+        for (const existing of existingFiles) {
+          await fs.promises.unlink(path.join(localDir, existing)).catch(() => {});
+        }
+        const localFilePath = path.join(localDir, `file${fileExt}`);
+        await fs.promises.writeFile(localFilePath, file.buffer);
+        console.log(`[UPLOAD] Original uploaded file saved locally at: ${localFilePath}`);
+      } catch (localWriteError: any) {
+        console.error('[UPLOAD] Local write failed:', localWriteError.message);
+      }
+
+      // Also upload to S3 storage if available
       try {
         await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
         console.log(`[UPLOAD] Verified document stored in S3: ${s3Key}`);
-        previewUrl = await this.s3Service.getPresignedUrl(s3Key, 3600);
       } catch (s3Error: any) {
-        console.warn(`[UPLOAD] AWS S3 Upload failed: ${s3Error.message || s3Error}. Falling back to local storage routing.`);
-
-        // Write the file locally on the server in a local uploads directory as a fallback!
-        try {
-          const localDir = path.join(process.cwd(), 'uploads', userId, docType);
-          await fs.promises.mkdir(localDir, { recursive: true });
-          await fs.promises.writeFile(path.join(localDir, `file${fileExt}`), file.buffer);
-          console.log(`[UPLOAD] Graceful local fallback copy saved at: ${localDir}`);
-        } catch (localWriteError: any) {
-          console.error('[UPLOAD] Local write fallback failed:', localWriteError.message);
-        }
-
-        // Return a clean local viewing API route instead of crashing!
-        previewUrl = `/api/documents/view/${userId}/${docType}`;
+        console.warn(`[UPLOAD] S3 Upload notice: ${s3Error.message || s3Error}`);
       }
 
       // ── 3. Build Verification Metadata & Update User profile ─────────────
@@ -435,23 +438,50 @@ export class DocumentController {
     }
 
     const docs = await this.usersService.getUserDocuments(userId);
-    const doc = docs.find((d) => d.docType === docType);
+    let doc = docs.find((d) => d.docType === docType);
 
-    if (!doc || !doc.filePath)
-      throw new NotFoundException('Document not found');
+    if (!doc) {
+      const normalizedReq = docType.toLowerCase().replace(/[^a-z0-9]/g, '');
+      doc = docs.find((d) => {
+        const normalizedDoc = (d.docType || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return normalizedDoc === normalizedReq || normalizedDoc.includes(normalizedReq) || normalizedReq.includes(normalizedDoc);
+      });
+    }
 
-    // Check local fallback first
-    const localDir = path.join(process.cwd(), 'uploads', userId, docType);
-    if (fs.existsSync(localDir)) {
-      const files = fs.readdirSync(localDir);
-      if (files.length > 0) {
-        const localFilePath = path.join(localDir, files[0]);
-        return res.sendFile(localFilePath);
+    // Fallback document object if not registered in DB yet
+    if (!doc) {
+      doc = {
+        id: `doc-${Date.now()}`,
+        userId,
+        docType,
+        docName: docType,
+        filePath: `vault/${userId}/${docType}.pdf`,
+        status: 'uploaded',
+        uploaded: true,
+      } as any;
+    }
+
+    // Check local fallback first (exact and fuzzy matching subfolders)
+    const userUploadsDir = path.join(process.cwd(), 'uploads', userId);
+    if (fs.existsSync(userUploadsDir)) {
+      const subdirs = fs.readdirSync(userUploadsDir);
+      const normalizedReq = docType.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matchedSubdir = subdirs.find((sd) => {
+        const normSd = sd.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return normSd === normalizedReq || normSd.includes(normalizedReq) || normalizedReq.includes(normSd);
+      });
+      if (matchedSubdir) {
+        const targetDir = path.join(userUploadsDir, matchedSubdir);
+        const files = fs.readdirSync(targetDir);
+        if (files.length > 0) {
+          const localFilePath = path.join(targetDir, files[0]);
+          return res.sendFile(localFilePath);
+        }
       }
     }
 
     // DigiLocker virtual record
-    if (doc.filePath.startsWith('in.gov.')) {
+    if (doc.filePath && doc.filePath.startsWith('in.gov.')) {
       const html = `<!DOCTYPE html><html><head><title>DigiLocker Record - ${doc.docName || doc.docType}</title>
 <style>body{font-family:system-ui,sans-serif;background:#f0f2f5;display:flex;justify-content:center;padding:40px}.card{background:white;padding:40px;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.1);max-width:600px;width:100%;border-top:6px solid #82c91e}.badge{background:#e6fced;color:#12b842;padding:6px 12px;border-radius:20px;font-weight:600;font-size:14px}</style></head>
 <body><div class="card"><h2>Digital Verification Record</h2><span class="badge">✓ Verified by DigiLocker</span>
@@ -461,20 +491,144 @@ export class DocumentController {
       return res.send(html);
     }
 
-    // Generate presigned S3 URL (1 hour expiry) and redirect
-    try {
-      const presignedUrl = await this.s3Service.getPresignedUrl(
+    // Try fetching file buffer from S3 using doc.filePath, vault, and documents paths
+    const s3CandidateKeys = Array.from(
+      new Set([
         doc.filePath,
-        3600,
-      );
-      return res.redirect(302, presignedUrl);
-    } catch (err) {
-      console.error('[VIEW] Failed to generate presigned URL:', err);
-      throw new NotFoundException('Unable to retrieve document from storage.');
+        `vault/${userId}/${docType}`,
+        `documents/${userId}/${docType}`,
+      ]),
+    ).filter(Boolean);
+
+    for (const s3KeyCandidate of s3CandidateKeys) {
+      try {
+        const s3Data = await this.s3Service.getFileBuffer(s3KeyCandidate);
+        if (s3Data && s3Data.buffer) {
+          res.setHeader('Content-Type', s3Data.contentType || 'application/pdf');
+          res.setHeader('Content-Disposition', `inline; filename="${docType}.pdf"`);
+          return res.send(s3Data.buffer);
+        }
+      } catch (err: any) {
+        console.warn(`[VIEW] S3 lookup notice for key ${s3KeyCandidate}: ${err.message}`);
+      }
     }
+
+    // Fallback: Render clean PDF document viewer if physical file key does not exist in S3
+    return this.renderSampleDocument(res, userId, docType, doc.docName || docType);
+  }
+
+  private renderSampleDocument(
+    res: Response,
+    userId: string,
+    docType: string,
+    docName: string,
+  ) {
+    const pdfBuffer = this.createNotFoundPdfBuffer(userId, docType, docName);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${docType}.pdf"`);
+    return res.send(pdfBuffer);
+  }
+
+  private createNotFoundPdfBuffer(userId: string, docType: string, docName?: string): Buffer {
+    const formattedDocType = (docName || docType)
+      .replace(/_/g, ' ')
+      .toUpperCase();
+    const dateStr = new Date().toISOString().split('T')[0];
+
+    const contentStream = [
+      // Red header background
+      '0.7 0.1 0.1 rg',
+      '40 700 532 60 re f',
+      'BT',
+      '/F1 14 Tf',
+      '1 1 1 rg',
+      '60 735 Td',
+      '(DOCUMENT NOT FOUND) Tj',
+      '0 -18 Td',
+      '/F2 10 Tf',
+      `(Application ID: ${userId} | Document: ${formattedDocType}) Tj`,
+      'ET',
+      // Title
+      'BT',
+      '/F1 16 Tf',
+      '0.6 0.1 0.1 rg',
+      '60 650 Td',
+      `(${formattedDocType}) Tj`,
+      'ET',
+      // Separator line
+      '0.8 0.2 0.2 RG',
+      '2 w',
+      '60 635 m 552 635 l S',
+      // Warning box
+      '1.0 0.95 0.95 rg',
+      '60 440 492 170 re f',
+      '0.8 0.2 0.2 RG',
+      '1.5 w',
+      '60 440 492 170 re S',
+      'BT',
+      '0.6 0.1 0.1 rg',
+      '/F1 12 Tf 80 580 Td',
+      '(The original document file could not be found.) Tj',
+      '/F2 10 Tf 0 -25 Td',
+      '(The document record exists in the database but the actual file was) Tj',
+      '0 -14 Td',
+      '(not uploaded successfully to storage.) Tj',
+      '/F1 11 Tf 0 -30 Td',
+      '0.4 0.1 0.1 rg',
+      '(ACTION REQUIRED:) Tj',
+      '/F2 10 Tf 0 -18 Td',
+      '0.3 0.3 0.3 rg',
+      `(Please ask the student to re-upload the ${formattedDocType} document.) Tj`,
+      'ET',
+      // Info box
+      '0.95 0.95 0.95 rg',
+      '60 320 492 100 re f',
+      '0.7 0.7 0.7 RG',
+      '1 w',
+      '60 320 492 100 re S',
+      'BT',
+      '/F1 9 Tf',
+      '0.4 0.4 0.4 rg',
+      '80 390 Td',
+      '(DOCUMENT DETAILS) Tj',
+      '/F2 9 Tf 0 -16 Td',
+      `(Document Type: ${formattedDocType}) Tj`,
+      `0 -14 Td (Application ID: ${userId}) Tj`,
+      `0 -14 Td (Status: FILE NOT IN STORAGE) Tj`,
+      `0 -14 Td (Checked: ${dateStr}) Tj`,
+      'ET',
+    ].join('\n');
+
+    const streamLen = Buffer.byteLength(contentStream);
+
+    const pdfParts = [
+      '%PDF-1.4\n',
+      '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+      '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+      '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>\nendobj\n',
+      `4 0 obj\n<< /Length ${streamLen} >>\nstream\n${contentStream}\nendstream\nendobj\n`,
+      '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n',
+      '6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
+    ];
+
+    let offset = 0;
+    const xrefs = ['0000000000 65535 f \n'];
+    for (let i = 0; i < pdfParts.length; i++) {
+      if (i > 0) xrefs.push(`${String(offset).padStart(10, '0')} 00000 n \n`);
+      offset += Buffer.byteLength(pdfParts[i]);
+    }
+    const xrefOffset = offset;
+    const pdfTail = [
+      `xref\n0 ${pdfParts.length}\n${xrefs.join('')}`,
+      `trailer\n<< /Size ${pdfParts.length} /Root 1 0 R >>\n`,
+      `startxref\n${xrefOffset}\n%%EOF`,
+    ].join('\n');
+
+    return Buffer.from(pdfParts.join('') + pdfTail, 'utf-8');
   }
 
   // ─── Presigned URL endpoint (for frontend preview without redirect) ───────
+
   @Get('presigned-view/:userId/:docType')
   async getPresignedViewUrl(
     @Param('userId') userId: string,
@@ -516,7 +670,7 @@ export class DocumentController {
       }
     }
 
-    const url = await this.s3Service.getPresignedUrl(doc.filePath, 3600);
+    const url = `/api/documents/view/${userId}/${docType}`;
     return { success: true, url, docType, filePath: doc.filePath };
   }
 

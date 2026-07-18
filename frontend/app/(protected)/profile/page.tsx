@@ -24,6 +24,23 @@ export default function ProfilePage() {
         dateOfBirth: "",
     });
 
+    const formatDateToDdMmYyyy = (dateStr?: string): string => {
+        if (!dateStr) return "";
+        try {
+            if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+                return dateStr;
+            }
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return "";
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        } catch {
+            return "";
+        }
+    };
+
     // Keep form in sync whenever the user object updates (e.g. after user-details submission)
     useEffect(() => {
         if (user) {
@@ -31,7 +48,7 @@ export default function ProfilePage() {
                 firstName: user.firstName || "",
                 lastName: user.lastName || "",
                 phoneNumber: user.phoneNumber || "",
-                dateOfBirth: user.dateOfBirth || "",
+                dateOfBirth: formatDateToDdMmYyyy(user.dateOfBirth),
             });
         }
     }, [user]);

@@ -265,10 +265,12 @@ export default function RemindersPage() {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const appEntries = Object.entries(followUps).map(([appId, fu]) => {
-        const d = new Date(fu.date + "T00:00:00");
-        const isToday = d.getTime() === today.getTime();
-        const isOverdue = d < today;
-        const isUpcoming = d >= tomorrow;
+        const timePart = fu.time && fu.time.includes(":") ? fu.time : "00:00";
+        const d = new Date(`${fu.date}T${timePart}:00`);
+        const dayOnly = new Date(fu.date + "T00:00:00");
+        const isToday = dayOnly.getTime() === today.getTime();
+        const isOverdue = dayOnly < today;
+        const isUpcoming = dayOnly >= tomorrow;
         return {
             id: appId,
             appId,
@@ -282,10 +284,12 @@ export default function RemindersPage() {
     });
 
     const studEntries = studentFollowUps.map((fu) => {
-        const d = new Date(fu.date + "T00:00:00");
-        const isToday = d.getTime() === today.getTime();
-        const isOverdue = d < today;
-        const isUpcoming = d >= tomorrow;
+        const timePart = fu.time && fu.time.includes(":") ? fu.time : "00:00";
+        const d = new Date(`${fu.date}T${timePart}:00`);
+        const dayOnly = new Date(fu.date + "T00:00:00");
+        const isToday = dayOnly.getTime() === today.getTime();
+        const isOverdue = dayOnly < today;
+        const isUpcoming = dayOnly >= tomorrow;
         return {
             id: fu.id,
             studentId: fu.studentId,

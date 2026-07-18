@@ -44,17 +44,15 @@ export default function EvvTab() {
         >
             {activeApp ? (
                 // EVV Test Agent - Quick local processing
-                <div className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-6">
-                    <EVVTestAgent
-                        applicationId={activeApp?.id || activeApp?._id}
-                        onComplete={handleEVVComplete}
-                    />
-                </div>
+                <EVVTestAgent
+                    applicationId={activeApp?.id || activeApp?._id}
+                    onComplete={handleEVVComplete}
+                />
             ) : (
                 // No Application
-                <div className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-12 text-center">
-                    <span className="material-symbols-outlined text-4xl text-gray-300 mb-3">payments</span>
-                    <p className="text-sm font-semibold text-gray-500 font-sans">No applications found. EVV analysis requires an active application file.</p>
+                <div className="bg-white/40 border border-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl p-12 text-center max-w-4xl mx-auto">
+                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-3">payments</span>
+                    <p className="text-sm font-semibold text-slate-500 font-sans">No applications found. EVV analysis requires an active application file.</p>
                 </div>
             )}
         </motion.div>

@@ -445,7 +445,7 @@ export class BankService {
 
     await this.db.from('BankDecision').insert({
       applicationId: applicationId,
-      bankId: application.bank,
+      bankId: application.bank || 'IDFC',
       decision: targetStatus.toUpperCase(),
       sanctionAmount: details.sanctionAmount || application.amount,
       interestRate: details.interestRate || application.interestRate,
@@ -456,7 +456,7 @@ export class BankService {
       counterOffer: (decisionType === 'counter_offer') ? JSON.stringify(details) : null,
       rejectionReason: details.reason || null,
       remarks: details.remarks || null,
-      decidedBy: bankUser.email
+      decidedBy: bankUser?.email || bankUser?.id || 'Bank Officer'
     });
     if (targetStatus === 'sanctioned') {
       await this.db.from('sanctions').insert({

@@ -119,14 +119,26 @@ export class ChatService {
     attachmentType?: string;
     senderName?: string;
   }) {
-    const { senderName, ...insertPayload } = data;
+    const insertPayload: any = {
+      conversationId: data.conversationId,
+      senderType: data.senderType,
+      senderId: data.senderId,
+      receiverType: data.receiverType || null,
+      content: data.content || '',
+      messageType: data.messageType || 'text',
+      status: data.status || 'sent',
+      attachmentUrl: data.attachmentUrl || null,
+      attachmentType: data.attachmentType || null,
+      senderName: data.senderName || null,
+    };
+
+    Object.keys(insertPayload).forEach((k) => {
+      if (insertPayload[k] === undefined) delete insertPayload[k];
+    });
+
     const { data: message, error } = await this.db
       .from('Message')
-      .insert({
-        ...insertPayload,
-        messageType: data.messageType || 'text',
-        status: data.status || 'sent'
-      })
+      .insert(insertPayload)
       .select()
       .single();
 

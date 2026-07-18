@@ -329,9 +329,9 @@ const NotificationsPanel = ({
         }
       }
 
-      if (notification.type === 'staff_chat_received') {
+      if (notification.type === 'staff_chat_received' || notification.type?.includes('chat')) {
         const convId = metadata?.conversationId;
-        router.push(convId ? `/staff/dashboard?section=chat_customer&conversationId=${convId}` : '/staff/dashboard?section=chat_customer');
+        router.push(convId ? `/staff/chat-customer?conversationId=${convId}` : '/staff/chat-customer');
         return;
       }
 

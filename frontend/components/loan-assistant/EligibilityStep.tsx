@@ -33,8 +33,8 @@ export default function EligibilityStep({
     if (!formData.annualIncome || formData.annualIncome < 0) {
       newErrors.annualIncome = "Please enter a valid annual income";
     }
-    if (!formData.creditScore || formData.creditScore < 300 || formData.creditScore > 900) {
-      newErrors.creditScore = "Credit score must be between 300-900";
+    if (!formData.creditScore || formData.creditScore <= 700 || formData.creditScore > 900) {
+      newErrors.creditScore = "CIBIL score must be more than 700 (> 700) to qualify for loan eligibility";
     }
     if (!formData.employmentType) {
       newErrors.employmentType = "Please select employment type";

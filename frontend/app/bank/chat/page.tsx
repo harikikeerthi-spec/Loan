@@ -23,6 +23,8 @@ export default function BankChatPage() {
         applicationNumber: applicationNumber || undefined
     } : null;
 
+    const conversationId = searchParams.get("conversationId");
+
     return (
         <div className="p-6 space-y-4 animate-fade-in relative z-10 h-[calc(100vh-80px)] overflow-hidden flex flex-col">
             <div className="flex justify-between items-end gap-6 mb-1">
@@ -34,15 +36,15 @@ export default function BankChatPage() {
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <div className="flex items-center gap-3 px-5 py-2.5 bg-white shadow-sm border border-black/5 rounded-2xl">
+                    <div className="flex items-center gap-3 px-5 py-2.5 bg-[#FFFFFF] shadow-sm border border-black/5 rounded-2xl">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Signal Synchronized</span>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 bg-white/50 backdrop-blur-xl rounded-[3rem] border border-white/20 shadow-2xl shadow-indigo-500/5 overflow-hidden flex flex-col">
-                <ChatInterface role="bank" initialBank={initialBank} hideSidebar={!!applicationId} className="flex h-full w-full overflow-hidden bg-white/95 text-gray-900 animate-fade-in" />
+            <div className="flex-1 bg-[#FFFFFF]/50 backdrop-blur-xl rounded-[3rem] border border-white/20 shadow-2xl shadow-indigo-500/5 overflow-hidden flex flex-col">
+                <ChatInterface role="bank" initialBank={initialBank} initialConversationId={conversationId || undefined} hideSidebar={!!applicationId} className="flex h-full w-full overflow-hidden bg-[#FFFFFF]/95 text-gray-900 animate-fade-in" />
             </div>
         </div>
     );

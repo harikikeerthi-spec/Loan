@@ -259,8 +259,8 @@ export class AdminApplicationService {
                     status: app.guardianIncome && app.guardianIncome > 300000 ? 'pass' : 'warning',
                 },
                 creditScore: {
-                    criteria: 'CIBIL score > 650',
-                    status: app.creditScore && app.creditScore > 650 ? 'pass' : app.creditScore ? 'warning' : 'unknown',
+                    criteria: 'CIBIL score > 700',
+                    status: app.creditScore && app.creditScore > 700 ? 'pass' : app.creditScore ? 'fail' : 'unknown',
                 },
                 noDefaults: {
                     criteria: 'No existing defaults/CCJs',

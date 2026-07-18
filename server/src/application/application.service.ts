@@ -1294,7 +1294,15 @@ export class ApplicationService {
   async addApplicationNote(applicationId: string, authorId: string, authorName: string, data: { content: string; type?: string; isInternal?: boolean }) {
     const { data: note, error } = await this.db
       .from('ApplicationNote')
-      .insert({ applicationId, authorId, authorName, content: data.content, type: data.type || 'general', isInternal: data.isInternal || false })
+      .insert({
+        id: crypto.randomUUID(),
+        applicationId,
+        authorId: authorId || 'system',
+        authorName: authorName || 'Staff Officer',
+        content: data.content,
+        type: data.type || 'general',
+        isInternal: data.isInternal || false
+      })
       .select()
       .single();
 
@@ -1697,22 +1705,24 @@ export class ApplicationService {
     if (!application) throw new NotFoundException('Application not found');
     const userId = application.userId;
 
-    // 2. Upload statement to S3 (or local fallback)
+    // 2. Upload statement to S3 & save local copy
     const fileExt = path.extname(file.originalname);
     const s3Key = `vault/${userId}/bank_statement${fileExt}`;
+
+    try {
+      const localDir = path.join(process.cwd(), 'uploads', userId, 'bank_statement');
+      await fs.promises.mkdir(localDir, { recursive: true });
+      await fs.promises.writeFile(path.join(localDir, `file${fileExt}`), file.buffer);
+      console.log(`[EVV Pipeline] Saved bank statement locally: ${localDir}`);
+    } catch (localWriteError: any) {
+      console.error('[EVV Pipeline] Local save failed:', localWriteError.message);
+    }
     
     try {
       await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
       console.log(`[EVV Pipeline] Uploaded statement to S3: ${s3Key}`);
     } catch (s3Error: any) {
-      console.warn(`[EVV Pipeline] AWS S3 Upload failed, saving local: ${s3Error.message}`);
-      try {
-        const localDir = path.join(process.cwd(), 'uploads', userId, 'bank_statement');
-        await fs.promises.mkdir(localDir, { recursive: true });
-        await fs.promises.writeFile(path.join(localDir, `file${fileExt}`), file.buffer);
-      } catch (localWriteError: any) {
-        console.error('[EVV Pipeline] Local fallback failed:', localWriteError.message);
-      }
+      console.warn(`[EVV Pipeline] AWS S3 Upload notice: ${s3Error.message}`);
     }
 
     // 3. Upsert document record in ApplicationDocument

@@ -25,6 +25,23 @@ export default function UserDetailsPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
+    const formatDateToDdMmYyyy = (dateStr?: string): string => {
+        if (!dateStr) return "";
+        try {
+            if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+                return dateStr;
+            }
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return "";
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        } catch {
+            return "";
+        }
+    };
+
     useEffect(() => {
         if (user) {
             const hasAll = user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth;
@@ -38,7 +55,7 @@ export default function UserDetailsPage() {
                 firstName: user.firstName || "",
                 lastName: user.lastName || "",
                 phoneNumber: user.phoneNumber || "",
-                dateOfBirth: user.dateOfBirth || "",
+                dateOfBirth: formatDateToDdMmYyyy(user.dateOfBirth),
             });
         }
     }, [user, router]);
