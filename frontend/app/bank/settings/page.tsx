@@ -990,7 +990,7 @@ export default function BankSettings() {
             <PageHeader 
                 title="Settings & Profile" 
                 description="Manage your credit auditor account settings, configure automated task rules, and adjust notification preferences."
-                moduleName="Module 13 • Settings & Profile"
+                moduleName="Settings & Profile"
                 icon="settings"
             />
 

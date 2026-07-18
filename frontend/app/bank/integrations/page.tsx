@@ -119,10 +119,6 @@ export default function Integrations() {
                     className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6"
                 >
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="material-symbols-outlined text-[#6605c7] bg-purple-50 p-2 rounded-xl">extension</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Module 10 • System Integrations</span>
-                        </div>
                         <h1 className="text-4xl font-display font-black text-gray-900 tracking-tight uppercase">
                             Collaboration Hub
                         </h1>

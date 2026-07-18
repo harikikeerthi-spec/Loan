@@ -263,10 +263,6 @@ export default function AnalyticsReports() {
             {/* Header */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-2">
                 <div className="space-y-3">
-                    <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm">
-                        <div className="w-2 h-2 rounded-full bg-[#6605c7] animate-pulse" />
-                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Module 09 • Channel Intelligence</span>
-                    </div>
                     <h2 className="text-3xl lg:text-4xl font-black font-display text-gray-900 tracking-tighter leading-none uppercase">
                         Portfolio <span className="text-[#6605c7]">Analytics</span>
                     </h2>

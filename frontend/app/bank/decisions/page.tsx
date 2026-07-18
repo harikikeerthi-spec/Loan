@@ -988,7 +988,7 @@ export default function DecisionsHub() {
             <PageHeader 
                 title="Underwriting Appraisal Workspace" 
                 description="Perform credit appraisal, sanction rates, define covenants, customize counter-offers, and record final verdicts."
-                moduleName="Module 05 • Underwriting Matrix"
+                moduleName="Underwriting Matrix"
                 icon="gavel"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">

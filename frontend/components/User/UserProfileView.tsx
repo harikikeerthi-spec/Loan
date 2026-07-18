@@ -269,6 +269,46 @@ export default function UserProfileView({
         return `••••••${val.slice(-4)}`;
     };
 
+    const renderTableAadhar = (val?: string, secretKey?: string) => {
+        const isEmpty = !val || val === "—" || val === "";
+        if (isEmpty) return <div className="text-black-900 italic text-[13px]">Aadhaar: Not provided</div>;
+        const isVisible = secretKey ? !!visibleSecrets[secretKey] : false;
+        const formatted = formatAadhar(val, isVisible);
+        return (
+            <div className="flex items-center gap-1.5 text-[14px]">
+                <span className="text-[#64748B]">Aadhaar:</span>
+                <span className="font-mono font-medium text-black-800">{formatted}</span>
+                <button
+                    type="button"
+                    onClick={() => secretKey && toggleSecretVisibility(secretKey)}
+                    className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-650 transition-colors border-0 bg-transparent flex items-center cursor-pointer"
+                >
+                    <i className={`ph ${isVisible ? 'ph-eye-slash' : 'ph-eye'} text-xs`} />
+                </button>
+            </div>
+        );
+    };
+
+    const renderTablePan = (val?: string, secretKey?: string) => {
+        const isEmpty = !val || val === "—" || val === "";
+        if (isEmpty) return <div className="text-black-900 italic text-[13px]">PAN: Not provided</div>;
+        const isVisible = secretKey ? !!visibleSecrets[secretKey] : false;
+        const formatted = formatPan(val, isVisible);
+        return (
+            <div className="flex items-center gap-1.5 text-[14px]">
+                <span className="text-[#64748B]">PAN:</span>
+                <span className="font-mono font-medium text-black-800">{formatted}</span>
+                <button
+                    type="button"
+                    onClick={() => secretKey && toggleSecretVisibility(secretKey)}
+                    className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-650 transition-colors border-0 bg-transparent flex items-center cursor-pointer"
+                >
+                    <i className={`ph ${isVisible ? 'ph-eye-slash' : 'ph-eye'} text-xs`} />
+                </button>
+            </div>
+        );
+    };
+
     const renderBentoField = (
         label: string,
         val: any,
@@ -341,12 +381,12 @@ export default function UserProfileView({
         );
     };
 
-    const coappIncomeVal = firstApp?.coApplicantIncome 
-        ? `₹${Number(firstApp.coApplicantIncome).toLocaleString('en-IN')}/yr` 
-        : activeProfile?.coApplicant?.monthlyIncome 
-            ? `₹${Number(activeProfile.coApplicant.monthlyIncome).toLocaleString('en-IN')}/mo` 
-            : activeProfile?.coApplicantIncome 
-                ? `₹${Number(activeProfile.coApplicantIncome).toLocaleString('en-IN')}/yr` 
+    const coappIncomeVal = firstApp?.coApplicantIncome
+        ? `₹${Number(firstApp.coApplicantIncome).toLocaleString('en-IN')}/yr`
+        : activeProfile?.coApplicant?.monthlyIncome
+            ? `₹${Number(activeProfile.coApplicant.monthlyIncome).toLocaleString('en-IN')}/mo`
+            : activeProfile?.coApplicantIncome
+                ? `₹${Number(activeProfile.coApplicantIncome).toLocaleString('en-IN')}/yr`
                 : null;
 
     const isFatherValid = !savingProfile &&
@@ -383,9 +423,8 @@ export default function UserProfileView({
                                     cx="50"
                                     cy="50"
                                     r="44"
-                                    className={`transition-all duration-700 ease-out ${
-                                        profileCompleteness === 100 ? "stroke-emerald-500" : "stroke-[#6605c7]"
-                                    }`}
+                                    className={`transition-all duration-700 ease-out ${profileCompleteness === 100 ? "stroke-emerald-500" : "stroke-[#6605c7]"
+                                        }`}
                                     strokeWidth="5"
                                     fill="transparent"
                                     strokeDasharray="276.46"
@@ -419,8 +458,8 @@ export default function UserProfileView({
                                     Verified Account
                                 </span>
                             </div>
-                            <p className="text-xs text-slate-500 font-semibold truncate">
-                                {activeProfile?.email}
+                            <p className="text-xs text-black-500 font-semibold truncate font-mono uppercase">
+                                Student ID: {displayUserId}
                             </p>
                         </div>
                     </div>
@@ -431,15 +470,13 @@ export default function UserProfileView({
                         <div className="flex items-center gap-3">
                             <div className="w-28 bg-slate-100 rounded-full h-2">
                                 <div
-                                    className={`h-2 rounded-full transition-all duration-700 ${
-                                        profileCompleteness === 100 ? "bg-emerald-500" : "bg-[#6605c7]"
-                                    }`}
+                                    className={`h-2 rounded-full transition-all duration-700 ${profileCompleteness === 100 ? "bg-emerald-500" : "bg-[#6605c7]"
+                                        }`}
                                     style={{ width: `${profileCompleteness}%` }}
                                 />
                             </div>
-                            <span className={`text-2xl font-black ${
-                                profileCompleteness === 100 ? "text-emerald-500" : "text-[#0F172A]"
-                            }`}>
+                            <span className={`text-2xl font-black ${profileCompleteness === 100 ? "text-emerald-500" : "text-[#0F172A]"
+                                }`}>
                                 {profileCompleteness}%
                             </span>
                         </div>
@@ -460,10 +497,10 @@ export default function UserProfileView({
                             <button
                                 type="button"
                                 onClick={startPersonalEdit}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-[#6605c7] hover:bg-purple-50 transition-all border-0 bg-transparent cursor-pointer"
-                                title="Edit Personal Details"
+                                className="px-3 py-1.5 flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100 text-[#6605c7] rounded-lg text-xs font-bold transition-all border-0 cursor-pointer"
                             >
                                 <i className="ph ph-pencil-simple text-sm" />
+                                Edit Profile
                             </button>
                         )}
                     </div>
@@ -563,7 +600,7 @@ export default function UserProfileView({
                         <i className="ph ph-graduation-cap text-[#6605c7] text-lg shrink-0" />
                         <h3 className="text-sm font-bold text-[#0F172A]">Academic Details</h3>
                     </div>
-                    
+
                     <div className="space-y-4">
                         {/* 10th Standard */}
                         <div className="p-4 bg-slate-50/50 rounded-[12px] border border-slate-100">
@@ -627,27 +664,16 @@ export default function UserProfileView({
                     </div>
                 </div>
 
-                {/* Card 3: Father Details Card */}
-                <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:col-span-1 relative group">
-                    <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
-                        <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
-                            <i className="ph ph-gender-male text-blue-500 text-lg shrink-0" />
-                            Father Details
-                        </h3>
-                        {editingCard !== "father" && (
-                            <button
-                                type="button"
-                                onClick={startFatherEdit}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-[#6605c7] hover:bg-purple-50 transition-all border-0 bg-transparent cursor-pointer"
-                                title="Edit Father Details"
-                            >
-                                <i className="ph ph-pencil-simple text-sm" />
-                            </button>
-                        )}
-                    </div>
-
+                {/* Unified Family & Co-Applicant Details Card */}
+                <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:col-span-2 relative">
                     {editingCard === "father" ? (
                         <div className="space-y-4">
+                            <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-2">
+                                <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+                                    <i className="ph ph-gender-male text-blue-500 text-lg shrink-0" />
+                                    Edit Father Details
+                                </h3>
+                            </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Full Name</label>
                                 <input
@@ -702,36 +728,14 @@ export default function UserProfileView({
                                 </button>
                             </div>
                         </div>
-                    ) : (
-                        <div className="space-y-1">
-                            {renderBentoField("Father's Full Name", fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName, startFatherEdit)}
-                            {renderBentoField("Aadhaar Number", fatherData?.aadharNumber, startFatherEdit, "aadhar", "father_aadhar")}
-                            {renderBentoField("PAN Number", fatherData?.panNumber, startFatherEdit, "pan", "father_pan")}
-                        </div>
-                    )}
-                </div>
-
-                {/* Card 4: Mother Details Card */}
-                <div className="bg-white rounded-[16px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:col-span-1 relative group">
-                    <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
-                        <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
-                            <i className="ph ph-gender-female text-pink-500 text-lg shrink-0" />
-                            Mother Details
-                        </h3>
-                        {editingCard !== "mother" && (
-                            <button
-                                type="button"
-                                onClick={startMotherEdit}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-[#6605c7] hover:bg-purple-50 transition-all border-0 bg-transparent cursor-pointer"
-                                title="Edit Mother Details"
-                            >
-                                <i className="ph ph-pencil-simple text-sm" />
-                            </button>
-                        )}
-                    </div>
-
-                    {editingCard === "mother" ? (
+                    ) : editingCard === "mother" ? (
                         <div className="space-y-4">
+                            <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-2">
+                                <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+                                    <i className="ph ph-gender-female text-pink-500 text-lg shrink-0" />
+                                    Edit Mother Details
+                                </h3>
+                            </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Full Name</label>
                                 <input
@@ -786,140 +790,204 @@ export default function UserProfileView({
                                 </button>
                             </div>
                         </div>
-                    ) : (
-                        <div className="space-y-1">
-                            {renderBentoField("Mother's Full Name", motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName, startMotherEdit)}
-                            {renderBentoField("Aadhaar Number", motherData?.aadharNumber, startMotherEdit, "aadhar", "mother_aadhar")}
-                            {renderBentoField("PAN Number", motherData?.panNumber, startMotherEdit, "pan", "mother_pan")}
-                        </div>
-                    )}
-                </div>
-
-                {/* Card 5: Primary Co-Applicant Details Card (Highlighted with Gradient border) */}
-                <div className="p-[1.5px] rounded-[16px] bg-gradient-to-br from-[#6605c7] via-[#8b5cf6] to-[#3b82f6] shadow-lg md:col-span-1 relative group">
-                    <div className="bg-white rounded-[14.5px] p-6 h-full">
-                        <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
-                            <h3 className="text-sm font-black text-[#6605c7] flex items-center gap-2">
-                                <i className="ph ph-shield-star text-lg shrink-0" />
-                                Primary Co-Applicant Details
-                            </h3>
-                            {editingCard !== "coapplicant" && (
+                    ) : editingCard === "coapplicant" ? (
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center pb-3 border-b border-[#6605c7]/15 mb-2">
+                                <h3 className="text-sm font-bold text-[#6605c7] flex items-center gap-2">
+                                    <i className="ph ph-shield-star text-lg shrink-0" />
+                                    Edit Co-Applicant Details
+                                </h3>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Co-Applicant Name</label>
+                                <input
+                                    type="text"
+                                    value={familyForm.coApplicantName}
+                                    onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantName: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Co-Applicant Relation</label>
+                                <select
+                                    value={familyForm.coApplicantRelation}
+                                    onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantRelation: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-white"
+                                >
+                                    <option value="">Select Relation</option>
+                                    <option value="Father">Father</option>
+                                    <option value="Mother">Mother</option>
+                                    <option value="Sibling">Sibling</option>
+                                    <option value="Spouse">Spouse</option>
+                                    <option value="Uncle">Uncle</option>
+                                    <option value="Aunt">Aunt</option>
+                                    <option value="Grandparent">Grandparent</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Phone Number</label>
+                                <input
+                                    type="tel"
+                                    value={familyForm.coApplicantPhone}
+                                    onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantPhone: formatPhone(e.target.value) }))}
+                                    maxLength={10}
+                                    className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Monthly/Annual Income (INR)</label>
+                                <input
+                                    type="number"
+                                    value={familyForm.coApplicantIncome}
+                                    onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantIncome: e.target.value }))}
+                                    placeholder="e.g. 978654"
+                                    className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Aadhaar Number</label>
+                                <input
+                                    type="text"
+                                    value={familyForm.coApplicantAadhar}
+                                    onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantAadhar: e.target.value.replace(/\D/g, '').slice(0, 12) }))}
+                                    placeholder="12-digit number"
+                                    className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 font-mono bg-slate-50/50"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">PAN Number</label>
+                                <input
+                                    type="text"
+                                    value={familyForm.coApplicantPan}
+                                    onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantPan: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) }))}
+                                    placeholder="10-digit PAN"
+                                    className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 font-mono bg-slate-50/50"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-2">
                                 <button
                                     type="button"
-                                    onClick={startCoApplicantEdit}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-[#6605c7] hover:bg-purple-50 transition-all border-0 bg-transparent cursor-pointer"
-                                    title="Edit Co-Applicant Details"
+                                    onClick={() => setEditingCard(null)}
+                                    className="px-5 py-2 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all duration-300 flex items-center gap-1.5 cursor-pointer bg-white"
+                                    disabled={savingProfile}
                                 >
-                                    <i className="ph ph-pencil-simple text-sm" />
+                                    Cancel
                                 </button>
-                            )}
+                                <button
+                                    type="button"
+                                    onClick={handleSaveFamily}
+                                    className="px-5 py-2 rounded-full bg-[#6605c7] hover:bg-[#5504a8] text-white text-xs font-bold shadow-md hover:shadow-lg hover:-translate-y-[2px] active:translate-y-0 active:shadow-md transition-all duration-300 border-0 flex items-center gap-1.5 cursor-pointer"
+                                    disabled={!isCoappValid}
+                                >
+                                    {savingProfile ? (
+                                        <>
+                                            <i className="ph ph-spinner animate-spin text-sm" /> Saving...
+                                        </>
+                                    ) : (
+                                        <>Save</>
+                                    )}
+                                </button>
+                            </div>
                         </div>
+                    ) : (
+                        <div className="font-sans">
+                            <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
+                                <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+                                    <i className="ph ph-users text-[#6605c7] text-lg shrink-0" />
+                                    Family & Co-Applicant Details
+                                </h3>
+                                {editingCard !== "father" && editingCard !== "mother" && editingCard !== "coapplicant" && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={startFatherEdit}
+                                            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold uppercase transition-all border border-slate-200 cursor-pointer"
+                                        >
+                                            Edit Father
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={startMotherEdit}
+                                            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold uppercase transition-all border border-slate-200 cursor-pointer"
+                                        >
+                                            Edit Mother
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={startCoApplicantEdit}
+                                            className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-[#6605c7] rounded-lg text-[10px] font-bold uppercase transition-all border-0 cursor-pointer"
+                                        >
+                                            Edit Co-Applicant
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
 
-                        {editingCard === "coapplicant" ? (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Co-Applicant Name</label>
-                                    <input
-                                        type="text"
-                                        value={familyForm.coApplicantName}
-                                        onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantName: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Co-Applicant Relation</label>
-                                    <select
-                                        value={familyForm.coApplicantRelation}
-                                        onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantRelation: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-white"
-                                    >
-                                        <option value="">Select Relation</option>
-                                        <option value="Father">Father</option>
-                                        <option value="Mother">Mother</option>
-                                        <option value="Sibling">Sibling</option>
-                                        <option value="Spouse">Spouse</option>
-                                        <option value="Uncle">Uncle</option>
-                                        <option value="Aunt">Aunt</option>
-                                        <option value="Grandparent">Grandparent</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        value={familyForm.coApplicantPhone}
-                                        onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantPhone: formatPhone(e.target.value) }))}
-                                        maxLength={10}
-                                        className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Monthly/Annual Income (INR)</label>
-                                    <input
-                                        type="number"
-                                        value={familyForm.coApplicantIncome}
-                                        onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantIncome: e.target.value }))}
-                                        placeholder="e.g. 978654"
-                                        className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">Aadhaar Number</label>
-                                    <input
-                                        type="text"
-                                        value={familyForm.coApplicantAadhar}
-                                        onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantAadhar: e.target.value.replace(/\D/g, '').slice(0, 12) }))}
-                                        placeholder="12-digit number"
-                                        className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 font-mono bg-slate-50/50"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-1.5">PAN Number</label>
-                                    <input
-                                        type="text"
-                                        value={familyForm.coApplicantPan}
-                                        onChange={(e) => setFamilyForm(p => ({ ...p, coApplicantPan: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) }))}
-                                        placeholder="10-digit PAN"
-                                        className="w-full px-3 py-2 border border-[#6605c7]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 font-mono bg-slate-50/50"
-                                    />
-                                </div>
-                                <div className="flex justify-end gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditingCard(null)}
-                                        className="px-5 py-2 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all duration-300 flex items-center gap-1.5 cursor-pointer bg-white"
-                                        disabled={savingProfile}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleSaveFamily}
-                                        className="px-5 py-2 rounded-full bg-[#6605c7] hover:bg-[#5504a8] text-white text-xs font-bold shadow-md hover:shadow-lg hover:-translate-y-[2px] active:translate-y-0 active:shadow-md transition-all duration-300 border-0 flex items-center gap-1.5 cursor-pointer"
-                                        disabled={!isCoappValid}
-                                    >
-                                        {savingProfile ? (
-                                            <>
-                                                <i className="ph ph-spinner animate-spin text-sm" /> Saving...
-                                            </>
-                                        ) : (
-                                            <>Save</>
-                                        )}
-                                    </button>
-                                </div>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-100 text-sm">
+                                    <thead className="bg-[#F8FAFC]">
+                                        <tr>
+                                            <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">Role</th>
+                                            <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">Name</th>
+                                            <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">KYC Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-[#FFFFFF]">
+                                        {/* Father Row */}
+                                        <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Father</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
+                                                {fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName || "—"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
+                                                {renderTableAadhar(fatherData?.aadharNumber, "father_aadhar")}
+                                                {renderTablePan(fatherData?.panNumber, "father_pan")}
+                                            </td>
+                                        </tr>
+                                        {/* Mother Row */}
+                                        <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Mother</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
+                                                {motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName || "—"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
+                                                {renderTableAadhar(motherData?.aadharNumber, "mother_aadhar")}
+                                                {renderTablePan(motherData?.panNumber, "mother_pan")}
+                                            </td>
+                                        </tr>
+                                        {/* Co-Applicant Row */}
+                                        <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-bold text-[#6605c7]">Primary Co-Applicant</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
+                                                <div>
+                                                    <div className="font-bold text-[#0F172A]">{coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || "—"}</div>
+                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                                                        Relation: {firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation || "—"}
+                                                    </div>
+                                                    {coappIncomeVal && (
+                                                        <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mt-0.5">
+                                                            Income: {coappIncomeVal}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
+                                                {firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone ? (
+                                                    <div className="flex items-center gap-1.5 text-[11px] mb-1">
+                                                        <span className="text-[#64748B]">Phone:</span>
+                                                        <span className="font-medium text-slate-800">{firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone}</span>
+                                                    </div>
+                                                ) : null}
+                                                {renderTableAadhar(coapplicantData?.aadharNumber, "coapp_aadhar")}
+                                                {renderTablePan(coapplicantData?.panNumber, "coapp_pan")}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
-                        ) : (
-                            <div className="space-y-1">
-                                {renderBentoField("Co-Applicant Name", coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName, startCoApplicantEdit)}
-                                {renderBentoField("Co-Applicant Relation", firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation, startCoApplicantEdit)}
-                                {renderBentoField("Monthly/Annual Income", coappIncomeVal, startCoApplicantEdit)}
-                                {renderBentoField("Co-Applicant Phone", firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone, startCoApplicantEdit)}
-                                {renderBentoField("Aadhaar Number", coapplicantData?.aadharNumber, startCoApplicantEdit, "aadhar", "coapp_aadhar")}
-                                {renderBentoField("PAN Number", coapplicantData?.panNumber, startCoApplicantEdit, "pan", "coapp_pan")}
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

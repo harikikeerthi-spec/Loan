@@ -114,10 +114,10 @@ label {
 .bank-portal table th,
 .bank-portal table thead th {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-weight: 750 !important;
-  font-size: 12.5px !important;
-  letter-spacing: 0.05em !important;
-  color: #4b5563 !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+  color: #64748B !important;
 }
 
 /* Specific styling for numbers and metrics in the bank portal: Use Plus Jakarta Sans without specialized mono/serif number styles */
@@ -1025,4 +1025,50 @@ input[type="range"]::-moz-range-thumb:hover {
     0 25px 50px rgba(139, 92, 246, 0.12),
     0 4px 12px rgba(0, 0, 0, 0.03),
     inset 0 0 0 1.5px rgba(255, 255, 255, 0.8);
+}
+
+/* Custom Palette Variables and Premium Card styles */
+:root {
+  --slate-dark: #0F172A;
+  --slate-muted: #64748B;
+  --slate-light: #F8FAFC;
+  --royal-accent: #2563EB;
+  --royal-tint: rgba(37, 99, 235, 0.06);
+  --border-color: #E2E8F0;
+}
+
+.premium-dashboard-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 
+              0 4px 12px -2px rgba(15, 23, 42, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-dashboard-card:hover {
+  transform: translateY(-2px);
+  border-color: #CBD5E1;
+  box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.06);
+}
+
+.filter-track {
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 8px;
+  display: inline-flex;
+}
+
+.filter-tab-item {
+  color: var(--slate-muted);
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.filter-tab-item.active {
+  background: #FFFFFF;
+  color: var(--royal-accent);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05);
 }

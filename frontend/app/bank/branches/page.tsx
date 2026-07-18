@@ -142,7 +142,7 @@ export default function BranchMatrix() {
             <PageHeader 
                 title="Branch Allocation Matrix" 
                 description="Manage partner bank branches, review localized SLA compliance metrics, and check active disbursement statistics."
-                moduleName="Module 11 • Branch Matrix"
+                moduleName="Branch Matrix"
                 icon="lan"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">

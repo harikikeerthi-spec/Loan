@@ -408,7 +408,7 @@ export default function DocumentReviewCenter() {
                 <PageHeader
                     title="Document Vault"
                     description="Verify identity proofs, academic degrees, and financial assets uploaded by students."
-                    moduleName="Module 04 • Document Vault"
+                    moduleName="Document Vault"
                     icon="folder_shared"
                 />
 

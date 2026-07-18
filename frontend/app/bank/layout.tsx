@@ -450,7 +450,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main Content */}
             <main
-                className="flex-1 min-h-screen relative transition-all duration-300 flex flex-col pt-20"
+                className="flex-1 min-h-screen relative transition-all duration-300 flex flex-col pt-[72px]"
                 style={{ paddingLeft: contentShiftWidth }}
             >
                 {/* Persistent Top Header (F16 Notification Center & F30 Global Search) */}
@@ -469,9 +469,9 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 setShowSearchPop(true);
                             }}
                             onFocus={() => setShowSearchPop(true)}
-                            className="w-full pl-8 pr-4 py-2 bg-transparent border-b border-gray-200 text-xs font-semibold focus:outline-none focus:border-gray-900 transition-all"
+                            className="w-full pl-9 pr-4 py-2 bg-[#F1F5F9] border-0 rounded-full text-xs font-semibold focus:outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/15 focus:border-[#3B82F6] transition-all text-slate-800 placeholder-slate-400"
                         />
-                        <span className="material-symbols-outlined absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+                        <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
 
                         {/* Search Results Popover */}
                         <AnimatePresence>
@@ -530,13 +530,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     <div className="flex items-center gap-6">
                         {/* Partner Bank Identity Badge */}
                         {selectedBankKey && (
-                            <div className="hidden md:flex items-center gap-3 px-4 py-1.5 rounded-xl border"
-                                style={{
-                                    background: 'linear-gradient(135deg, rgba(102,5,199,0.04) 0%, rgba(139,36,229,0.03) 100%)',
-                                    borderColor: 'rgba(102,5,199,0.12)',
-                                    boxShadow: '0 2px 8px rgba(102,5,199,0.06)'
-                                }}
-                            >
+                            <div className="hidden md:flex items-center gap-3 px-4 py-1.5 rounded-full border border-[#E2E8F0] bg-white shadow-sm">
                                 {bankLogos[selectedBankKey] ? (
                                     <img
                                         src={bankLogos[selectedBankKey]}
@@ -545,7 +539,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                         title={bankName}
                                     />
                                 ) : (
-                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[9px] font-black"
+                                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[9px] font-black"
                                         style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)' }}>
                                         {bankName?.[0] || 'B'}
                                     </div>
@@ -554,10 +548,6 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 leading-none">Partner Bank</span>
                                     <span className="text-[11.5px] font-bold text-gray-800 leading-tight truncate max-w-[120px]" title={bankName}>{bankName}</span>
                                 </div>
-                                {/* <div className="flex items-center gap-1 ml-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-wide">Live</span>
-                                </div> */}
                             </div>
                         )}
 
@@ -579,7 +569,13 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     </div>
                 </header>
 
-                <div className="relative">
+                <style dangerouslySetInnerHTML={{ __html: `
+                    .bank-portal main > div > div {
+                        padding: 0 !important;
+                    }
+                `}} />
+
+                <div className="relative p-6 lg:p-8">
                     {children}
                 </div>
             </main>

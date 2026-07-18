@@ -180,6 +180,60 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
     }
   };
 
+  const handleAutoGenerateAndValidate = async () => {
+    if (!campaignName) {
+      alert('Please fill out the Campaign Name first.');
+      return;
+    }
+    setGeneratingAI(true);
+    setValidating(true);
+    try {
+      const res: any = await campaignApi.generate({
+        optimizationGoal: campaignGoal,
+        primaryObjective: ctaText,
+        targetContext: campaignName,
+        tone,
+        emailLength: 'medium',
+        language: 'English',
+        brand: 'UniHunt',
+        cta: ctaText,
+      });
+
+      if (res.success && res.data) {
+        const subject = res.data.subject;
+        const body = res.data.bodyTemplate;
+        setSubjectLine(subject);
+        setEmailBody(body);
+
+        const draftRes: any = await campaignApi.create({
+          title: campaignName,
+          templateType: campaignType,
+          tone,
+          optimizationGoal: campaignGoal,
+          primaryObjective: ctaText,
+          subject: subject,
+          bodyTemplate: body,
+          priority,
+        });
+
+        if (draftRes.success && draftRes.data?.id) {
+          setSelectedCampaign(draftRes.data);
+          const valRes: any = await campaignApi.validate(draftRes.data.id);
+          if (valRes.success) {
+            setValidationData(valRes.data);
+          }
+        }
+      } else {
+        alert('AI Email generation failed.');
+      }
+    } catch (err: any) {
+      alert('AI Auto-Generation Error: ' + err.message);
+    } finally {
+      setGeneratingAI(false);
+      setValidating(false);
+    }
+  };
+
   const handleApplyAudienceFilters = async () => {
     setLoadingStudents(true);
     try {
@@ -498,11 +552,11 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex justify-between items-center border-b border-slate-200 pb-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Campaign Composer Wizard</h3>
-            <p className="text-[10px] text-slate-500 mt-0.5">Define core parameters, generate copy, refine filters, validate, and queue.</p>
+            <h3 className="text-base font-bold text-slate-900">Campaign Composer Workspace</h3>
+            <p className="text-[10px] text-slate-500 mt-0.5">Configure campaign filters, auto-generate responsive HTML content via AI, and dispatch.</p>
           </div>
           <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map(step => (
+            {[1, 2].map(step => (
               <span key={step} className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
                 wizardStep === step ? 'bg-[#6605c7] text-white border-[#6605c7]' : 'bg-white text-slate-400 border-slate-200'
               }`}>
@@ -512,492 +566,404 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
           </div>
         </div>
 
-        {/* Step 1: Configuration */}
+        {/* Step 1: Configuration, Filters & Live Preview */}
         {wizardStep === 1 && (
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campaign Name</label>
-                <input
-                  type="text"
-                  value={campaignName}
-                  onChange={(e) => setCampaignName(e.target.value)}
-                  placeholder="e.g. Ireland Masters Welcome Update 2026"
-                  className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#6605c7] text-xs font-semibold"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campaign Type</label>
-                <select
-                  value={campaignType}
-                  onChange={(e) => setCampaignType(e.target.value)}
-                  className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#6605c7] text-xs"
-                >
-                  <option value="Newsletter">Newsletter</option>
-                  <option value="Scholarship Update">Scholarship Update</option>
-                  <option value="Loan Approval">Loan Approval Welcome</option>
-                  <option value="Document Reminder">Missing Documents Reminder</option>
-                  <option value="EMI Reminder">EMI Payment Reminder</option>
-                  <option value="University Update">University Admission Update</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Tone Style</label>
-                <select
-                  value={tone}
-                  onChange={(e) => setTone(e.target.value)}
-                  className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#6605c7] text-xs"
-                >
-                  <option value="Professional">Professional</option>
-                  <option value="Friendly">Friendly</option>
-                  <option value="Conversational">Conversational</option>
-                  <option value="Premium">Premium</option>
-                  <option value="Urgent">Urgent</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority Queue</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#6605c7] text-xs"
-                >
-                  <option value="low">Low Priority</option>
-                  <option value="medium">Medium Priority</option>
-                  <option value="high">High Priority</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target CTA Label</label>
-                <input
-                  type="text"
-                  value={ctaText}
-                  onChange={(e) => setCtaText(e.target.value)}
-                  placeholder="e.g. Upload Passport"
-                  className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#6605c7] text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campaign Goal (AI Instructions)</label>
-              <textarea
-                value={campaignGoal}
-                onChange={(e) => setCampaignGoal(e.target.value)}
-                placeholder="Instruct the AI on what parameters this campaign should target. For example: Remind Ireland bound postgraduate candidates to upload their pending visa documentation to avoid approval delays."
-                rows={3}
-                className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#6605c7] text-xs"
-              />
-            </div>
-
-            {/* AI Generator Trigger */}
-            <div className="bg-[#6605c7]/5 border border-[#6605c7]/10 p-4 rounded-xl flex justify-between items-center">
-              <div>
-                <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-[#6605c7]">auto_awesome</span>
-                  AI Content Generator
-                </h4>
-                <p className="text-[10px] text-slate-500 mt-0.5">Let the AI construct the subject line and responsive email templates.</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleGenerateAI}
-                disabled={generatingAI}
-                className="px-4 py-2 bg-[#6605c7] hover:bg-[#5204a1] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-              >
-                {generatingAI ? 'Composing...' : 'Generate Copy'}
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-1 pt-3 border-t border-slate-100">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Generated Subject Line</label>
-              <input
-                type="text"
-                value={subjectLine}
-                onChange={(e) => setSubjectLine(e.target.value)}
-                placeholder="Generated Subject Line"
-                className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#6605c7] text-xs font-bold"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Generated Email Body (HTML Template)</label>
-              <textarea
-                value={emailBody}
-                onChange={(e) => setEmailBody(e.target.value)}
-                placeholder="Generate HTML copy or paste your own template..."
-                rows={10}
-                className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#6605c7] text-xs font-mono"
-              />
-            </div>
-
-            <div className="flex justify-between items-center pt-3 border-t border-slate-100">
-              <span className="text-[10px] text-slate-400 font-medium">Supports dynamic variables: <code>{"{{studentName}}"}</code>, <code>{"{{country}}"}</code>, <code>{"{{course}}"}</code>, <code>{"{{loanAmount}}"}</code></span>
-              <button
-                onClick={() => setWizardStep(2)}
-                disabled={!subjectLine || !emailBody}
-                className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800 disabled:opacity-40"
-              >
-                Continue: Audience selection
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Audience Segment Builder */}
-        {wizardStep === 2 && (
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-6 shadow-sm">
-            <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Advanced AND / OR Filter Builder</h4>
-            
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-4">
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Filter Logic:</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setFilterLogic('AND')}
-                    className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                      filterLogic === 'AND' ? 'bg-[#6605c7] text-white border-[#6605c7]' : 'bg-white text-slate-600 border-slate-200'
-                    }`}
-                  >
-                    Match All (AND)
-                  </button>
-                  <button
-                    onClick={() => setFilterLogic('OR')}
-                    className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                      filterLogic === 'OR' ? 'bg-[#6605c7] text-white border-[#6605c7]' : 'bg-white text-slate-600 border-slate-200'
-                    }`}
-                  >
-                    Match Any (OR)
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Country</label>
-                  <input
-                    type="text"
-                    value={filterCountry}
-                    onChange={(e) => setFilterCountry(e.target.value)}
-                    placeholder="e.g. Ireland"
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Target University</label>
-                  <input
-                    type="text"
-                    value={filterUniversity}
-                    onChange={(e) => setFilterUniversity(e.target.value)}
-                    placeholder="e.g. Dublin"
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Intake / Course</label>
-                  <input
-                    type="text"
-                    value={filterCourse}
-                    onChange={(e) => setFilterCourse(e.target.value)}
-                    placeholder="e.g. Computer Science"
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Loan Status</label>
-                  <select
-                    value={filterLoanStatus}
-                    onChange={(e) => setFilterLoanStatus(e.target.value)}
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
-                  >
-                    <option value="">All Loan Statuses</option>
-                    <option value="pending">Pending Review</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="disbursed">Disbursed</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Admission Status</label>
-                  <input
-                    type="text"
-                    value={filterAdmitStatus}
-                    onChange={(e) => setFilterAdmitStatus(e.target.value)}
-                    placeholder="e.g. admit_received"
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">AI Eligibility Score (Min)</label>
-                  <input
-                    type="number"
-                    value={filterMinScore}
-                    onChange={(e) => setFilterMinScore(e.target.value)}
-                    placeholder="e.g. 70"
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newAudienceName}
-                    onChange={(e) => setNewAudienceName(e.target.value)}
-                    placeholder="Save Segment Name"
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-48"
-                  />
-                  <button
-                    onClick={handleSaveSegment}
-                    className="px-3 py-1.5 bg-slate-900 text-white font-bold rounded-lg text-[10px] uppercase hover:bg-slate-800"
-                  >
-                    Save Segment
-                  </button>
-                </div>
-                <button
-                  onClick={handleApplyAudienceFilters}
-                  disabled={loadingStudents}
-                  className="px-5 py-2 bg-[#6605c7] hover:bg-[#5204a1] text-white font-bold rounded-lg text-[10px] uppercase tracking-wider flex items-center gap-1.5"
-                >
-                  {loadingStudents ? 'Querying...' : 'Preview Target Count'}
-                </button>
-              </div>
-            </div>
-
-            {/* Recipient Count Panel */}
-            <div className="flex justify-between items-center bg-slate-50 border border-slate-100 p-4 rounded-xl">
-              <span className="text-[11px] font-bold text-slate-600">Students Selected: {selectedStudentIds.length} / {students.length} matched</span>
-              <span className="px-3 py-1 bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider rounded-lg border border-[#6605c7]/10">
-                Audience Ready
-              </span>
-            </div>
-
-            {/* Recipients Scroll */}
-            <div className="max-h-[250px] overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
-              {students.map(s => (
-                <div key={s.id} className="p-3.5 flex justify-between items-center hover:bg-slate-50/50">
-                  <div className="flex items-center gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* LEFT COLUMN: Configuration & Audience filters */}
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5 shadow-sm">
+                <h4 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-2">Campaign Parameters</h4>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campaign Name</label>
                     <input
-                      type="checkbox"
-                      checked={selectedStudentIds.includes(s.id)}
-                      onChange={(e) => {
-                        setSelectedStudentIds(prev =>
-                          e.target.checked ? [...prev, s.id] : prev.filter(id => id !== s.id)
-                        );
-                      }}
-                      className="w-4 h-4 text-[#6605c7] border-slate-300 rounded focus:ring-[#6605c7]"
+                      type="text"
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
+                      placeholder="e.g. Ireland Welcome Update 2026"
+                      className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] text-xs font-semibold"
                     />
-                    <div>
-                      <div className="font-bold text-slate-800">{s.firstName || 'Student'} {s.lastName || ''}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{s.email}</div>
-                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-[#6605c7]">{s.studyDestination || 'Unspecified'}</span>
-                    <div className="text-[9px] text-slate-400 mt-0.5 truncate max-w-xs">{s.targetUniversity || 'University choice'}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-between items-center pt-3 border-t border-slate-100">
-              <button onClick={() => setWizardStep(1)} className="text-xs font-bold text-slate-500 hover:text-slate-700">Back</button>
-              <button
-                onClick={runPreSendValidation}
-                disabled={selectedStudentIds.length === 0 || validating}
-                className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800 disabled:opacity-40 flex items-center gap-1.5"
-              >
-                {validating ? 'Validating Copy...' : 'Validate and Preview'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Preview */}
-        {wizardStep === 3 && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPreviewDevice('desktop')}
-                    className={`px-3 py-1 rounded text-[10px] font-bold border ${previewDevice === 'desktop' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}
-                  >
-                    Desktop
-                  </button>
-                  <button
-                    onClick={() => setPreviewDevice('tablet')}
-                    className={`px-3 py-1 rounded text-[10px] font-bold border ${previewDevice === 'tablet' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}
-                  >
-                    Tablet
-                  </button>
-                  <button
-                    onClick={() => setPreviewDevice('mobile')}
-                    className={`px-3 py-1 rounded text-[10px] font-bold border ${previewDevice === 'mobile' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}
-                  >
-                    Mobile
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPreviewMode('html')}
-                    className={`px-3 py-1 rounded text-[10px] font-bold border ${previewMode === 'html' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}
-                  >
-                    HTML
-                  </button>
-                  <button
-                    onClick={() => setPreviewMode('text')}
-                    className={`px-3 py-1 rounded text-[10px] font-bold border ${previewMode === 'text' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}
-                  >
-                    Plain Text
-                  </button>
-                </div>
-              </div>
-
-              {/* Responsive Device Frame Mockup */}
-              <div className="bg-slate-100 rounded-2xl border border-slate-200 p-4 min-h-[400px] flex justify-center items-start shadow-inner">
-                <div className={`bg-white shadow-xl rounded-xl overflow-hidden border border-slate-200/80 transition-all duration-300 ${
-                  previewDevice === 'desktop' ? 'w-full max-w-[800px]' : previewDevice === 'tablet' ? 'w-[500px] h-[650px]' : 'w-[320px] h-[550px]'
-                }`}>
-                  <div className="bg-slate-50 border-b border-slate-100 p-4 text-[10px] text-slate-500 space-y-1">
-                    <div><strong>From:</strong> VidyaLoan Notifications &lt;noreply@vidyaloan.com&gt;</div>
-                    <div><strong>Subject:</strong> {subjectLine.replace('{{studentName}}', 'Jane Doe')}</div>
-                  </div>
-                  {previewMode === 'html' ? (
-                    <div
-                      className="p-5 overflow-y-auto h-[350px] custom-scrollbar"
-                      dangerouslySetInnerHTML={{
-                        __html: emailBody
-                          .replace('{{studentName}}', 'Jane Doe')
-                          .replace('{{country}}', 'Ireland')
-                          .replace('{{course}}', 'MSc Data Analytics')
-                          .replace('{{loanAmount}}', '₹15,00,000')
-                      }}
-                    />
-                  ) : (
-                    <textarea
-                      readOnly
-                      value={emailBody.replace(/<[^>]*>/g, '').trim()}
-                      className="w-full h-[350px] p-5 font-mono text-[11px] text-slate-600 focus:outline-none"
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right panel summary metrics */}
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-5">
-              <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Campaign Send Summary</h4>
-              <div className="space-y-3.5 text-xs">
-                <div className="flex justify-between border-b border-slate-50 pb-2.5">
-                  <span className="text-slate-400">Total Recipients</span>
-                  <span className="font-bold text-slate-800">{selectedStudentIds.length} Students</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-50 pb-2.5">
-                  <span className="text-slate-400">Priority Level</span>
-                  <span className="font-bold text-slate-800 uppercase">{priority}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-50 pb-2.5">
-                  <span className="text-slate-400">Estimated CTR</span>
-                  <span className="font-bold text-emerald-600">45% Open / 18% CTR</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-50 pb-2.5">
-                  <span className="text-slate-400">Spam Deliverability</span>
-                  <span className="font-bold text-emerald-500">Low Spam Risk (1.2)</span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex flex-col gap-3">
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={testEmailAddress}
-                    onChange={(e) => setTestEmailAddress(e.target.value)}
-                    placeholder="Admin email"
-                    className="px-3 py-2 border border-slate-200 rounded-lg text-xs w-full"
-                  />
-                  <button
-                    onClick={handleSendTestEmail}
-                    disabled={sendingTest}
-                    className="px-3 py-2 bg-slate-900 text-white font-bold rounded-lg text-[10px] uppercase whitespace-nowrap hover:bg-slate-800"
-                  >
-                    {sendingTest ? 'Sending...' : 'Send Test'}
-                  </button>
-                </div>
-
-                <button
-                  onClick={handleQueueCampaignFinal}
-                  className="w-full py-3 bg-[#6605c7] hover:bg-[#5204a1] text-white font-bold rounded-xl text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-indigo-100"
-                >
-                  <span className="material-symbols-outlined text-[16px]">send</span> Confirm & Queue Campaign
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: AI Validation Checklist */}
-        {wizardStep === 4 && (
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-6 shadow-sm">
-            <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">AI Pre-send Validator Checklist</h4>
-            {validationData && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                    <p className="text-xs text-slate-400">Subject Score</p>
-                    <p className="text-xl font-bold mt-1 text-emerald-600">{validationData.scores.subjectScore} / 100</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                    <p className="text-xs text-slate-400">CTA Engagement Score</p>
-                    <p className="text-xl font-bold mt-1 text-emerald-600">{validationData.scores.ctaScore} / 100</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                    <p className="text-xs text-slate-400">AI Spam Risk Score</p>
-                    <p className="text-xl font-bold mt-1 text-[#6605c7]">{validationData.scores.spamScore} / 10</p>
-                  </div>
-                </div>
-
-                {validationData.warnings.length > 0 ? (
-                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl space-y-2">
-                    <h5 className="text-xs font-bold text-amber-700 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px]">warning</span> Warnings & Adjustments Recommended
-                    </h5>
-                    <ul className="list-disc pl-5 text-[11px] text-amber-600 space-y-1">
-                      {validationData.warnings.map((w: string, i: number) => (
-                        <li key={i}>{w}</li>
-                      ))}
-                    </ul>
-                    <button
-                      onClick={handleGenerateAI}
-                      className="px-4 py-2 bg-amber-600 text-white rounded-lg text-[10px] font-bold uppercase mt-2 hover:bg-amber-700"
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campaign Type</label>
+                    <select
+                      value={campaignType}
+                      onChange={(e) => setCampaignType(e.target.value)}
+                      className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] text-xs font-semibold bg-white"
                     >
-                      🛠️ Fix & Refine with AI
+                      <option value="Newsletter">Newsletter</option>
+                      <option value="Scholarship Update">Scholarship Update</option>
+                      <option value="Loan Approval">Loan Approval Welcome</option>
+                      <option value="Document Reminder">Missing Documents Reminder</option>
+                      <option value="EMI Reminder">EMI Payment Reminder</option>
+                      <option value="University Update">University Admission Update</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Tone Style</label>
+                    <select
+                      value={tone}
+                      onChange={(e) => setTone(e.target.value)}
+                      className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] text-xs font-semibold bg-white"
+                    >
+                      <option value="Professional">Professional</option>
+                      <option value="Friendly">Friendly</option>
+                      <option value="Conversational">Conversational</option>
+                      <option value="Premium">Premium</option>
+                      <option value="Urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority Queue</label>
+                    <select
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                      className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] text-xs font-semibold bg-white"
+                    >
+                      <option value="low">Low Priority</option>
+                      <option value="medium">Medium Priority</option>
+                      <option value="high">High Priority</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Primary Objective / CTA Text</label>
+                  <input
+                    type="text"
+                    value={ctaText}
+                    onChange={(e) => setCtaText(e.target.value)}
+                    placeholder="e.g. Visit Our Website"
+                    className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] text-xs font-semibold"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campaign Goal (AI Context Instructions)</label>
+                  <textarea
+                    value={campaignGoal}
+                    onChange={(e) => setCampaignGoal(e.target.value)}
+                    placeholder="E.g. Inform candidate on Heriot-Watt University Ramadan Community Scholarship 2026 - Get Up to £5000 tuition fee discount."
+                    rows={3}
+                    className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] text-xs font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Target Audience Filters */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-sm">
+                <h4 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-2">Target Segment Filters</h4>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Destination Country</label>
+                    <input
+                      type="text"
+                      value={filterCountry}
+                      onChange={(e) => setFilterCountry(e.target.value)}
+                      placeholder="e.g. Ireland"
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Target University</label>
+                    <input
+                      type="text"
+                      value={filterUniversity}
+                      onChange={(e) => setFilterUniversity(e.target.value)}
+                      placeholder="e.g. Dublin"
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Course / Keyword</label>
+                    <input
+                      type="text"
+                      value={filterCourse}
+                      onChange={(e) => setFilterCourse(e.target.value)}
+                      placeholder="e.g. Computer Science"
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Loan Status</label>
+                    <select
+                      value={filterLoanStatus}
+                      onChange={(e) => setFilterLoanStatus(e.target.value)}
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] bg-white"
+                    >
+                      <option value="">All Loan Statuses</option>
+                      <option value="pending">Pending Review</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="disbursed">Disbursed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newAudienceName}
+                      onChange={(e) => setNewAudienceName(e.target.value)}
+                      placeholder="Save Segment Name"
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-40"
+                    />
+                    <button
+                      onClick={handleSaveSegment}
+                      className="px-3 py-1.5 bg-slate-900 text-white font-bold rounded-lg text-[9px] uppercase hover:bg-slate-800 transition-colors"
+                    >
+                      Save
                     </button>
                   </div>
-                ) : (
-                  <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-emerald-700 flex items-center gap-2 text-xs">
-                    <span className="material-symbols-outlined">check_circle</span>
-                    All validation checks passed! Email matches mobile responsiveness and spam-safe guidelines.
+                  <button
+                    onClick={handleApplyAudienceFilters}
+                    disabled={loadingStudents}
+                    className="px-4 py-2 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    {loadingStudents ? 'Querying...' : 'Filter Recipient Count'}
+                  </button>
+                </div>
+
+                {students.length > 0 && (
+                  <div className="px-4 py-2 bg-emerald-50 text-emerald-700 text-[10px] font-semibold rounded-lg border border-emerald-100/50 flex justify-between items-center">
+                    <span>Matched Recipients: <strong>{students.length} matched</strong></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Giant AI Generation Button */}
+              <button
+                type="button"
+                onClick={handleAutoGenerateAndValidate}
+                disabled={generatingAI || validating}
+                className="w-full py-4 bg-gradient-to-r from-[#6605c7] to-[#4F46E5] hover:from-[#5204a1] hover:to-[#4338CA] text-white font-bold rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 hover:shadow-indigo-200 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-lg animate-pulse">auto_awesome</span>
+                {generatingAI || validating ? 'AI Copywriters generating email...' : 'Auto-Generate & Validate with AI'}
+              </button>
+            </div>
+
+            {/* RIGHT COLUMN: Live email preview and AI verification */}
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Live Copy Preview</h4>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setPreviewDevice('desktop')}
+                      className={`p-1.5 rounded border transition-colors ${previewDevice === 'desktop' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                      title="Desktop view"
+                    >
+                      <span className="material-symbols-outlined text-sm">desktop_windows</span>
+                    </button>
+                    <button
+                      onClick={() => setPreviewDevice('mobile')}
+                      className={`p-1.5 rounded border transition-colors ${previewDevice === 'mobile' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                      title="Mobile view"
+                    >
+                      <span className="material-symbols-outlined text-sm">smartphone</span>
+                    </button>
+                  </div>
+                </div>
+
+                {subjectLine && (
+                  <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-xs space-y-1 text-slate-650 font-sans">
+                    <div><strong>Subject:</strong> {subjectLine.replace('{{studentName}}', 'Jane Doe')}</div>
                   </div>
                 )}
 
-                <div className="flex justify-end pt-3 border-t border-slate-100">
-                  <button
-                    onClick={() => setWizardStep(3)}
-                    className="px-5 py-2.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800"
-                  >
-                    Proceed to Preview & Send
-                  </button>
+                {/* Simulated Responsive Email Shell */}
+                <div className="bg-slate-100 rounded-xl border border-slate-200 p-4 min-h-[300px] flex justify-center items-start shadow-inner">
+                  <div className={`bg-white shadow-md rounded-lg overflow-hidden border border-slate-200 transition-all duration-300 w-full ${
+                    previewDevice === 'mobile' ? 'max-w-[340px]' : ''
+                  }`}>
+                    {emailBody ? (
+                      <div
+                        className="p-5 overflow-y-auto max-h-[350px] text-xs font-sans"
+                        dangerouslySetInnerHTML={{
+                          __html: emailBody
+                            .replace('{{studentName}}', 'Jane Doe')
+                            .replace('{{country}}', filterCountry || 'Ireland')
+                            .replace('{{course}}', filterCourse || 'MSc Data Science')
+                            .replace('{{loanAmount}}', '₹15,00,000')
+                            .replace(/\[Your SaaS Platform Name\]/g, 'UniHunt')
+                            .replace(/\[Your Platform Name\]/g, 'UniHunt')
+                            .replace(/\[Brand Name\]/g, 'UniHunt')
+                            .replace(/VidyaLoan/g, 'UniHunt')
+                        }}
+                      />
+                    ) : (
+                      <div className="p-8 text-center text-slate-400 italic text-xs">
+                        Enter campaign details and click the AI button to generate email content.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* AI Verification Scores block */}
+              {validationData && (
+                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                  <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">AI Quality Validation</h4>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                      <p className="text-[10px] text-slate-400 font-medium">Subject Line</p>
+                      <p className="text-lg font-bold text-emerald-600 mt-0.5">{validationData.scores.subjectScore}%</p>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                      <p className="text-[10px] text-slate-400 font-medium">Engagement</p>
+                      <p className="text-lg font-bold text-emerald-600 mt-0.5">{validationData.scores.ctaScore}%</p>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                      <p className="text-[10px] text-slate-400 font-medium">Spam Risk</p>
+                      <p className="text-lg font-bold text-[#6605c7] mt-0.5">{validationData.scores.spamScore}/10</p>
+                    </div>
+                  </div>
+
+                  {validationData.warnings.length > 0 ? (
+                    <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg text-[11px] text-amber-700 space-y-1 font-medium">
+                      <div className="font-bold flex items-center gap-1"><span className="material-symbols-outlined text-sm">warning</span> Adjustments Suggested:</div>
+                      <ul className="list-disc pl-4 space-y-0.5">
+                        {validationData.warnings.map((w: string, i: number) => (
+                          <li key={i}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-lg text-[11px] text-emerald-700 font-medium flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm">check_circle</span> Quality checks passed. Delivery ready.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Actions Row to proceed to Step 2 */}
+            <div className="col-span-1 lg:col-span-2 pt-4 border-t border-slate-150 flex justify-end">
+              <button
+                onClick={() => {
+                  if (students.length === 0) {
+                    handleApplyAudienceFilters().then(() => setWizardStep(2));
+                  } else {
+                    setWizardStep(2);
+                  }
+                }}
+                disabled={!subjectLine || !emailBody}
+                className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl disabled:opacity-40 transition-colors flex items-center gap-2"
+              >
+                Proceed: Recipient List & Launch <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Recipient Verification & Launch */}
+        {wizardStep === 2 && (
+          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-6 shadow-sm max-w-4xl mx-auto animate-fade-in">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-150">
+              <div>
+                <h4 className="text-xs font-black uppercase text-[#6605c7] tracking-wider">Step 2: Recipient Verification</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">Verify targeted profiles, trigger test deliveries, and dispatch final broadcast.</p>
+              </div>
+              <button
+                onClick={() => setWizardStep(1)}
+                className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-650 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border border-slate-200"
+              >
+                <span className="material-symbols-outlined text-sm">arrow_back</span> Edit Design
+              </button>
+            </div>
+
+            {/* Test Email Dispatch panel */}
+            <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h5 className="text-xs font-bold text-slate-850">Send Test Delivery</h5>
+                <p className="text-[10px] text-slate-500">Dispatch a test copy to verify presentation in your email client inbox.</p>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <input
+                  type="email"
+                  value={testEmailAddress}
+                  onChange={(e) => setTestEmailAddress(e.target.value)}
+                  placeholder="admin@unihunt.com"
+                  className="px-3 py-1.5 border border-slate-250 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] w-full sm:w-56 bg-white"
+                />
+                <button
+                  onClick={handleSendTestEmail}
+                  disabled={sendingTest}
+                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-850 text-white text-[10px] font-bold uppercase rounded-lg whitespace-nowrap transition-colors"
+                >
+                  {sendingTest ? 'Sending...' : 'Send Test'}
+                </button>
+              </div>
+            </div>
+
+            {/* Filters / Search inside recipients list */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-slate-700">Matched Recipient List ({selectedStudentIds.length} of {students.length} selected)</span>
+                <div className="flex gap-2 text-[10px] font-bold text-[#6605c7]">
+                  <button onClick={() => setSelectedStudentIds(students.map(s => s.id))} className="hover:underline">Select All</button>
+                  <span>|</span>
+                  <button onClick={() => setSelectedStudentIds([])} className="hover:underline">Deselect All</button>
+                </div>
+              </div>
+
+              <div className="max-h-[280px] overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-white">
+                {students.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 italic text-xs">
+                    No recipients matched the chosen segment filters. Go back to adjust parameters.
+                  </div>
+                ) : (
+                  students.map(s => (
+                    <div key={s.id} className="p-3.5 flex justify-between items-center hover:bg-slate-50/50">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedStudentIds.includes(s.id)}
+                          onChange={(e) => {
+                            setSelectedStudentIds(prev =>
+                              e.target.checked ? [...prev, s.id] : prev.filter(id => id !== s.id)
+                            );
+                          }}
+                          className="w-4 h-4 text-[#6605c7] border-slate-300 rounded focus:ring-[#6605c7]"
+                        />
+                        <div>
+                          <div className="font-bold text-slate-800">{s.firstName || 'Student'} {s.lastName || ''}</div>
+                          <div className="text-[10px] text-slate-450 mt-0.5">{s.email}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-[#6605c7]">{s.studyDestination || 'Unspecified'}</span>
+                        <div className="text-[9px] text-slate-400 mt-0.5 truncate max-w-xs">{s.targetUniversity || 'University Choice'}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Broadcast Action Block */}
+            <div className="pt-4 border-t border-slate-150 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="text-xs text-slate-500 font-medium">
+                Sending prioritised queue as: <strong className="uppercase">{priority} Priority</strong>.
+              </div>
+              <button
+                onClick={handleQueueCampaignFinal}
+                disabled={selectedStudentIds.length === 0 || loading}
+                className="w-full sm:w-auto px-6 py-3.5 bg-[#6605c7] hover:bg-[#5204a1] text-white font-bold rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-lg">send</span> Confirm & Queue Broadcast Campaign
+              </button>
+            </div>
           </div>
         )}
       </div>

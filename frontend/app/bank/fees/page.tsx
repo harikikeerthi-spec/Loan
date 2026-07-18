@@ -231,7 +231,7 @@ export default function ProcessingFeeTracker() {
             <PageHeader 
                 title="Processing Fee Tracker" 
                 description="Manage processing fee collection profiles, record merchant bank tokens, and evaluate file-level fee waivers."
-                moduleName="Module 05.1 • Fee Desk"
+                moduleName="Fee Desk"
                 icon="receipt_long"
                 actionSlot={
                     <div className="relative">

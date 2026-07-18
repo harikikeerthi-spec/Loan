@@ -172,12 +172,16 @@ export class OnboardingService {
               .select('id')
               .eq('userId', user.id)
               .eq('relation', p.relation)
-              .single();
+              .maybeSingle();
 
             if (existingParent) {
               await this.db.from('parents').update(parentPayload).eq('id', existingParent.id);
             } else {
-              await this.db.from('parents').insert(parentPayload);
+              const newParentPayload = {
+                id: `${user.id}_${p.relation}_${Date.now()}`,
+                ...parentPayload
+              };
+              await this.db.from('parents').insert(newParentPayload);
             }
           }
         }

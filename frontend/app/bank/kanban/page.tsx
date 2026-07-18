@@ -223,7 +223,7 @@ export default function KanbanBoardPage() {
             <PageHeader 
                 title="Application Kanban Board" 
                 description="Manage, drag, and monitor loan processing pipelines across multiple appraisal stages."
-                moduleName="Module 14 • Pipeline Kanban"
+                moduleName="Pipeline Kanban"
                 icon="view_kanban"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">

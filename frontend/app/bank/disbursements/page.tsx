@@ -218,7 +218,7 @@ export default function DisbursementTracker() {
             <PageHeader 
                 title="Disbursement Board" 
                 description="Verify sanction files, register student beneficiary details, execute fund payouts, and record payment transaction tranches."
-                moduleName="Module 06 • Disbursement Desk"
+                moduleName="Disbursement Desk"
                 icon="payments"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">

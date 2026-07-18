@@ -462,50 +462,51 @@ export default function IncomingQueuePage() {
                 <PageHeader
                     title="Incoming Loan Files"
                     description="Incoming loan portfolios from VidyaLoans system awaiting validation and assignation of LAN."
-                    moduleName="Module 02 • Incoming Queue"
+                    moduleName="Incoming Queue"
                     icon="download"
                 />                {/* KPI Cards Grid */}
+                {/* KPI Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* KPI Card 1: Total Pending Reviews */}
-                    <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] flex items-center justify-between hover:shadow-md transition-all duration-300">
+                    <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-[0_10px_25px_-5px_rgba(15,23,42,0.04)] flex items-center justify-between hover:shadow-[0_10px_20px_-5px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 transition-all duration-300">
                         <div className="space-y-1.5">
                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider font-sans">Total Pending Reviews</p>
-                            <h3 className="text-[28px] font-bold text-[#111827] leading-none font-sans">{kpiTotalPending}</h3>
+                            <h3 className={`text-[28px] font-bold leading-none font-sans ${kpiTotalPending === 0 ? "text-[#64748B]" : "text-[#0F172A]"}`}>{kpiTotalPending}</h3>
                         </div>
-                        <div className="w-10 h-10 rounded-md bg-blue-50 flex items-center justify-center text-blue-600">
+                        <div className="w-10 h-10 rounded-full bg-[#2563EB]/10 flex items-center justify-center text-[#2563EB]">
                             <span className="material-symbols-outlined text-xl">pending_actions</span>
                         </div>
                     </div>
 
                     {/* KPI Card 2: High Value Loans */}
-                    <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] flex items-center justify-between hover:shadow-md transition-all duration-300">
+                    <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-[0_10px_25px_-5px_rgba(15,23,42,0.04)] flex items-center justify-between hover:shadow-[0_10px_20px_-5px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 transition-all duration-300">
                         <div className="space-y-1.5">
                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider font-sans">High Value Loans (&gt; ₹25L)</p>
-                            <h3 className="text-[28px] font-bold text-[#111827] leading-none font-sans">{kpiHighValue}</h3>
+                            <h3 className={`text-[28px] font-bold leading-none font-sans ${kpiHighValue === 0 ? "text-[#64748B]" : "text-[#0F172A]"}`}>{kpiHighValue}</h3>
                         </div>
-                        <div className="w-10 h-10 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-600">
+                        <div className="w-10 h-10 rounded-full bg-[#2563EB]/10 flex items-center justify-center text-[#2563EB]">
                             <span className="material-symbols-outlined text-xl">payments</span>
                         </div>
                     </div>
 
                     {/* KPI Card 3: SLA Breached Soon */}
-                    <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] flex items-center justify-between hover:shadow-md transition-all duration-300">
+                    <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-[0_10px_25px_-5px_rgba(15,23,42,0.04)] flex items-center justify-between hover:shadow-[0_10px_20px_-5px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 transition-all duration-300">
                         <div className="space-y-1.5">
                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider font-sans">SLA Breached Soon (&gt; 24h)</p>
-                            <h3 className="text-[28px] font-bold text-[#111827] leading-none font-sans">{kpiSlaBreached}</h3>
+                            <h3 className={`text-[28px] font-bold leading-none font-sans ${kpiSlaBreached === 0 ? "text-[#64748B]" : "text-[#0F172A]"}`}>{kpiSlaBreached}</h3>
                         </div>
-                        <div className="w-10 h-10 rounded-md bg-amber-50 flex items-center justify-center text-amber-650">
+                        <div className="w-10 h-10 rounded-full bg-[#EAB308]/10 flex items-center justify-center text-[#EAB308]">
                             <span className="material-symbols-outlined text-xl">hourglass_bottom</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Main Table Card containing Search, Chips and Table */}
-                <div className="bg-white rounded-lg border border-gray-100 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] p-6 space-y-6">
+                <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-[0_10px_25px_-5px_rgba(15,23,42,0.04)] p-6 space-y-6">
                     {/* Header with Title and Pill Search Bar */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
-                            <h2 className="text-base font-bold text-[#0A2540] font-sans">Incoming Queue</h2>
+                            <h2 className="text-base font-bold text-[#0F172A] font-sans">Incoming Queue</h2>
                             <p className="text-xs text-gray-500 mt-0.5 font-sans">Manage and assign LAN numbers to new loan applications</p>
                         </div>
 
@@ -516,41 +517,46 @@ export default function IncomingQueuePage() {
                                 placeholder="Search student name, ID..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 bg-[#F8F9FA] hover:bg-[#F4F5F7] focus:bg-white border border-gray-205 rounded-full text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#4F46E5] focus:border-[#4F46E5] transition-all font-sans"
+                                className="w-full pl-9 pr-4 py-2 bg-[#F1F5F9] hover:bg-[#E2E8F0]/50 border-0 rounded-full text-xs font-semibold focus:outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/15 focus:border-[#3B82F6] transition-all font-sans text-slate-800 placeholder-slate-400"
                             />
                             <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
                         </div>
                     </div>
 
-                    {/* Filter Chips */}
-                    <div className="flex items-center gap-2 flex-wrap border-b border-gray-100 pb-4">
-                        <button
-                            onClick={() => setActiveFilterChip("all")}
-                            className={`px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all font-sans ${activeFilterChip === "all"
-                                ? "bg-[#0A2540] text-white shadow-sm"
-                                : "bg-[#F8F9FA] text-gray-500 hover:bg-[#F4F5F7]"
-                                }`}
-                        >
-                            All Portfolios
-                        </button>
-                        <button
-                            onClick={() => setActiveFilterChip("high_value")}
-                            className={`px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all font-sans ${activeFilterChip === "high_value"
-                                ? "bg-[#0A2540] text-white shadow-sm"
-                                : "bg-[#F8F9FA] text-gray-500 hover:bg-[#F4F5F7]"
-                                }`}
-                        >
-                            High Value (&gt; ₹25L)
-                        </button>
-                        <button
-                            onClick={() => setActiveFilterChip("sla_close")}
-                            className={`px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all font-sans ${activeFilterChip === "sla_close"
-                                ? "bg-[#0A2540] text-white shadow-sm"
-                                : "bg-[#F8F9FA] text-gray-500 hover:bg-[#F4F5F7]"
-                                }`}
-                        >
-                            SLA Breached
-                        </button>
+                    {/* Filter Tabs */}
+                    <div className="flex border-b border-slate-100 pb-4">
+                        <div className="bg-[#F1F5F9] p-1 rounded-xl flex items-center gap-1">
+                            <button
+                                onClick={() => setActiveFilterChip("all")}
+                                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 cursor-pointer ${activeFilterChip === "all"
+                                    ? "bg-white text-[#2563EB] shadow-sm font-bold"
+                                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/40"
+                                    }`}
+                            >
+                                {activeFilterChip === "all" && <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />}
+                                All Portfolios
+                            </button>
+                            <button
+                                onClick={() => setActiveFilterChip("high_value")}
+                                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 cursor-pointer ${activeFilterChip === "high_value"
+                                    ? "bg-white text-[#2563EB] shadow-sm font-bold"
+                                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/40"
+                                    }`}
+                            >
+                                {activeFilterChip === "high_value" && <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />}
+                                High Value (&gt; ₹25L)
+                            </button>
+                            <button
+                                onClick={() => setActiveFilterChip("sla_close")}
+                                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 cursor-pointer ${activeFilterChip === "sla_close"
+                                    ? "bg-white text-[#2563EB] shadow-sm font-bold"
+                                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/40"
+                                    }`}
+                            >
+                                {activeFilterChip === "sla_close" && <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />}
+                                SLA Breached
+                            </button>
+                        </div>
                     </div>
 
                     {/* Queue Data Table */}

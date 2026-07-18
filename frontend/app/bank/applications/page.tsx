@@ -489,10 +489,6 @@ export default function ApplicationManagement() {
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="material-symbols-outlined text-[#6605c7] bg-purple-50 p-2 rounded-xl">assignment</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Module 03 • My Files (Logged)</span>
-                        </div>
                         <h1 className="text-4xl font-display font-bold text-gray-900 tracking-tight">Application Management</h1>
                         <p className="text-sm text-gray-500 mt-2 font-medium">Verify documents, log file numbers, and record credit underwriting decisions.</p>
                     </div>

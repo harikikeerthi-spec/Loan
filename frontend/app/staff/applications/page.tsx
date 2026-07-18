@@ -309,7 +309,7 @@ export default function ApplicationsPage() {
                         className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
                     >
                         <span className="material-symbols-outlined text-[16px]">refresh</span>
-                        Refresh
+
                     </button>
                     <div className="relative">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>

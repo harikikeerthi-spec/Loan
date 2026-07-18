@@ -236,14 +236,6 @@ export function PageHeader({ title, description, moduleName = "Bank Portal", ico
     return (
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-8">
             <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-[#4F46E5] bg-[#4F46E5]/10 p-2 rounded-lg text-xl">
-                        {icon}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4F46E5]">
-                        {moduleName}
-                    </span>
-                </div>
                 <h1 className="text-3xl lg:text-4xl font-bold text-[#0A2540] tracking-tight font-sans">
                     {title}
                 </h1>
@@ -264,18 +256,27 @@ interface EmptyStateProps {
     message: string;
     icon?: string;
 }
+export function EmptyState({ title = "No Data Found", message, icon }: EmptyStateProps) {
+    const isAllCaughtUp = !message || message.includes("All clear") || message.includes("no pending") || message.toLowerCase().includes("no incoming");
+    const displayTitle = isAllCaughtUp ? "All Caught Up" : title;
+    const displayMessage = isAllCaughtUp 
+        ? "There are currently no pending loan files awaiting validation in your queue."
+        : message;
 
-export function EmptyState({ title = "No Data Found", message, icon = "folder_off" }: EmptyStateProps) {
     return (
         <div className="flex flex-col items-center justify-center text-center p-8">
-            <span className="material-symbols-outlined text-gray-200 text-6xl mb-4 select-none">
-                {icon}
-            </span>
-            <h3 className="text-sm font-black text-gray-800 uppercase tracking-wider mb-1">
-                {title}
+            <div className="mb-4 text-[#3B82F6]/40">
+                <svg className="w-16 h-16 mx-auto" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="18" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                    <path d="M18 24H30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M24 18V30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+            </div>
+            <h3 className="text-sm font-bold text-slate-800 tracking-wide mb-1.5 font-sans">
+                {displayTitle}
             </h3>
-            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-                {message}
+            <p className="text-xs text-slate-400 max-w-xs leading-relaxed font-medium font-sans">
+                {displayMessage}
             </p>
         </div>
     );

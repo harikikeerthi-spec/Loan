@@ -154,10 +154,6 @@ export default function CalendarViewPage() {
             {/* Header */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-2">
                 <div className="space-y-3">
-                    <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm">
-                        <span className="material-symbols-outlined text-[#6605c7] text-[10px] animate-pulse">calendar_month</span>
-                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Module 15 • Scheduling Matrix</span>
-                    </div>
                     <h2 className="text-3xl lg:text-4xl font-black font-display text-gray-900 tracking-tighter leading-none uppercase">
                         Calendar <span className="text-[#6605c7]">Scheduler</span>
                     </h2>

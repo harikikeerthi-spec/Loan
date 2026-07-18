@@ -379,32 +379,35 @@ export default function ProfileTab() {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 shadow-sm">
-                            <div className="flex items-center gap-2 mb-4">
+                        <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm p-6 space-y-6 font-sans">
+                            <div className="border-b border-[#E2E8F0] pb-4 flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
                                     <span className="material-symbols-outlined text-[16px]">person</span>
                                 </div>
                                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Personal Details</h3>
                             </div>
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Email Address</label>
-                                        <span className="text-sm font-medium text-[#0F172A] block mt-1 lowercase">{getDisplayValue(userData.email)}</span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Phone Number</label>
-                                        <span className="text-sm font-medium text-[#0F172A] block mt-1">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
-                                    </div>
+
+                            {/* Row 1: Email and Phone */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-2">
+                                <div>
+                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Email Address</span>
+                                    <span className="text-sm font-semibold text-slate-800 lowercase break-all">{getDisplayValue(userData.email)}</span>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Date of Birth</label>
+                                <div>
+                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Phone Number</span>
+                                    <span className="text-sm font-semibold text-slate-800">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
+                                </div>
+                            </div>
+
+                            {/* Row 2: DOB, Nationality, Destination Country */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                                <div>
+                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Date of Birth</span>
+                                    <span className="text-sm font-semibold text-slate-800">
                                         {(() => {
                                             const raw = (userData as any).dateOfBirth;
                                             let dobDate: Date | null = null;
                                             if (raw) {
-                                                // Handle DD-MM-YYYY (server format)
                                                 if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) {
                                                     const [dd, mm, yyyy] = raw.split('-');
                                                     dobDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
@@ -414,30 +417,24 @@ export default function ProfileTab() {
                                             }
                                             const isDobValid = dobDate && !isNaN(dobDate.getTime());
                                             if (isDobValid) {
-                                                return (
-                                                    <span className="text-sm font-medium text-[#0F172A] block mt-1">
-                                                        {dobDate!.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                                    </span>
-                                                );
+                                                return dobDate!.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                                             } else {
-                                                return (
-                                                    <span className="text-sm font-medium text-[#94A3B8] block mt-1">Pending</span>
-                                                );
+                                                return <span className="text-[#94A3B8] font-normal">Pending</span>;
                                             }
                                         })()}
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Nationality</label>
-                                        <span className="text-sm font-medium text-[#0F172A] block mt-1">
-                                            {getDisplayValue(userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian")}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Destination Country</label>
-                                        <span className="text-sm font-medium text-[#0F172A] block mt-1">
-                                            {getDisplayValue(userData.studyDestination || userData.countryOfEducation || userData.academic?.countryOfEducation, "Pending")}
-                                        </span>
-                                    </div>
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Nationality</span>
+                                    <span className="text-sm font-semibold text-slate-800">
+                                        {getDisplayValue(userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian")}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Destination Country</span>
+                                    <span className="text-sm font-semibold text-slate-800">
+                                        {getDisplayValue(userData.studyDestination || userData.countryOfEducation || userData.academic?.countryOfEducation, "Pending")}
+                                    </span>
                                 </div>
                             </div>
                         </div>

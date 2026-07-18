@@ -384,6 +384,7 @@ model UserDocument {
   status     String    @default("pending") // pending, uploaded, verified, rejected, available_in_digilocker
   filePath   String?
   uploadedAt DateTime?
+  rejectionReason String?
 
   // DigiLocker metadata
   digilockerTxId       String?
