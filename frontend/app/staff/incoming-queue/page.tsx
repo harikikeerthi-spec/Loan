@@ -7,6 +7,7 @@ import { useStaffLayout } from "@/app/staff/layout";
 import { adminApi, staffProfileApi, apiFetch } from "@/lib/api";
 import Link from "next/link";
 import SendEmailModal from "@/components/staff/SendEmailModal";
+import ShareWithBankModal from "@/components/staff/ShareWithBankModal";
  
 import { useDialog } from "@/contexts/DialogContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -182,6 +183,8 @@ export default function IncomingQueuePage() {
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
     
     const [activeDockApp, setActiveDockApp] = useState<any | null>(null);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [routingApp, setRoutingApp] = useState<any | null>(null);
 
     // Email Modal
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -974,26 +977,14 @@ export default function IncomingQueuePage() {
                         <div className="shrink-0 flex items-center gap-3">
                             {/* Approve button: moves application to active pipeline */}
                             <button
-                                onClick={async () => {
-                                    if (!confirm('Move this application to the active pipeline?')) return;
-                                    await handleApproveApplication(activeDockApp);
+                                onClick={() => {
+                                    setRoutingApp(activeDockApp);
+                                    setIsShareModalOpen(true);
                                 }}
-                                className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg"
+                                className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                                Approve
-                            </button>
-
-                            {/* Rejection Control (Far right red trash/cancel icon button) */}
-                            <button
-                                onClick={() => {
-                                    setAppToReject(activeDockApp);
-                                    setIsRejectModalOpen(true);
-                                }}
-                                className="w-11 h-11 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-600 hover:text-rose-700 transition-all flex items-center justify-center shrink-0 active:scale-95"
-                                title="Reject Lead"
-                            >
-                                <span className="material-symbols-outlined text-[20px]">cancel</span>
+                                Approve & Select Bank
                             </button>
 
                             {/* Close Capsule Button */}
@@ -1008,6 +999,27 @@ export default function IncomingQueuePage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {isShareModalOpen && routingApp && (
+                <ShareWithBankModal
+                    applicationId={routingApp.id || routingApp._id}
+                    applicationNumber={routingApp.applicationNumber || ""}
+                    studentName={`${routingApp.firstName || routingApp.student?.firstName || ""} ${routingApp.lastName || routingApp.student?.lastName || ""}`}
+                    loanAmount={routingApp.amount || 1500000}
+                    isOpen={isShareModalOpen}
+                    onClose={() => {
+                        setIsShareModalOpen(false);
+                        setRoutingApp(null);
+                    }}
+                    onSuccess={async () => {
+                        setIsShareModalOpen(false);
+                        setRoutingApp(null);
+                        setActiveDockApp(null);
+                        await loadData();
+                        await fetchBadgeStats();
+                    }}
+                />
+            )}
         </div>
     );
 }

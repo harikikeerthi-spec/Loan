@@ -8,6 +8,7 @@ import Link from "next/link";
 import { adminApi } from "@/lib/api";
 import { format } from "date-fns";
 import BankNotificationsPanel from "@/components/bank/BankNotificationsPanel";
+import SupportTicketModal from "@/components/SupportTicketModal";
 
 const bankLogos: Record<string, string> = {
     auxilo: "/banks/auxilo.png",
@@ -251,6 +252,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 { icon: "calendar_month", label: "Calendar View", path: "/bank/calendar" },
                 { icon: "folder_shared", label: "Document Vault", path: "/bank/documents" },
                 { icon: "receipt_long", label: "Processing Fees", path: "/bank/fees" },
+                { icon: "confirmation_number", label: "Support Tickets", path: "/bank/support-tickets" },
             ]
         },
         {
@@ -264,6 +266,8 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
             ]
         }
     ], [incomingCount, loggedCount, chatCount]);
+
+    const [isSupportOpen, setIsSupportOpen] = useState(false);
 
     if (pathname === '/bank/login') {
         return <>{children}</>;
@@ -564,6 +568,16 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             </div>
                         </div>
 
+                        <button
+                            type="button"
+                            onClick={() => setIsSupportOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6605c7]/10 hover:bg-[#6605c7]/20 text-[#6605c7] rounded-xl text-xs font-bold transition-all border border-[#6605c7]/20 cursor-pointer shadow-2xs"
+                            title="Raise or track support tickets"
+                        >
+                            <span className="material-symbols-outlined text-[16px]">support_agent</span>
+                            <span className="hidden sm:inline">Support Ticket</span>
+                        </button>
+
                         {/* Real-time Notification Bell (Socket.io live) */}
                         <BankNotificationsPanel showUnreadBadge={true} />
                     </div>
@@ -579,6 +593,13 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     {children}
                 </div>
             </main>
+
+            <SupportTicketModal
+                isOpen={isSupportOpen}
+                onClose={() => setIsSupportOpen(false)}
+                userRole="bank"
+                userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
+            />
 
             {/* Decorative floating orbs */}
             <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">

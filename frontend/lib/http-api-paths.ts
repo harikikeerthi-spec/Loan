@@ -222,6 +222,19 @@ export const HttpApiPaths = {
         exportMis: () => `${HTTP_API_PREFIX}/bank/export/mis`,
         consent: (applicationId: string) => `${HTTP_API_PREFIX}/bank/applications/${enc(applicationId)}/consent`,
     },
+
+    support: {
+        root: () => `${HTTP_API_PREFIX}/support`,
+        tickets: () => `${HTTP_API_PREFIX}/support/tickets`,
+        myTickets: () => `${HTTP_API_PREFIX}/support/my-tickets`,
+        ticketById: (id: string) => `${HTTP_API_PREFIX}/support/tickets/${enc(id)}`,
+        status: (id: string) => `${HTTP_API_PREFIX}/support/tickets/${enc(id)}/status`,
+        priority: (id: string) => `${HTTP_API_PREFIX}/support/tickets/${enc(id)}/priority`,
+        assign: (id: string) => `${HTTP_API_PREFIX}/support/tickets/${enc(id)}/assign`,
+        comment: (id: string) => `${HTTP_API_PREFIX}/support/tickets/${enc(id)}/comment`,
+        attachment: (id: string) => `${HTTP_API_PREFIX}/support/tickets/${enc(id)}/attachment`,
+        dashboard: () => `${HTTP_API_PREFIX}/support/dashboard`,
+    },
 } as const;
 
 /** Metadata for tooling / docs — paths resolved via HttpApiPaths (sample params where needed). */

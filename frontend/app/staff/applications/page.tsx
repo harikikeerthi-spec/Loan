@@ -153,7 +153,7 @@ const getApplicationStageLabel = (app: any, progress: number): string => {
 };
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
-    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[10px] uppercase tracking-widest font-['Playfair_Display',serif] font-bold text-left">
+    <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 text-[11px] uppercase tracking-wider font-sans font-bold text-left">
         <tr>{children}</tr>
     </thead>
 );
@@ -230,14 +230,14 @@ export default function ApplicationsPage() {
     };
 
     const statusColors: Record<string, string> = {
-        draft: 'bg-amber-50 text-amber-600 border border-amber-200',
-        pending: 'bg-amber-50 text-amber-600 border border-amber-200',
-        submitted: 'bg-blue-50 text-blue-600 border border-blue-200',
-        submitted_to_bank: 'bg-indigo-50 text-indigo-600 border border-indigo-200',
-        processing: 'bg-indigo-50 text-indigo-600 border border-indigo-200',
+        draft: 'bg-amber-50 text-amber-700 border border-amber-200',
+        pending: 'bg-amber-50 text-amber-700 border border-amber-200',
+        submitted: 'bg-blue-50 text-blue-700 border border-blue-200',
+        submitted_to_bank: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+        processing: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
         approved: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
         verified: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-        rejected: 'bg-rose-50 text-rose-600 border border-rose-200',
+        rejected: 'bg-rose-50 text-rose-700 border border-rose-200',
         disbursed: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
         routed_multiparty: 'bg-purple-50 text-purple-700 border border-purple-200',
     };
@@ -294,22 +294,16 @@ export default function ApplicationsPage() {
         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    {/* <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">STAFF DASHBOARD</p> */}
-                    <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
+                    <h2 className="text-2xl font-bold tracking-tight text-[#0A2540]">
                         Active Pipeline
-                        {/* <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-sans font-semibold text-emerald-700 ml-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            LIVE SYSTEM
-                        </span> */}
                     </h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <button
                         onClick={loadData}
-                        className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                        className="px-3.5 py-2 bg-white border border-slate-200/80 rounded-xl text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-xs cursor-pointer"
                     >
                         <span className="material-symbols-outlined text-[16px]">refresh</span>
-
                     </button>
                     <div className="relative">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
@@ -318,13 +312,13 @@ export default function ApplicationsPage() {
                             value={searchQuery}
                             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                             placeholder="Search applications..."
-                            className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-['Playfair_Display',serif] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm"
+                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] transition-all text-slate-900 w-64 shadow-xs"
                         />
                     </div>
                     <select
                         value={filterStatus}
                         onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-                        className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-['Playfair_Display',serif] font-black uppercase tracking-widest text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all shadow-sm"
+                        className="px-4 py-2 bg-white border border-slate-200/80 rounded-xl text-xs font-bold uppercase tracking-wider text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/20 cursor-pointer transition-all shadow-xs"
                     >
                         <option value="all">ALL STATUS</option>
                         <option value="pending">PENDING</option>
@@ -335,16 +329,15 @@ export default function ApplicationsPage() {
                 </div>
             </div>
 
-            <div className="rounded-[24px] border border-slate-100 overflow-hidden shadow-sm bg-white">
+            <div className="rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs bg-white">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <TableHeader>
-                            <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">APPLICANT PROFILE</span></th>
-                            <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">COLLEGE NAME</span></th>
-                            {/* <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">TARGET BANK</span></th> */}
-                            <th className="px-5 py-5 w-48"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">PROGRESS</span></th>
-                            <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">CURRENT STATUS</span></th>
-                            <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
+                            <th className="sticky left-0 z-20 bg-slate-50/80 px-5 py-4"><span className="text-[11px] font-bold text-[#0A2540] uppercase tracking-wider">APPLICANT PROFILE</span></th>
+                            <th className="px-5 py-4"><span className="text-[11px] font-bold text-[#0A2540] uppercase tracking-wider">COLLEGE NAME</span></th>
+                            <th className="px-5 py-4 w-48"><span className="text-[11px] font-bold text-[#0A2540] uppercase tracking-wider">PROGRESS</span></th>
+                            <th className="px-5 py-4 min-w-[220px] w-[220px]"><span className="text-[11px] font-bold text-[#0A2540] uppercase tracking-wider">CURRENT STATUS</span></th>
+                            <th className="px-5 py-4 text-center"><span className="text-[11px] font-bold text-[#0A2540] uppercase tracking-wider">ACTIONS</span></th>
                         </TableHeader>
                         <tbody className={`divide-y divide-slate-50 ${loading ? 'opacity-60 pointer-events-none transition-opacity duration-300' : 'transition-opacity duration-300'}`}>
                             {loading && pagedData.length === 0 ? (

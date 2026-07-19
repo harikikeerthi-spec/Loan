@@ -78,6 +78,46 @@ const DEFAULT_CATEGORIES = [
   "EMI", "Authentication", "Profile", "API Error", "Technical Issue", "Others"
 ];
 
+const parseISTDate = (dateVal: any): Date => {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) return dateVal;
+  let s = String(dateVal).trim();
+  if (!s.endsWith("Z") && !s.includes("+") && !s.includes("Z")) {
+    s += "Z";
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? new Date() : d;
+};
+
+const formatIST = (dateVal: any, pattern: "full" | "short" | "time" | "relative" = "full"): string => {
+  if (!dateVal) return "—";
+  const d = parseISTDate(dateVal);
+
+  if (pattern === "relative") {
+    return formatDistanceToNow(d, { addSuffix: true });
+  }
+
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  };
+
+  if (pattern === "short") {
+    options.year = undefined;
+  } else if (pattern === "time") {
+    options.year = undefined;
+    options.month = undefined;
+    options.day = undefined;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", options).format(d);
+};
+
 // ─── Utility Components ───────────────────────────────────────────────────────
 
 const PriorityBadge = ({ priority }: { priority: string }) => {
@@ -380,7 +420,7 @@ const SupportDashboard = ({ onNavigate }: { onNavigate: (view: string) => void }
               <PriorityBadge priority={t.priority} />
               <StatusBadge status={t.status} />
               <span className="text-[10px] text-slate-400 w-20 text-right flex-shrink-0">
-                {formatDistanceToNow(new Date(t.createdAt), { addSuffix: true })}
+                {formatDistanceToNow(parseISTDate(t.createdAt), { addSuffix: true })}
               </span>
             </div>
           ))}
@@ -632,7 +672,7 @@ const TicketTable = ({
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-[10px] text-slate-400">
-                      {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}
+                      {formatDistanceToNow(parseISTDate(ticket.createdAt), { addSuffix: true })}
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <button onClick={() => onSelectTicket(ticket)}
@@ -926,7 +966,7 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
                           <span className="text-[9px] font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">Internal Note</span>
                         )}
                       </div>
-                      <div className="text-[9px] text-slate-400">{format(new Date(c.createdAt), "MMM d, yyyy · h:mm a")}</div>
+                      <div className="text-[9px] text-slate-400">{formatIST(c.createdAt, "full")}</div>
                     </div>
                   </div>
                   <p className="text-xs text-slate-700 leading-relaxed pl-9 whitespace-pre-wrap">{c.content}</p>
@@ -978,7 +1018,7 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
                     {log.oldValue && log.newValue && (
                       <span className="text-slate-400"> · <span className="line-through">{log.oldValue}</span> → <span className="font-medium text-slate-700">{log.newValue}</span></span>
                     )}
-                    <div className="text-[9px] text-slate-400 mt-0.5">{format(new Date(log.createdAt), "MMM d, h:mm a")}</div>
+                    <div className="text-[9px] text-slate-400 mt-0.5">{formatIST(log.createdAt, "short")}</div>
                   </div>
                 </div>
               ))}
@@ -998,12 +1038,12 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
             </div>
             {ticket.slaResolveAt && (
               <div className="text-[10px] text-slate-400">
-                Deadline: {format(new Date(ticket.slaResolveAt), "MMM d, h:mm a")}
+                Deadline: {formatIST(ticket.slaResolveAt, "full")}
               </div>
             )}
             {ticket.firstResponseAt && (
               <div className="text-[10px] text-emerald-600 mt-1">
-                ✓ First response: {format(new Date(ticket.firstResponseAt), "h:mm a")}
+                ✓ First response: {formatIST(ticket.firstResponseAt, "time")}
               </div>
             )}
           </div>
@@ -1080,8 +1120,8 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
               { label: "Role", value: ticket.createdByRole },
               { label: "Category", value: ticket.category },
               { label: "Source", value: ticket.source },
-              { label: "Created", value: format(new Date(ticket.createdAt), "MMM d, yyyy h:mm a") },
-              { label: "Updated", value: formatDistanceToNow(new Date(ticket.updatedAt), { addSuffix: true }) },
+              { label: "Created", value: formatIST(ticket.createdAt, "full") },
+              { label: "Updated", value: formatDistanceToNow(parseISTDate(ticket.updatedAt), { addSuffix: true }) },
             ].map(r => (
               <div key={r.label} className="flex items-start justify-between gap-2">
                 <span className="text-[10px] text-slate-400">{r.label}</span>

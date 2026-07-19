@@ -146,7 +146,7 @@ export class SupportService {
       category,
       assignedToId,
       createdById,
-      sortBy = 'created_at',
+      sortBy = 'createdAt',
       sortOrder = 'desc',
     } = query;
 
@@ -165,11 +165,15 @@ export class SupportService {
 
     if (status && status !== 'all') q = q.eq('status', status);
     if (priority && priority !== 'all') q = q.eq('priority', priority);
-    if (category && category !== 'all') q = q.eq('category', category);
+    const isAdmin = user && ['admin', 'super_admin'].includes(user.role);
     if (assignedToId) q = q.eq('assignedToId', assignedToId);
-    if (createdById) q = q.eq('createdById', createdById);
+    if (!isAdmin && user) {
+      q = q.eq('createdById', user.id);
+    } else if (createdById) {
+      q = q.eq('createdById', createdById);
+    }
 
-    const col = sortBy === 'createdAt' ? 'created_at' : sortBy === 'updatedAt' ? 'updated_at' : sortBy;
+    const col = sortBy === 'created_at' ? 'createdAt' : sortBy === 'updated_at' ? 'updatedAt' : sortBy;
     q = q.order(col, { ascending: sortOrder === 'asc' });
     q = q.range(from, to);
 

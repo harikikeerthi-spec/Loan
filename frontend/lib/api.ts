@@ -559,6 +559,8 @@ export const authApi = {
         passportNumber?: string;
         intakeSeason?: string;
         pincode?: string;
+        targetUniversity?: string;
+        studyDestination?: string;
     }) =>
         apiFetch(HttpApiPaths.auth.updateDetails(), {
             method: "POST",
@@ -1576,6 +1578,21 @@ export const supportApi = {
         apiFetch(`${API_URL}/support/tickets/${id}/comment`, { method: "POST", body: JSON.stringify({ content, isInternal: false }) }),
     addInternalNote: (id: string, content: string) =>
         apiFetch(`${API_URL}/support/tickets/${id}/internal-note`, { method: "POST", body: JSON.stringify({ content, isInternal: true }) }),
+    uploadAttachment: async (ticketId: string, file: File) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") || localStorage.getItem("auth_token") : "";
+        const res = await fetch(`${API_URL}/support/tickets/${ticketId}/attachment`, {
+            method: "POST",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: formData,
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.message || "Failed to upload attachment");
+        }
+        return res.json();
+    },
 
     // Dashboard & Analytics
     getDashboard: () => apiFetch(`${API_URL}/support/dashboard`),

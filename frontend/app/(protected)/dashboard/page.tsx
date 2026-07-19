@@ -12,6 +12,8 @@ import UserProfileView from "@/components/User/UserProfileView";
 import { io } from "socket.io-client";
 import { getProfileDocumentRequirements } from "@/lib/documentRequirements";
 import DatePicker from "@/components/DatePicker";
+import SupportTicketModal from "@/components/SupportTicketModal";
+import UserSupportTicketsView from "@/components/UserSupportTicketsView";
 import { formatPhone, isPhoneValid } from "@/lib/validation";
 
 interface DashboardData {
@@ -325,6 +327,7 @@ export default function DashboardPage() {
     const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
     const [selectedAppDetails, setSelectedAppDetails] = useState<any>(null);
     const [connectingSupport, setConnectingSupport] = useState(false);
+    const [isSupportOpen, setIsSupportOpen] = useState(false);
     const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
 
     const [profileSubTab, setProfileSubTab] = useState<"personal" | "family" | "academic">("personal");
@@ -514,7 +517,7 @@ export default function DashboardPage() {
         // Set tab from hash if present
         if (typeof window !== "undefined" && window.location.hash) {
             const hashTab = window.location.hash.replace("#", "");
-            if (["overview", "applications", "documents", "profile"].includes(hashTab)) {
+            if (["overview", "applications", "documents", "support_tickets", "profile"].includes(hashTab)) {
                 setActiveTab(hashTab);
             }
         }
@@ -602,6 +605,14 @@ export default function DashboardPage() {
         { href: "/community/discussions", icon: "forum", label: "Community", desc: "Ask & share advice", color: "from-emerald-500 to-teal-600" },
     ];
 
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+                <div className="w-12 h-12 border-4 border-[#6605c7]/20 border-t-[#6605c7] rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-transparent">
             <Navbar />
@@ -675,6 +686,14 @@ export default function DashboardPage() {
                                         Connect with Support
                                     </>
                                 )}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsSupportOpen(true)}
+                                className="px-5 py-2.5 bg-[#6605c7] hover:bg-[#5204a3] text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-purple-600/20 flex items-center gap-2 cursor-pointer border-0"
+                            >
+                                <span className="material-symbols-outlined text-sm">confirmation_number</span>
+                                Raise Support Ticket
                             </button>
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
                                 Speak with Counsellor
@@ -870,7 +889,7 @@ export default function DashboardPage() {
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-8 overflow-x-auto no-scrollbar border-b border-slate-200/60 relative">
-                    {["overview", "applications", "documents", "profile"].map((tab) => (
+                    {["overview", "applications", "documents", "support_tickets", "profile"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -880,7 +899,7 @@ export default function DashboardPage() {
                                     : "text-slate-400 hover:text-slate-700"
                             }`}
                         >
-                            {tab}
+                            {tab.replace("_", " ")}
                             {/* Sliding underline */}
                             <span
                                 className={`absolute bottom-0 left-0 h-[2px] bg-[#6605c7] transition-all duration-300 ease-out ${
@@ -1237,6 +1256,14 @@ export default function DashboardPage() {
                     />
                 )}
 
+                {/* Support Tickets Tab */}
+                {activeTab === "support_tickets" && (
+                    <UserSupportTicketsView
+                        userRole={user?.role || "student"}
+                        userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
+                    />
+                )}
+
 
                 {/* Documents Tab */}
                 {activeTab === "documents" && (
@@ -1440,6 +1467,13 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
+
+            <SupportTicketModal
+                isOpen={isSupportOpen}
+                onClose={() => setIsSupportOpen(false)}
+                userRole={user?.role || "student"}
+                userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
+            />
         </div>
     );
 }

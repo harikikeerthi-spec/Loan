@@ -74,6 +74,7 @@ export default function ProfileTab() {
         dateOfBirth: "",
         nationality: "",
         studyDestination: "",
+        targetUniversity: "",
         fatherName: "",
         fatherAadhar: "",
         fatherPan: "",
@@ -120,10 +121,20 @@ export default function ProfileTab() {
     };
 
     const getCoApplicantName = (index: 1 | 2 | 3) => {
-        if (index === 1 && userApplications && userApplications.length > 0) {
-            const firstApp = userApplications.find(app => app.coApplicantName);
-            if (firstApp?.coApplicantName) {
-                return firstApp.coApplicantName;
+        if (index === 1) {
+            if (coapplicantData?.name) return coapplicantData.name;
+            if (userData?.coApplicant) {
+                let coApp: any = userData.coApplicant;
+                if (typeof coApp === 'string') {
+                    try { coApp = JSON.parse(coApp); } catch {}
+                }
+                if (typeof coApp === 'object' && coApp?.name) return coApp.name;
+            }
+            if (userApplications && userApplications.length > 0) {
+                const firstApp = userApplications.find(app => app.coApplicantName);
+                if (firstApp?.coApplicantName) {
+                    return firstApp.coApplicantName;
+                }
             }
         }
 
@@ -148,10 +159,23 @@ export default function ProfileTab() {
         return <span className="text-[#94A3B8] font-normal">Pending</span>;
     };
 
-    const parentsList = userData?.parents || [];
-    const fatherData = parentsList.find((p: any) => p.relation === 'father');
-    const motherData = parentsList.find((p: any) => p.relation === 'mother');
-    const coapplicantData = parentsList.find((p: any) => p.relation === 'coapplicant');
+    const parentsList = Array.isArray(userData?.parents) ? userData.parents : [];
+    const fatherData = parentsList.find((p: any) => p.relation === 'father') || {
+        name: userData?.family?.fatherName || userData?.fatherName,
+        aadharNumber: userData?.family?.fatherAadhar || userData?.fatherAadhar,
+        panNumber: userData?.family?.fatherPan || userData?.fatherPan
+    };
+    const motherData = parentsList.find((p: any) => p.relation === 'mother') || {
+        name: userData?.family?.motherName || userData?.motherName,
+        aadharNumber: userData?.family?.motherAadhar || userData?.motherAadhar,
+        panNumber: userData?.family?.motherPan || userData?.motherPan
+    };
+    const coapplicantData = parentsList.find((p: any) => p.relation === 'coapplicant') || {
+        name: (typeof userData?.coApplicant === 'object' ? userData?.coApplicant?.name : "") || userData?.coApplicantName,
+        relation: (typeof userData?.coApplicant === 'object' ? userData?.coApplicant?.relation : "") || userData?.coApplicantRelation,
+        aadharNumber: (typeof userData?.coApplicant === 'object' ? userData?.coApplicant?.aadharNumber : "") || userData?.coApplicantAadhar,
+        panNumber: (typeof userData?.coApplicant === 'object' ? userData?.coApplicant?.panNumber : "") || userData?.coApplicantPan
+    };
 
     const userDocs = userDocuments || [];
     const sscDoc = userDocs.find((d: any) => d.docType === 'marksheet_10' || d.docType === 'marksheet_10th');
@@ -167,9 +191,17 @@ export default function ProfileTab() {
     };
 
     const getAcademicDetails = (doc: any, key: 'ssc' | 'hsc' | 'ug') => {
-        const fallback = userData?.academic?.[key] || {};
-        const inst = getExtractedField(doc, 'institution') || getExtractedField(doc, 'university') || getExtractedField(doc, 'school_name') || getExtractedField(doc, 'college_name') || fallback.institute;
-        const pct = getExtractedField(doc, 'score') || getExtractedField(doc, 'percentage') || getExtractedField(doc, 'gpa') || getExtractedField(doc, 'cgpa') || fallback.percentage;
+        let parsedAcademic: any = userData?.academic;
+        if (typeof parsedAcademic === 'string') {
+            try { parsedAcademic = JSON.parse(parsedAcademic); } catch {}
+        }
+        const fallback = parsedAcademic?.[key] || {};
+        const extInst = getExtractedField(doc, 'institution') || getExtractedField(doc, 'university') || getExtractedField(doc, 'school_name') || getExtractedField(doc, 'college_name');
+        const extPct = getExtractedField(doc, 'score') || getExtractedField(doc, 'percentage') || getExtractedField(doc, 'gpa') || getExtractedField(doc, 'cgpa');
+
+        const inst = fallback.institute || extInst;
+        const pct = fallback.percentage || extPct;
+
         return { 
             rawInstitute: inst || "",
             rawPercentage: pct || "",
@@ -266,6 +298,19 @@ export default function ProfileTab() {
 
     const handleOpenEdit = () => {
         setSubmitError("");
+        let parsedAcademic: any = userData?.academic;
+        if (typeof parsedAcademic === 'string') {
+            try { parsedAcademic = JSON.parse(parsedAcademic); } catch {}
+        }
+        let parsedFamily: any = userData?.family;
+        if (typeof parsedFamily === 'string') {
+            try { parsedFamily = JSON.parse(parsedFamily); } catch {}
+        }
+        let parsedCoApp: any = userData?.coApplicant;
+        if (typeof parsedCoApp === 'string') {
+            try { parsedCoApp = JSON.parse(parsedCoApp); } catch {}
+        }
+
         setEditForm({
             firstName: userData?.firstName || "",
             lastName: userData?.lastName || "",
@@ -278,27 +323,30 @@ export default function ProfileTab() {
             })(),
             nationality: typeof userData?.nationality === 'object' ? (userData?.nationality?.name || "") : (userData?.nationality || "Indian"),
             studyDestination: userData?.studyDestination || userData?.countryOfEducation || "",
+            targetUniversity: userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.universityName ||
+                userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.university ||
+                userData?.targetUniversity || userData?.universityName || "",
 
-            fatherName: fatherData?.name || userData?.fatherName || "",
-            fatherAadhar: fatherData?.aadharNumber || "",
-            fatherPan: fatherData?.panNumber || "",
+            fatherName: fatherData?.name || parsedFamily?.fatherName || userData?.fatherName || "",
+            fatherAadhar: fatherData?.aadharNumber || parsedFamily?.fatherAadhar || "",
+            fatherPan: fatherData?.panNumber || parsedFamily?.fatherPan || "",
 
-            motherName: motherData?.name || "",
-            motherAadhar: motherData?.aadharNumber || "",
-            motherPan: motherData?.panNumber || "",
+            motherName: motherData?.name || parsedFamily?.motherName || userData?.motherName || "",
+            motherAadhar: motherData?.aadharNumber || parsedFamily?.motherAadhar || "",
+            motherPan: motherData?.panNumber || parsedFamily?.motherPan || "",
 
-            coappName: coapplicantData?.name || (userData?.coApplicant?.name || ""),
-            coappRelation: coapplicantData?.relation || (userData?.coApplicant?.relation || userData?.coApplicant?.relationship || ""),
-            coappIncome: userData?.coApplicant?.monthlyIncome || userData?.coApplicantIncome || "",
-            coappAadhar: coapplicantData?.aadharNumber || "",
-            coappPan: coapplicantData?.panNumber || "",
+            coappName: coapplicantData?.name || parsedCoApp?.name || userData?.coApplicantName || "",
+            coappRelation: coapplicantData?.relation || parsedCoApp?.relation || parsedCoApp?.relationship || "",
+            coappIncome: parsedCoApp?.monthlyIncome || userData?.coApplicantIncome || "",
+            coappAadhar: coapplicantData?.aadharNumber || parsedCoApp?.aadharNumber || "",
+            coappPan: coapplicantData?.panNumber || parsedCoApp?.panNumber || "",
 
-            sscSchool: sscDetails.rawInstitute,
-            sscScore: sscDetails.rawPercentage ? sscDetails.rawPercentage.toString().replace('%', '') : "",
-            hscCollege: hscDetails.rawInstitute,
-            hscScore: hscDetails.rawPercentage ? hscDetails.rawPercentage.toString().replace('%', '') : "",
-            ugCollege: ugDetails.rawInstitute,
-            ugScore: ugDetails.rawPercentage ? ugDetails.rawPercentage.toString().replace('%', '') : "",
+            sscSchool: parsedAcademic?.ssc?.institute || sscDetails.rawInstitute,
+            sscScore: parsedAcademic?.ssc?.percentage || (sscDetails.rawPercentage ? sscDetails.rawPercentage.toString().replace('%', '') : ""),
+            hscCollege: parsedAcademic?.hsc?.institute || hscDetails.rawInstitute,
+            hscScore: parsedAcademic?.hsc?.percentage || (hscDetails.rawPercentage ? hscDetails.rawPercentage.toString().replace('%', '') : ""),
+            ugCollege: parsedAcademic?.ug?.institute || ugDetails.rawInstitute,
+            ugScore: parsedAcademic?.ug?.percentage || (ugDetails.rawPercentage ? ugDetails.rawPercentage.toString().replace('%', '') : ""),
         });
         setIsEditOpen(true);
     };
@@ -308,29 +356,51 @@ export default function ProfileTab() {
         setIsSubmitting(true);
         setSubmitError("");
         try {
+            let parsedFamily: any = userData?.family;
+            if (typeof parsedFamily === 'string') {
+                try { parsedFamily = JSON.parse(parsedFamily); } catch {}
+            }
+            let parsedCoApp: any = userData?.coApplicant;
+            if (typeof parsedCoApp === 'string') {
+                try { parsedCoApp = JSON.parse(parsedCoApp); } catch {}
+            }
+            let parsedAcademic: any = userData?.academic;
+            if (typeof parsedAcademic === 'string') {
+                try { parsedAcademic = JSON.parse(parsedAcademic); } catch {}
+            }
+
             const updates = {
                 firstName: editForm.firstName,
                 lastName: editForm.lastName,
                 phone: editForm.phoneNumber,
+                fatherName: editForm.fatherName,
+                motherName: editForm.motherName,
                 dateOfBirth: editForm.dateOfBirth,
                 nationality: editForm.nationality,
                 studyDestination: editForm.studyDestination,
+                targetUniversity: editForm.targetUniversity,
 
                 family: {
-                    ...userData?.family,
+                    ...(parsedFamily || {}),
                     fatherName: editForm.fatherName,
                     motherName: editForm.motherName,
+                    fatherAadhar: editForm.fatherAadhar,
+                    fatherPan: editForm.fatherPan,
+                    motherAadhar: editForm.motherAadhar,
+                    motherPan: editForm.motherPan,
                 },
 
                 coApplicant: {
-                    ...userData?.coApplicant,
+                    ...(parsedCoApp || {}),
                     name: editForm.coappName,
                     relation: editForm.coappRelation,
                     monthlyIncome: editForm.coappIncome,
+                    aadharNumber: editForm.coappAadhar,
+                    panNumber: editForm.coappPan,
                 },
 
                 academic: {
-                    ...userData?.academic,
+                    ...(parsedAcademic || {}),
                     ssc: { institute: editForm.sscSchool, percentage: editForm.sscScore },
                     hsc: { institute: editForm.hscCollege, percentage: editForm.hscScore },
                     ug: { institute: editForm.ugCollege, percentage: editForm.ugScore },
@@ -387,8 +457,8 @@ export default function ProfileTab() {
                                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Personal Details</h3>
                             </div>
 
-                            {/* Row 1: Email and Phone */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-2">
+                            {/* Row 1: Email, Phone, and Target University */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-2">
                                 <div>
                                     <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Email Address</span>
                                     <span className="text-sm font-semibold text-slate-800 lowercase break-all">{getDisplayValue(userData.email)}</span>
@@ -396,6 +466,22 @@ export default function ProfileTab() {
                                 <div>
                                     <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Phone Number</span>
                                     <span className="text-sm font-semibold text-slate-800">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Target University</span>
+                                    <span className="text-sm font-semibold text-slate-800">
+                                        {getDisplayValue(
+                                            userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.universityName ||
+                                            userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.university ||
+                                            userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.targetUniversity ||
+                                            userData?.targetUniversity ||
+                                            userData?.universityName ||
+                                            userData?.university ||
+                                            userData?.academic?.universityName ||
+                                            userData?.academic?.targetUniversity,
+                                            "Pending"
+                                        )}
+                                    </span>
                                 </div>
                             </div>
 
@@ -899,13 +985,23 @@ export default function ProfileTab() {
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white"
                                             />
                                         </div>
-                                        <div className="sm:col-span-2">
+                                        <div>
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Destination Country</label>
                                             <input
                                                 type="text"
                                                 value={editForm.studyDestination}
                                                 onChange={(e) => setEditForm(prev => ({ ...prev, studyDestination: e.target.value }))}
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target University</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.targetUniversity}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, targetUniversity: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                                                placeholder="e.g. Harvard University"
                                             />
                                         </div>
                                     </div>

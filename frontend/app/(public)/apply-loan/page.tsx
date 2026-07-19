@@ -3,11 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { applicationApi, authApi, aiApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
 import { getAllCountries } from "@/lib/countriesData";
-import { universities as staticUniversities, searchMasterUniversities } from "@/lib/universityData";
+import { applicationApi, authApi, aiApi } from "@/lib/api";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -116,6 +115,7 @@ export default function ApplyLoanPage() {
     const [suggestedUniversities, setSuggestedUniversities] = useState<any[]>([]);
     const [loadingUniversities, setLoadingUniversities] = useState(false);
     const [showUniversitySuggestions, setShowUniversitySuggestions] = useState(false);
+    const [countryAiLoaded, setCountryAiLoaded] = useState<string>(""); // tracks which country AI has been fetched for
 
     // Pre-fill personal info from user profile and URL params
     useEffect(() => {
@@ -203,105 +203,87 @@ export default function ApplyLoanPage() {
         }
     };
 
-    const getStaticUniversitiesForCountry = (country: string, query?: string) => {
-        const results = searchMasterUniversities(query || "", country);
-        return results.map((uni) => ({
-            name: uni.name,
-            loc: uni.loc || uni.country,
-            country: uni.country,
-            slug: uni.slug || uni.name.toLowerCase().replace(/\s+/g, '-'),
-        })).slice(0, 15);
-    };
-
-    // Fetch popular universities for the selected country using master dataset + AI
-    useEffect(() => {
-        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
-        if (!selectedCountry || selectedCountry.trim().length < 2) {
-            setSuggestedUniversities([]);
-            return;
-        }
-
-        const staticSuggestions = getStaticUniversitiesForCountry(selectedCountry, formData.university);
-        if (staticSuggestions.length > 0) {
-            setSuggestedUniversities(staticSuggestions);
-        }
-
-        const fetchUnis = async () => {
-            setLoadingUniversities(true);
-            try {
-                const res = await aiApi.aiSearch({
-                    type: "university",
-                    query: formData.university || "",
-                    country: selectedCountry
-                }) as any;
-
-                const universities = res?.universities || res?.results || [];
-                if (universities.length > 0) {
-                    // Combine AI results with static master matches
-                    const combined = [...staticSuggestions];
-                    universities.forEach((u: any) => {
-                        if (!combined.some(c => c.name.toLowerCase() === u.name.toLowerCase())) {
-                            combined.push(u);
-                        }
-                    });
-                    setSuggestedUniversities(combined);
-                } else if (staticSuggestions.length > 0) {
-                    setSuggestedUniversities(staticSuggestions);
-                }
-            } catch (err) {
-                console.error("Failed to fetch universities via AI", err);
-                if (staticSuggestions.length > 0) {
-                    setSuggestedUniversities(staticSuggestions);
-                }
-            } finally {
-                setLoadingUniversities(false);
-            }
-        };
-
-        fetchUnis();
-    }, [formData.country, formData.otherCountry]);
-
-    // Real-time Search universities when typing in the input field
+    // Fetch and search universities for the selected country purely using AI
     useEffect(() => {
         const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
         const queryText = (formData.university || "").trim();
 
-        // Always update master local suggestions immediately while typing
-        const masterMatches = getStaticUniversitiesForCountry(selectedCountry, queryText);
-        setSuggestedUniversities(masterMatches);
-
-        if (!selectedCountry || queryText.length < 2) {
+        // Clear suggestions if neither country nor query text are present
+        if (!selectedCountry && !queryText) {
+            setSuggestedUniversities([]);
             return;
         }
 
+        // Wait until at least 2 characters if typing a query
+        if (queryText.length > 0 && queryText.length < 2) {
+            return;
+        }
+
+        let active = true;
+        // When country changes with no university typed, fetch AI universities immediately (0ms delay)
+        // When user is typing, use 300ms debounce
+        const delay = queryText.length === 0 ? 0 : 300;
         const delayDebounceFn = setTimeout(async () => {
             setLoadingUniversities(true);
             try {
                 const res = await aiApi.aiSearch({
                     type: "university",
                     query: queryText,
-                    country: selectedCountry
+                    country: selectedCountry || ""
                 }) as any;
 
+                if (!active) return;
+
                 const aiUnis = res?.universities || res?.results || [];
-                if (aiUnis.length > 0) {
-                    const merged = [...masterMatches];
-                    aiUnis.forEach((u: any) => {
-                        if (!merged.some(m => m.name.toLowerCase() === u.name.toLowerCase())) {
-                            merged.push(u);
-                        }
-                    });
-                    setSuggestedUniversities(merged);
+                const formatted: any[] = [];
+
+                aiUnis.forEach((u: any) => {
+                    let uniName = "";
+                    let uniLoc = "";
+                    let uniCountry = "";
+                    if (typeof u === "string") {
+                        uniName = u;
+                    } else if (u && typeof u === "object") {
+                        uniName = u.name || u.university || "";
+                        uniLoc = u.loc || u.location || "";
+                        uniCountry = u.country || "";
+                    }
+
+                    if (uniName && !formatted.some(m => m.name.toLowerCase() === uniName.toLowerCase())) {
+                        formatted.push({
+                            name: uniName,
+                            loc: uniLoc || uniCountry || selectedCountry || "Global",
+                            country: uniCountry || selectedCountry || "",
+                            slug: uniName.toLowerCase().replace(/\s+/g, '-')
+                        });
+                    }
+                });
+
+                setSuggestedUniversities(formatted);
+                if (!queryText && selectedCountry) {
+                    setCountryAiLoaded(selectedCountry);
                 }
             } catch (err) {
                 console.error("Failed to query universities via AI", err);
             } finally {
-                setLoadingUniversities(false);
+                if (active) setLoadingUniversities(false);
             }
-        }, 300);
+        }, delay);
 
-        return () => clearTimeout(delayDebounceFn);
+        return () => {
+            active = false;
+            clearTimeout(delayDebounceFn);
+        };
     }, [formData.university, formData.country, formData.otherCountry]);
+
+    // When destination country changes, auto-show the university suggestions dropdown
+    useEffect(() => {
+        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+        if (selectedCountry && !formData.university) {
+            // Auto-open the university suggestions so user sees country-specific options immediately
+            setShowUniversitySuggestions(true);
+        }
+    }, [formData.country, formData.otherCountry]);
 
     const amountLakhs = (() => {
         if (!formData.amount) return 40;
@@ -501,6 +483,8 @@ export default function ApplyLoanPage() {
                         dateOfBirth: formData.dateOfBirth, // Custom DatePicker already returns DD-MM-YYYY
                         intakeSeason: formData.intakeSeason,
                         pincode: formData.pincode,
+                        targetUniversity: formData.university,
+                        studyDestination: formData.country === "Other" ? formData.otherCountry : formData.country,
                     });
                     await refreshUser();
                 } catch (err) {
@@ -654,21 +638,30 @@ export default function ApplyLoanPage() {
                                         if (v !== "Other") {
                                             update("otherCountry", "");
                                         }
+                                        // Clear previous university and auto-show suggestions for new country
+                                        update("university", "");
+                                        setCountryAiLoaded("");
+                                        setSuggestedUniversities([]);
+                                        setShowUniversitySuggestions(true);
                                     }}
                                         options={popularCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
                                     {formData.country === "Other" && (
                                         <div className="md:col-span-2">
-                                            <SearchableSelectField label="Specify Destination Country" icon="public" value={formData.otherCountry} onChange={(v) => update("otherCountry", v)}
+                                            <SearchableSelectField label="Specify Destination Country" icon="public" value={formData.otherCountry} onChange={(v) => {
+                                                update("otherCountry", v);
+                                                // Clear previous university and auto-show suggestions for new country
+                                                update("university", "");
+                                                setCountryAiLoaded("");
+                                                setSuggestedUniversities([]);
+                                                setShowUniversitySuggestions(true);
+                                            }}
                                                 options={allCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.otherCountry} placeholder="Search countries..." />
                                         </div>
                                     )}
                                 </div>
 
                                 <div className="space-y-8">
-                                    <div className="relative" onFocus={() => setShowUniversitySuggestions(true)} onBlur={() => {
-                                        // Delay hiding suggestions so that click events on the suggestion items can register
-                                        setTimeout(() => setShowUniversitySuggestions(false), 200);
-                                    }}>
+                                    <div className="relative">
                                         <InputField
                                             label="Full University Name"
                                             icon="domain"
@@ -676,12 +669,18 @@ export default function ApplyLoanPage() {
                                             onChange={(v) => update("university", v.replace(/\d/g, ""))}
                                             placeholder="e.g. University of Toronto"
                                             error={stepErrors.university}
+                                            onFocus={() => setShowUniversitySuggestions(true)}
+                                            onBlur={() => {
+                                                // Delay hiding suggestions so that click events on the suggestion items can register
+                                                setTimeout(() => setShowUniversitySuggestions(false), 200);
+                                            }}
                                         />
 
                                         {/* Loading Indicator */}
                                         {loadingUniversities && (
                                             <div className="absolute right-4 top-[50px] flex items-center gap-1.5 text-xs text-[#6605c7] font-bold select-none">
                                                 <div className="w-3.5 h-3.5 border-2 border-[#6605c7] border-t-transparent rounded-full animate-spin" />
+                                                <span className="text-[10px] font-black uppercase tracking-wider">AI Searching...</span>
                                             </div>
                                         )}
 
@@ -709,10 +708,24 @@ export default function ApplyLoanPage() {
                                                     }
                                                 }
 
-                                                if (filtered.length === 0) return null;
+                                                if (filtered.length === 0 && !loadingUniversities) return null;
 
                                                 return (
-                                                    <div className="absolute z-40 left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-purple-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-gray-150/10 animate-fade-in">
+                                                    <div className="absolute z-40 left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-purple-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto divide-y divide-gray-100/50 animate-fade-in">
+                                                        {/* AI-Powered Header */}
+                                                        <div className="px-5 py-3 flex items-center justify-between bg-gradient-to-r from-purple-50/80 to-indigo-50/50 rounded-t-2xl border-b border-purple-100/50">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[#6605c7] text-sm">auto_awesome</span>
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7]">AI-Powered Suggestions</span>
+                                                                {selectedCountry && <span className="text-[10px] font-bold text-gray-400">for {selectedCountry}</span>}
+                                                            </div>
+                                                            {loadingUniversities && (
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <div className="w-3 h-3 border-2 border-[#6605c7] border-t-transparent rounded-full animate-spin" />
+                                                                    <span className="text-[9px] text-[#6605c7] font-black uppercase">Loading</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         {filtered.map((uni, idx) => (
                                                             <button
                                                                 key={`${uni.name}-${idx}`}
@@ -724,13 +737,36 @@ export default function ApplyLoanPage() {
                                                                 }}
                                                                 className="w-full px-5 py-3.5 text-left text-xs font-bold text-gray-700 hover:text-[#6605c7] hover:bg-purple-50/50 transition-all flex items-center justify-between group"
                                                             >
-                                                                <div className="flex flex-col gap-0.5">
-                                                                    <span className="text-[13px] font-black text-gray-900 group-hover:text-[#6605c7]">{uni.name}</span>
-                                                                    <span className="text-[10px] text-gray-400 font-medium">{uni.loc || uni.country || "Target University"}</span>
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-7 h-7 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0">
+                                                                        <span className="material-symbols-outlined text-[#6605c7] text-sm">school</span>
+                                                                    </div>
+                                                                    <div className="flex flex-col gap-0.5">
+                                                                        <span className="text-[13px] font-black text-gray-900 group-hover:text-[#6605c7]">{uni.name}</span>
+                                                                        <span className="text-[10px] text-gray-400 font-medium">{uni.loc || uni.country || "Target University"}</span>
+                                                                    </div>
                                                                 </div>
                                                                 <span className="material-symbols-outlined text-[#6605c7] text-sm opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
                                                             </button>
                                                         ))}
+                                                        {filtered.length === 0 && loadingUniversities && (
+                                                            <div className="px-5 py-4 space-y-3">
+                                                                {[1,2,3,4,5].map(i => (
+                                                                    <div key={i} className="flex items-center gap-3 animate-pulse">
+                                                                        <div className="w-7 h-7 rounded-xl bg-purple-100/70 shrink-0" />
+                                                                        <div className="flex-1 space-y-1.5">
+                                                                            <div className="h-3 bg-gray-200/80 rounded-full" style={{ width: `${60 + i * 8}%` }} />
+                                                                            <div className="h-2 bg-gray-100/80 rounded-full w-1/3" />
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {filtered.length === 0 && !loadingUniversities && (
+                                                            <div className="px-5 py-6 text-center text-gray-400 text-xs font-bold">
+                                                                No matching universities found. Please try another name or check your spelling.
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             })()
@@ -1120,9 +1156,10 @@ export default function ApplyLoanPage() {
     );
 }
 
-function InputField({ label, icon, value, onChange, placeholder, type = "text", error, required }: {
+function InputField({ label, icon, value, onChange, placeholder, type = "text", error, required, onFocus, onBlur }: {
     label: string; icon?: string; value: string; onChange: (v: string) => void;
     placeholder?: string; type?: string; error?: string; required?: boolean;
+    onFocus?: () => void; onBlur?: () => void;
 }) {
     return (
         <div className="space-y-3">
@@ -1139,6 +1176,8 @@ function InputField({ label, icon, value, onChange, placeholder, type = "text", 
                     type={type}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
                     placeholder={placeholder}
                     className={`w-full ${icon ? 'pl-12' : 'px-6'} pr-6 py-4 bg-white/70 border rounded-2xl shadow-sm transition-all outline-none text-sm font-bold text-gray-900 focus:bg-white placeholder:text-gray-400 ${error ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#6605c7]/50 focus:ring-4 focus:ring-purple-100 hover:border-gray-300"}`}
                 />

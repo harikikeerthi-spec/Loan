@@ -52,42 +52,42 @@ const formatRelativeTime = (dateStr: string) => {
 
 const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...props }: any) => {
     let colorScheme = {
-        iconBg: 'bg-slate-50',
-        iconText: 'text-slate-600',
-        valueText: 'text-slate-900',
-        trendBg: 'bg-slate-50',
-        trendText: 'text-slate-500'
+        iconBg: 'bg-[#4F46E5]/10',
+        iconText: 'text-[#4F46E5]',
+        valueText: 'text-[#0A2540]',
+        trendBg: 'bg-slate-100/80',
+        trendText: 'text-slate-600'
     };
 
     if (color?.includes('blue')) {
-        colorScheme = { iconBg: 'bg-blue-50', iconText: 'text-blue-500', valueText: 'text-slate-900', trendBg: 'bg-slate-50', trendText: 'text-slate-500' };
+        colorScheme = { iconBg: 'bg-blue-50/80 border border-blue-100', iconText: 'text-blue-600', valueText: 'text-[#0A2540]', trendBg: 'bg-blue-50/60', trendText: 'text-blue-700' };
     } else if (color?.includes('amber')) {
-        colorScheme = { iconBg: 'bg-amber-50', iconText: 'text-amber-500', valueText: 'text-slate-900', trendBg: 'bg-amber-50/50', trendText: 'text-amber-700' };
+        colorScheme = { iconBg: 'bg-amber-50/80 border border-amber-100', iconText: 'text-amber-600', valueText: 'text-[#0A2540]', trendBg: 'bg-amber-50/80', trendText: 'text-amber-700' };
     } else if (color?.includes('green') || color?.includes('emerald')) {
-        colorScheme = { iconBg: 'bg-emerald-50', iconText: 'text-emerald-500', valueText: 'text-slate-900', trendBg: 'bg-emerald-50/50', trendText: 'text-emerald-700' };
+        colorScheme = { iconBg: 'bg-emerald-50/80 border border-emerald-100', iconText: 'text-emerald-600', valueText: 'text-[#0A2540]', trendBg: 'bg-emerald-50/80', trendText: 'text-emerald-700' };
     } else if (color?.includes('purple') || color?.includes('indigo')) {
-        colorScheme = { iconBg: 'bg-purple-50', iconText: 'text-purple-500', valueText: 'text-slate-900', trendBg: 'bg-slate-50', trendText: 'text-slate-500' };
+        colorScheme = { iconBg: 'bg-indigo-50/80 border border-indigo-100', iconText: 'text-[#4F46E5]', valueText: 'text-[#0A2540]', trendBg: 'bg-indigo-50/60', trendText: 'text-[#4F46E5]' };
     }
 
     return (
-        <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group hover:border-indigo-200 flex flex-col justify-between min-h-[140px]">
+        <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group hover:border-[#4F46E5]/40 flex flex-col justify-between min-h-[140px]">
             {color?.includes('amber') && (
-                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
             )}
 
             <div className="flex justify-between items-start mb-2 relative z-10">
-                <span className="text-slate-500 text-[11px] font-semibold uppercase tracking-wider">{label}</span>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorScheme.iconBg} ${colorScheme.iconText}`}>
-                    <span className="material-symbols-outlined text-[16px]">{icon}</span>
+                <span className="text-slate-500 text-[11px] font-bold uppercase tracking-wider font-sans">{label}</span>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${colorScheme.iconBg} ${colorScheme.iconText} shadow-xs`}>
+                    <span className="material-symbols-outlined text-[18px]">{icon}</span>
                 </div>
             </div>
 
             <div className="mt-1 mb-3 relative z-10 flex items-center gap-3">
-                <div className={`staff-dashboard-number text-[42px] font-bold tracking-normal leading-none ${colorScheme.valueText}`}>
-                    {loading ? <span className="h-10 bg-slate-100 animate-pulse rounded block w-20" /> : value ?? "—"}
+                <div className={`text-[36px] font-extrabold tracking-tight leading-none ${colorScheme.valueText}`}>
+                    {loading ? <span className="h-9 bg-slate-100 animate-pulse rounded-lg block w-20" /> : value ?? "—"}
                 </div>
                 {badge && !loading && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-50 border border-amber-100/50">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200">
                         <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                         <span className="text-[10px] font-bold text-amber-700">{badge}</span>
                     </div>
@@ -97,9 +97,9 @@ const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...p
             <div className="mt-auto relative z-10 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                     {trend !== undefined && !loading && (
-                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${colorScheme.trendBg} ${colorScheme.trendText}`}>
+                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${colorScheme.trendBg} ${colorScheme.trendText}`}>
                             {typeof trend === 'string' && (trend.includes('⏳') || trend.includes('📈')) ? null : (
-                                <span className="material-symbols-outlined text-[12px]">
+                                <span className="material-symbols-outlined text-[13px]">
                                     {Number(trend) >= 0 ? 'trending_up' : 'trending_down'}
                                 </span>
                             )}
@@ -107,13 +107,13 @@ const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...p
                         </div>
                     )}
                     {hint && !loading && (
-                        <span className="text-[10px] font-medium text-slate-400 border-l border-slate-200 pl-2 ml-1">
+                        <span className="text-[10px] font-semibold text-slate-400 border-l border-slate-200 pl-2 ml-1">
                             {hint}
                         </span>
                     )}
                 </div>
                 {props.footerAction && !loading && (
-                    <button onClick={props.onFooterActionClick} className="text-[10px] font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                    <button onClick={props.onFooterActionClick} className="text-[10px] font-bold text-slate-500 hover:text-[#4F46E5] transition-colors flex items-center gap-1">
                         {props.footerAction}
                     </button>
                 )}
@@ -148,28 +148,16 @@ export default function StaffDashboardPage() {
             const [blogStats, appStats, userStats, todayRes]: [any, any, any, any] = await Promise.all([
                 adminApi.getBlogStats().catch(() => ({ data: {} })),
                 adminApi.getApplicationStats().catch(() => ({ data: {} })),
-                adminApi.getUsers().catch(() => ({ data: [], total: 0 })),
-                staffProfileApi.getTodayDashboard().catch(() => null)
+                adminApi.getUserStats().catch(() => ({ data: {} })),
+                staffProfileApi.getTodayDashboard().catch(() => ({ data: {} })),
             ]);
-
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const joinedToday = userStats.data?.filter((u: any) => u.createdAt && new Date(u.createdAt) >= today).length || 0;
 
             setStats({
                 blogs: blogStats.data || {},
                 apps: appStats.data || {},
-                users: {
-                    total: userStats.total || userStats.data?.length || 0,
-                    joinedToday
-                }
+                users: userStats.data || {},
             });
-
-            if (todayRes && todayRes.success) {
-                setTodayStats(todayRes.data);
-            } else if (todayRes) {
-                setTodayStats(todayRes);
-            }
+            setTodayStats(todayRes?.data || todayRes || {});
         } catch (e) {
             console.error(e);
         } finally {
@@ -228,25 +216,24 @@ export default function StaffDashboardPage() {
                 <>
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Operational Overview</h2>
-                            <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                            <h2 className="text-2xl font-bold text-[#0A2540] tracking-tight">Operational Overview</h2>
+                            <p className="text-slate-500 text-[11px] mt-1 font-semibold flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[15px] text-[#4F46E5]">calendar_today</span>
                                 Synced: {format(new Date(), 'MMM do, yyyy')}
                             </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2.5">
                             <button
                                 onClick={() => { loadOverview(); setLastRefresh(new Date()); }}
-                                className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-sm"
+                                className="px-3.5 py-2 rounded-xl bg-white border border-slate-200/80 text-slate-700 font-bold text-[11px] hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                             >
-                                <span className="material-symbols-outlined text-[14px]">refresh</span>
-
+                                <span className="material-symbols-outlined text-[15px]">refresh</span>
                             </button>
-                            <button onClick={() => router.push("/staff/onboarding")} className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-1.5 shadow-sm">
-                                <span className="material-symbols-outlined text-[16px]">person_add</span> Add Student
+                            <button onClick={() => router.push("/staff/onboarding")} className="px-4 py-2 rounded-xl bg-white border border-slate-200/80 text-slate-700 font-bold text-[11px] hover:bg-slate-50 hover:text-[#0A2540] transition-all flex items-center gap-2 shadow-xs cursor-pointer">
+                                <span className="material-symbols-outlined text-[17px] text-[#4F46E5]">person_add</span> Add Student
                             </button>
-                            <button onClick={() => router.push("/staff/tasks")} className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-1.5 shadow-sm">
-                                <span className="material-symbols-outlined text-[16px]">calendar_month</span> View Calendar
+                            <button onClick={() => router.push("/staff/tasks")} className="px-4 py-2 rounded-xl bg-[#0A2540] hover:bg-[#081d33] text-white font-bold text-[11px] transition-all flex items-center gap-2 shadow-md shadow-[#0A2540]/10 cursor-pointer">
+                                <span className="material-symbols-outlined text-[17px]">calendar_month</span> View Calendar
                             </button>
                         </div>
                     </div>
@@ -287,36 +274,35 @@ export default function StaffDashboardPage() {
                             color="text-purple-600"
                             loading={loading}
                             hint={`${stats.users?.joinedToday || 0} joined today`}
-                            // footerAction="View List ➔"
                             onFooterActionClick={(e: any) => { e.stopPropagation(); router.push('/staff/users'); }}
                         />
                     </div>
 
                     {/* Today's Focus Areas */}
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                        <h3 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                        <h3 className="text-[11px] font-bold text-[#0A2540] uppercase tracking-wider flex items-center gap-2">
                             <span className="material-symbols-outlined text-rose-500 text-[18px] animate-pulse">campaign</span>
-                            Today's Operational Summary (F29)
+                            Today's Operational Summary
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <div className="p-4 rounded-xl border border-rose-100 bg-rose-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
-                                <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Urgent Cases</span>
+                            <div className="p-4 rounded-2xl border border-rose-100 bg-rose-50/40 flex flex-col justify-between min-h-[95px] hover:shadow-xs transition-all">
+                                <span className="text-[10px] font-extrabold text-rose-700 uppercase tracking-wider">Urgent Cases</span>
                                 <span className="text-2xl font-black text-rose-700 mt-2">{todayStats?.urgent?.count ?? 0}</span>
                             </div>
-                            <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
-                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">New Admissions (24h)</span>
+                            <div className="p-4 rounded-2xl border border-blue-100 bg-blue-50/40 flex flex-col justify-between min-h-[95px] hover:shadow-xs transition-all">
+                                <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider">New Admissions (24h)</span>
                                 <span className="text-2xl font-black text-blue-700 mt-2">{todayStats?.newFiles?.count ?? 0}</span>
                             </div>
-                            <div className="p-4 rounded-xl border border-amber-100 bg-amber-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
-                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Responded Queries</span>
+                            <div className="p-4 rounded-2xl border border-amber-100 bg-amber-50/40 flex flex-col justify-between min-h-[95px] hover:shadow-xs transition-all">
+                                <span className="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider">Responded Queries</span>
                                 <span className="text-2xl font-black text-amber-700 mt-2">{todayStats?.respondedQueries?.count ?? 0}</span>
                             </div>
-                            <div className="p-4 rounded-xl border border-purple-100 bg-purple-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
-                                <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Pending Decisions</span>
+                            <div className="p-4 rounded-2xl border border-purple-100 bg-purple-50/40 flex flex-col justify-between min-h-[95px] hover:shadow-xs transition-all">
+                                <span className="text-[10px] font-extrabold text-purple-700 uppercase tracking-wider">Pending Decisions</span>
                                 <span className="text-2xl font-black text-purple-700 mt-2">{todayStats?.pendingDecisions?.count ?? 0}</span>
                             </div>
-                            <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
-                                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Pending Disb.</span>
+                            <div className="p-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 flex flex-col justify-between min-h-[95px] hover:shadow-xs transition-all">
+                                <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider">Pending Disb.</span>
                                 <span className="text-2xl font-black text-emerald-700 mt-2">{todayStats?.pendingDisbursements?.count ?? 0}</span>
                             </div>
                         </div>

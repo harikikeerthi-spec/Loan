@@ -62,25 +62,51 @@ export async function fetchUniversityData(body: ReqBody) {
     
     Respond ONLY with valid JSON array of strings.`;
   } else {
-    prompt = `Return a list of up to 15 real, well-known universities for ${course || 'Higher Education'} in ${country}. 
-    User Profile: ${bachelors} degree, GPA ${gpa}, Target: ${target_university}.
-    
-    For each real university include ALL of these exact fields:
-    - name: full official name of the university
-    - loc: city, country (e.g. "Cambridge, United Kingdom")
-    - country: country name
-    - rank: global QS ranking (integer)
-    - accept: acceptance rate percentage (integer)
-    - tuition: annual tuition in USD (integer)
-    - min_gpa: minimum GPA required (float, scale 0-10)
-    - min_ielts: minimum IELTS score required (float)
-    - min_toefl: minimum TOEFL iBT score required (integer)
-    - courses: array of offered master's programs relevant to ${course || 'various fields'}
-    - loan: true (boolean, as education loans are available)
-    - slug: url-friendly name
-    - website: official university URL
-    
-    Return ONLY a JSON object with a "universities" key containing the array.`;
+    // When the user has typed a specific university name, do a targeted name-match search.
+    // When no query is provided, return a broad list of popular universities for the country.
+    if (query && query.trim().length > 0) {
+      prompt = `You are a university database. The user is searching for a university named: "${query}".
+      Country context: ${country || 'any country'}.
+
+      TASK: Return up to 25 REAL universities whose name contains or closely matches "${query}".
+      IMPORTANT: "${query}" itself MUST appear as the FIRST result if it is a real university. Include it even if it is not globally famous.
+      Also include other universities with similar names (e.g. if query is "University of Dayton", include "University of Dayton" first, then other universities with "Dayton" in the name).
+      
+      Include ALL real universities — not just top-ranked ones. Regional, state, and private universities are equally valid.
+      
+      For each university return these exact fields:
+      - name: full official name of the university (MUST be accurate and real)
+      - loc: "City, State/Region" (e.g. "Dayton, Ohio")
+      - country: country name (e.g. "USA")
+      - rank: approximate global QS or US News ranking (integer, use 0 if unranked)
+      - accept: acceptance rate percentage (integer)
+      - tuition: approximate annual tuition in USD (integer)
+      - loan: true
+      - slug: url-friendly name (lowercase, hyphens)
+      - website: official university URL
+      
+      Return ONLY a JSON object: { "universities": [...] }`;
+    } else {
+      prompt = `Return a list of 25 real universities for ${course || 'Higher Education'} in ${country}.
+      Include a diverse mix: top-ranked, mid-tier, and regional universities. Do NOT only list the most famous ones.
+      
+      For each real university include ALL of these exact fields:
+      - name: full official name of the university
+      - loc: city, state/region (e.g. "Dayton, Ohio" or "Toronto, Ontario")
+      - country: country name
+      - rank: global QS ranking (integer, 0 if unranked)
+      - accept: acceptance rate percentage (integer)
+      - tuition: annual tuition in USD (integer)
+      - min_gpa: minimum GPA required (float, scale 0-10)
+      - min_ielts: minimum IELTS score required (float)
+      - min_toefl: minimum TOEFL iBT score required (integer)
+      - courses: array of offered master's programs relevant to ${course || 'various fields'}
+      - loan: true
+      - slug: url-friendly name
+      - website: official university URL
+      
+      Return ONLY a JSON object with a "universities" key containing the array.`;
+    }
   }
 
   try {
@@ -91,7 +117,7 @@ export async function fetchUniversityData(body: ReqBody) {
         'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' }
       })

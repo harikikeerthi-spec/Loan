@@ -48,7 +48,7 @@ export class SupportController {
   }
 
   @Get('tickets')
-  @UseGuards(AdminGuard)
+  @UseGuards(UserGuard)
   @ApiOperation({ summary: 'List all tickets with filters and pagination' })
   getTickets(@Query() query: any, @Request() req: any) {
     return this.supportService.getTickets(query, req.user);

@@ -602,10 +602,11 @@ export default function UserProfileView({
                                 {renderBentoField("Email Address", activeProfile?.email, startPersonalEdit)}
                                 {renderBentoField("Phone Number", activeProfile?.phoneNumber, startPersonalEdit)}
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {renderBentoField("Date of Birth", formatDob(activeProfile?.dateOfBirth), startPersonalEdit)}
                                 {renderBentoField("Nationality", activeProfile?.nationality || "Indian", startPersonalEdit)}
                                 {renderBentoField("Destination Country", activeProfile?.studyDestination, startPersonalEdit)}
+                                {renderBentoField("Target University", activeProfile?.targetUniversity || activeProfile?.universityName, startPersonalEdit)}
                             </div>
                         </div>
                     )}

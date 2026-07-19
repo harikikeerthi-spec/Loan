@@ -5,10 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AgentProvider, useAgent } from "./AgentContext";
 import Link from "next/link";
+import SupportTicketModal from "@/components/SupportTicketModal";
 
 function AgentLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [notificationsOpen, setNotificationsOpen] = React.useState(false);
+    const [isSupportOpen, setIsSupportOpen] = React.useState(false);
     const {
         logout,
         toast,
@@ -33,6 +35,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         { section: "alumni", icon: "diversity_3", label: "Alumni Referrals" },
         { section: "chat-staff", icon: "support_agent", label: "Staff RM Line", badge: unreadChatCount },
         { section: "chat-student", icon: "forum", label: "Student Line" },
+        { section: "support-tickets", icon: "confirmation_number", label: "Support Tickets" },
         { section: "qr-code", icon: "qr_code_2", label: "QR Lead Capture" },
         { section: "tracking-links", icon: "link", label: "Tracking Links" },
         { section: "whatsapp-bot", icon: "chat_bubble", label: "WhatsApp Bot" },
@@ -268,6 +271,15 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                         </div>
                                     </>
                                 )}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSupportOpen(true)}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#6605c7]/10 hover:bg-[#6605c7]/20 text-[#6605c7] rounded-xl text-xs font-bold transition-all border border-[#6605c7]/20 cursor-pointer shadow-2xs"
+                                    title="Raise or track support tickets"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">support_agent</span>
+                                    <span className="hidden sm:inline">Support Ticket</span>
+                                </button>
                             </div>
                         </div>
                     </header>
@@ -280,6 +292,13 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                     </div>
                 </div>
             </main>
+
+            <SupportTicketModal
+                isOpen={isSupportOpen}
+                onClose={() => setIsSupportOpen(false)}
+                userRole="agent"
+                userInfo={{ id: agentProfile?.id, name: agentProfile?.businessName, email: agentProfile?.email }}
+            />
         </div>
     );
 }

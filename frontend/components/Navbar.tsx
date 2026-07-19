@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
+import SupportTicketModal from "@/components/SupportTicketModal";
 
 export default function Navbar() {
     const { user, isAuthenticated, logout } = useAuth();
@@ -14,6 +15,7 @@ export default function Navbar() {
     const [profileOpen, setProfileOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [hasApplied, setHasApplied] = useState(false);
+    const [supportOpen, setSupportOpen] = useState(false);
     const profileRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -283,6 +285,14 @@ export default function Navbar() {
                                             />
                                             <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
                                             <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
+                                            <button
+                                                type="button"
+                                                onClick={() => { setProfileOpen(false); setSupportOpen(true); }}
+                                                className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-purple-50/80 transition-colors text-left border-0 bg-transparent cursor-pointer rounded-xl"
+                                            >
+                                                <span className="material-symbols-outlined text-base text-[#6605c7]">support_agent</span>
+                                                <span>Support Ticket</span>
+                                            </button>
                                             {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
                                                 <ProfileDropItem href="/user-details" icon="info" label="Complete Profile" iconClass="text-yellow-500" />
                                             )}
@@ -290,7 +300,7 @@ export default function Navbar() {
                                         <div className="border-t border-gray-200 p-2">
                                             <button
                                                 onClick={handleLogout}
-                                                className="flex items-center justify-center gap-2 w-full px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors uppercase tracking-wider"
+                                                className="flex items-center justify-center gap-2 w-full px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors uppercase tracking-wider border-0 cursor-pointer"
                                             >
                                                 <span className="material-symbols-outlined text-sm">logout</span>
                                                 Sign Out
@@ -346,6 +356,13 @@ export default function Navbar() {
                     )}
                 </div>
             )}
+
+            <SupportTicketModal
+                isOpen={supportOpen}
+                onClose={() => setSupportOpen(false)}
+                userRole={user?.role || "student"}
+                userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
+            />
         </nav>
     );
 }

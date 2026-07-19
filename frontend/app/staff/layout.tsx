@@ -8,6 +8,7 @@ import Link from "next/link";
 import { adminApi, staffProfileApi, apiFetch } from "@/lib/api";
 import { format } from "date-fns";
 import NotificationsPanel from "@/components/staff/NotificationsPanel";
+import SupportTicketModal from "@/components/SupportTicketModal";
 import { io } from "socket.io-client";
 
 export const StaffLayoutContext = createContext<{
@@ -53,29 +54,28 @@ const NavItem = ({ path, section, active, icon, label, badge, expanded }: any) =
         <Link
             href={path}
             title={label}
-            className={`relative w-full flex items-center gap-3 px-4 transition-all duration-150 group/item ${isActive
-                ? 'text-white'
-                : 'text-slate-500 hover:text-slate-200'
+            className={`relative w-full flex items-center gap-3.5 px-3.5 py-2.5 my-0.5 rounded-xl transition-all duration-200 group/item ${isActive
+                ? 'text-white bg-[#4F46E5]/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                 }`}
-            style={{ height: 44 }}
         >
             {isActive && (
-                <span className="absolute inset-x-1 inset-y-1 rounded-lg bg-indigo-600" />
+                <span className="absolute left-0 top-2 bottom-2 w-1 bg-[#4F46E5] rounded-r-md" />
             )}
             {/* Icon — always visible */}
-            <span className={`material-symbols-outlined text-[24px] relative z-10 flex-shrink-0 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover/item:text-slate-200'
+            <span className={`material-symbols-outlined text-[20px] relative z-10 flex-shrink-0 transition-transform duration-200 ${isActive ? 'text-[#818cf8] scale-110' : 'text-slate-400 group-hover/item:text-white group-hover/item:scale-105'
                 }`}>{icon}</span>
-            {/* Label — hidden at 56px, fades in when parent sidebar is hovered */}
-            <span className={`relative z-10 text-[16px] font-['Playfair_Display',serif] tracking-wider whitespace-nowrap overflow-hidden transition-all duration-300
+            {/* Label */}
+            <span className={`relative z-10 text-[13px] font-sans tracking-wide whitespace-nowrap overflow-hidden transition-all duration-300
                 ${expanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}
-                ${isActive ? 'text-white font-medium' : 'text-slate-300'}`}>
+                ${isActive ? 'text-white font-semibold' : 'text-slate-300 font-medium'}`}>
                 {label}
             </span>
             {badge > 0 && (
-                <span className={`relative z-10 ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full
-                    bg-rose-500 text-white transition-opacity duration-300
+                <span className={`relative z-10 ml-auto text-[9.5px] font-black px-2 py-0.5 rounded-full shadow-sm
+                    bg-[#4F46E5] text-white transition-opacity duration-300
                     ${expanded ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>
-                    {badge > 9 ? '9+' : badge}
+                    {badge > 99 ? '99+' : badge}
                 </span>
             )}
         </Link>
@@ -101,9 +101,10 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
 
-    // WebSocket state (can be used for syncing online presences, badge updates etc.)
+    // WebSocket state
     const socketRef = useRef<any>(null);
     const [onlineEmails, setOnlineEmails] = useState<string[]>([]);
+    const [isSupportOpen, setIsSupportOpen] = useState(false);
 
     // Authentication and authorization checks
     useEffect(() => {
@@ -138,7 +139,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         return "overview";
     }, [pathname]);
 
-    // Fetch dashboard badge counts (incoming, pending pipeline, chat count, tasks count)
+    // Fetch dashboard badge counts
     const fetchBadgeStats = useCallback(async () => {
         if (!token) return;
         try {
@@ -181,7 +182,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     const staffId = user?.id || user?.email || 'default';
                     let count = 0;
 
-                    // Count application follow-ups
                     const followUpKey = `staff_follow_up_dates_${staffId}`;
                     const savedFollowUps = localStorage.getItem(followUpKey);
                     if (savedFollowUps) {
@@ -193,7 +193,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                         }
                     }
 
-                    // Count student follow-ups
                     if (typeof window !== "undefined") {
                         for (let i = 0; i < localStorage.length; i++) {
                             const key = localStorage.key(i);
@@ -221,7 +220,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         } catch (err) {
             console.error("Failed to load badge stats:", err);
         }
-    }, [token, activeSection]);
+    }, [token, activeSection, user?.email, user?.id]);
 
     // Poll badge counts periodically
     useEffect(() => {
@@ -242,7 +241,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
             ? baseApiUrl.replace('/api', '/chat')
             : `${baseApiUrl.replace(/\/$/, '')}/chat`;
 
-        console.log("[StaffLayout] Connecting to WebSocket at", socketUrl);
         const socketInstance = io(socketUrl, {
             auth: { token }
         });
@@ -250,7 +248,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         socketRef.current = socketInstance;
 
         socketInstance.on('connect', () => {
-            console.log('[StaffLayout] Socket connected successfully');
             socketInstance.emit('request_presence');
             fetchBadgeStats();
         });
@@ -303,6 +300,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         overview: 'Dashboard',
         incoming_queue: 'Incoming Queue',
         applications: 'Active Pipeline',
+        inactive_applications: 'Inactive Pipeline',
         tasks: 'Reminders',
         performance: 'Performance',
         users: 'Bank & Staff Members',
@@ -316,11 +314,13 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         { section: "overview", path: "/staff/dashboard", icon: "dashboard", label: "Dashboard", badge: 0 },
         { section: "incoming_queue", path: "/staff/incoming-queue", icon: "move_to_inbox", label: "Incoming Queue", badge: incomingCount },
         { section: "applications", path: "/staff/applications", icon: "description", label: "Active Pipeline", badge: pendingCount },
-        { section: "users", path: "/staff/users", icon: "people", label: "Bank & Staff Members", badge: 0 },
+        { section: "inactive_applications", path: "/staff/inactive-pipeline", icon: "archive", label: "Inactive Pipeline", badge: 0 },
+        { section: "users", path: "/staff/users", icon: "group", label: "Bank & Staff Members", badge: 0 },
         { section: "performance", path: "/staff/performance", icon: "insights", label: "Performance", badge: 0 },
         { section: "tasks", path: "/staff/tasks", icon: "notifications_active", label: "Reminders", badge: remindersCount },
         { section: "communications", path: "/staff/communications", icon: "mail", label: "Outreach Center", badge: 0 },
         { section: "chat_customer", path: "/staff/chat-customer", icon: "support_agent", label: "Support Chat", badge: unreadChatCount },
+        { section: "support_tickets", path: "/staff/support-tickets", icon: "confirmation_number", label: "Support Tickets", badge: 0 },
         { section: "my_profile", path: "/staff/my-profile", icon: "badge", label: "My Profile", badge: 0 },
     ];
 
@@ -333,8 +333,8 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
     if (isLoading) {
         return (
-            <div className="h-screen flex items-center justify-center bg-transparent">
-                <div className="w-12 h-12 border-4 border-[#6605c7]/20 border-t-[#6605c7] rounded-full animate-spin" />
+            <div className="h-screen flex items-center justify-center bg-[#f8fafc]">
+                <div className="w-12 h-12 border-4 border-[#0A2540]/20 border-t-[#4F46E5] rounded-full animate-spin" />
             </div>
         );
     }
@@ -345,32 +345,34 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
     return (
         <StaffLayoutContext.Provider value={contextValue}>
-            <div className="staff-dashboard-shell h-screen overflow-hidden flex bg-white text-slate-900 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <div className="staff-dashboard-shell h-screen overflow-hidden flex bg-[#f8fafc] text-slate-900 text-sm font-sans" style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
                 {/* Mobile overlay */}
                 {sidebarOpen && (
-                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
                 )}
 
-                {/* Sidebar — slim icon rail, expands on hover */}
-                <aside className={`fixed inset-y-0 left-0 z-50 bg-[#0f172a] flex flex-col py-3 gap-1
-                    shadow-2xl border-r border-slate-800/60 group/sidebar
+                {/* Sidebar — Professional Dark Navy Theme */}
+                <aside className={`fixed inset-y-0 left-0 z-50 bg-[#0A2540] flex flex-col py-3 px-2 gap-1
+                    shadow-2xl border-r border-[#1E3A8A]/30 group/sidebar
                     transition-all duration-300 ease-in-out overflow-hidden
                     ${sidebarOpen
-                        ? 'w-[280px] translate-x-0'
-                        : 'w-[68px] lg:translate-x-0 -translate-x-full hover:w-[280px]'
+                        ? 'w-[270px] translate-x-0'
+                        : 'w-[68px] lg:translate-x-0 -translate-x-full hover:w-[270px]'
                     }`}>
 
                     {/* Logo Area */}
-                    <div className="flex flex-col items-center gap-1.5 px-2 mb-6 mt-2 flex-shrink-0">
-                        <img
-                            src="/images/vidyaloans-logo-transparent.png"
-                            alt="VidyaLoans"
-                            className="w-10 h-10 object-contain drop-shadow-md"
-                        />
-                        <span className={`text-[25px] font-bold text-white whitespace-nowrap transition-opacity duration-300 tracking-tight
-                            ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
-                            VidyaLoans
-                        </span>
+                    <div className="flex items-center gap-3 px-2 mb-5 mt-1.5 flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4F46E5] to-[#3730A3] flex items-center justify-center shadow-lg shadow-[#4F46E5]/30 shrink-0">
+                            <span className="material-symbols-outlined text-white text-[22px]">account_balance</span>
+                        </div>
+                        <div className={`transition-all duration-300 whitespace-nowrap ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+                            <span className="text-[18px] font-extrabold text-white tracking-tight block leading-tight">
+                                VidyaLoans
+                            </span>
+                            <span className="text-[9.5px] font-bold text-[#818cf8] uppercase tracking-widest block">
+                                Staff Portal
+                            </span>
+                        </div>
                     </div>
 
                     {/* Nav */}
@@ -381,57 +383,57 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     </nav>
 
                     {/* Avatar + Sign-out at bottom */}
-                    <div className="px-3 mt-2 flex-shrink-0">
-                        <div className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/60 transition-colors cursor-pointer group/profile border border-transparent hover:border-slate-700/50">
+                    <div className="px-1.5 mt-auto pt-3 border-t border-slate-700/40 flex-shrink-0">
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 transition-all cursor-pointer group/profile border border-slate-700/30">
                             <Link href="/staff/my-profile" className="flex items-center gap-3 flex-1 min-w-0" title="View Profile">
                                 <img
                                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
                                     alt="Avatar"
-                                    className="w-8 h-8 rounded-full border border-slate-700 object-cover flex-shrink-0 group-hover/profile:border-indigo-500 transition-colors"
+                                    className="w-8 h-8 rounded-full bg-[#1E3A8A] border border-indigo-400/50 object-cover flex-shrink-0 group-hover/profile:border-indigo-400 transition-colors"
                                 />
                                 <div className={`min-w-0 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
-                                    <p className="text-[13px] font-['Playfair_Display',serif] tracking-wide text-slate-200 truncate leading-tight">{user?.firstName || 'Staff Profile'}</p>
-                                    <p className="text-[10px] text-slate-500 capitalize truncate mt-0.5">{user?.role?.replace('_', ' ')}</p>
+                                    <p className="text-[12px] font-bold text-white truncate leading-tight">{user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Staff Member'}</p>
+                                    <p className="text-[10px] font-medium text-slate-400 capitalize truncate mt-0.5">{user?.role?.replace('_', ' ') || 'Staff'}</p>
                                 </div>
                             </Link>
-                            <button onClick={(e) => { e.stopPropagation(); logout(); }} className={`text-slate-500 hover:text-rose-400 p-1.5 flex-shrink-0 transition-all duration-200 rounded-md hover:bg-rose-500/10 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`} title="Sign Out">
-                                <span className="material-symbols-outlined text-[16px]">logout</span>
+                            <button onClick={(e) => { e.stopPropagation(); logout(); }} className={`text-slate-400 hover:text-rose-400 p-1.5 flex-shrink-0 transition-all duration-200 rounded-lg hover:bg-rose-500/15 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`} title="Sign Out">
+                                <span className="material-symbols-outlined text-[18px]">logout</span>
                             </button>
                         </div>
                     </div>
                 </aside>
 
                 {/* Main Content */}
-                <main className={`flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-[#f8fafc] transition-all duration-300 ${sidebarOpen ? 'lg:pl-[280px]' : 'lg:pl-[68px]'}`}>
-                    {/* Header */}
-                    <header className="h-[56px] bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40 flex-shrink-0">
-                        {/* Left: Breadcrumb + Title */}
+                <main className={`flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-[#f8fafc] transition-all duration-300 ${sidebarOpen ? 'lg:pl-[270px]' : 'lg:pl-[68px]'}`}>
+                    {/* Top Header Navbar */}
+                    <header className="h-[60px] bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 flex items-center justify-between sticky top-0 z-40 flex-shrink-0 shadow-sm">
+                        {/* Left: Section Title */}
                         <div className="flex flex-col justify-center">
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none mb-0.5">VidyaLoans</p>
-                            <h1 className="text-[18px] font-semibold text-slate-800 leading-tight">
+                            <span className="text-[9.5px] font-extrabold text-[#4F46E5] uppercase tracking-widest leading-none mb-1 font-mono">VidyaLoans Enterprise</span>
+                            <h1 className="text-[20px] font-bold text-[#0A2540] tracking-tight leading-tight">
                                 {sectionTitles[activeSection] || activeSection}
                             </h1>
                         </div>
 
-                        {/* Center: Search */}
-                        <div className="relative hidden md:block w-[320px] lg:w-[400px]">
-                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                        {/* Center: Global Search */}
+                        <div className="relative hidden md:block w-[320px] lg:w-[420px]">
+                            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={e => handleGlobalSearch(e.target.value)}
                                 onFocus={() => { if (searchResults.length > 0) setShowSearchSuggestions(true); }}
                                 placeholder="Search email, phone, student ID, application ID..."
-                                className="pl-10 pr-10 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white w-full transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-sm"
+                                className="pl-10 pr-10 py-2 bg-slate-100/70 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] focus:bg-white w-full transition-all text-slate-800 placeholder:text-slate-400 shadow-none focus:shadow-sm"
                             />
                             {isSearching && (
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+                                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-slate-300 border-t-[#4F46E5] rounded-full animate-spin" />
                             )}
                             {showSearchSuggestions && searchResults.length > 0 && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setShowSearchSuggestions(false)} />
-                                    <div className="absolute left-0 mt-2 w-[420px] max-h-[300px] overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1">
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 py-1 border-b border-slate-100">
+                                    <div className="absolute left-0 mt-2 w-[440px] max-h-[320px] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1">
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 py-1.5 border-b border-slate-100">
                                             Found {searchResults.length} Results
                                         </div>
                                         {searchResults.map(app => (
@@ -443,23 +445,23 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                                                     setSearchResults([]);
                                                     router.push(`/staff/users/${app.userId}`);
                                                 }}
-                                                className="p-3 hover:bg-slate-50 rounded-lg flex items-center justify-between cursor-pointer transition-colors group"
+                                                className="p-3 hover:bg-slate-50 rounded-xl flex items-center justify-between cursor-pointer transition-colors group"
                                             >
                                                 <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">{app.firstName} {app.lastName}</p>
+                                                    <p className="text-xs font-bold text-slate-900 group-hover:text-[#4F46E5] truncate">{app.firstName} {app.lastName}</p>
                                                     <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">{app.applicationNumber || app.id} • Student: {app.userId}</p>
-                                                    <p className="text-[9px] text-slate-400 font-medium truncate mt-0.5">{app.email || "—"} • {app.phone || "—"}</p>
+                                                    <p className="text-[9.5px] text-slate-400 font-medium truncate mt-0.5">{app.email || "—"} • {app.phone || "—"}</p>
                                                 </div>
                                                 <div className="text-right flex-shrink-0 ml-3">
                                                     <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${['approved', 'sanctioned', 'disbursed'].includes(app.status?.toLowerCase())
-                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                                         : ['rejected', 'cancelled'].includes(app.status?.toLowerCase())
-                                                            ? 'bg-rose-50 text-rose-700 border border-rose-100'
-                                                            : 'bg-amber-50 text-amber-700 border border-amber-100'
+                                                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                                            : 'bg-amber-50 text-amber-700 border border-amber-200'
                                                         }`}>
                                                         {app.status || 'Draft'}
                                                     </span>
-                                                    <p className="text-[9px] text-slate-400 mt-1 font-bold">₹{(app.amount || 0).toLocaleString('en-IN')}</p>
+                                                    <p className="text-[10px] text-slate-700 mt-1 font-bold">₹{(app.amount || 0).toLocaleString('en-IN')}</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -468,47 +470,68 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                             )}
                         </div>
 
-                        {/* Right: Notifications + User + Logout */}
-                        <div className="flex items-center gap-3">
-                            {/* Real-time Sync Timer */}
-                            <div className="hidden lg:flex items-center gap-4 border-r border-slate-200 pr-4">
-                                <div className="flex items-center gap-1.5 text-[14px] text-black-600 font-bold uppercase tracking-widest font-mono">
-                                    <span>{format(nowTime, 'MMM dd, HH:mm:ss')}</span>
-                                </div>
+                        {/* Right: Notifications + Time + User Profile */}
+                        <div className="flex items-center gap-3.5">
+                            {/* Real-time IST Clock */}
+                            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[11px] font-bold text-[#0A2540] font-mono tracking-tight">
+                                    {format(nowTime, 'MMM dd, HH:mm:ss')}
+                                </span>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsSupportOpen(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4F46E5]/10 hover:bg-[#4F46E5]/20 text-[#4F46E5] rounded-xl text-xs font-bold transition-all border border-[#4F46E5]/20 cursor-pointer shadow-2xs"
+                                title="Raise or track support tickets"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">support_agent</span>
+                                <span className="hidden sm:inline">Support Ticket</span>
+                            </button>
 
                             <NotificationsPanel
                                 staffId={user?.id}
                                 maxDisplay={8}
                                 showUnreadBadge={true}
                             />
+                            
                             <div className="h-5 w-px bg-slate-200" />
-                            <div className="flex items-center gap-2">
+                            
+                            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => router.push('/staff/my-profile')}>
                                 <img
                                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
                                     alt="Avatar"
-                                    className="w-7 h-7 rounded-full bg-slate-200 border border-slate-300 object-cover"
+                                    className="w-8 h-8 rounded-full bg-[#0A2540] border border-indigo-200 object-cover shadow-sm"
                                 />
                                 <div className="hidden sm:flex flex-col">
-                                    <span className="text-[12px] font-semibold text-slate-800 leading-none">{user?.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName[0] + '.' : ''}` : 'Staff'}</span>
-                                    <span className="text-[10px] text-slate-400 capitalize leading-none mt-0.5">{user?.role?.replace('_', ' ') || 'Staff'}</span>
+                                    <span className="text-[12px] font-bold text-[#0A2540] leading-none">{user?.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName[0] + '.' : ''}` : 'Staff'}</span>
+                                    <span className="text-[10px] font-medium text-slate-400 capitalize leading-none mt-0.5">{user?.role?.replace('_', ' ') || 'Staff'}</span>
                                 </div>
                             </div>
+
                             <button
                                 onClick={logout}
                                 title="Sign Out"
-                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border-0 bg-transparent cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-[20px]">logout</span>
                             </button>
                         </div>
                     </header>
 
-                    <div className={`staff-dashboard-body flex-1 ${(activeSection.startsWith('chat_') || activeSection === 'onboarding') ? 'p-0 overflow-hidden' : 'p-6 overflow-y-auto space-y-5 custom-scrollbar'} bg-[#f8fafc]`}>
+                    <div className={`staff-dashboard-body flex-1 ${(activeSection.startsWith('chat_') || activeSection === 'onboarding') ? 'p-0 overflow-hidden' : 'p-6 overflow-y-auto space-y-6 custom-scrollbar'} bg-[#f8fafc]`}>
                         {children}
                     </div>
                 </main>
             </div>
+
+            <SupportTicketModal
+                isOpen={isSupportOpen}
+                onClose={() => setIsSupportOpen(false)}
+                userRole={user?.role || "staff"}
+                userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
+            />
         </StaffLayoutContext.Provider>
     );
 }

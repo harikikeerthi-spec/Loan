@@ -97,9 +97,11 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
         );
     }
 
+    const activeBankAppsCount = (userApplications || []).filter((app: any) => app.status !== "submitted" && app.status !== "draft").length;
+
     const navigationTabs = [
         { id: "profile", label: "Profile Details", path: `/staff/users/${userId}`, icon: "badge" },
-        { id: "applications", label: "Bank Applications", path: `/staff/users/${userId}/applications`, icon: "article", badge: userApplications.length > 0 ? userApplications.length : undefined },
+        { id: "applications", label: "Bank Applications", path: `/staff/users/${userId}/applications`, icon: "article", badge: activeBankAppsCount > 0 ? activeBankAppsCount : undefined },
         { id: "evv", label: "EVV Analysis", path: `/staff/users/${userId}/evv`, icon: "payments" },
         { id: "follow-ups", label: "Follow-ups", path: `/staff/users/${userId}/follow-ups`, icon: "assignment_turned_in" },
         { id: "notes", label: "Internal Notes", path: `/staff/users/${userId}/notes`, icon: "sticky_note_2" },

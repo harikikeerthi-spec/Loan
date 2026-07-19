@@ -218,18 +218,20 @@ export class ApplicationService {
 
     if (error) throw error;
 
-    // Sync target intake and destination to User profile
-    if (userId && (data.intakeSeason || data.country)) {
+    // Sync target intake, destination, and university to User profile
+    const targetUni = data.universityName || data.university || data.targetUniversity;
+    if (userId && (data.intakeSeason || data.country || targetUni)) {
       try {
         await this.db
           .from('User')
           .update({
             ...(data.intakeSeason ? { intakeSeason: data.intakeSeason } : {}),
             ...(data.country ? { studyDestination: data.country } : {}),
+            ...(targetUni ? { targetUniversity: targetUni } : {}),
           })
           .eq('id', userId);
       } catch (err) {
-        console.error('Failed to sync target intake/destination to User profile:', err);
+        console.error('Failed to sync target intake/destination/university to User profile:', err);
       }
     }
 

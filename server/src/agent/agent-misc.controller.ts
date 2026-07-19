@@ -85,14 +85,14 @@ export class AgentMiscController {
     return { success: true, data: message };
   }
 
-  @Get('support/tickets')
+  @Get('agent-scratch/tickets')
   async getTickets(@Req() req: any) {
     const agentId = req.user.id;
     const tickets = readTickets(agentId);
     return { success: true, tickets };
   }
 
-  @Post('support/tickets')
+  @Post('agent-scratch/tickets')
   async createTicket(@Req() req: any, @Body() body: any) {
     const agentId = req.user.id;
     const ticket = addTicket(agentId, {

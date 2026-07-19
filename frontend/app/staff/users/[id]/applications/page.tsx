@@ -277,6 +277,8 @@ export default function ApplicationsTab() {
         }
     };
 
+    const activeBankApps = (userApplications || []).filter((app: any) => app.status !== "submitted" && app.status !== "draft");
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -288,7 +290,7 @@ export default function ApplicationsTab() {
             <div className="flex justify-between items-center bg-white/40 backdrop-blur-md p-4 rounded-2xl border border-white/60">
                 <div>
                     <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Bank Applications</h3>
-                    <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{userApplications.length} active loan channels</p>
+                    <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{activeBankApps.length} active loan channels</p>
                 </div>
                 <button
                     onClick={() => setIsAddAppOpen(true)}
@@ -301,7 +303,7 @@ export default function ApplicationsTab() {
 
             {/* Applications Table Card */}
             <div className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden">
-                {userApplications.length > 0 ? (
+                {activeBankApps.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -312,7 +314,7 @@ export default function ApplicationsTab() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {userApplications.map((app, idx) => {
+                                {activeBankApps.map((app, idx) => {
                                     const statusStyle = app.status === "approved"
                                         ? "bg-emerald-500/8 text-emerald-600 border-emerald-500/20"
                                         : app.status === "rejected"
