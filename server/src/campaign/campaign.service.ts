@@ -144,7 +144,7 @@ export class CampaignService {
 
   async getTargetAudience(filters: any = {}) {
     const queryConditions: any = {
-      role: 'student', // only target students
+      role: { in: ['user', 'student'] }, // target student/regular users (excluding admin, bank, staff)
     };
 
     // If advanced filter object is provided

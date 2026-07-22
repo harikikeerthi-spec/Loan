@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
-import SupportTicketModal from "@/components/SupportTicketModal";
 
 export default function Navbar() {
     const { user, isAuthenticated, logout } = useAuth();
@@ -15,7 +14,6 @@ export default function Navbar() {
     const [profileOpen, setProfileOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [hasApplied, setHasApplied] = useState(false);
-    const [supportOpen, setSupportOpen] = useState(false);
     const profileRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -283,6 +281,7 @@ export default function Navbar() {
                                                 label="Dashboard"
                                                 iconClass="text-[#6605c7]"
                                             />
+                                            <ProfileDropItem href="/support-tickets" icon="confirmation_number" label="Support Tickets" iconClass="text-indigo-500" />
                                             <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
                                             <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
                                             {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
@@ -318,15 +317,16 @@ export default function Navbar() {
                     <button
                         className={`lg:hidden w-9 h-9 rounded-full flex items-center justify-center transition-colors bg-[#190f23]/5 text-[#190f23]`}
                         onClick={() => setMobileOpen((o) => !o)}
+                        aria-label="Toggle menu"
                     >
-                        <span className="material-symbols-outlined">{mobileOpen ? "close" : "menu"}</span>
+                        <span className="material-symbols-outlined text-xl">{mobileOpen ? "close" : "menu"}</span>
                     </button>
                 </div>
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile menu panel */}
             {mobileOpen && (
-                <div className="absolute top-full left-0 w-full bg-white/98 backdrop-blur-xl border-t border-gray-100 p-6 flex flex-col gap-4 lg:hidden shadow-xl">
+                <div className="lg:hidden bg-white border-b border-gray-200 px-4 pt-3 pb-6 flex flex-col gap-2">
                     <MobileLink href="/" label="Home" onClick={() => setMobileOpen(false)} />
                     <MobileLink href="/emi" label="EMI Calculator" onClick={() => setMobileOpen(false)} />
                     <MobileLink href="/compare-loans" label="Compare Loans" onClick={() => setMobileOpen(false)} />
@@ -341,6 +341,7 @@ export default function Navbar() {
                                 label="Dashboard"
                                 onClick={() => setMobileOpen(false)}
                             />
+                            <MobileLink href="/support-tickets" label="Support Tickets" onClick={() => setMobileOpen(false)} />
                             <button onClick={handleLogout} className="text-left text-red-500 font-bold text-sm">Sign Out</button>
                         </>
                     ) : (
@@ -348,13 +349,6 @@ export default function Navbar() {
                     )}
                 </div>
             )}
-
-            <SupportTicketModal
-                isOpen={supportOpen}
-                onClose={() => setSupportOpen(false)}
-                userRole={user?.role || "student"}
-                userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
-            />
         </nav>
     );
 }

@@ -8,6 +8,7 @@ import { authApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
 import { formatPhone, isPhoneValid } from "@/lib/validation";
+import UserSupportTicketsView from "@/components/UserSupportTicketsView";
 
 export default function ProfilePage() {
     const { user, refreshUser } = useAuth();
@@ -379,9 +380,21 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
+                    {/* Support Tickets Section */}
+                    <div className="mt-8">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <UserSupportTicketsView
+                                userRole={user?.role || "student"}
+                                userInfo={{
+                                    id: user?.id,
+                                    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+                                    email: user?.email,
+                                }}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     );
-
 }

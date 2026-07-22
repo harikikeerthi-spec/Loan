@@ -68,9 +68,22 @@ export default function IncomingQueuePage() {
                 bankApi.getDocuments(appId)
             ]);
             if (appRes) {
+                let userObj: any = null;
+                const targetUserId = appRes.userId || appRes.user_id || appRes.applicantId || selectedApp?.userId || selectedApp?.user_id;
+                if (targetUserId) {
+                    try {
+                        const userRes: any = await adminApi.getUserById(targetUserId);
+                        if (userRes && userRes.data) {
+                            userObj = userRes.data;
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch user for application drawer:", e);
+                    }
+                }
                 setSelectedApp((prev: any) => ({
                     ...prev,
                     ...appRes,
+                    user: userObj || prev?.user || appRes?.user,
                     documents: docsRes || [],
                     statusHistory: appRes.statusHistory || []
                 }));
@@ -768,61 +781,122 @@ export default function IncomingQueuePage() {
                                             <div className="grid grid-cols-2 gap-3 text-xs">
                                                 <div>
                                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Full Name</span>
-                                                    <span className="font-semibold text-gray-900">{selectedApp.firstName} {selectedApp.lastName}</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.firstName || selectedApp.user?.firstName || "—"} {selectedApp.lastName || selectedApp.user?.lastName || ""}</span>
                                                 </div>
                                                 <div>
                                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Gender</span>
-                                                    <span className="font-semibold text-gray-900 capitalize">{selectedApp.gender || "—"}</span>
+                                                    <span className="font-semibold text-gray-900 capitalize">{selectedApp.gender || selectedApp.user?.gender || "—"}</span>
                                                 </div>
                                                 <div>
                                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Date of Birth</span>
-                                                    <span className="font-semibold text-gray-900">{selectedApp.dateOfBirth ? format(parseISO(selectedApp.dateOfBirth), "dd MMM yyyy") : "—"}</span>
+                                                    <span className="font-semibold text-gray-900">
+                                                        {(() => {
+                                                            const raw = selectedApp.dateOfBirth || selectedApp.user?.dateOfBirth || selectedApp.dob;
+                                                            if (!raw) return "—";
+                                                            let dobDate: Date | null = null;
+                                                            if (typeof raw === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(raw.trim())) {
+                                                                const [dd, mm, yyyy] = raw.trim().split('-');
+                                                                dobDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                                                            } else if (typeof raw === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(raw.trim())) {
+                                                                const [dd, mm, yyyy] = raw.trim().split('/');
+                                                                dobDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                                                            } else {
+                                                                dobDate = new Date(raw);
+                                                            }
+                                                            if (!dobDate || isNaN(dobDate.getTime())) return "—";
+                                                            return format(dobDate, "dd MMM yyyy");
+                                                        })()}
+                                                    </span>
                                                 </div>
                                                 <div>
                                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Nationality</span>
-                                                    <span className="font-semibold text-gray-900">{selectedApp.nationality || "—"}</span>
+                                                    <span className="font-semibold text-gray-900">
+                                                        {(() => {
+                                                            const raw = selectedApp.nationality || selectedApp.user?.nationality || selectedApp.student?.nationality;
+                                                            if (!raw) return "Indian";
+                                                            if (typeof raw === 'object' && raw !== null) return raw.name || raw.nationality || "Indian";
+                                                            if (typeof raw === 'string') {
+                                                                const trimmed = raw.trim();
+                                                                if (!trimmed) return "Indian";
+                                                                try {
+                                                                    const parsed = JSON.parse(trimmed);
+                                                                    if (typeof parsed === 'object' && parsed !== null) return parsed.name || parsed.nationality || "Indian";
+                                                                } catch { }
+                                                                return trimmed;
+                                                            }
+                                                            return "Indian";
+                                                        })()}
+                                                    </span>
                                                 </div>
                                                 <div className="col-span-2">
                                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Email Address</span>
-                                                    <span className="font-semibold text-gray-900">{selectedApp.email || "—"}</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.email || selectedApp.user?.email || "—"}</span>
                                                 </div>
                                                 <div className="col-span-2">
                                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Phone Number</span>
-                                                    <span className="font-semibold text-gray-900">{selectedApp.phone || "—"}</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.phone || selectedApp.phoneNumber || selectedApp.user?.phoneNumber || selectedApp.user?.mobile || "—"}</span>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* SECTION 3: RESIDENTIAL ADDRESS */}
-                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Residential Address</span>
-                                            <div className="text-xs space-y-2">
-                                                <div>
-                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Full Address</span>
-                                                    <span className="font-semibold text-gray-900 block leading-normal">
-                                                        {selectedApp.address || "—"}
-                                                    </span>
+                                        {(() => {
+                                            const fullAddr = selectedApp.address || selectedApp.permanentAddress || selectedApp.user?.permanentAddress || selectedApp.mailingAddress || "";
+                                            let pincode = selectedApp.pincode || selectedApp.user?.pincode || "";
+                                            let city = selectedApp.city || selectedApp.user?.city || "";
+                                            let state = selectedApp.state || selectedApp.user?.state || "";
+
+                                            if (!pincode && fullAddr) {
+                                                const pinMatch = fullAddr.match(/\b\d{6}\b/);
+                                                if (pinMatch) pincode = pinMatch[0];
+                                            }
+
+                                            if ((!city || !state) && fullAddr) {
+                                                const cleanAddr = fullAddr.replace(/\b\d{6}\b/, '').replace(/,\s*$/, '').trim();
+                                                const parts = cleanAddr.split(',').map((p: string) => p.trim()).filter(Boolean);
+
+                                                if (parts.length >= 2) {
+                                                    if (!state) state = parts[parts.length - 1];
+                                                    if (!city) city = parts[parts.length - 2];
+                                                } else if (parts.length === 1) {
+                                                    if (!city && !state) city = parts[0];
+                                                }
+                                            }
+
+                                            const destCountry = selectedApp.country || selectedApp.studyDestination || selectedApp.countryOfEducation || selectedApp.user?.studyDestination || selectedApp.destinationCountry || "—";
+
+                                            return (
+                                                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Residential Address</span>
+                                                    <div className="text-xs space-y-2">
+                                                        <div>
+                                                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Full Address</span>
+                                                            <span className="font-semibold text-gray-900 block leading-normal">
+                                                                {fullAddr || "—"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">City</span>
+                                                                <span className="font-semibold text-gray-900">{city || "—"}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">State</span>
+                                                                <span className="font-semibold text-gray-900">{state || "—"}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Pincode</span>
+                                                                <span className="font-semibold text-gray-900">{pincode || "—"}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Destination Country</span>
+                                                                <span className="font-semibold text-gray-900">{destCountry}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div>
-                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">City</span>
-                                                        <span className="font-semibold text-gray-900">{selectedApp.city || "—"}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">State</span>
-                                                        <span className="font-semibold text-gray-900">{selectedApp.state || "—"}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Pincode</span>
-                                                        <span className="font-semibold text-gray-900">{selectedApp.pincode || "—"}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Country</span>
-                                                        <span className="font-semibold text-gray-900">{selectedApp.country || "—"}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                            );
+                                        })()}
 
                                         {/* SECTION 4: STUDENT EMPLOYMENT DETAILS */}
                                         <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">

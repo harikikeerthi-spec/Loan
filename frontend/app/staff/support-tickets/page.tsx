@@ -1,19 +1,19 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
 import UserSupportTicketsView from "@/components/UserSupportTicketsView";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function StaffSupportTicketsPage() {
     const { user } = useAuth();
 
     return (
-        <div className="space-y-6">
+        <div className="max-w-[1400px] mx-auto animate-fade-in pb-12">
             <UserSupportTicketsView
-                userRole={user?.role || "staff"}
+                userRole="staff"
                 userInfo={{
                     id: user?.id,
-                    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
-                    email: user?.email,
+                    name: user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Staff Member',
+                    email: user?.email
                 }}
             />
         </div>

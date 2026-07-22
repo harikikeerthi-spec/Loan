@@ -349,7 +349,7 @@ export default function StaffDashboardPage() {
                                     <p className="text-lg font-semibold text-slate-900">{Number(stats.users?.total ?? 0)}</p>
                                     <p className="text-[10px] font-medium text-slate-400 mt-0.5">Users</p>
                                 </div>
-                                <div className="text-center">
+                                <div className="text-center cursor-pointer hover:opacity-80 transition-opacity" onClick={() => router.push('/staff/inactive-pipeline')} title="View Inactive Pipeline">
                                     <p className="text-lg font-semibold text-rose-600">{rejectedCount + Number(stats.apps?.cancelled ?? 0)}</p>
                                     <p className="text-[10px] font-medium text-slate-400 mt-0.5">Rejected</p>
                                 </div>
@@ -359,14 +359,19 @@ export default function StaffDashboardPage() {
                         {/* Activity Feed + Quick Actions */}
                         <div className="space-y-4 flex flex-col">
                             <div className="space-y-1.5">
-                                <button onClick={() => router.push('/staff/chat-customer')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
+                                <button onClick={() => router.push('/staff/chat-customer')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center gap-3 bg-white shadow-sm cursor-pointer">
                                     <span className="material-symbols-outlined text-indigo-500 text-[18px]">forum</span>
                                     <span className="text-[12px] font-semibold text-slate-800">Support Chat</span>
                                     <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                 </button>
-                                <button onClick={() => router.push('/staff/applications')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
+                                <button onClick={() => router.push('/staff/applications')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center gap-3 bg-white shadow-sm cursor-pointer">
                                     <span className="material-symbols-outlined text-emerald-500 text-[18px]">manage_accounts</span>
                                     <span className="text-[12px] font-semibold text-slate-800">Applicant Profiles</span>
+                                    <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
+                                </button>
+                                <button onClick={() => router.push('/staff/inactive-pipeline')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-rose-300 hover:bg-rose-50/30 transition-all flex items-center gap-3 bg-white shadow-sm cursor-pointer">
+                                    <span className="material-symbols-outlined text-rose-500 text-[18px]">archive</span>
+                                    <span className="text-[12px] font-semibold text-slate-800">Inactive Pipeline</span>
                                     <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                 </button>
                             </div>

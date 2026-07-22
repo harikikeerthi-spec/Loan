@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { campaignApi } from '@/lib/api';
 import { format } from 'date-fns';
@@ -524,10 +525,9 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
                     </td>
                     <td className="px-6 py-4 capitalize">{camp.campaignType.replace('_', ' ')}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded border ${
-                        camp.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                        camp.status === 'sending' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-100'
-                      }`}>
+                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded border ${camp.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          camp.status === 'sending' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-100'
+                        }`}>
                         {camp.status}
                       </span>
                     </td>
@@ -557,9 +557,8 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
           </div>
           <div className="flex gap-2">
             {[1, 2].map(step => (
-              <span key={step} className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${
-                wizardStep === step ? 'bg-[#6605c7] text-white border-[#6605c7]' : 'bg-white text-slate-400 border-slate-200'
-              }`}>
+              <span key={step} className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all ${wizardStep === step ? 'bg-[#6605c7] text-white border-[#6605c7]' : 'bg-white text-slate-400 border-slate-200'
+                }`}>
                 {step}
               </span>
             ))}
@@ -573,7 +572,7 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
             <div className="space-y-6">
               <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5 shadow-sm">
                 <h4 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-2">Campaign Parameters</h4>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campaign Name</label>
@@ -657,7 +656,7 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
               {/* Target Audience Filters */}
               <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-sm">
                 <h4 className="text-xs font-black uppercase text-[#6605c7] tracking-wider mb-2">Target Segment Filters</h4>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Destination Country</label>
@@ -783,9 +782,8 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
 
                 {/* Simulated Responsive Email Shell */}
                 <div className="bg-slate-100 rounded-xl border border-slate-200 p-4 min-h-[300px] flex justify-center items-start shadow-inner">
-                  <div className={`bg-white shadow-md rounded-lg overflow-hidden border border-slate-200 transition-all duration-300 w-full ${
-                    previewDevice === 'mobile' ? 'max-w-[340px]' : ''
-                  }`}>
+                  <div className={`bg-white shadow-md rounded-lg overflow-hidden border border-slate-200 transition-all duration-300 w-full ${previewDevice === 'mobile' ? 'max-w-[340px]' : ''
+                    }`}>
                     {emailBody ? (
                       <div
                         className="p-5 overflow-y-auto max-h-[350px] text-xs font-sans"
@@ -910,7 +908,12 @@ export default function CampaignsDashboard({ activeSubmenu, setActiveSubmenu }: 
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold text-slate-700">Matched Recipient List ({selectedStudentIds.length} of {students.length} selected)</span>
-                <div className="flex gap-2 text-[10px] font-bold text-[#6605c7]">
+                <div className="flex gap-2 text-[10px] font-bold text-[#6605c7] items-center">
+                  <button onClick={handleApplyAudienceFilters} disabled={loadingStudents} className="hover:underline flex items-center gap-1">
+                    <span className={`material-symbols-outlined text-xs ${loadingStudents ? 'animate-spin' : ''}`}>refresh</span>
+                    {loadingStudents ? 'Loading...' : 'Refresh List'}
+                  </button>
+                  <span>|</span>
                   <button onClick={() => setSelectedStudentIds(students.map(s => s.id))} className="hover:underline">Select All</button>
                   <span>|</span>
                   <button onClick={() => setSelectedStudentIds([])} className="hover:underline">Deselect All</button>

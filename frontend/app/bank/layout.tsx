@@ -248,11 +248,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
             category: "Collaboration & Operations",
             items: [
                 { icon: "forum", label: "Secure Chat Stream", path: "/bank/chat", badge: chatCount },
+                { icon: "confirmation_number", label: "Support Tickets", path: "/bank/support-tickets" },
                 { icon: "assignment_add", label: "Task Matrix", path: "/bank/tasks" },
                 { icon: "calendar_month", label: "Calendar View", path: "/bank/calendar" },
                 { icon: "folder_shared", label: "Document Vault", path: "/bank/documents" },
                 { icon: "receipt_long", label: "Processing Fees", path: "/bank/fees" },
-                { icon: "confirmation_number", label: "Support Tickets", path: "/bank/support-tickets" },
             ]
         },
         {
@@ -310,21 +310,15 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 onMouseLeave={() => {
                     setHoverExpanded(false);
                 }}
-                className="fixed h-screen z-50 flex flex-col overflow-hidden"
-                style={{
-                    background: '#FFFFFF',
-                    borderRight: '1px solid #E5E7EB',
-                    boxShadow: '4px 0 24px rgba(0, 0, 0, 0.02)'
-                }}
+                className="fixed h-screen z-50 flex flex-col overflow-hidden bg-[#0f172a] text-slate-300 border-r border-slate-800 shadow-xl"
             >
                 {/* Logo Section */}
-                <div className="flex items-center gap-3 px-4 py-4 mb-2">
-                    <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm"
-                        style={{ background: '#0A2540' }}
-                    >
-                        <span className="material-symbols-outlined text-lg">account_balance</span>
-                    </div>
+                <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0 gap-2.5">
+                    <img
+                        src="/images/vidyaloans-logo-transparent.png"
+                        alt="VidyaLoans Logo"
+                        className="w-7 h-7 object-contain flex-shrink-0"
+                    />
                     <AnimatePresence>
                         {isOpened && (
                             <motion.div
@@ -334,22 +328,16 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 transition={{ duration: 0.2 }}
                                 className="flex items-center gap-2 min-w-0 flex-1"
                             >
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-xl font-extrabold text-[#0A2540] leading-none tracking-tight font-sans">
-                                        Vidya<span style={{ color: '#4F46E5' }}>Bank</span>
-                                    </span>
-                                    <span className="text-[9px] font-bold uppercase tracking-[0.2em] mt-1.5 opacity-70 font-sans"
-                                        style={{ color: '#4F46E5' }}>
-                                        Partner Matrix
-                                    </span>
-                                </div>
+                                <span className="font-semibold text-[13px] text-white tracking-wide whitespace-nowrap">
+                                    VidyaLoans<span className="text-indigo-400"> Bank</span>
+                                </span>
                                 {selectedBankKey && bankLogos[selectedBankKey] && (
                                     <>
-                                        <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
+                                        <div className="h-4 w-px bg-slate-700 shrink-0 mx-0.5" />
                                         <img
                                             src={bankLogos[selectedBankKey]}
                                             alt={bankName}
-                                            className="h-8 max-w-[75px] object-contain rounded shrink-0"
+                                            className="h-6 max-w-[60px] object-contain rounded shrink-0 bg-white/10 p-0.5"
                                             title={bankName}
                                         />
                                     </>
@@ -360,18 +348,15 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 </div>
 
                 {/* Nav Section */}
-                <nav className="flex-1 px-3 space-y-6 overflow-y-auto no-scrollbar py-2">
+                <nav className="flex-1 px-2 space-y-4 overflow-y-auto custom-scrollbar py-3">
                     {categorizedNav.map((cat, idx) => (
-                        <div key={idx} className="space-y-2.5">
+                        <div key={idx} className="space-y-1">
                             {isOpened && (
-                                <div className="flex items-center gap-3 px-3 mb-2">
-                                    <p className="text-[8.5px] font-extrabold uppercase tracking-[0.3em] text-gray-400 font-sans">
-                                        {cat.category}
-                                    </p>
-                                    <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent"></div>
+                                <div className="px-3 mb-1 mt-1 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none">
+                                    {cat.category}
                                 </div>
                             )}
-                            <div className="space-y-1.5">
+                            <div className="space-y-0.5">
                                 {cat.items.map((item) => (
                                     <NavItem
                                         key={item.path}
@@ -386,69 +371,32 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 </nav>
 
                 {/* Footer Section */}
-                <div className="mt-auto px-3 pb-4 space-y-2">
-                    <div className="flex gap-1.5">
-                        {/* <button
-                            onClick={() => setCollapsed(!collapsed)}
-                            title="Collapse"
-                            className="flex-1 flex items-center justify-center gap-2 py-2 px-2 rounded-xl text-gray-400 transition-all group"
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
-                        >
-                            <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}>
-                                chevron_left
-                            </span>
-                            {isOpened && <span className="text-[11px] font-semibold tracking-wide">Collapse</span>}
-                        </button> */}
-
-                        <button
-                            onClick={async () => {
-                                await logout();
-                                sessionStorage.removeItem("selectedBank");
-                                router.push('/bank/login');
-                            }}
-                            title="Sign Out"
-                            className="flex-1 flex items-center justify-center gap-2 py-2 px-2 rounded-xl transition-all group"
-                            style={{ color: '#f43f5e' }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(244,63,94,0.06)')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
-                        >
-                            <span className="material-symbols-outlined text-[18px] group-hover:rotate-12 transition-transform">power_settings_new</span>
-                            {isOpened && <span className="text-[11px] font-semibold tracking-wide">Sign Out</span>}
-                        </button>
+                <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex-shrink-0">
+                    <div className="flex items-center gap-3 mb-3 p-1">
+                        <img
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
+                            alt="Avatar"
+                            className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 object-cover flex-shrink-0"
+                        />
+                        {isOpened && (
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[12px] font-medium text-slate-200 truncate">{user.firstName} {user.lastName}</p>
+                                <p className="text-[10px] text-slate-500 capitalize truncate">Bank Auditor</p>
+                            </div>
+                        )}
                     </div>
-
-                    <div
-                        className="flex items-center gap-2.5 p-2 rounded-lg border border-gray-150"
-                        style={{
-                            backgroundColor: '#F8F9FA',
-                            justifyContent: isOpened ? undefined : 'center'
+                    <button
+                        onClick={async () => {
+                            await logout();
+                            sessionStorage.removeItem("selectedBank");
+                            router.push('/bank/login');
                         }}
+                        className="w-full px-3 py-2 rounded bg-slate-800 hover:bg-rose-500/10 hover:text-rose-400 text-slate-300 border border-slate-700 hover:border-rose-500/30 transition-all text-[11px] font-semibold flex items-center justify-center gap-2"
+                        title="Sign Out"
                     >
-                        <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-[10px] shrink-0 shadow-sm"
-                            style={{ background: '#0A2540' }}
-                        >
-                            {user.firstName?.[0]}{user.lastName?.[0]}
-                        </div>
-                        <AnimatePresence>
-                            {isOpened && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="flex-1 min-w-0"
-                                >
-                                    <p className="text-[13px] font-bold text-gray-900 truncate">
-                                        {user.firstName} {user.lastName}
-                                    </p>
-                                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mt-0.5">
-                                        Bank Auditor
-                                    </p>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+                        <span className="material-symbols-outlined text-[16px]">logout</span>
+                        {isOpened && <span>Sign Out</span>}
+                    </button>
                 </div>
             </motion.aside>
 
@@ -568,16 +516,6 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => setIsSupportOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6605c7]/10 hover:bg-[#6605c7]/20 text-[#6605c7] rounded-xl text-xs font-bold transition-all border border-[#6605c7]/20 cursor-pointer shadow-2xs"
-                            title="Raise or track support tickets"
-                        >
-                            <span className="material-symbols-outlined text-[16px]">support_agent</span>
-                            <span className="hidden sm:inline">Support Ticket</span>
-                        </button>
-
                         {/* Real-time Notification Bell (Socket.io live) */}
                         <BankNotificationsPanel showUnreadBadge={true} />
                     </div>
@@ -593,13 +531,6 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     {children}
                 </div>
             </main>
-
-            <SupportTicketModal
-                isOpen={isSupportOpen}
-                onClose={() => setIsSupportOpen(false)}
-                userRole="bank"
-                userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
-            />
 
             {/* Decorative floating orbs */}
             <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">

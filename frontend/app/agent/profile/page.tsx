@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAgent } from "../AgentContext";
 import { agentApi, documentApi } from "@/lib/api";
+import UserSupportTicketsView from "@/components/UserSupportTicketsView";
 
 const KYC_DOC_TYPES = [
     { type: "agent_aadhar", label: "Aadhar Card" },
@@ -16,7 +17,7 @@ export default function AgentProfilePage() {
     const { showToast, setAgentProfile, agentProfile } = useAgent();
     
     // Tab State
-    const [activeTab, setActiveTab] = useState<"details" | "kyc" | "bank" | "agreements" | "notifications">("details");
+    const [activeTab, setActiveTab] = useState<"details" | "kyc" | "bank" | "agreements" | "support" | "notifications">("details");
     
     // Profile Data State
     const [loading, setLoading] = useState(true);
@@ -240,6 +241,7 @@ export default function AgentProfilePage() {
         { id: "kyc" as const, label: "KYC Documents" },
         { id: "bank" as const, label: "Payout Bank Account" },
         { id: "agreements" as const, label: "Partnership Agreements" },
+        { id: "support" as const, label: "Support Tickets" },
         { id: "notifications" as const, label: "Notification Preferences" }
     ];
 
@@ -639,6 +641,20 @@ export default function AgentProfilePage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* Support Tickets Tab */}
+                {activeTab === "support" && (
+                    <div className="p-8 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm">
+                        <UserSupportTicketsView
+                            userRole="agent"
+                            userInfo={{
+                                id: displayProfile?.id,
+                                name: `${displayProfile?.firstName || ''} ${displayProfile?.lastName || ''}`.trim() || displayProfile?.email,
+                                email: displayProfile?.email,
+                            }}
+                        />
                     </div>
                 )}
             </section>

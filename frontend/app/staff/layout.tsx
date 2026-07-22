@@ -48,33 +48,24 @@ const DASHBOARD_SECTIONS = [
 const getDashboardSection = (section: string | null) =>
     DASHBOARD_SECTIONS.includes(section as any) ? section as typeof DASHBOARD_SECTIONS[number] : "overview";
 
-const NavItem = ({ path, section, active, icon, label, badge, expanded }: any) => {
+const NavItem = ({ section, icon, label, badge, active, expanded }: any) => {
     const isActive = active === section;
+    const path = section === 'overview' ? '/staff' : `/staff/${section.replace('_', '-')}`;
     return (
         <Link
             href={path}
             title={label}
-            className={`relative w-full flex items-center gap-3.5 px-3.5 py-2.5 my-0.5 rounded-xl transition-all duration-200 group/item ${isActive
-                ? 'text-white bg-[#4F46E5]/20 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+            className={`w-full text-left px-3 py-1.5 rounded flex items-center gap-3 transition-colors text-xs font-medium ${isActive
+                ? 'bg-indigo-500/10 text-indigo-400 font-medium'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                 }`}
         >
-            {isActive && (
-                <span className="absolute left-0 top-2 bottom-2 w-1 bg-[#4F46E5] rounded-r-md" />
-            )}
-            {/* Icon — always visible */}
-            <span className={`material-symbols-outlined text-[20px] relative z-10 flex-shrink-0 transition-transform duration-200 ${isActive ? 'text-[#818cf8] scale-110' : 'text-slate-400 group-hover/item:text-white group-hover/item:scale-105'
-                }`}>{icon}</span>
-            {/* Label */}
-            <span className={`relative z-10 text-[13px] font-sans tracking-wide whitespace-nowrap overflow-hidden transition-all duration-300
-                ${expanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}
-                ${isActive ? 'text-white font-semibold' : 'text-slate-300 font-medium'}`}>
+            <span className={`material-symbols-outlined text-[16px] flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>{icon}</span>
+            <span className={`flex-1 transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
                 {label}
             </span>
             {badge > 0 && (
-                <span className={`relative z-10 ml-auto text-[9.5px] font-black px-2 py-0.5 rounded-full shadow-sm
-                    bg-[#4F46E5] text-white transition-opacity duration-300
-                    ${expanded ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>
+                <span className={`px-1.5 py-0.5 rounded-sm text-[13px] font-medium transition-opacity duration-200 ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'} ${expanded ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>
                     {badge > 99 ? '99+' : badge}
                 </span>
             )}
@@ -127,6 +118,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
     // Determine active section based on Next.js routing path
     const activeSection = useMemo(() => {
+        if (pathname.includes("/staff/inactive-pipeline")) return "inactive_applications";
         if (pathname.includes("/staff/incoming-queue")) return "incoming_queue";
         if (pathname.includes("/staff/applications")) return "applications";
         if (pathname.includes("/staff/users")) return "users";
@@ -134,9 +126,11 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         if (pathname.includes("/staff/tasks")) return "tasks";
         if (pathname.includes("/staff/communications")) return "communications";
         if (pathname.includes("/staff/chat-customer")) return "chat_customer";
+        if (pathname.includes("/staff/support-tickets")) return "support_tickets";
         if (pathname.includes("/staff/my-profile")) return "my_profile";
         if (pathname.includes("/staff/onboarding")) return "onboarding";
-        return "overview";
+        if (pathname.includes("/staff/dashboard")) return "dashboard";
+        return "dashboard";
     }, [pathname]);
 
     // Fetch dashboard badge counts
@@ -297,6 +291,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     }, []);
 
     const sectionTitles: Record<string, string> = {
+        dashboard: 'Dashboard',
         overview: 'Dashboard',
         incoming_queue: 'Incoming Queue',
         applications: 'Active Pipeline',
@@ -305,13 +300,14 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         performance: 'Performance',
         users: 'Bank & Staff Members',
         communications: 'Outreach Center',
+        support_tickets: 'Support Tickets',
         my_profile: 'My Profile',
         chat_customer: 'Support Chat',
         onboarding: 'Applicant Onboarding',
     };
 
     const navItems = [
-        { section: "overview", path: "/staff/dashboard", icon: "dashboard", label: "Dashboard", badge: 0 },
+        { section: "dashboard", path: "/staff/dashboard", icon: "dashboard", label: "Dashboard", badge: 0 },
         { section: "incoming_queue", path: "/staff/incoming-queue", icon: "move_to_inbox", label: "Incoming Queue", badge: incomingCount },
         { section: "applications", path: "/staff/applications", icon: "description", label: "Active Pipeline", badge: pendingCount },
         { section: "inactive_applications", path: "/staff/inactive-pipeline", icon: "archive", label: "Inactive Pipeline", badge: 0 },
@@ -351,65 +347,66 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
                 )}
 
-                {/* Sidebar — Professional Dark Navy Theme */}
-                <aside className={`fixed inset-y-0 left-0 z-50 bg-[#0A2540] flex flex-col py-3 px-2 gap-1
-                    shadow-2xl border-r border-[#1E3A8A]/30 group/sidebar
+                {/* Sidebar — Admin Dashboard UI Style */}
+                <aside className={`fixed inset-y-0 left-0 z-50 bg-[#0f172a] text-slate-300 flex flex-col py-0 px-0
+                    shadow-xl border-r border-slate-800 group/sidebar
                     transition-all duration-300 ease-in-out overflow-hidden
                     ${sidebarOpen
-                        ? 'w-[270px] translate-x-0'
-                        : 'w-[68px] lg:translate-x-0 -translate-x-full hover:w-[270px]'
+                        ? 'w-[240px] translate-x-0'
+                        : 'w-[68px] lg:translate-x-0 -translate-x-full hover:w-[240px]'
                     }`}>
 
-                    {/* Logo Area */}
-                    <div className="flex items-center gap-3 px-2 mb-5 mt-1.5 flex-shrink-0">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4F46E5] to-[#3730A3] flex items-center justify-center shadow-lg shadow-[#4F46E5]/30 shrink-0">
-                            <span className="material-symbols-outlined text-white text-[22px]">account_balance</span>
-                        </div>
-                        <div className={`transition-all duration-300 whitespace-nowrap ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
-                            <span className="text-[18px] font-extrabold text-white tracking-tight block leading-tight">
-                                VidyaLoans
-                            </span>
-                            <span className="text-[9.5px] font-bold text-[#818cf8] uppercase tracking-widest block">
-                                Staff Portal
-                            </span>
-                        </div>
+                    {/* Header Logo */}
+                    <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0 gap-2.5">
+                        <img
+                            src="/images/vidyaloans-logo-transparent.png"
+                            alt="VidyaLoans Logo"
+                            className="w-7 h-7 object-contain flex-shrink-0"
+                        />
+                        <span className={`font-semibold text-[14px] text-white tracking-wide whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+                            VidyaLoans<span className="text-indigo-400"> Staff</span>
+                        </span>
                     </div>
 
                     {/* Nav */}
-                    <nav className="flex-1 flex flex-col w-full gap-0.5 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'none' }}>
+                    <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto custom-scrollbar">
+                        <div className={`px-3 mb-2 mt-1 text-[14px] font-semibold text-slate-500 uppercase tracking-widest leading-none whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>Menu</div>
                         {navItems.map(item => (
                             <NavItem key={item.section} {...item} active={activeSection} expanded={sidebarOpen} />
                         ))}
                     </nav>
 
-                    {/* Avatar + Sign-out at bottom */}
-                    <div className="px-1.5 mt-auto pt-3 border-t border-slate-700/40 flex-shrink-0">
-                        <div className="flex items-center justify-between p-2 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 transition-all cursor-pointer group/profile border border-slate-700/30">
-                            <Link href="/staff/my-profile" className="flex items-center gap-3 flex-1 min-w-0" title="View Profile">
-                                <img
-                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
-                                    alt="Avatar"
-                                    className="w-8 h-8 rounded-full bg-[#1E3A8A] border border-indigo-400/50 object-cover flex-shrink-0 group-hover/profile:border-indigo-400 transition-colors"
-                                />
-                                <div className={`min-w-0 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
-                                    <p className="text-[12px] font-bold text-white truncate leading-tight">{user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Staff Member'}</p>
-                                    <p className="text-[10px] font-medium text-slate-400 capitalize truncate mt-0.5">{user?.role?.replace('_', ' ') || 'Staff'}</p>
-                                </div>
-                            </Link>
-                            <button onClick={(e) => { e.stopPropagation(); logout(); }} className={`text-slate-400 hover:text-rose-400 p-1.5 flex-shrink-0 transition-all duration-200 rounded-lg hover:bg-rose-500/15 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`} title="Sign Out">
-                                <span className="material-symbols-outlined text-[18px]">logout</span>
-                            </button>
+                    {/* Avatar + Sign-out Footer */}
+                    <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex-shrink-0">
+                        <div className="flex items-center gap-3 mb-3 p-1">
+                            <img
+                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
+                                alt="Avatar"
+                                className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 object-cover flex-shrink-0"
+                            />
+                            <div className={`min-w-0 flex-1 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+                                <p className="text-[12px] font-medium text-slate-200 truncate">{user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Staff Member'}</p>
+                                <p className="text-[10px] text-slate-500 capitalize truncate">{user?.role?.replace('_', ' ') || 'Staff'}</p>
+                            </div>
                         </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); logout(); }}
+                            className={`w-full px-3 py-2 rounded bg-slate-800 hover:bg-rose-500/10 hover:text-rose-400 text-slate-300 border border-slate-700 hover:border-rose-500/30 transition-all text-[11px] font-semibold flex items-center justify-center gap-2 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}
+                            title="Sign Out"
+                        >
+                            <span className="material-symbols-outlined text-[16px]">logout</span>
+                            <span className={`whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'inline' : 'hidden group-hover/sidebar:inline'}`}>Sign Out</span>
+                        </button>
                     </div>
                 </aside>
 
                 {/* Main Content */}
-                <main className={`flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-[#f8fafc] transition-all duration-300 ${sidebarOpen ? 'lg:pl-[270px]' : 'lg:pl-[68px]'}`}>
+                <main className={`flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-[#f8fafc] transition-all duration-300 ${sidebarOpen ? 'lg:pl-[240px]' : 'lg:pl-[68px]'}`}>
                     {/* Top Header Navbar */}
                     <header className="h-[60px] bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 flex items-center justify-between sticky top-0 z-40 flex-shrink-0 shadow-sm">
                         {/* Left: Section Title */}
                         <div className="flex flex-col justify-center">
-                            <span className="text-[9.5px] font-extrabold text-[#4F46E5] uppercase tracking-widest leading-none mb-1 font-mono">VidyaLoans Enterprise</span>
+                            <span className="text-[14px] font-extrabold text-[#4F46E5] uppercase tracking-widest leading-none mb-1 font-mono">VidyaLoans</span>
                             <h1 className="text-[20px] font-bold text-[#0A2540] tracking-tight leading-tight">
                                 {sectionTitles[activeSection] || activeSection}
                             </h1>
@@ -474,7 +471,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                         <div className="flex items-center gap-3.5">
                             {/* Real-time IST Clock */}
                             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-[14px] font-bold text-[#0A2540] font-mono">
                                     {format(nowTime, 'MMM dd, HH:mm:ss')}
                                 </span>
@@ -515,13 +511,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     </div>
                 </main>
             </div>
-
-            <SupportTicketModal
-                isOpen={isSupportOpen}
-                onClose={() => setIsSupportOpen(false)}
-                userRole={user?.role || "staff"}
-                userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
-            />
         </StaffLayoutContext.Provider>
     );
 }

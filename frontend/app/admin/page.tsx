@@ -781,11 +781,13 @@ export default function AdminDashboardPage() {
             {/* Sidebar */}
             <aside className={`fixed inset-y-0 left-0 z-50 w-[240px] bg-[#0f172a] text-slate-300 transform transition-transform duration-200 lg:translate-x-0 border-r border-slate-800 flex flex-col shadow-xl ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded bg-indigo-500 flex items-center justify-center text-white shadow-sm">
-                            <span className="material-symbols-outlined text-[16px]">layers</span>
-                        </div>
-                        <span className="font-semibold text-[13px] text-white tracking-wide">Admin<span className="text-indigo-400">Portal</span></span>
+                    <div className="flex items-center gap-2.5">
+                        <img
+                            src="/images/vidyaloans-logo-transparent.png"
+                            alt="VidyaLoans Logo"
+                            className="w-7 h-7 object-contain"
+                        />
+                        <span className="font-semibold text-[13px] text-white tracking-wide">VidyaLoans<span className="text-indigo-400"> Admin</span></span>
                     </div>
                 </div>
 

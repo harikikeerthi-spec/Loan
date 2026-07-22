@@ -41,9 +41,9 @@ export class UsersController {
         const safeJsonParse = (str: string) => {
             if (!str) return null;
             try {
-                return JSON.parse(str);
+                return typeof str === 'string' ? JSON.parse(str) : str;
             } catch (e) {
-                return null;
+                return str;
             }
         };
 
@@ -423,7 +423,7 @@ export class UsersController {
                 try {
                     return typeof str === 'string' ? JSON.parse(str) : str;
                 } catch (e) {
-                    return null;
+                    return str;
                 }
             };
 

@@ -4,15 +4,14 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminApi } from "@/lib/api";
 import { format } from "date-fns";
-import UserSupportTicketsView from "@/components/UserSupportTicketsView";
-import SupportTicketModal from "@/components/SupportTicketModal";
+import { useRouter } from "next/navigation";
 
 export default function MyProfilePage() {
+    const router = useRouter();
     const { user } = useAuth();
     const [applications, setApplications] = useState<any[]>([]);
     const [tasks, setTasks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
     useEffect(() => {
         const loadProfileStats = async () => {
@@ -67,7 +66,7 @@ export default function MyProfilePage() {
                 </div>
                 <button
                     type="button"
-                    onClick={() => setIsSupportModalOpen(true)}
+                    onClick={() => router.push('/staff/support-tickets')}
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/20 cursor-pointer"
                 >
                     <span className="material-symbols-outlined text-[18px]">support_agent</span>
@@ -84,15 +83,15 @@ export default function MyProfilePage() {
                     <h3 className="text-[20px] font-black text-slate-900 tracking-tight">{user?.firstName || '—'} {user?.lastName || ''}</h3>
                     <p className="text-[11px] font-black uppercase tracking-widest text-indigo-600 mt-1">{user?.role?.replace('_', ' ') || 'Staff'}</p>
                     <p className="text-[13px] text-slate-500 mt-2 font-semibold font-mono">{user?.email}</p>
-                    
-                    <button
+
+                    {/* <button
                         type="button"
                         onClick={() => setIsSupportModalOpen(true)}
                         className="mt-5 w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all border border-indigo-200/60 flex items-center justify-center gap-2 cursor-pointer"
                     >
                         <span className="material-symbols-outlined text-[16px]">confirmation_number</span>
                         New Support Ticket
-                    </button>
+                    </button> */}
 
                     <div className="mt-6 w-full pt-6 border-t border-slate-100 space-y-3">
                         <div className="flex justify-between text-[12px]">
@@ -138,35 +137,23 @@ export default function MyProfilePage() {
 
             {/* Support Tickets Section */}
             <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
-                <div className="mb-6 pb-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center justify-between">
                     <div>
                         <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                             <span className="material-symbols-outlined text-indigo-600">confirmation_number</span>
                             Support Tickets & Requests
                         </h3>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">Manage, track, and raise support tickets directly from your profile</p>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">Manage, track, and raise support tickets directly from your dedicated support desk</p>
                     </div>
+                    <button
+                        onClick={() => router.push('/staff/support-tickets')}
+                        className="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">confirmation_number</span>
+                        Open Support Tickets Desk
+                    </button>
                 </div>
-                <UserSupportTicketsView
-                    userRole={user?.role || "staff"}
-                    userInfo={{
-                        id: user?.id,
-                        name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
-                        email: user?.email,
-                    }}
-                />
             </div>
-
-            <SupportTicketModal
-                isOpen={isSupportModalOpen}
-                onClose={() => setIsSupportModalOpen(false)}
-                userRole={user?.role || "staff"}
-                userInfo={{
-                    id: user?.id,
-                    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
-                    email: user?.email,
-                }}
-            />
         </div>
     );
 }

@@ -558,12 +558,35 @@ export class ApplicationService {
     const application = await this.getApplicationById(applicationId);
 
     const targetBank = data.bank !== undefined ? data.bank : application.bank;
-    const targetCountry = data.country !== undefined ? data.country : application.country;
-    const targetUniversity = (data.universityName || data.university) !== undefined ? (data.universityName || data.university) : application.universityName;
+    const targetCountry = (data.country || data.studyDestination || data.countryOfStudy || data.destinationCountry) !== undefined
+      ? (data.country || data.studyDestination || data.countryOfStudy || data.destinationCountry)
+      : application.country;
+    const targetUniversity = (data.universityName || data.university || data.targetUniversity) !== undefined
+      ? (data.universityName || data.university || data.targetUniversity)
+      : application.universityName;
 
     await this.validateApplicationConstraints(application.userId, applicationId, targetBank, targetCountry, targetUniversity);
 
     const updatePayload: any = { ...data };
+
+    // Standardize aliases to exact DB column names on LoanApplication table
+    if (data.universityName || data.university || data.targetUniversity) {
+      updatePayload.universityName = data.universityName || data.university || data.targetUniversity;
+    }
+    if (data.country || data.studyDestination || data.countryOfStudy || data.destinationCountry) {
+      updatePayload.country = data.country || data.studyDestination || data.countryOfStudy || data.destinationCountry;
+    }
+    if (data.courseName || data.course) {
+      updatePayload.courseName = data.courseName || data.course;
+    }
+
+    // Remove alias keys that are not actual database columns on LoanApplication
+    delete updatePayload.university;
+    delete updatePayload.targetUniversity;
+    delete updatePayload.studyDestination;
+    delete updatePayload.countryOfStudy;
+    delete updatePayload.destinationCountry;
+    delete updatePayload.course;
 
     // Convert numeric fields if present
     if (data.amount !== undefined) updatePayload.amount = data.amount ? parseFloat(data.amount) : null;
@@ -594,6 +617,18 @@ export class ApplicationService {
     if (error) {
       console.error('[ApplicationService.adminUpdateApplication] DB Error:', error);
       throw error;
+    }
+
+    // Sync targetUniversity and studyDestination to User profile record
+    if (application.userId && (updatePayload.universityName || updatePayload.country)) {
+      try {
+        const userSync: any = {};
+        if (updatePayload.universityName) userSync.targetUniversity = updatePayload.universityName;
+        if (updatePayload.country) userSync.studyDestination = updatePayload.country;
+        await this.db.from('User').update(userSync).eq('id', application.userId);
+      } catch (uErr: any) {
+        console.warn('[ApplicationService.adminUpdateApplication] Failed to sync User profile:', uErr.message);
+      }
     }
 
     if (data.remarks !== undefined && data.remarks !== application.remarks) {

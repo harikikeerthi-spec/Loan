@@ -179,7 +179,24 @@ export default function ApplicationsTab() {
                 lastName: userData.lastName || "",
                 email: userData.email || "",
                 phone: userData.phoneNumber || userData.mobile || userData.phone || "",
-                dateOfBirth: userData.dateOfBirth ? (() => { const d = new Date(userData.dateOfBirth); return isNaN(d.getTime()) ? "" : d.toISOString().split('T')[0]; })() : "",
+                dateOfBirth: userData.dateOfBirth ? (() => {
+                    const raw = userData.dateOfBirth;
+                    let dobDate: Date | null = null;
+                    if (typeof raw === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(raw.trim())) {
+                        const [dd, mm, yyyy] = raw.trim().split('-');
+                        dobDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                    } else if (typeof raw === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(raw.trim())) {
+                        const [dd, mm, yyyy] = raw.trim().split('/');
+                        dobDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                    } else {
+                        dobDate = new Date(raw);
+                    }
+                    if (!dobDate || isNaN(dobDate.getTime())) return "";
+                    const yyyy = dobDate.getFullYear();
+                    const mm = String(dobDate.getMonth() + 1).padStart(2, '0');
+                    const dd = String(dobDate.getDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                })() : "",
                 address: userData.permanentAddress || "",
                 pincode: userData.pincode || "",
             }));
@@ -261,7 +278,24 @@ export default function ApplicationsTab() {
                 lastName: userData?.lastName || "",
                 email: userData?.email || "",
                 phone: userData?.phoneNumber || userData?.mobile || userData?.phone || "",
-                dateOfBirth: userData?.dateOfBirth ? (() => { const d = new Date(userData.dateOfBirth); return isNaN(d.getTime()) ? "" : d.toISOString().split('T')[0]; })() : "",
+                dateOfBirth: userData?.dateOfBirth ? (() => {
+                    const raw = userData.dateOfBirth;
+                    let dobDate: Date | null = null;
+                    if (typeof raw === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(raw.trim())) {
+                        const [dd, mm, yyyy] = raw.trim().split('-');
+                        dobDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                    } else if (typeof raw === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(raw.trim())) {
+                        const [dd, mm, yyyy] = raw.trim().split('/');
+                        dobDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                    } else {
+                        dobDate = new Date(raw);
+                    }
+                    if (!dobDate || isNaN(dobDate.getTime())) return "";
+                    const yyyy = dobDate.getFullYear();
+                    const mm = String(dobDate.getMonth() + 1).padStart(2, '0');
+                    const dd = String(dobDate.getDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                })() : "",
                 address: userData?.permanentAddress || "",
                 pincode: userData?.pincode || "",
                 notes: "",

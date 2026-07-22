@@ -9,6 +9,7 @@ import SupportTicketModal from "@/components/SupportTicketModal";
 
 function AgentLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const { user } = useAuth();
     const [notificationsOpen, setNotificationsOpen] = React.useState(false);
     const [isSupportOpen, setIsSupportOpen] = React.useState(false);
     const {
@@ -34,8 +35,8 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         { section: "training", icon: "school", label: "LMS & Training" },
         { section: "alumni", icon: "diversity_3", label: "Alumni Referrals" },
         { section: "chat-staff", icon: "support_agent", label: "Staff RM Line", badge: unreadChatCount },
-        { section: "chat-student", icon: "forum", label: "Student Line" },
         { section: "support-tickets", icon: "confirmation_number", label: "Support Tickets" },
+        { section: "chat-student", icon: "forum", label: "Student Line" },
         { section: "qr-code", icon: "qr_code_2", label: "QR Lead Capture" },
         { section: "tracking-links", icon: "link", label: "Tracking Links" },
         { section: "whatsapp-bot", icon: "chat_bubble", label: "WhatsApp Bot" },
@@ -58,69 +59,62 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                 </div>
             )}
 
-            {/* Sidebar Navigation */}
-            <aside className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] lg:relative lg:translate-x-0 lg:h-full ${sidebarCollapsed ? "w-24 lg:w-24 p-3 lg:pr-2" : "w-80 lg:w-80 p-6 lg:pr-3"} ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-                <div className="flex flex-col h-full bg-white rounded-[3rem] border border-[#6605c7]/5 shadow-[0_20px_50px_rgb(102,5,199,0.06)] overflow-hidden relative">
-                    <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-[#6605c7]/5 to-transparent pointer-events-none" />
+            {/* Sidebar Navigation — Admin Dashboard UI Style */}
+            <aside className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 lg:h-full bg-[#0f172a] text-slate-300 border-r border-slate-800 shadow-xl flex flex-col ${sidebarCollapsed ? "w-[68px]" : "w-[240px]"} ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+                <div className="flex flex-col h-full overflow-hidden relative">
                     
-                    {/* Brand Banner Logo */}
-                    <div className={`py-6 ${sidebarCollapsed ? "px-2 justify-center" : "px-8 justify-between"} border-b border-[#6605c7]/5 relative z-10 flex items-center`}>
-                        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
-                            <div className="w-10 h-10 rounded-[1rem] bg-gradient-to-br from-[#6605c7] to-[#8b24e5] flex items-center justify-center text-white shadow-xl shadow-[#6605c7]/30 transform group-hover:rotate-[15deg] transition-all duration-500 flex-shrink-0 overflow-hidden">
-                                {agentProfile?.profileImage || "/agent-logo.png" ? (
-                                    <img src={agentProfile?.profileImage || "/agent-logo.png"} alt="Agent Logo" className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="material-symbols-outlined font-black text-xl">handshake</span>
-                                )}
-                            </div>
-                            {!sidebarCollapsed && (
-                                <div className="animate-fade-in overflow-hidden">
-                                    <span className="font-display font-black text-xl lg:text-2xl tracking-tighter text-gray-900 block leading-tight break-words pr-2" title={agentProfile?.businessName || "VidyaAgent"}>
-                                        {agentProfile?.businessName || <>Vidya<span className="text-[#6605c7]">Agent</span></>}
-                                    </span>
-                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]/40 block mt-1">DSA Partner Hub</span>
-                                </div>
-                            )}
-                        </div>
+                    {/* Brand Header Logo */}
+                    <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0 gap-2.5">
+                        <img
+                            src="/images/vidyaloans-logo-transparent.png"
+                            alt="VidyaLoans Logo"
+                            className="w-7 h-7 object-contain flex-shrink-0 cursor-pointer"
+                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                        />
+                        {!sidebarCollapsed && (
+                            <span className="font-semibold text-[13px] text-white tracking-wide whitespace-nowrap flex-1">
+                                VidyaLoans<span className="text-indigo-400"> Agent</span>
+                            </span>
+                        )}
                         {!sidebarCollapsed && (
                             <button 
                                 onClick={(e) => { e.stopPropagation(); setSidebarCollapsed(true); }} 
-                                className="hidden lg:flex w-7 h-7 rounded-lg bg-gray-50 hover:bg-[#6605c7]/5 text-gray-400 hover:text-[#6605c7] items-center justify-center transition-all"
+                                className="hidden lg:flex w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white items-center justify-center transition-all"
                                 title="Collapse Sidebar"
                             >
-                                <span className="material-symbols-outlined text-base">chevron_left</span>
+                                <span className="material-symbols-outlined text-sm">chevron_left</span>
                             </button>
                         )}
                     </div>
 
                     {/* Nav Items List */}
-                    <nav className={`flex-1 ${sidebarCollapsed ? "px-1.5" : "px-4"} py-3 space-y-1.5 overflow-y-auto relative z-10 custom-scrollbar`}>
-                        {!sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 mb-1">Main</p>}
+                    <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto custom-scrollbar">
+                        {!sidebarCollapsed && <div className="px-3 mb-2 mt-1 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none">Main</div>}
                         
                         {navItems.map((item, idx) => {
                             const isActive = pathname.startsWith(`/agent/${item.section}`);
                             return (
                                 <React.Fragment key={item.section}>
-                                    {idx === 3 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Backoffice</p>}
-                                    {idx === 7 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Grow Network</p>}
-                                    {idx === 11 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Live Support</p>}
-                                    {idx === 13 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Smart Tools</p>}
+                                    {idx === 3 && !sidebarCollapsed && <div className="px-3 mb-2 mt-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none border-t border-slate-800 pt-3">Backoffice</div>}
+                                    {idx === 7 && !sidebarCollapsed && <div className="px-3 mb-2 mt-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none border-t border-slate-800 pt-3">Grow Network</div>}
+                                    {idx === 11 && !sidebarCollapsed && <div className="px-3 mb-2 mt-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none border-t border-slate-800 pt-3">Live Support</div>}
+                                    {idx === 13 && !sidebarCollapsed && <div className="px-3 mb-2 mt-4 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none border-t border-slate-800 pt-3">Smart Tools</div>}
                                     
                                     <Link 
                                         href={`/agent/${item.section}`} 
                                         onClick={() => setSidebarOpen(false)}
-                                        className={`w-full rounded-[1.25rem] flex items-center transition-all duration-300 ${sidebarCollapsed ? "justify-center p-2.5" : "px-4 py-2.5 gap-3 text-left"} ${isActive ? "bg-[#6605c7] text-white shadow-[0_12px_24px_rgb(102,5,199,0.3)] scale-[1.02]" : "text-gray-500 hover:bg-[#6605c7]/5 hover:text-[#6605c7]"}`}
+                                        className={`w-full text-left px-3 py-1.5 rounded flex items-center gap-3 transition-colors text-xs font-medium ${isActive ? "bg-indigo-500/10 text-indigo-400 font-medium" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"}`}
                                         title={item.label}
                                     >
-                                        <span className="material-symbols-outlined text-xl">{item.icon}</span>
-                                        {!sidebarCollapsed && <span className="font-bold text-[10px] tracking-[0.15em] uppercase flex-1">{item.label}</span>}
+                                        <span className={`material-symbols-outlined text-[16px] flex-shrink-0 ${isActive ? "text-indigo-400" : "text-slate-500"}`}>{item.icon}</span>
+                                        {!sidebarCollapsed && <span className="flex-1 truncate">{item.label}</span>}
                                         {!sidebarCollapsed && item.badge && item.badge > 0 && (
-                                            <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold">
+                                            <span className={`px-1.5 py-0.5 rounded-sm text-[9px] font-medium ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'}`}>
                                                 {item.badge}
                                             </span>
                                         )}
                                         {sidebarCollapsed && item.badge && item.badge > 0 && (
-                                            <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                                            <div className="w-2 h-2 bg-indigo-500 rounded-full" />
                                         )}
                                     </Link>
                                 </React.Fragment>
@@ -129,11 +123,27 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                     </nav>
 
                     {/* Agent Session Info Footer */}
-                    <div className={`${sidebarCollapsed ? "p-2" : "p-4"} border-t border-[#6605c7]/5 bg-[#fcfaff]/50 backdrop-blur-xl relative z-10 flex-shrink-0`}>
-
-                        <button onClick={logout} className={`w-full py-2.5 rounded-[1rem] flex items-center justify-center text-red-500 hover:bg-red-50 hover:text-red-600 transition-all font-black text-[9px] tracking-widest uppercase border border-transparent hover:border-red-100 ${sidebarCollapsed ? "px-0" : "gap-2"}`} title="Terminate Session">
-                            <span className="material-symbols-outlined text-base">logout</span>
-                            {!sidebarCollapsed && <span>Terminate Session</span>}
+                    <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex-shrink-0">
+                        <div className="flex items-center gap-3 mb-3 p-1">
+                            <img
+                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
+                                alt="Avatar"
+                                className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 object-cover flex-shrink-0"
+                            />
+                            {!sidebarCollapsed && (
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[12px] font-medium text-slate-200 truncate">{user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Agent Partner'}</p>
+                                    <p className="text-[10px] text-slate-500 capitalize truncate">{agentProfile?.businessName || 'DSA Partner'}</p>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={logout}
+                            className="w-full px-3 py-2 rounded bg-slate-800 hover:bg-rose-500/10 hover:text-rose-400 text-slate-300 border border-slate-700 hover:border-rose-500/30 transition-all text-[11px] font-semibold flex items-center justify-center gap-2"
+                            title="Terminate Session"
+                        >
+                            <span className="material-symbols-outlined text-[16px]">logout</span>
+                            {!sidebarCollapsed && <span>Sign Out</span>}
                         </button>
                     </div>
                 </div>
@@ -271,15 +281,6 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                         </div>
                                     </>
                                 )}
-                                <button
-                                    type="button"
-                                    onClick={() => setIsSupportOpen(true)}
-                                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#6605c7]/10 hover:bg-[#6605c7]/20 text-[#6605c7] rounded-xl text-xs font-bold transition-all border border-[#6605c7]/20 cursor-pointer shadow-2xs"
-                                    title="Raise or track support tickets"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">support_agent</span>
-                                    <span className="hidden sm:inline">Support Ticket</span>
-                                </button>
                             </div>
                         </div>
                     </header>
@@ -292,13 +293,6 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                     </div>
                 </div>
             </main>
-
-            <SupportTicketModal
-                isOpen={isSupportOpen}
-                onClose={() => setIsSupportOpen(false)}
-                userRole="agent"
-                userInfo={{ id: agentProfile?.id, name: agentProfile?.businessName, email: agentProfile?.email }}
-            />
         </div>
     );
 }

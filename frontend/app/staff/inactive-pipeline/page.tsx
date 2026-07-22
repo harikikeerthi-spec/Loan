@@ -250,8 +250,20 @@ export default function InactivePipelinePage() {
                                                         {initials.toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-slate-950">
-                                                            {item.firstName || "—"} {item.lastName || ""}
+                                                        <p
+                                                            onClick={() => {
+                                                                const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                                const email = item.email || item.student?.email;
+                                                                if (uid) {
+                                                                    window.open(`/staff/users/${uid}${email ? `?email=${encodeURIComponent(email)}` : ''}`, '_blank');
+                                                                } else {
+                                                                    router.push(`/staff/users?search=${encodeURIComponent(item.firstName || '')}`);
+                                                                }
+                                                            }}
+                                                            className="text-sm font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors"
+                                                            title="Click to view Student Profile"
+                                                        >
+                                                            {item.firstName || item.student?.firstName || "—"} {item.lastName || item.student?.lastName || ""}
                                                         </p>
                                                         <p className="text-[10px] font-mono text-slate-400 mt-0.5">
                                                             {item.applicationNumber || "Pending"}

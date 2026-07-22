@@ -4,7 +4,7 @@ import { useUserDossier } from "./DossierContext";
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { adminApi, documentApi } from "@/lib/api";
+import { adminApi, authApi, documentApi } from "@/lib/api";
 
 // Premium 3D Interactive Card Component
 function TiltCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -58,7 +58,7 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
 }
 
 export default function ProfileTab() {
-    const { userData, setUserData, userApplications, userDocuments, refreshData } = useUserDossier();
+    const { userData, setUserData, userApplications, setUserApplications, userDocuments, refreshData } = useUserDossier();
     const router = useRouter();
 
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -332,15 +332,39 @@ export default function ProfileTab() {
             email: userData?.email || "",
             phoneNumber: userData?.phoneNumber || userData?.mobile || userData?.phone || "",
             dateOfBirth: (() => {
-                if (!userData?.dateOfBirth) return "";
-                const d = new Date(userData.dateOfBirth);
-                return isNaN(d.getTime()) ? "" : d.toISOString().split('T')[0];
+                const raw = userData?.dateOfBirth || userData?.personal?.dateOfBirth || userData?.dob;
+                if (!raw) return "";
+                let dobDate: Date | null = null;
+                if (typeof raw === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(raw.trim())) {
+                    const [dd, mm, yyyy] = raw.trim().split('-');
+                    dobDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                } else if (typeof raw === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(raw.trim())) {
+                    const [dd, mm, yyyy] = raw.trim().split('/');
+                    dobDate = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                } else {
+                    dobDate = new Date(raw);
+                }
+                if (!dobDate || isNaN(dobDate.getTime())) return "";
+                const yyyy = dobDate.getFullYear();
+                const mm = String(dobDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(dobDate.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
             })(),
-            nationality: typeof userData?.nationality === 'object' ? (userData?.nationality?.name || "") : (userData?.nationality || "Indian"),
-            studyDestination: userData?.studyDestination || userData?.countryOfEducation || "",
-            targetUniversity: userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.universityName ||
-                userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.university ||
-                userData?.targetUniversity || userData?.universityName || "",
+            nationality: (() => {
+                const nat = userData?.nationality || userData?.personal?.nationality;
+                if (!nat) return "Indian";
+                if (typeof nat === 'object' && nat !== null) return nat.name || nat.nationality || "Indian";
+                if (typeof nat === 'string' && nat.trim() !== '') {
+                    try {
+                        const parsed = JSON.parse(nat);
+                        if (typeof parsed === 'object' && parsed !== null) return parsed.name || parsed.nationality || "Indian";
+                    } catch { }
+                    return nat;
+                }
+                return "Indian";
+            })(),
+            studyDestination: userData?.studyDestination || userData?.countryOfEducation || userData?.country || (userApplications && userApplications[0]?.country) || (userApplications && userApplications[0]?.studyDestination) || "",
+            targetUniversity: userData?.targetUniversity || userData?.universityName || userData?.university || (userApplications && userApplications[0]?.universityName) || (userApplications && userApplications[0]?.university) || (userApplications && userApplications[0]?.targetUniversity) || "",
 
             fatherName: fatherData?.name || parsedFamily?.fatherName || userData?.fatherName || "",
             fatherAadhar: fatherData?.aadharNumber || parsedFamily?.fatherAadhar || "",
@@ -395,7 +419,12 @@ export default function ProfileTab() {
                 dateOfBirth: editForm.dateOfBirth,
                 nationality: editForm.nationality,
                 studyDestination: editForm.studyDestination,
+                countryOfEducation: editForm.studyDestination,
+                country: editForm.studyDestination,
+                destinationCountry: editForm.studyDestination,
                 targetUniversity: editForm.targetUniversity,
+                universityName: editForm.targetUniversity,
+                university: editForm.targetUniversity,
 
                 personal: {
                     firstName: editForm.firstName,
@@ -407,6 +436,8 @@ export default function ProfileTab() {
                     nationality: editForm.nationality,
                     fatherName: editForm.fatherName,
                     motherName: editForm.motherName,
+                    studyDestination: editForm.studyDestination,
+                    targetUniversity: editForm.targetUniversity,
                 },
 
                 family: {
@@ -437,6 +468,9 @@ export default function ProfileTab() {
                     ssc: { institute: editForm.sscSchool, percentage: editForm.sscScore },
                     hsc: { institute: editForm.hscCollege, percentage: editForm.hscScore },
                     ug: { institute: editForm.ugCollege, percentage: editForm.ugScore },
+                    targetUniversity: editForm.targetUniversity,
+                    universityName: editForm.targetUniversity,
+                    countryOfEducation: editForm.studyDestination,
                 },
 
                 parents: [
@@ -454,13 +488,38 @@ export default function ProfileTab() {
                     lastName: editForm.lastName,
                     phoneNumber: editForm.phoneNumber,
                     dateOfBirth: editForm.dateOfBirth,
-                })
+                }),
+                authApi.updateDetails(userData.email || editForm.email, {
+                    firstName: editForm.firstName,
+                    lastName: editForm.lastName,
+                    phoneNumber: editForm.phoneNumber,
+                    dateOfBirth: editForm.dateOfBirth,
+                    targetUniversity: editForm.targetUniversity,
+                    studyDestination: editForm.studyDestination,
+                }),
+                ...(userApplications || []).map((app: any) =>
+                    adminApi.updateApplication(app.id || app._id, {
+                        universityName: editForm.targetUniversity,
+                        university: editForm.targetUniversity,
+                        targetUniversity: editForm.targetUniversity,
+                        country: editForm.studyDestination,
+                        countryOfStudy: editForm.studyDestination,
+                        studyDestination: editForm.studyDestination,
+                        destinationCountry: editForm.studyDestination,
+                    })
+                )
             ]);
 
             if (setUserData) {
                 setUserData((prev: any) => ({
                     ...prev,
                     ...updates,
+                    targetUniversity: editForm.targetUniversity,
+                    universityName: editForm.targetUniversity,
+                    university: editForm.targetUniversity,
+                    studyDestination: editForm.studyDestination,
+                    countryOfEducation: editForm.studyDestination,
+                    country: editForm.studyDestination,
                     phoneNumber: editForm.phoneNumber,
                     mobile: editForm.phoneNumber,
                     phone: editForm.phoneNumber,
@@ -469,6 +528,21 @@ export default function ProfileTab() {
                     academic: updates.academic,
                     parents: updates.parents,
                 }));
+            }
+
+            if (setUserApplications) {
+                setUserApplications(
+                    (userApplications || []).map((app: any) => ({
+                        ...app,
+                        universityName: editForm.targetUniversity,
+                        university: editForm.targetUniversity,
+                        targetUniversity: editForm.targetUniversity,
+                        country: editForm.studyDestination,
+                        countryOfStudy: editForm.studyDestination,
+                        studyDestination: editForm.studyDestination,
+                        destinationCountry: editForm.studyDestination,
+                    }))
+                );
             }
 
             if (typeof window !== "undefined") {
@@ -582,7 +656,16 @@ export default function ProfileTab() {
                                 <div>
                                     <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Destination Country</span>
                                     <span className="text-sm font-semibold text-slate-800">
-                                        {getDisplayValue(userData.studyDestination || userData.countryOfEducation || userData.academic?.countryOfEducation, "Pending")}
+                                        {getDisplayValue(
+                                            userData?.studyDestination ||
+                                            userData?.countryOfEducation ||
+                                            userData?.country ||
+                                            userData?.destinationCountry ||
+                                            userApplications?.find((app: any) => app.country || app.countryOfStudy || app.studyDestination)?.country ||
+                                            userApplications?.find((app: any) => app.country || app.countryOfStudy || app.studyDestination)?.countryOfStudy ||
+                                            userData?.academic?.countryOfEducation,
+                                            "Pending"
+                                        )}
                                     </span>
                                 </div>
                             </div>
@@ -1046,10 +1129,27 @@ export default function ProfileTab() {
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Destination Country</label>
                                             <input
                                                 type="text"
+                                                list="destination-countries-list"
                                                 value={editForm.studyDestination}
                                                 onChange={(e) => setEditForm(prev => ({ ...prev, studyDestination: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white"
+                                                placeholder="e.g. Germany, USA, UK"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
                                             />
+                                            <datalist id="destination-countries-list">
+                                                <option value="Germany" />
+                                                <option value="United States" />
+                                                <option value="United Kingdom" />
+                                                <option value="Canada" />
+                                                <option value="Australia" />
+                                                <option value="Ireland" />
+                                                <option value="France" />
+                                                <option value="New Zealand" />
+                                                <option value="Singapore" />
+                                                <option value="Dubai (UAE)" />
+                                                <option value="Netherlands" />
+                                                <option value="Sweden" />
+                                                <option value="Switzerland" />
+                                            </datalist>
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target University</label>

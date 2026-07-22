@@ -294,7 +294,9 @@ export const EVVTestAgent: React.FC<{
         console.error("Failed to parse saved EVV data:", e);
       }
     }
-    loadDemo();
+    setEvvResult(null);
+    setConsoleMessages([]);
+    log("EVV verification engine online. Standing by for statement data.");
   }, [application]);
 
   // Auto-scroll console
@@ -524,7 +526,26 @@ export const EVVTestAgent: React.FC<{
         </div>
 
         {/* Results Section */}
-        {evvResult && (
+        {!evvResult ? (
+          <div className="border-t border-slate-100/80 pt-8 pb-4 text-center">
+            <div className="bg-slate-50/60 border border-dashed border-slate-200 rounded-3xl p-10 max-w-xl mx-auto space-y-3">
+              <span className="material-symbols-outlined text-4xl text-slate-300">receipt_long</span>
+              <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">No Bank Statement Analyzed Yet</h4>
+              <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                Upload a customer bank statement (PDF or CSV) above and click <span className="font-bold text-slate-600">Verify EVV</span> to process transactions and calculate the Estimated Verified Value score.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={loadDemo}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[14px]">science</span>
+                  Load Sample Demo Data (Testing)
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
           <div className="space-y-6 border-t border-slate-100/80 pt-6">
             {/* Hero Metric Card - Diffused Shadow, Gradient typography, Risk metrics */}
             <div className="bg-white border border-violet-100 rounded-3xl p-8 shadow-[0_20px_40px_-10px_rgba(91,33,182,0.15)] relative overflow-hidden flex flex-col md:flex-row justify-between md:items-center gap-6">

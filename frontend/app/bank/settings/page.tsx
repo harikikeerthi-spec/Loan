@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/bank/SharedUI";
+import UserSupportTicketsView from "@/components/UserSupportTicketsView";
 import Link from "next/link";
 
 export default function BankSettings() {
@@ -686,6 +687,16 @@ export default function BankSettings() {
 
     const renderSupportTab = () => (
         <div className="space-y-6">
+            <div className="glass-card bg-white/90 border border-purple-50 p-6 rounded-3xl shadow-sm">
+                <UserSupportTicketsView
+                    userRole="bank"
+                    userInfo={{
+                        id: user?.id,
+                        name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+                        email: user?.email,
+                    }}
+                />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* F45: Relationship Manager Contact Card */}
                 <div className="glass-card bg-white/80 backdrop-blur-md border border-purple-50 p-6 rounded-3xl space-y-6 shadow-lg shadow-purple-900/[0.01] flex flex-col justify-between">

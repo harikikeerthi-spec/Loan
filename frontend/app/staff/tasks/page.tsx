@@ -353,29 +353,56 @@ export default function RemindersPage() {
     const toDateKey = (y: number, m: number, d: number) =>
         `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-    const prevMonth = () => setCalendarDate(new Date(calYear, calMonth - 1, 1));
-    const nextMonth = () => setCalendarDate(new Date(calYear, calMonth + 1, 1));
+    const formatDateKey = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    // Dynamic Navigation handlers based on selected calendarView
+    const handlePrev = () => {
+        if (calendarView === "month") {
+            setCalendarDate(new Date(calYear, calMonth - 1, Math.min(calendarDate.getDate(), 28)));
+        } else if (calendarView === "week") {
+            const nextD = new Date(calendarDate);
+            nextD.setDate(nextD.getDate() - 7);
+            setCalendarDate(nextD);
+        } else {
+            const nextD = new Date(calendarDate);
+            nextD.setDate(nextD.getDate() - 1);
+            setCalendarDate(nextD);
+        }
+    };
+
+    const handleNext = () => {
+        if (calendarView === "month") {
+            setCalendarDate(new Date(calYear, calMonth + 1, Math.min(calendarDate.getDate(), 28)));
+        } else if (calendarView === "week") {
+            const nextD = new Date(calendarDate);
+            nextD.setDate(nextD.getDate() + 7);
+            setCalendarDate(nextD);
+        } else {
+            const nextD = new Date(calendarDate);
+            nextD.setDate(nextD.getDate() + 1);
+            setCalendarDate(nextD);
+        }
+    };
+
     const goToday = () => setCalendarDate(new Date());
 
-    // Build calendar grid cells
-    const cells: { day: number; month: "prev" | "current" | "next"; dateKey: string }[] = [];
-    // Prev month padding
+    // Build calendar grid cells for Month View
+    const cells: { day: number; month: "prev" | "current" | "next"; dateKey: string; dateObj: Date }[] = [];
     for (let i = firstDayOfMonth - 1; i >= 0; i--) {
         const d = daysInPrevMonth - i;
         const m = calMonth - 1 < 0 ? 11 : calMonth - 1;
         const y = calMonth - 1 < 0 ? calYear - 1 : calYear;
-        cells.push({ day: d, month: "prev", dateKey: toDateKey(y, m, d) });
+        cells.push({ day: d, month: "prev", dateKey: toDateKey(y, m, d), dateObj: new Date(y, m, d) });
     }
-    // Current month
     for (let d = 1; d <= daysInMonth; d++) {
-        cells.push({ day: d, month: "current", dateKey: toDateKey(calYear, calMonth, d) });
+        cells.push({ day: d, month: "current", dateKey: toDateKey(calYear, calMonth, d), dateObj: new Date(calYear, calMonth, d) });
     }
-    // Next month padding to fill 6 rows
     const remaining = 42 - cells.length;
     for (let d = 1; d <= remaining; d++) {
         const m = calMonth + 1 > 11 ? 0 : calMonth + 1;
         const y = calMonth + 1 > 11 ? calYear + 1 : calYear;
-        cells.push({ day: d, month: "next", dateKey: toDateKey(y, m, d) });
+        cells.push({ day: d, month: "next", dateKey: toDateKey(y, m, d), dateObj: new Date(y, m, d) });
     }
 
     const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
@@ -387,8 +414,42 @@ export default function RemindersPage() {
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
         return Math.ceil((diff / oneWeek) + startOfYear.getDay() / 7);
     };
+
+    // Calculate 7 days for Week View (Sunday to Saturday)
+    const getWeekDays = (baseDate: Date) => {
+        const d = new Date(baseDate);
+        const dayOfWeek = d.getDay();
+        const sun = new Date(d);
+        sun.setDate(d.getDate() - dayOfWeek);
+        const weekDays: Date[] = [];
+        for (let i = 0; i < 7; i++) {
+            const day = new Date(sun);
+            day.setDate(sun.getDate() + i);
+            weekDays.push(day);
+        }
+        return weekDays;
+    };
+    const weekDays = getWeekDays(calendarDate);
+    const weekStart = weekDays[0];
+    const weekEnd = weekDays[6];
+
+    const currentWeekNum = getWeekNumber(calendarDate);
     const startWeek = getWeekNumber(new Date(calYear, calMonth, 1));
     const endWeek = getWeekNumber(new Date(calYear, calMonth, daysInMonth));
+
+    // Dynamic header titles
+    let headerTitle = `${MONTHS[calMonth]} ${calYear}`;
+    let headerSub = `/ WEEK ${startWeek} – ${endWeek}`;
+
+    if (calendarView === "week") {
+        const startMonthName = MONTHS[weekStart.getMonth()].substring(0, 3);
+        const endMonthName = MONTHS[weekEnd.getMonth()].substring(0, 3);
+        headerTitle = `${startMonthName} ${weekStart.getDate()} – ${endMonthName} ${weekEnd.getDate()}, ${weekEnd.getFullYear()}`;
+        headerSub = `/ WEEK ${currentWeekNum}`;
+    } else if (calendarView === "day") {
+        headerTitle = `${MONTHS[calMonth]} ${calendarDate.getDate()}, ${calYear}`;
+        headerSub = `/ ${DAYS[calendarDate.getDay()].toUpperCase()}`;
+    }
 
     return (
         <div className="space-y-6 max-w-[1400px] mx-auto pb-12">
@@ -418,27 +479,27 @@ export default function RemindersPage() {
                                 <span className="material-symbols-outlined text-indigo-500 text-[20px]">calendar_month</span>
                                 <div>
                                     <span className="text-[13px] font-black text-slate-800 uppercase tracking-wider">
-                                        {MONTHS[calMonth]} {calYear}
+                                        {headerTitle}
                                     </span>
                                     <span className="ml-2 text-[10px] text-slate-400 font-semibold">
-                                        / WEEK {startWeek} – {endWeek}
+                                        {headerSub}
                                     </span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-all">
+                                <button onClick={handlePrev} title={`Previous ${calendarView}`} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-all cursor-pointer">
                                     <span className="material-symbols-outlined text-[16px]">chevron_left</span>
                                 </button>
-                                <button onClick={goToday} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 transition-all">
+                                <button onClick={goToday} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 transition-all cursor-pointer">
                                     Today
                                 </button>
-                                <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-all">
+                                <button onClick={handleNext} title={`Next ${calendarView}`} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-all cursor-pointer">
                                     <span className="material-symbols-outlined text-[16px]">chevron_right</span>
                                 </button>
                                 <div className="flex border border-slate-200 rounded-lg overflow-hidden ml-2">
                                     {(["month", "week", "day"] as const).map(v => (
                                         <button key={v} onClick={() => setCalendarView(v)}
-                                            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-all ${calendarView === v ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
+                                            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-all cursor-pointer ${calendarView === v ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>
                                             {v}
                                         </button>
                                     ))}
@@ -447,63 +508,291 @@ export default function RemindersPage() {
                         </div>
 
                         {/* Legend */}
-                        <div className="px-6 py-2 bg-slate-50/50 border-b border-slate-100 flex items-center gap-4">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Legend</span>
-                            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600">
-                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                                Follow-up Schedules
+                        <div className="px-6 py-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Legend</span>
+                                <span className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600">
+                                    <span className="w-2.5 h-2 rounded-full bg-rose-500" />
+                                    Follow-up Schedules
+                                </span>
+                            </div>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                {calendarView} view
                             </span>
                         </div>
 
-                        {/* Day headers */}
-                        <div className="grid grid-cols-7 border-b border-slate-100">
-                            {DAYS.map(d => (
-                                <div key={d} className="py-2 text-center text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                    {d}
+                        {/* MONTH VIEW */}
+                        {calendarView === "month" && (
+                            <>
+                                <div className="grid grid-cols-7 border-b border-slate-100">
+                                    {DAYS.map(d => (
+                                        <div key={d} className="py-2 text-center text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                            {d}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
 
-                        {/* Calendar grid */}
-                        <div className="grid grid-cols-7" style={{ minHeight: 420 }}>
-                            {cells.map((cell, idx) => {
-                                const isCurrentMonth = cell.month === "current";
-                                const isToday = cell.dateKey === todayKey;
-                                const events = followUpsByDate[cell.dateKey] || [];
-                                return (
-                                    <div
-                                        key={idx}
-                                        className={`min-h-[70px] p-1.5 border-b border-r border-slate-100 transition-all ${isCurrentMonth ? 'bg-white' : 'bg-slate-50/40'} ${idx % 7 === 6 ? 'border-r-0' : ''}`}
-                                    >
-                                        <div className={`w-7 h-7 flex items-center justify-center rounded-full text-[12px] font-bold mb-1 ${isToday ? 'bg-indigo-600 text-white' : isCurrentMonth ? 'text-slate-700' : 'text-slate-300'}`}>
-                                            {cell.day}
+                                <div className="grid grid-cols-7" style={{ minHeight: 420 }}>
+                                    {cells.map((cell, idx) => {
+                                        const isCurrentMonth = cell.month === "current";
+                                        const isToday = cell.dateKey === todayKey;
+                                        const isSelected = cell.dateKey === formatDateKey(calendarDate);
+                                        const events = followUpsByDate[cell.dateKey] || [];
+                                        return (
+                                            <div
+                                                key={idx}
+                                                onClick={() => {
+                                                    setCalendarDate(cell.dateObj);
+                                                }}
+                                                className={`min-h-[70px] p-1.5 border-b border-r border-slate-100 transition-all cursor-pointer ${isCurrentMonth ? (isSelected ? 'bg-indigo-50/40' : 'bg-white hover:bg-slate-50/80') : 'bg-slate-50/40'} ${idx % 7 === 6 ? 'border-r-0' : ''}`}
+                                            >
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <div className={`w-7 h-7 flex items-center justify-center rounded-full text-[12px] font-bold ${isToday ? 'bg-indigo-600 text-white' : isCurrentMonth ? 'text-slate-700' : 'text-slate-300'}`}>
+                                                        {cell.day}
+                                                    </div>
+                                                    {events.length > 0 && (
+                                                        <span className="w-2 h-2 rounded-full bg-rose-500" title={`${events.length} schedule(s)`} />
+                                                    )}
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    {events.slice(0, 3).map(ev => {
+                                                        const displayId = ev.appNumber || ev.id;
+                                                        return (
+                                                            <button
+                                                                key={ev.id}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (ev.isStudent) {
+                                                                        router.push(`/staff/users/${ev.studentId}/follow-ups`);
+                                                                    } else {
+                                                                        router.push(`/staff/applications/${ev.appId}`);
+                                                                    }
+                                                                }}
+                                                                title={`${ev.studentName ? ev.studentName + " — " : ""}${displayId}`}
+                                                                className="w-full text-left px-1 py-0.5 rounded text-[8px] font-mono font-extrabold leading-none flex items-center gap-1 bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 transition-all cursor-pointer shadow-2xs"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[9px] shrink-0 text-rose-600">calendar_today</span>
+                                                                <span className="truncate tracking-tighter">{displayId}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    {events.length > 3 && (
+                                                        <span className="text-[8px] text-slate-400 font-bold pl-1 block">+{events.length - 3} more</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+
+                        {/* WEEK VIEW */}
+                        {calendarView === "week" && (
+                            <>
+                                <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/40">
+                                    {weekDays.map(d => {
+                                        const dateKey = formatDateKey(d);
+                                        const isTodayDate = dateKey === todayKey;
+                                        const isSelectedDate = dateKey === formatDateKey(calendarDate);
+                                        return (
+                                            <div
+                                                key={d.toISOString()}
+                                                onClick={() => setCalendarDate(d)}
+                                                className={`py-2.5 text-center border-r border-slate-100 last:border-r-0 cursor-pointer transition-all ${isSelectedDate ? 'bg-indigo-50/60' : 'hover:bg-slate-100/50'}`}
+                                            >
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{DAYS[d.getDay()]}</p>
+                                                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-extrabold mt-0.5 transition-all ${isTodayDate ? 'bg-indigo-600 text-white shadow-sm' : isSelectedDate ? 'bg-indigo-100 text-indigo-700' : 'text-slate-700'}`}>
+                                                    {d.getDate()}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="grid grid-cols-7" style={{ minHeight: 420 }}>
+                                    {weekDays.map((d) => {
+                                        const dateKey = formatDateKey(d);
+                                        const isTodayDate = dateKey === todayKey;
+                                        const isSelectedDate = dateKey === formatDateKey(calendarDate);
+                                        const events = followUpsByDate[dateKey] || [];
+                                        return (
+                                            <div
+                                                key={dateKey}
+                                                className={`min-h-[420px] p-2 border-r border-slate-100 last:border-r-0 transition-all ${isSelectedDate ? 'bg-indigo-50/15' : isTodayDate ? 'bg-slate-50/30' : 'bg-white'}`}
+                                            >
+                                                <div className="space-y-2">
+                                                    {events.map(ev => (
+                                                        <div
+                                                            key={ev.id}
+                                                            className="p-2 rounded-xl border bg-rose-50/90 border-rose-200 text-rose-900 shadow-sm space-y-1.5 transition-all hover:shadow"
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[8px] font-black text-rose-600 flex items-center gap-0.5">
+                                                                    <span className="material-symbols-outlined text-[10px]">schedule</span>
+                                                                    {ev.time || "Follow-up"}
+                                                                </span>
+                                                                <span className="px-1.5 py-0.5 rounded text-[8.5px] font-mono font-extrabold bg-rose-100/90 border border-rose-300 text-rose-900 tracking-tighter shrink-0" title={ev.appNumber || ev.id}>
+                                                                    {ev.appNumber || ev.id}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[10px] font-extrabold text-slate-800 truncate">{ev.studentName}</p>
+                                                            {ev.notes && (
+                                                                <p className="text-[9px] text-slate-600 font-medium line-clamp-2 bg-white/80 p-1 rounded border border-rose-100">
+                                                                    {ev.notes}
+                                                                </p>
+                                                            )}
+                                                            <div className="flex items-center gap-1 pt-1 border-t border-rose-200/60">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (ev.isStudent) {
+                                                                            router.push(`/staff/users/${ev.studentId}/follow-ups`);
+                                                                        } else {
+                                                                            router.push(`/staff/applications/${ev.appId}`);
+                                                                        }
+                                                                    }}
+                                                                    className="px-1.5 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[8px] font-bold transition-all cursor-pointer"
+                                                                >
+                                                                    View
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleOpenNotes(ev)}
+                                                                    className="px-1.5 py-0.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded text-[8px] font-bold transition-all cursor-pointer"
+                                                                >
+                                                                    Notes
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {events.length === 0 && (
+                                                        <div className="py-12 text-center">
+                                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-300">No tasks</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+
+                        {/* DAY VIEW */}
+                        {calendarView === "day" && (() => {
+                            const dateKey = formatDateKey(calendarDate);
+                            const dayEvents = followUpsByDate[dateKey] || [];
+                            const isTodayDate = dateKey === todayKey;
+
+                            return (
+                                <div className="p-6 space-y-6" style={{ minHeight: 420 }}>
+                                    {/* Day Header Banner */}
+                                    <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-slate-50 to-white border border-indigo-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold ${isTodayDate ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-800 border border-slate-200'}`}>
+                                                <span className="text-[9px] uppercase font-black tracking-wider opacity-80">{DAYS[calendarDate.getDay()]}</span>
+                                                <span className="text-lg leading-none font-black">{calendarDate.getDate()}</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-extrabold text-slate-900">
+                                                    {MONTHS[calendarDate.getMonth()]} {calendarDate.getDate()}, {calendarDate.getFullYear()}
+                                                </h4>
+                                                <p className="text-[11px] text-slate-500 font-semibold">
+                                                    {dayEvents.length} follow-up schedule{dayEvents.length !== 1 ? 's' : ''} for this date
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="space-y-0.5">
-                                            {events.slice(0, 2).map(ev => (
-                                                <button
-                                                    key={ev.id}
-                                                    onClick={() => {
-                                                        if (ev.isStudent) {
-                                                            router.push(`/staff/users/${ev.studentId}/follow-ups`);
-                                                        } else {
-                                                            router.push(`/staff/applications/${ev.appId}`);
-                                                        }
-                                                    }}
-                                                    title={`${ev.studentName} — ${ev.appNumber || ev.id}`}
-                                                    className="w-full text-left px-1.5 py-0.5 rounded text-[9px] font-bold truncate flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all"
-                                                >
-                                                    <span className="material-symbols-outlined text-[9px]">calendar_today</span>
-                                                    {ev.appNumber || ev.id}
-                                                </button>
-                                            ))}
-                                            {events.length > 2 && (
-                                                <span className="text-[8px] text-slate-400 font-bold pl-1">+{events.length - 2} more</span>
-                                            )}
-                                        </div>
+                                        {isTodayDate && (
+                                            <span className="px-3 py-1 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                                                Today
+                                            </span>
+                                        )}
                                     </div>
-                                );
-                            })}
-                        </div>
+
+                                    {/* Event List for the Day */}
+                                    <div className="space-y-3">
+                                        {dayEvents.length === 0 ? (
+                                            <div className="py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                                <span className="material-symbols-outlined text-4xl text-slate-300 mb-2 block">event_available</span>
+                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">No Follow-ups Scheduled</p>
+                                                <p className="text-[11px] text-slate-400 mt-1">No tasks or reminders set for this day.</p>
+                                            </div>
+                                        ) : (
+                                            dayEvents.map(ev => {
+                                                const chip = statusChip(ev);
+                                                return (
+                                                    <div
+                                                        key={ev.id}
+                                                        className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-sm transition-all space-y-3"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <h5 className="text-sm font-extrabold text-slate-900">{ev.studentName}</h5>
+                                                                <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md text-[11px] font-mono font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 tracking-tight">
+                                                                    {ev.appNumber || ev.id}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {ev.time && (
+                                                                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 flex items-center gap-1">
+                                                                        <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                                                        {ev.time}
+                                                                    </span>
+                                                                )}
+                                                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border ${chip.cls}`}>
+                                                                    {chip.label}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {ev.notes && (
+                                                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600 font-medium">
+                                                                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+                                                                    <span className="material-symbols-outlined text-[12px] text-indigo-500">sticky_note_2</span>
+                                                                    Notes
+                                                                </p>
+                                                                <p className="whitespace-pre-wrap">{ev.notes}</p>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (ev.isStudent) {
+                                                                            router.push(`/staff/users/${ev.studentId}/follow-ups`);
+                                                                        } else {
+                                                                            router.push(`/staff/applications/${ev.appId}`);
+                                                                        }
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                                    View Record
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleOpenNotes(ev)}
+                                                                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[14px]">edit_note</span>
+                                                                    {ev.notes ? "Edit Note" : "Add Note"}
+                                                                </button>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => clearFollowUp(ev)}
+                                                                className="px-3 py-1.5 text-rose-600 hover:bg-rose-50 rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                Mark Done
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -551,7 +840,9 @@ export default function RemindersPage() {
                                             <div className="flex items-start justify-between gap-2 mb-2">
                                                 <div className="min-w-0">
                                                     <p className="text-[13px] font-bold text-slate-800 truncate">{fu.studentName || "—"}</p>
-                                                    <p className="text-[10px] text-indigo-500 font-bold">{fu.appNumber || fu.id}</p>
+                                                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-100 tracking-tight">
+                                                        {fu.appNumber || fu.id}
+                                                    </span>
                                                 </div>
                                                 <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase border flex-shrink-0 ${chip.cls}`}>{chip.label}</span>
                                             </div>
@@ -568,7 +859,7 @@ export default function RemindersPage() {
                                                 )}
                                             </div>
                                             {fu.notes ? (
-                                                <div 
+                                                <div
                                                     onClick={() => handleOpenNotes(fu)}
                                                     className="bg-slate-50 border border-slate-100 hover:border-indigo-200 rounded-xl p-2.5 mb-3 cursor-pointer group transition-all"
                                                 >
@@ -686,7 +977,7 @@ export default function RemindersPage() {
                                 {/* History Area */}
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block font-sans">Note History</label>
-                                    
+
                                     {loadingNotes ? (
                                         <div className="flex flex-col items-center justify-center py-8 gap-2">
                                             <div className="w-6 h-6 border-2 border-[#6605c7]/20 border-t-[#6605c7] rounded-full animate-spin" />
