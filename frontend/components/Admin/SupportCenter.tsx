@@ -118,6 +118,16 @@ const formatIST = (dateVal: any, pattern: "full" | "short" | "time" | "relative"
   return new Intl.DateTimeFormat("en-IN", options).format(d);
 };
 
+const getAttachmentUrl = (att: any) => {
+  if (!att) return "#";
+  const path = att.fileUrl || att.url || att.filePath || "";
+  if (!path) return "#";
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+  return `http://localhost:5000${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 // ─── Utility Components ───────────────────────────────────────────────────────
 
 const PriorityBadge = ({ priority }: { priority: string }) => {
@@ -646,7 +656,14 @@ const TicketTable = ({
                     </td>
                     <td className="px-4 py-3 max-w-48">
                       <div className="font-medium text-slate-800 truncate">{ticket.subject}</div>
-                      {ticket._count && <div className="text-[9px] text-slate-400 mt-0.5">💬 {ticket._count.comments} · 📎 {ticket._count.attachments}</div>}
+                      <div className="text-[9px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span>💬 {ticket.comments?.length || ticket._count?.comments || 0}</span>
+                        {((ticket.attachments && ticket.attachments.length > 0) || (ticket._count?.attachments ?? 0) > 0) && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-bold border border-indigo-100">
+                            📎 {ticket.attachments?.length || ticket._count?.attachments} File{(ticket.attachments?.length || ticket._count?.attachments || 1) > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-[10px] text-slate-600 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">{ticket.category}</span>
@@ -914,6 +931,57 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
             <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Description</h3>
             <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ticket.description}</p>
           </div>
+
+          {/* Uploaded Proof Attachments */}
+          {((ticket.attachments && ticket.attachments.length > 0) || (ticket as any).attachmentUrl) && (
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-indigo-600">attachment</span>
+                  Uploaded Problem Proof & Attachments ({ticket.attachments?.length || 1})
+                </h3>
+                <span className="text-[10px] text-slate-400 font-medium">Click to view file</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {(ticket.attachments && ticket.attachments.length > 0
+                  ? ticket.attachments
+                  : [{ fileName: "Proof Attachment", filePath: (ticket as any).attachmentUrl }]
+                ).map((att: any, idx: number) => {
+                  const url = getAttachmentUrl(att);
+                  const isImage = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif)$/i);
+                  const isPdf = (att.mimeType || att.fileName || att.filePath || "").match(/\.pdf$/i);
+
+                  return (
+                    <a
+                      key={att.id || idx}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-indigo-50/70 border border-slate-200 hover:border-indigo-300 rounded-xl transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-indigo-100/70 border border-indigo-200/60 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform shrink-0 overflow-hidden">
+                        {isImage ? (
+                          <img src={url} alt="Attachment" className="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                          <span className="material-symbols-outlined text-[22px]">
+                            {isPdf ? "picture_as_pdf" : "description"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate transition-colors">
+                          {att.fileName || att.name || "Uploaded Attachment"}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                          {att.fileSize ? `${(att.fileSize / 1024).toFixed(1)} KB` : "Problem attachment"} • Open File ↗
+                        </p>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Related Loan Context */}
           {(ticket.loanApplicationNum || ticket.studentName || ticket.universityName || ticket.loanStage) && (

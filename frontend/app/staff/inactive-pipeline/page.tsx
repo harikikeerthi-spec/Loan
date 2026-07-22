@@ -139,6 +139,44 @@ export default function InactivePipelinePage() {
         }
     };
 
+    const handleMoveToActivePipeline = async (item: any) => {
+        const appId = item.id || item._id;
+        if (!appId) return;
+
+        if (!confirm(`Are you sure you want to move ${item.firstName || "this student"}'s application to the Active Pipeline?`)) {
+            return;
+        }
+
+        setIsActionLoading(appId);
+        try {
+            await adminApi.updateApplicationStatus(appId, {
+                status: "processing",
+                stage: "processing",
+                progress: 40,
+                remarks: "Moved to active pipeline by staff",
+            });
+
+            try {
+                await staffProfileApi.logActivity({
+                    type: "processing",
+                    msg: `Application #${item.applicationNumber || appId.slice(-6)} moved to active pipeline`,
+                    icon: "play_arrow",
+                    color: "bg-[#4F46E5]/10 text-[#4F46E5]",
+                });
+            } catch (err) {
+                console.error(err);
+            }
+
+            alert("Application successfully moved to Active Pipeline!");
+            await loadData();
+            await fetchBadgeStats();
+        } catch (e: any) {
+            alert(e?.message || "Failed to move application to active pipeline");
+        } finally {
+            setIsActionLoading(null);
+        }
+    };
+
     const filteredData = useMemo(() => {
         return data.filter(item => {
             const fullName = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.toLowerCase();
@@ -250,9 +288,23 @@ export default function InactivePipelinePage() {
                                                         View
                                                     </button>
                                                     <button
+                                                        onClick={() => handleMoveToActivePipeline(item)}
+                                                        disabled={isActionLoading === rowId}
+                                                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition-all border border-indigo-200 cursor-pointer flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                                                        title="Move application to Active Pipeline"
+                                                    >
+                                                        {isActionLoading === rowId ? (
+                                                            <div className="w-3.5 h-3.5 border-2 border-indigo-700 border-t-transparent rounded-full animate-spin" />
+                                                        ) : (
+                                                            <span className="material-symbols-outlined text-[14px]">play_arrow</span>
+                                                        )}
+                                                        Move to Active Pipeline
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleMoveToIncomingQueue(item)}
                                                         disabled={isActionLoading === rowId}
                                                         className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg transition-all border border-emerald-200 cursor-pointer flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                                                        title="Move application back to Incoming Queue"
                                                     >
                                                         {isActionLoading === rowId ? (
                                                             <div className="w-3.5 h-3.5 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin" />

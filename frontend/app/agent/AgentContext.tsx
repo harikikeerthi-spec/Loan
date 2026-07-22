@@ -762,6 +762,11 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        if (new Date(newTaskForm.dateTime).getTime() < Date.now() - 60000) {
+            showToast("⚠️ Follow-up date & time cannot be set in the past.", "warning");
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await agentApi.createTask({

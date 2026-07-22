@@ -99,8 +99,8 @@ export class OnboardingService {
       const updateData: any = {
         firstName: personal.firstName || data.firstName || user?.firstName,
         lastName: personal.lastName || data.lastName || user?.lastName,
-        phoneNumber: personal.mobile || data.phone || data.phoneNumber || user?.phoneNumber,
-        mobile: personal.mobile || data.phone || data.phoneNumber || user?.mobile,
+        phoneNumber: data.phoneNumber || data.phone || data.mobile || personal.phoneNumber || personal.mobile || personal.phone || user?.phoneNumber,
+        mobile: data.phoneNumber || data.phone || data.mobile || personal.phoneNumber || personal.mobile || personal.phone || user?.mobile,
         goal: goalValue,
         studyDestination: countryValue,
         courseName: courseValue,
@@ -244,6 +244,30 @@ export class OnboardingService {
           else { await this.db.from('UserFinancialProfile').insert(fin); }
         })(),
       ]);
+
+      // Also sync LoanApplication records for this user if any exist
+      try {
+        const appUpdates: any = {};
+        if (updateData.firstName) appUpdates.firstName = updateData.firstName;
+        if (updateData.lastName) appUpdates.lastName = updateData.lastName;
+        if (updateData.phoneNumber || updateData.mobile) {
+          appUpdates.phone = updateData.phoneNumber || updateData.mobile;
+          appUpdates.mobile = updateData.phoneNumber || updateData.mobile;
+        }
+        if (targetUniValue) appUpdates.universityName = targetUniValue;
+        if (countryValue) appUpdates.countryOfEducation = countryValue;
+        if (updateData.fatherName) appUpdates.fatherName = updateData.fatherName;
+        if (updateData.motherName) appUpdates.motherName = updateData.motherName;
+        if (data.coApplicant?.name) appUpdates.coApplicantName = data.coApplicant.name;
+        if (data.coApplicant?.relation) appUpdates.coApplicantRelation = data.coApplicant.relation;
+        if (data.coApplicant?.mobile || data.coApplicant?.phone) appUpdates.coApplicantPhone = data.coApplicant.mobile || data.coApplicant.phone;
+
+        if (Object.keys(appUpdates).length > 0) {
+          await this.db.from('LoanApplication').update(appUpdates).eq('userId', user.id);
+        }
+      } catch (appErr) {
+        console.error('Failed to sync LoanApplication records during onboarding save:', appErr);
+      }
 
       return { success: true, message: 'Onboarding data saved successfully', user };
     } catch (error) {

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { formatDate } from "@/lib/utils";
-import { checkFollowUpConflict, DEFAULT_TIME_SLOTS, formatSlot12Hr } from "@/lib/followUpUtils";
+import { checkFollowUpConflict, DEFAULT_TIME_SLOTS, formatSlot12Hr, getTodayDateString } from "@/lib/followUpUtils";
 
 interface FollowUp {
     id: string;
@@ -99,6 +99,12 @@ export default function FollowUpsTab() {
         const appId = activeApp?.id || activeApp?._id;
         const staffId = staffUser?.id || staffUser?.email || "default";
 
+        const todayStr = getTodayDateString();
+        if (date < todayStr) {
+            alert("⚠️ Past Date Selected!\n\nFollow-up date cannot be scheduled in the past. Please select today's date or a future date.");
+            return;
+        }
+
         // Check if date and time slot is already assigned
         const conflict = checkFollowUpConflict({
             staffId,
@@ -137,6 +143,8 @@ export default function FollowUpsTab() {
         const updated = followUps.map(f => f.id === id ? { ...f, status } : f);
         saveFollowUps(updated);
     };
+
+    const todayStr = getTodayDateString();
 
     return (
         <motion.div
@@ -177,6 +185,7 @@ export default function FollowUpsTab() {
                                     <input
                                         type="date"
                                         required
+                                        min={todayStr}
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
                                         className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"

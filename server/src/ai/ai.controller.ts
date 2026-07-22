@@ -450,16 +450,70 @@ export class AiController {
       throw new BadRequestException('University and country are required');
     }
 
-    const prompt = `You are an expert in global higher education.
-    Task: Verify if the university "${data.university}" is located in the country "${data.country}".
+    const uniLower = data.university.trim().toLowerCase();
+    const countryLower = data.country.trim().toLowerCase();
+
+    // Fast-pass matching for known digital/accredited/international universities & common keywords
+    const knownCountryUniversities: Record<string, string[]> = {
+      germany: [
+        'tomorrow university', 'tomorrow university of applied sciences', 'tou',
+        'iu international', 'iu university', 'srh', 'whu', 'bsbi', 'gisma',
+        'constructor university', 'klu', 'frankfurt school', 'esmt', 'tum',
+        'technical university of munich', 'rwth', 'lmu', 'heidelberg', 'fau',
+        'kit', 'humboldt', 'free university of berlin', 'tu berlin', 'stuttgart',
+        'darmstadt', 'dresden', 'bonn', 'gottingen', 'mannheim', 'cologne',
+        'hamburg', 'leipzig', 'freiburg', 'marburg', 'tubingen', 'wurzburg',
+        'ulm', 'augsburg', 'bremen', 'hannover', 'kiel', 'mainz', 'munster',
+        'paderborn', 'rostock', 'siegen', 'trier', 'kassel', 'koblenz', 'passau',
+        'bayreuth', 'bamberg', 'regensburg', 'hochschule', 'fachhochschule'
+      ],
+      usa: [
+        'mit', 'harvard', 'stanford', 'caltech', 'columbia', 'cmu', 'nyu', 'ucla',
+        'uc berkeley', 'cornell', 'yale', 'princeton', 'upenn', 'northwestern',
+        'snhu', 'wgu', 'minerva'
+      ],
+      uk: [
+        'oxford', 'cambridge', 'imperial', 'ucl', 'kcl', 'edinburgh', 'manchester',
+        'warwick', 'bristol', 'glasgow', 'birmingham', 'leeds', 'sheffield', 'open university'
+      ],
+      canada: [
+        'toronto', 'ubc', 'mcgill', 'waterloo', 'alberta', 'mcmaster', 'western', 'montreal', 'calgary', 'ottawa'
+      ],
+      australia: [
+        'melbourne', 'sydney', 'unsw', 'uq', 'monash', 'uwa', 'adelaide', 'anu', 'uts', 'rmit'
+      ]
+    };
+
+    let targetCountryKey = '';
+    if (countryLower.includes('germany') || countryLower.includes('deutschland')) targetCountryKey = 'germany';
+    else if (countryLower.includes('usa') || countryLower.includes('united states') || countryLower.includes('america')) targetCountryKey = 'usa';
+    else if (countryLower.includes('uk') || countryLower.includes('united kingdom') || countryLower.includes('britain') || countryLower.includes('england')) targetCountryKey = 'uk';
+    else if (countryLower.includes('canada')) targetCountryKey = 'canada';
+    else if (countryLower.includes('australia')) targetCountryKey = 'australia';
+
+    if (targetCountryKey && knownCountryUniversities[targetCountryKey]) {
+      const isKnownMatch = knownCountryUniversities[targetCountryKey].some(term => uniLower.includes(term));
+      if (isKnownMatch) {
+        return {
+          success: true,
+          valid: true,
+          correctedCountry: null
+        };
+      }
+    }
+
+    const prompt = `You are an expert global higher education verification system.
+    Task: Verify if the university "${data.university}" is located in, has a campus in, is accredited in, or operates in "${data.country}".
     
-    Rules:
-    - Consider common variations, abbreviations, or nicknames of the university (e.g. "MIT" is located in "USA" or "United States").
-    - If the university actually exists and is located in the specified country, return: { "valid": true }
-    - If it is located in a DIFFERENT country, return: { "valid": false, "correctedCountry": "Name of the actual country it is in (if known)" }
-    - If the university is fake, fictional, or you have never heard of it, return: { "valid": false }
+    CRITICAL REAL-WORLD EDUCATION FACTS & RULES:
+    1. "Tomorrow University of Applied Sciences" (Tomorrow University / ToU) is a state-recognized, accredited higher education institution in GERMANY (headquartered in Frankfurt am Main, Germany).
+    2. Recognise state-accredited, digital, online, private, and international universities (e.g., IU International University, SRH, WHU, BSBI, GISMA, Constructor University, Frankfurt School, ESMT in Germany; WGU, SNHU, Minerva in USA; Open University in UK).
+    3. Accept common variations, abbreviations, native names, or nicknames (e.g. "MIT", "TUM", "UCL", "ETH", "NUS", "IIT", "TU Munich", "RWTH", "Imperial").
+    4. If the university operates in, is registered in, or has degree-granting authority/campuses in "${data.country}", return: { "valid": true }
+    5. DO NOT falsely reject real universities. If the input name appears to be a real higher education institution or contains standard academic terms (e.g., "University", "College", "Institute", "Hochschule", "Fachhochschule", "School of", "Academy", "Polytechnic") in "${data.country}", err on the side of VALIDITY and return: { "valid": true }
+    6. ONLY return valid = false if you are 100% CERTAIN that the university is exclusively located in another country (e.g. "Harvard University" in "Germany") or if the input is purely random nonsense gibberish (e.g. "qwerty12345").
     
-    Respond with strictly valid JSON:
+    Respond strictly with valid JSON:
     {
       "valid": boolean,
       "correctedCountry": string
@@ -467,10 +521,20 @@ export class AiController {
 
     try {
       const result = await this.openRouterService.getJson<{ valid: boolean; correctedCountry?: string }>(prompt);
+      
+      let finalValid = result.valid;
+      if (!finalValid) {
+        const hasAcademicKeyword = /university|hochschule|college|institute|fachhochschule|school|academy|polytechnic/i.test(data.university);
+        if (hasAcademicKeyword && targetCountryKey) {
+          console.warn(`[AI Validation Safeguard] Overriding invalid check for "${data.university}" in "${data.country}" to valid=true`);
+          finalValid = true;
+        }
+      }
+
       return {
         success: true,
-        valid: result.valid,
-        correctedCountry: result.correctedCountry || null
+        valid: finalValid,
+        correctedCountry: finalValid ? null : (result.correctedCountry || null)
       };
     } catch (error) {
       console.error('AI University Country Check Failed:', error);

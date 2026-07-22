@@ -475,29 +475,19 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                             {/* Real-time IST Clock */}
                             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[11px] font-bold text-[#0A2540] font-mono tracking-tight">
+                                <span className="text-[14px] font-bold text-[#0A2540] font-mono">
                                     {format(nowTime, 'MMM dd, HH:mm:ss')}
                                 </span>
                             </div>
-
-                            <button
-                                type="button"
-                                onClick={() => setIsSupportOpen(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4F46E5]/10 hover:bg-[#4F46E5]/20 text-[#4F46E5] rounded-xl text-xs font-bold transition-all border border-[#4F46E5]/20 cursor-pointer shadow-2xs"
-                                title="Raise or track support tickets"
-                            >
-                                <span className="material-symbols-outlined text-[16px]">support_agent</span>
-                                <span className="hidden sm:inline">Support Ticket</span>
-                            </button>
 
                             <NotificationsPanel
                                 staffId={user?.id}
                                 maxDisplay={8}
                                 showUnreadBadge={true}
                             />
-                            
+
                             <div className="h-5 w-px bg-slate-200" />
-                            
+
                             <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => router.push('/staff/my-profile')}>
                                 <img
                                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}

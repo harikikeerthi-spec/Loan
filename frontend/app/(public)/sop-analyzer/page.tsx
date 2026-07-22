@@ -84,7 +84,7 @@ export default function SOPAnalyzerPage() {
                     <div className="text-center mb-16">
                         <span className="text-[#6605c7] font-bold text-[11px] tracking-[0.2em] uppercase mb-4 block">Document Intelligence</span>
                         <h1 className="text-5xl md:text-6xl font-display font-bold text-gray-900 mb-6">
-                            SOP <span className="italic text-[#6605c7]">Quality Scorer</span>
+                            SOP <span className="italic text-[#6605c7]">Analyser</span>
                         </h1>
                         <p className="text-gray-500 text-lg max-w-3xl mx-auto leading-relaxed">
                             Evaluate your Statement of Purpose against global university standards.

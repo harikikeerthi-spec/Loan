@@ -15,6 +15,24 @@ export const DEFAULT_TIME_SLOTS = [
     "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"
 ];
 
+export function getTodayDateString(): string {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+export function getTodayDateTimeLocalString(): string {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const hh = String(today.getHours()).padStart(2, "0");
+    const min = String(today.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
 export function formatSlot12Hr(time24: string): string {
     if (!time24) return "";
     const parts = time24.split(":");

@@ -439,17 +439,7 @@ export default function ApplicationsPage() {
                                                         {isExpanded && (
                                                             <div className="flex flex-col items-end shrink-0 pt-1">
                                                                 <div className="flex items-center gap-2 relative">
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const bankParam = item.bank || item.targetBank || item.lender || item.assignedBank || "Poonawalla Fincorp";
-                                                                            const appNo = item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`;
-                                                                            router.push(`/staff/chat-customer?bankName=${encodeURIComponent(bankParam)}&applicationId=${item.id || item._id}&applicationNumber=${encodeURIComponent(appNo)}`);
-                                                                        }}
-                                                                        className="w-7 h-7 rounded bg-white border border-indigo-200 shadow-sm hover:border-indigo-400 hover:bg-indigo-50 flex items-center justify-center text-indigo-600 hover:text-indigo-800 transition-all"
-                                                                        title={`Chat with ${item.bank || item.targetBank || item.lender || 'Bank'}`}
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-[14px]">account_balance</span>
-                                                                    </button>
+
                                                                     <button
                                                                         onClick={() => setActiveContactPopup(popup?.id === rowId && popup?.type === 'phone' ? null : { id: rowId, type: 'phone' })}
                                                                         className="w-7 h-7 rounded bg-white border border-slate-200 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all"

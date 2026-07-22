@@ -11,7 +11,7 @@ import ShareWithBankModal from "@/components/staff/ShareWithBankModal";
  
 import { useDialog } from "@/contexts/DialogContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { checkFollowUpConflict, DEFAULT_TIME_SLOTS, formatSlot12Hr } from "@/lib/followUpUtils";
+import { checkFollowUpConflict, DEFAULT_TIME_SLOTS, formatSlot12Hr, getTodayDateString } from "@/lib/followUpUtils";
 
 const IST_OFFSET = 5.5 * 60 * 60 * 1000;
 
@@ -230,6 +230,12 @@ export default function IncomingQueuePage() {
             return;
         }
 
+        const todayStr = getTodayDateString();
+        if (tempFollowUpDate < todayStr) {
+            alert("⚠️ Past Date Selected!\n\nFollow-up date cannot be scheduled in the past. Please select today's date or a future date.");
+            return;
+        }
+
         const selectedTime = tempFollowUpTime || "10:00";
         const staffId = user?.id || user?.email || "default";
 
@@ -381,6 +387,35 @@ export default function IncomingQueuePage() {
             await fetchBadgeStats();
         } catch (e: any) {
             alert(e?.message || 'Failed to approve application');
+        }
+    };
+
+    const handleMoveToInactivePipeline = async (item: any) => {
+        const appId = item.id || item._id;
+        if (!appId) {
+            alert("Application ID is missing.");
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to move ${item.firstName || item.student?.firstName || "this student"}'s application to the Inactive Pipeline?`)) {
+            return;
+        }
+
+        try {
+            await adminApi.updateApplicationStatus(appId, {
+                status: 'rejected',
+                stage: 'rejected',
+                rejectionReason: 'Moved to inactive pipeline by staff',
+                remarks: 'Moved to inactive pipeline by staff',
+            });
+
+            await logActivity('rejected', `Application #${item.applicationNumber || (appId + '').slice(-6)} moved to inactive pipeline`, 'archive', 'bg-rose-50 text-rose-700');
+            setActiveDockApp(null);
+            await loadData();
+            await fetchBadgeStats();
+            alert("Application successfully moved to Inactive Pipeline!");
+        } catch (e: any) {
+            alert(e?.message || 'Failed to move application to inactive pipeline');
         }
     };
 
@@ -794,7 +829,7 @@ export default function IncomingQueuePage() {
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Set a custom due date</label>
-                                    <input type="date" value={tempFollowUpDate} onChange={e => setTempFollowUpDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
+                                    <input type="date" min={getTodayDateString()} value={tempFollowUpDate} onChange={e => setTempFollowUpDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
                                 </div>
                                 <div>
                                     <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Select time slot</label>
@@ -975,6 +1010,15 @@ export default function IncomingQueuePage() {
 
                         {/* Route / Send Bank button */}
                         <div className="shrink-0 flex items-center gap-3">
+                            {/* Move to Inactive Pipeline button */}
+                            <button
+                                onClick={() => handleMoveToInactivePipeline(activeDockApp)}
+                                className="h-11 px-5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">archive</span>
+                                Move to Inactive Pipeline
+                            </button>
+
                             {/* Approve button: moves application to active pipeline */}
                             <button
                                 onClick={() => {

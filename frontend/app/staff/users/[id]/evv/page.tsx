@@ -46,6 +46,7 @@ export default function EvvTab() {
                 // EVV Test Agent - Quick local processing
                 <EVVTestAgent
                     applicationId={activeApp?.id || activeApp?._id}
+                    application={activeApp}
                     onComplete={handleEVVComplete}
                 />
             ) : (

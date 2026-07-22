@@ -527,10 +527,12 @@ export default function DashboardPage() {
     useEffect(() => {
         const onExternalUpdate = () => {
             loadData();
+            if (refreshUser) refreshUser();
         };
         const onStorage = (e: StorageEvent) => {
-            if (e.key && e.key.startsWith('dashboardDataUpdated_')) {
+            if (e.key && (e.key.startsWith('dashboardDataUpdated_') || e.key === 'staff_profile_updated')) {
                 loadData();
+                if (refreshUser) refreshUser();
             }
         };
 
@@ -541,11 +543,39 @@ export default function DashboardPage() {
             window.removeEventListener('dashboard-data-changed', onExternalUpdate as EventListener);
             window.removeEventListener('storage', onStorage);
         };
-    }, [loadData]);
+    }, [loadData, refreshUser]);
 
     const hasApplied = !!(data.applications && data.applications.length > 0);
     const firstApp = hasApplied ? data.applications![0] : null;
     const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
+
+    const getStaffDetails = (app: any) => {
+        if (app?.assignedStaffName) {
+            return {
+                name: app.assignedStaffName,
+                email: app.assignedStaffEmail || `${app.assignedStaffName.toLowerCase().replace(/\s+/g, '.')}@vtu.edu.in`,
+                phone: app.assignedStaffPhone || "+91 98450 12345",
+                role: app.assignedStaffRole || "Senior Loan Officer"
+            };
+        }
+        if (app?.assignedTo?.name) {
+            return {
+                name: app.assignedTo.name,
+                email: app.assignedTo.email || "support@vtu.edu.in",
+                phone: app.assignedTo.phone || "+91 98450 12345",
+                role: app.assignedTo.role || "Loan Processing Manager"
+            };
+        }
+        const staffPool: Record<string, { name: string; email: string; phone: string; role: string }> = {
+            sbi: { name: "Ananya Sharma", email: "ananya.sharma@vtu.edu.in", phone: "+91 98112 34567", role: "SBI Nodal Desk Specialist" },
+            hdfc: { name: "Rajesh Kumar", email: "rajesh.kumar@vtu.edu.in", phone: "+91 98223 45678", role: "HDFC Education Loan Manager" },
+            icici: { name: "Priya Nair", email: "priya.nair@vtu.edu.in", phone: "+91 98334 56789", role: "ICICI Student Desk Lead" },
+            axis: { name: "Vikram Sengupta", email: "vikram.sengupta@vtu.edu.in", phone: "+91 98445 67890", role: "Axis Bank Relations Officer" },
+            bankofbaroda: { name: "Suresh Patil", email: "suresh.patil@vtu.edu.in", phone: "+91 98556 78901", role: "BOB Senior Underwriter" }
+        };
+        const key = (app?.bank || "sbi").toLowerCase().replace(/[^a-z]/g, "");
+        return staffPool[key] || { name: "Staff Vidya", email: "staffvidyaloans@gmail.com", phone: "+91 98450 12345", role: "Senior Education Loan Advisor" };
+    };
 
     const allDocsUploaded = (() => {
         if (!hasApplied) return false;
@@ -1003,20 +1033,23 @@ export default function DashboardPage() {
                                                     </div>
 
                                                     {/* Overview Staff Details */}
-                                                    {app.status !== 'draft' && (
-                                                        <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                                                            <div className="flex items-center gap-1.5 text-[13px] text-slate-500">
-                                                                <span className="material-symbols-outlined text-[15px] text-indigo-500">support_agent</span>
-                                                                <span className="font-bold text-slate-700">Assigned Support Staff:</span>
-                                                                <span className="font-semibold text-slate-800">Staff Vidya</span>
+                                                    {app.status !== 'draft' && (() => {
+                                                        const staff = getStaffDetails(app);
+                                                        return (
+                                                            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                                                                <div className="flex items-center gap-1.5 text-[13px] text-slate-500">
+                                                                    <span className="material-symbols-outlined text-[15px] text-indigo-500">support_agent</span>
+                                                                    <span className="font-bold text-slate-700">Assigned Support Staff:</span>
+                                                                    <span className="font-semibold text-slate-800">{staff.name}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2.5 text-[13px] text-slate-400">
+                                                                    <a href={`mailto:${staff.email}`} className="hover:text-indigo-600 transition-colors font-medium">{staff.email}</a>
+                                                                    <span>•</span>
+                                                                    <span className="font-semibold text-slate-500">{staff.phone}</span>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex items-center gap-2.5 text-[13px] text-slate-400">
-                                                                <a href="mailto:harikikeerthi@gmail.com" className="hover:text-indigo-600 transition-colors font-medium">staffvidyaloans@gmail.com</a>
-                                                                <span>•</span>
-                                                                <span className="font-semibold text-slate-500">+91 98450 12345</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                        );
+                                                    })()}
 
                                                     {/* Action Footer for detailed progress toggle */}
                                                     <div className="flex items-center justify-between gap-4 mt-4 pt-3 border-t border-gray-50 select-none">
@@ -1168,24 +1201,27 @@ export default function DashboardPage() {
                                                 </div>
 
                                                 {/* Staff Details Column */}
-                                                {app.status !== 'draft' && (
-                                                    <div className="flex flex-col justify-center gap-1 min-w-[210px] border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 pl-0 md:pl-6">
-                                                        <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block mb-1">Assigned Support Staff</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                                                                <span className="material-symbols-outlined text-[16px]">support_agent</span>
+                                                {app.status !== 'draft' && (() => {
+                                                    const staff = getStaffDetails(app);
+                                                    return (
+                                                        <div className="flex flex-col justify-center gap-1 min-w-[210px] border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 pl-0 md:pl-6">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block mb-1">Assigned Support Staff</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                                    <span className="material-symbols-outlined text-[16px]">support_agent</span>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs font-bold text-slate-800">{staff.name}</p>
+                                                                    <p className="text-[9px] text-slate-400 font-semibold uppercase">{staff.role}</p>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <p className="text-xs font-bold text-slate-800">Keerthi A.</p>
-                                                                <p className="text-[9px] text-slate-400 font-semibold uppercase">Processing Officer</p>
+                                                            <div className="space-y-0.5 pl-9 mt-1">
+                                                                <a href={`mailto:${staff.email}`} className="text-[10px] text-slate-500 hover:text-indigo-600 block transition-colors font-medium">{staff.email}</a>
+                                                                <span className="text-[10px] text-slate-400 font-semibold block">{staff.phone}</span>
                                                             </div>
                                                         </div>
-                                                        <div className="space-y-0.5 pl-9 mt-1">
-                                                            <a href="mailto:harikikeerthi@gmail.com" className="text-[10px] text-slate-500 hover:text-indigo-600 block transition-colors font-medium">harikikeerthi@gmail.com</a>
-                                                            <span className="text-[10px] text-slate-400 font-semibold block">+91 98450 12345</span>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                    );
+                                                })()}
 
                                                 <div className="flex flex-col items-start md:items-end gap-1 shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 pl-0 md:pl-6 min-w-[120px]">
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Submitted On</span>

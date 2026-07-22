@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useAgent } from "../AgentContext";
+import { getTodayDateTimeLocalString } from "@/lib/followUpUtils";
 
 const CALENDAR_DAYS = [
     {
@@ -248,9 +249,10 @@ export default function AgentCalendar() {
                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Date & Time</label>
                             <input
                                 type="datetime-local"
+                                min={getTodayDateTimeLocalString()}
                                 value={newTaskForm.dateTime}
                                 onChange={(e) => setNewTaskForm({ ...newTaskForm, dateTime: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-white transition-all"
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/15 focus:bg-[#fff] transition-all"
                             />
                         </div>
 

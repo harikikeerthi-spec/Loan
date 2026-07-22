@@ -581,26 +581,29 @@ export function generateDemoData(): Transaction[] {
     txs.push({ date, balance: Math.max(0, balance), debit, credit, narration: narr, raw: "" });
   };
 
-  for (let m = 0; m < 6; m++) {
-    const y = 2026, mo = m + 1;
-    const days = new Date(y, mo, 0).getDate();
+  const now = new Date();
+  for (let m = 5; m >= 0; m--) {
+    const targetDate = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const y = targetDate.getFullYear();
+    const mo = targetDate.getMonth();
+    const days = new Date(y, mo + 1, 0).getDate();
 
     // Salary on day 1
-    push(new Date(y, mo - 1, 1, 9, 0), 0, 55_000, "SALARY CREDIT / VidyaCorp Payroll");
+    push(new Date(y, mo, 1, 9, 0), 0, 55_000, "SALARY CREDIT / VidyaCorp Payroll");
     // Rent on day 4
-    push(new Date(y, mo - 1, 4, 10, 0), 14_000, 0, "RENT ACH / NACH0028481");
+    push(new Date(y, mo, 4, 10, 0), 14_000, 0, "RENT ACH / NACH0028481");
     // EMI on day 8
-    push(new Date(y, mo - 1, 8, 11, 0), 4_200, 0, "EMI NACH / LOAN DEBIT AUTO");
-    // Simulate March low-balance dip
-    if (m === 2) {
-      push(new Date(y, mo - 1, 26, 18, 0), 48_000, 0, "ATM CASH WITHDRAWAL");
+    push(new Date(y, mo, 8, 11, 0), 4_200, 0, "EMI NACH / LOAN DEBIT AUTO");
+    // Low balance dip in month index 3
+    if (m === 3) {
+      push(new Date(y, mo, 26, 18, 0), 48_000, 0, "ATM CASH WITHDRAWAL");
     }
     // Random daily UPI flows
     for (let d = 2; d <= days; d += 3) {
       const amt = Math.round(Math.random() * 5_000 + 500);
       const isCr = Math.sin(d + m) > 0;
-      if (isCr) push(new Date(y, mo - 1, d, 14, 0), 0, amt, `UPI/CR/${d}${m} / NEFT INWARD`);
-      else       push(new Date(y, mo - 1, d, 16, 0), amt, 0, `UPI/DR/${d}${m} / MERCHANT PAY`);
+      if (isCr) push(new Date(y, mo, d, 14, 0), 0, amt, `UPI/CR/${d}${m} / NEFT INWARD`);
+      else       push(new Date(y, mo, d, 16, 0), amt, 0, `UPI/DR/${d}${m} / MERCHANT PAY`);
     }
   }
 

@@ -58,7 +58,7 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
 }
 
 export default function ProfileTab() {
-    const { userData, userApplications, userDocuments, refreshData } = useUserDossier();
+    const { userData, setUserData, userApplications, userDocuments, refreshData } = useUserDossier();
     const router = useRouter();
 
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -120,13 +120,46 @@ export default function ProfileTab() {
         return candidates.find((value) => typeof value === "string" && value.trim()) || "—";
     };
 
-    const getCoApplicantName = (index: 1 | 2 | 3) => {
+    const parentsList = Array.isArray(userData?.parents) ? userData.parents : [];
+
+    let parsedFamilyObj: any = userData?.family;
+    if (typeof parsedFamilyObj === 'string') {
+        try { parsedFamilyObj = JSON.parse(parsedFamilyObj); } catch { }
+    }
+    let parsedCoAppObj: any = userData?.coApplicant;
+    if (typeof parsedCoAppObj === 'string') {
+        try { parsedCoAppObj = JSON.parse(parsedCoAppObj); } catch { }
+    }
+
+    const fatherEntry = parentsList.find((p: any) => p.relation === 'father') || {};
+    const fatherData = {
+        name: parsedFamilyObj?.fatherName || userData?.fatherName || fatherEntry.name || getParentName("father"),
+        aadharNumber: parsedFamilyObj?.fatherAadhar || userData?.fatherAadhar || fatherEntry.aadharNumber || fatherEntry.aadhar,
+        panNumber: parsedFamilyObj?.fatherPan || userData?.fatherPan || fatherEntry.panNumber || fatherEntry.pan,
+    };
+
+    const motherEntry = parentsList.find((p: any) => p.relation === 'mother') || {};
+    const motherData = {
+        name: parsedFamilyObj?.motherName || userData?.motherName || motherEntry.name || getParentName("mother"),
+        aadharNumber: parsedFamilyObj?.motherAadhar || userData?.motherAadhar || motherEntry.aadharNumber || motherEntry.aadhar,
+        panNumber: parsedFamilyObj?.motherPan || userData?.motherPan || motherEntry.panNumber || motherEntry.pan,
+    };
+
+    const coappEntry = parentsList.find((p: any) => p.relation === 'coapplicant') || {};
+    const coapplicantData: any = {
+        name: (typeof parsedCoAppObj === 'object' ? parsedCoAppObj?.name : "") || parsedFamilyObj?.coappName || userData?.coApplicantName || coappEntry.name,
+        relation: (typeof parsedCoAppObj === 'object' ? parsedCoAppObj?.relation : "") || parsedFamilyObj?.coappRelation || userData?.coApplicantRelation || coappEntry.relation,
+        aadharNumber: (typeof parsedCoAppObj === 'object' ? parsedCoAppObj?.aadharNumber : "") || parsedFamilyObj?.coappAadhar || userData?.coApplicantAadhar || coappEntry.aadharNumber || coappEntry.aadhar,
+        panNumber: (typeof parsedCoAppObj === 'object' ? parsedCoAppObj?.panNumber : "") || parsedFamilyObj?.coappPan || userData?.coApplicantPan || coappEntry.panNumber || coappEntry.pan,
+    };
+
+    const getCoApplicantName = (index: 1 | 2 | 3): any => {
         if (index === 1) {
             if (coapplicantData?.name) return coapplicantData.name;
             if (userData?.coApplicant) {
                 let coApp: any = userData.coApplicant;
                 if (typeof coApp === 'string') {
-                    try { coApp = JSON.parse(coApp); } catch {}
+                    try { coApp = JSON.parse(coApp); } catch { }
                 }
                 if (typeof coApp === 'object' && coApp?.name) return coApp.name;
             }
@@ -159,24 +192,6 @@ export default function ProfileTab() {
         return <span className="text-[#94A3B8] font-normal">Pending</span>;
     };
 
-    const parentsList = Array.isArray(userData?.parents) ? userData.parents : [];
-    const fatherData = parentsList.find((p: any) => p.relation === 'father') || {
-        name: userData?.family?.fatherName || userData?.fatherName,
-        aadharNumber: userData?.family?.fatherAadhar || userData?.fatherAadhar,
-        panNumber: userData?.family?.fatherPan || userData?.fatherPan
-    };
-    const motherData = parentsList.find((p: any) => p.relation === 'mother') || {
-        name: userData?.family?.motherName || userData?.motherName,
-        aadharNumber: userData?.family?.motherAadhar || userData?.motherAadhar,
-        panNumber: userData?.family?.motherPan || userData?.motherPan
-    };
-    const coapplicantData = parentsList.find((p: any) => p.relation === 'coapplicant') || {
-        name: (typeof userData?.coApplicant === 'object' ? userData?.coApplicant?.name : "") || userData?.coApplicantName,
-        relation: (typeof userData?.coApplicant === 'object' ? userData?.coApplicant?.relation : "") || userData?.coApplicantRelation,
-        aadharNumber: (typeof userData?.coApplicant === 'object' ? userData?.coApplicant?.aadharNumber : "") || userData?.coApplicantAadhar,
-        panNumber: (typeof userData?.coApplicant === 'object' ? userData?.coApplicant?.panNumber : "") || userData?.coApplicantPan
-    };
-
     const userDocs = userDocuments || [];
     const sscDoc = userDocs.find((d: any) => d.docType === 'marksheet_10' || d.docType === 'marksheet_10th');
     const hscDoc = userDocs.find((d: any) => d.docType === 'marksheet_12' || d.docType === 'marksheet_12th');
@@ -193,20 +208,20 @@ export default function ProfileTab() {
     const getAcademicDetails = (doc: any, key: 'ssc' | 'hsc' | 'ug') => {
         let parsedAcademic: any = userData?.academic;
         if (typeof parsedAcademic === 'string') {
-            try { parsedAcademic = JSON.parse(parsedAcademic); } catch {}
+            try { parsedAcademic = JSON.parse(parsedAcademic); } catch { }
         }
         const fallback = parsedAcademic?.[key] || {};
         const extInst = getExtractedField(doc, 'institution') || getExtractedField(doc, 'university') || getExtractedField(doc, 'school_name') || getExtractedField(doc, 'college_name');
         const extPct = getExtractedField(doc, 'score') || getExtractedField(doc, 'percentage') || getExtractedField(doc, 'gpa') || getExtractedField(doc, 'cgpa');
 
-        const inst = fallback.institute || extInst;
-        const pct = fallback.percentage || extPct;
+        const inst = (fallback.institute && String(fallback.institute).trim() !== "") ? fallback.institute : extInst;
+        const pct = (fallback.percentage !== undefined && fallback.percentage !== null && String(fallback.percentage).trim() !== "") ? fallback.percentage : extPct;
 
-        return { 
+        return {
             rawInstitute: inst || "",
             rawPercentage: pct || "",
-            institute: inst ? inst : <span className="text-[#94A3B8] font-normal">Not Uploaded</span>, 
-            percentage: pct ? (pct.toString().includes('%') ? pct : `${pct}%`) : <span className="text-[#94A3B8] font-normal">Pending</span> 
+            institute: inst ? inst : <span className="text-[#94A3B8] font-normal">Pending</span>,
+            percentage: pct ? (pct.toString().includes('%') ? pct : `${pct}%`) : <span className="text-[#94A3B8] font-normal">Pending</span>
         };
     };
 
@@ -300,15 +315,15 @@ export default function ProfileTab() {
         setSubmitError("");
         let parsedAcademic: any = userData?.academic;
         if (typeof parsedAcademic === 'string') {
-            try { parsedAcademic = JSON.parse(parsedAcademic); } catch {}
+            try { parsedAcademic = JSON.parse(parsedAcademic); } catch { }
         }
         let parsedFamily: any = userData?.family;
         if (typeof parsedFamily === 'string') {
-            try { parsedFamily = JSON.parse(parsedFamily); } catch {}
+            try { parsedFamily = JSON.parse(parsedFamily); } catch { }
         }
         let parsedCoApp: any = userData?.coApplicant;
         if (typeof parsedCoApp === 'string') {
-            try { parsedCoApp = JSON.parse(parsedCoApp); } catch {}
+            try { parsedCoApp = JSON.parse(parsedCoApp); } catch { }
         }
 
         setEditForm({
@@ -358,27 +373,41 @@ export default function ProfileTab() {
         try {
             let parsedFamily: any = userData?.family;
             if (typeof parsedFamily === 'string') {
-                try { parsedFamily = JSON.parse(parsedFamily); } catch {}
+                try { parsedFamily = JSON.parse(parsedFamily); } catch { }
             }
             let parsedCoApp: any = userData?.coApplicant;
             if (typeof parsedCoApp === 'string') {
-                try { parsedCoApp = JSON.parse(parsedCoApp); } catch {}
+                try { parsedCoApp = JSON.parse(parsedCoApp); } catch { }
             }
             let parsedAcademic: any = userData?.academic;
             if (typeof parsedAcademic === 'string') {
-                try { parsedAcademic = JSON.parse(parsedAcademic); } catch {}
+                try { parsedAcademic = JSON.parse(parsedAcademic); } catch { }
             }
 
             const updates = {
                 firstName: editForm.firstName,
                 lastName: editForm.lastName,
                 phone: editForm.phoneNumber,
+                phoneNumber: editForm.phoneNumber,
+                mobile: editForm.phoneNumber,
                 fatherName: editForm.fatherName,
                 motherName: editForm.motherName,
                 dateOfBirth: editForm.dateOfBirth,
                 nationality: editForm.nationality,
                 studyDestination: editForm.studyDestination,
                 targetUniversity: editForm.targetUniversity,
+
+                personal: {
+                    firstName: editForm.firstName,
+                    lastName: editForm.lastName,
+                    mobile: editForm.phoneNumber,
+                    phone: editForm.phoneNumber,
+                    phoneNumber: editForm.phoneNumber,
+                    dateOfBirth: editForm.dateOfBirth,
+                    nationality: editForm.nationality,
+                    fatherName: editForm.fatherName,
+                    motherName: editForm.motherName,
+                },
 
                 family: {
                     ...(parsedFamily || {}),
@@ -388,6 +417,10 @@ export default function ProfileTab() {
                     fatherPan: editForm.fatherPan,
                     motherAadhar: editForm.motherAadhar,
                     motherPan: editForm.motherPan,
+                    coappName: editForm.coappName,
+                    coappRelation: editForm.coappRelation,
+                    coappAadhar: editForm.coappAadhar,
+                    coappPan: editForm.coappPan,
                 },
 
                 coApplicant: {
@@ -413,7 +446,37 @@ export default function ProfileTab() {
                 ]
             };
 
-            await documentApi.updateProfile(userData.id, updates);
+            await Promise.allSettled([
+                documentApi.updateProfile(userData.id, updates),
+                adminApi.updateUserDetails({
+                    email: editForm.email || userData.email,
+                    firstName: editForm.firstName,
+                    lastName: editForm.lastName,
+                    phoneNumber: editForm.phoneNumber,
+                    dateOfBirth: editForm.dateOfBirth,
+                })
+            ]);
+
+            if (setUserData) {
+                setUserData((prev: any) => ({
+                    ...prev,
+                    ...updates,
+                    phoneNumber: editForm.phoneNumber,
+                    mobile: editForm.phoneNumber,
+                    phone: editForm.phoneNumber,
+                    family: updates.family,
+                    coApplicant: updates.coApplicant,
+                    academic: updates.academic,
+                    parents: updates.parents,
+                }));
+            }
+
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new Event("dashboard-data-changed"));
+                localStorage.setItem(`dashboardDataUpdated_${userData.id}`, Date.now().toString());
+                localStorage.setItem("staff_profile_updated", Date.now().toString());
+            }
+
             await refreshData();
             setIsEditOpen(false);
         } catch (err: any) {
@@ -531,7 +594,7 @@ export default function ProfileTab() {
                             const motherName = motherData?.name || getParentName("mother");
 
                             const coApp1Name = getCoApplicantName(1);
-                             const coApp2Name = getCoApplicantName(2);
+                            const coApp2Name = getCoApplicantName(2);
                             const coApp3Name = getCoApplicantName(3);
 
                             return (
@@ -672,8 +735,8 @@ export default function ProfileTab() {
                                     key={m}
                                     onClick={() => setEvvPeriod(m)}
                                     className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-wider transition-all ${evvPeriod === m
-                                            ? 'bg-indigo-600 text-white'
-                                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
                                         }`}
                                 >
                                     {m}M
@@ -739,27 +802,6 @@ export default function ProfileTab() {
                                     <div className={`px-4 py-3 rounded-xl border text-center shadow-sm font-black text-xs min-w-[70px] ${riskColor}`}>
                                         {risk}
                                     </div>
-                                </div>
-
-                                {/* EVV score bar */}
-                                <div className="bg-white rounded-xl border border-slate-100 p-2.5 shadow-sm">
-                                    <div className="flex justify-between text-[8px] font-bold text-slate-400 uppercase mb-1.5">
-                                        <span>EVV Progress</span>
-                                        <span>{periodEvvScore}%</span>
-                                    </div>
-                                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full transition-all duration-500 ${risk === 'LOW' ? 'bg-emerald-500' : risk === 'MEDIUM' ? 'bg-amber-500' : 'bg-rose-500'
-                                                }`}
-                                            style={{ width: `${periodEvvScore}%` }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Recommendation Banner */}
-                                <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100/50 rounded-xl text-center shadow-sm">
-                                    <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider">Recommendation</span>
-                                    <span className="block text-xs font-bold text-indigo-900 mt-0.5">{periodRec}</span>
                                 </div>
                             </div>
                         );
@@ -880,39 +922,52 @@ export default function ProfileTab() {
             </div>
 
             {isEditOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden relative">
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 md:p-8 pt-20 sm:pt-24 bg-slate-950/70 backdrop-blur-md overflow-y-auto">
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_25px_70px_-15px_rgba(15,23,42,0.3)] w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden relative my-auto animate-in zoom-in-95 duration-200">
                         {/* Header */}
-                        <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-                            <div>
-                                <h3 className="text-base font-bold text-slate-900">Edit Profile Details</h3>
-                                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-mono mt-0.5">Modify student records</p>
+                        <div className="flex justify-between items-center px-6 sm:px-8 py-5 border-b border-slate-100 bg-slate-50/80 backdrop-blur-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
+                                    <span className="material-symbols-outlined text-[20px]">edit_square</span>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-base font-bold text-slate-900 font-['Playfair_Display',serif]">Edit Profile Details</h3>
+                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100/80">
+                                            STUDENT RECORD
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Modify and sync student profile information</p>
+                                </div>
                             </div>
                             <button
+                                type="button"
                                 onClick={() => setIsEditOpen(false)}
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors border-0 cursor-pointer"
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all border-0 cursor-pointer"
+                                title="Close Modal"
                             >
                                 <span className="material-symbols-outlined text-[20px]">close</span>
                             </button>
                         </div>
 
                         {/* Tabs */}
-                        <div className="flex border-b border-slate-100 px-6 bg-slate-50/30">
+                        <div className="flex border-b border-slate-100 px-6 sm:px-8 bg-slate-50/40 gap-2 pt-2">
                             {[
-                                { id: 'student', label: 'Student Info' },
-                                { id: 'parents', label: 'Parents' },
-                                { id: 'coapplicant', label: 'Co-Applicant' },
-                                { id: 'academic', label: 'Academic' }
+                                { id: 'student', label: 'Student Info', icon: 'person' },
+                                { id: 'parents', label: 'Parents', icon: 'family_history' },
+                                { id: 'coapplicant', label: 'Co-Applicant', icon: 'group' },
+                                { id: 'academic', label: 'Academic', icon: 'school' }
                             ].map((tab) => (
                                 <button
                                     key={tab.id}
                                     type="button"
                                     onClick={() => setActiveEditTab(tab.id as any)}
-                                    className={`py-3.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer border-0 ${activeEditTab === tab.id
-                                            ? 'border-indigo-600 text-indigo-600 bg-transparent'
-                                            : 'border-transparent text-slate-400 hover:text-slate-600 bg-transparent'
+                                    className={`py-3 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer border-0 flex items-center gap-1.5 ${activeEditTab === tab.id
+                                        ? 'border-indigo-600 text-indigo-600 bg-white/80 rounded-t-xl shadow-sm'
+                                        : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 rounded-t-xl bg-transparent'
                                         }`}
                                 >
+                                    <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
                                     {tab.label}
                                 </button>
                             ))}
@@ -920,7 +975,7 @@ export default function ProfileTab() {
 
                         <form onSubmit={handleSaveEdit} className="flex-1 flex flex-col overflow-hidden">
                             {/* Body */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-4">
                                 {submitError && (
                                     <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-xs font-semibold">
                                         {submitError}
@@ -962,9 +1017,11 @@ export default function ProfileTab() {
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
                                             <input
                                                 type="text"
+                                                required
+                                                disabled
                                                 value={editForm.phoneNumber}
                                                 onChange={(e) => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white"
+                                                className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-500 cursor-not-allowed"
                                             />
                                         </div>
                                         <div>
@@ -1215,18 +1272,18 @@ export default function ProfileTab() {
                             </div>
 
                             {/* Footer */}
-                            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 shrink-0">
+                            <div className="p-5 sm:px-8 border-t border-slate-100 bg-slate-50/80 backdrop-blur-sm flex justify-end gap-3 shrink-0">
                                 <button
                                     type="button"
                                     onClick={() => setIsEditOpen(false)}
-                                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer bg-white"
+                                    className="px-5 py-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer bg-white active:scale-95 shadow-sm"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md hover:shadow-indigo-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer flex items-center gap-1.5"
+                                    className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-0 cursor-pointer flex items-center gap-2"
                                 >
                                     {isSubmitting ? (
                                         <>

@@ -156,7 +156,7 @@ export default function Navbar() {
                                         <div>
                                             <h3 className="text-[9px] font-bold uppercase tracking-widest text-pink-500 mb-4 border-b border-pink-500/10 pb-2">Application</h3>
                                             <NavItem href="/sop-writer" icon="auto_fix_high" title="AI SOP Writer" desc="Generate statements instantly" color="text-pink-500" />
-                                            <NavItem href="/sop-analyzer" icon="analytics" title="Quality Scorer" desc="Analyze your existing SOP" color="text-pink-500" />
+                                            <NavItem href="/sop-analyzer" icon="analytics" title="SOP Analyser" desc="Analyze your existing SOP" color="text-pink-500" />
                                             <NavItem href="/admit-predictor" icon="insights" title="Admit Predictor" desc="Chance of acceptance" color="text-pink-500" />
                                             {/* <NavItem href="/visa-mock" icon="record_voice_over" title="Visa Interview Prep" desc="AI mock visa interview" color="text-pink-500" /> */}
                                         </div>
@@ -285,14 +285,6 @@ export default function Navbar() {
                                             />
                                             <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
                                             <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
-                                            <button
-                                                type="button"
-                                                onClick={() => { setProfileOpen(false); setSupportOpen(true); }}
-                                                className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-purple-50/80 transition-colors text-left border-0 bg-transparent cursor-pointer rounded-xl"
-                                            >
-                                                <span className="material-symbols-outlined text-base text-[#6605c7]">support_agent</span>
-                                                <span>Support Ticket</span>
-                                            </button>
                                             {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
                                                 <ProfileDropItem href="/user-details" icon="info" label="Complete Profile" iconClass="text-yellow-500" />
                                             )}
