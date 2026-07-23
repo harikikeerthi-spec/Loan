@@ -454,8 +454,14 @@ const TicketTable = ({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(filter?.status || "all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState(filter?.priority || "all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+
+  useEffect(() => {
+    setStatusFilter(filter?.status || "all");
+    setPriorityFilter(filter?.priority || "all");
+    setPage(1);
+  }, [filter?.status, filter?.priority, filter?.assignedToId]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);

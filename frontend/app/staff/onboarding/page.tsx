@@ -781,7 +781,7 @@ export default function OnboardingPage() {
         const routes: Record<string, string> = {
             overview: "/staff/dashboard",
             incoming_queue: "/staff/incoming-queue",
-            applications: "/staff/applications",
+            applications: "/staff/incoming-queue",
             tasks: "/staff/tasks",
             performance: "/staff/performance",
             users: "/staff/users",

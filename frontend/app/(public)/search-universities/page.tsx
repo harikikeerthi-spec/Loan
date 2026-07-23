@@ -1,192 +1,310 @@
 "use client";
 
-import React, { useState } from 'react';
-import UniversityCard from '../../../components/UniversityCard';
-import UniversityDetailsModal from '../../../components/UniversityDetailsModal';
-import { useUniversity } from '@/context/UniversityContext';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { universities as staticUniversitiesDict } from "@/lib/universityData";
 
-const POPULAR = [
-  'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'Netherlands', 'India', 'Singapore', 'Sweden', 'Switzerland', 'Japan', 'South Korea', 'China', 'New Zealand'
+const POPULAR_COUNTRIES = [
+    "All Countries",
+    "United States",
+    "United Kingdom",
+    "Canada",
+    "Australia",
+    "Germany",
+    "Singapore",
+    "France",
+    "Netherlands",
 ];
 
+const TableHeader = ({ children }: { children: React.ReactNode }) => (
+    <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 text-[11px] uppercase tracking-wider font-sans font-bold text-left">
+        <tr>{children}</tr>
+    </thead>
+);
+
 export default function SearchUniversitiesPage() {
-  const router = useRouter();
-  const [selected, setSelected] = useState<string[]>(['United States']);
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [active, setActive] = useState<any | null>(null);
-  const { selectedUniversity } = useUniversity();
+    const router = useRouter();
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCountry, setSelectedCountry] = useState("All Countries");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(15);
+    const [loading, setLoading] = useState(false);
+    const [dynamicResults, setDynamicResults] = useState<any[]>([]);
 
-  function toggleCountry(c: string) {
-    setSelected((s) => s.includes(c) ? s.filter(x => x !== c) : [...s, c]);
-  }
+    // Convert static dictionary to array
+    const staticList = useMemo(() => {
+        return Object.values(staticUniversitiesDict);
+    }, []);
 
-  async function search() {
-    setError(null);
-    setLoading(true);
-    setResults([]);
-    try {
-      const res = await fetch('/api/university-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ countries: selected, limit: 50 })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Search failed');
-      setResults(data.results || []);
-    } catch (err: any) {
-      setError(String(err.message || err));
-    } finally {
-      setLoading(false);
-    }
-  }
+    // Combine static and dynamic results
+    const allUniversities = useMemo(() => {
+        const combined = [...staticList];
+        dynamicResults.forEach((dyn) => {
+            if (!combined.some(u => u.name.toLowerCase() === dyn.name.toLowerCase())) {
+                combined.push({
+                    slug: dyn.slug || dyn.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                    name: dyn.name,
+                    shortName: dyn.name.split(' ').map((w: string) => w[0]).join('').slice(0, 4),
+                    location: dyn.city || dyn.country || "Global",
+                    country: dyn.country || "International",
+                    countryCode: dyn.countryCode || '',
+                    flag: dyn.flag || '🌐',
+                    founded: dyn.founded || 1900,
+                    type: dyn.type || 'University',
+                    rank: dyn.worldRanking || dyn.ranking || dyn.rank || 500,
+                    rankBy: 'QS World Rankings',
+                    acceptanceRate: dyn.acceptanceRate || dyn.accept || 25,
+                    tuition: typeof dyn.tuition === 'number' ? dyn.tuition : (parseInt(String(dyn.averageFees || '25000').replace(/[^0-9]/g, '')) || 25000),
+                    currency: dyn.currency || 'USD',
+                    description: dyn.description || '',
+                    heroImage: '',
+                    campusImages: [],
+                    logo: dyn.website ? `https://logo.clearbit.com/${dyn.website.replace(/^https?:\/\//, '')}` : '',
+                    primaryColor: '#4F46E5',
+                    gradient: '',
+                    badge: '',
+                    website: dyn.website || '',
+                    stats: { totalStudents: '—', internationalStudents: '—', facultyRatio: '—', researchOutput: '—', employmentRate: '—', avgSalary: '—' },
+                    programs: [],
+                    topRecruiters: [],
+                    requirements: { gpa: '3.0', ielts: '6.5', toefl: '80', gre: '300' },
+                    loanInfo: { availableLenders: ['HDFC Credila', 'Avanse', 'IDFC FIRST'], avgLoanAmount: '$40,000', collateralFree: true, fastTrack: true, notes: '' },
+                    pros: [],
+                    campusFacilities: []
+                });
+            }
+        });
+        return combined;
+    }, [staticList, dynamicResults]);
 
-  return (
-    <div className="min-h-screen bg-[#fcfaff]">
-      {/* Hero Section - Clean & Modern Glassmorphism */}
-      <section className="relative pt-32 pb-24 px-6 overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-[600px] bg-gradient-to-b from-purple-50/50 to-transparent pointer-events-none" />
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-purple-200/20 rounded-full blur-[100px]" />
-        <div className="absolute top-1/2 -left-24 w-72 h-72 bg-blue-200/20 rounded-full blur-[80px]" />
+    const handleSearchClick = useCallback(async () => {
+        setLoading(true);
+        try {
+            const countriesToSearch = selectedCountry === "All Countries" ? POPULAR_COUNTRIES.slice(1) : [selectedCountry];
+            const res = await fetch("/api/university-search", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ countries: countriesToSearch, limit: 50 })
+            });
+            const data = await res.json();
+            if (data.results || data.universities) {
+                setDynamicResults(data.results || data.universities || []);
+            }
+        } catch (e) {
+            console.error("Failed to fetch university data:", e);
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedCountry]);
 
-        <div className="max-w-[1400px] mx-auto relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-purple-100 shadow-sm mb-8 animate-fade-in">
-            <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-            <span className="text-[10px] font-black text-purple-600 uppercase tracking-widest">Global Academic Database</span>
-            <span className="w-px h-3 bg-purple-100 mx-1" />
-            <span className="text-[10px] font-bold text-gray-400">Powered by GradRight</span>
-          </div>
+    const filteredData = useMemo(() => {
+        return allUniversities.filter((item) => {
+            const query = searchQuery.toLowerCase();
+            const matchesQuery = item.name.toLowerCase().includes(query) ||
+                item.country.toLowerCase().includes(query) ||
+                (item.location && item.location.toLowerCase().includes(query));
 
-          <h1 className="text-5xl md:text-7xl font-black mb-8 text-gray-900 tracking-tight leading-[1.1]">
-            Find Your Future <br /><span className="text-[#6605c7] relative">
-              Universe
-              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 100 10" preserveAspectRatio="none">
-                <path d="M0 5 Q 50 10 100 5" stroke="#6605c7" strokeWidth="2" fill="none" opacity="0.3" />
-              </svg>
-            </span>
-          </h1>
-          <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto font-medium leading-relaxed mb-12">
-            Explore 10,000+ verified institutions across the globe. Match your profile with ROI-backed insights and secure your study loan in clicks.
-          </p>
+            const matchesCountry = selectedCountry === "All Countries" ||
+                item.country.toLowerCase().includes(selectedCountry.toLowerCase()) ||
+                (selectedCountry === "United States" && (item.country === "USA" || item.country === "United States"));
 
-          {/* Search Box / Interaction */}
-          <div className="max-w-4xl mx-auto bg-white/60 backdrop-blur-xl border border-white p-2 rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(102,5,199,0.1)]">
-            <div className="p-8">
-              <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-                {POPULAR.slice(0, 10).map(c => (
-                  <button
-                    key={c}
-                    onClick={() => toggleCountry(c)}
-                    className={`px-5 py-2.5 rounded-2xl border font-bold text-sm transition-all duration-300 ${selected.includes(c)
-                      ? 'bg-[#6605c7] text-white border-purple-600 shadow-lg shadow-purple-500/20'
-                      : 'bg-white text-gray-600 border-gray-100 hover:border-purple-200 hover:bg-purple-50/30'
-                      }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-                <button className="px-5 py-2.5 rounded-2xl border border-dashed border-gray-200 text-gray-400 font-bold text-sm hover:border-purple-300 hover:text-purple-400 transition-all">
-                  + Other Countries
-                </button>
-              </div>
+            return matchesQuery && matchesCountry;
+        });
+    }, [allUniversities, searchQuery, selectedCountry]);
 
-              <button
-                onClick={search}
-                disabled={loading || selected.length === 0}
-                className="group relative px-10 py-5 rounded-[1.5rem] bg-[#6605c7] text-white font-black hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_15px_30px_rgba(102,5,199,0.3)] hover:shadow-purple-500/40 active:scale-[0.98] min-w-[240px]"
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    <span>Analyzing Markets...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <span>Search Universities</span>
-                    <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                  </div>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
+    const pagedData = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filteredData.slice(start, start + itemsPerPage);
+    }, [filteredData, currentPage, itemsPerPage]);
 
-      <div className="max-w-[1400px] mx-auto px-6 pb-32">
-        {/* Results Info Bar */}
-        {(results.length > 0 || loading) && (
-          <div className="flex items-center justify-between mb-10 pb-6 border-b border-gray-100">
-            <div>
-              <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-                {loading ? 'Finding Best Matches...' : `Found ${results.length} Institutions`}
-              </h2>
-              <p className="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">Verified by GradRight & VidyaLoan</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 mr-2">Sort by:</span>
-              <select className="bg-transparent border-0 text-gray-900 font-black text-sm focus:ring-0 cursor-pointer">
-                <option>Global Rank</option>
-                <option>Acceptance Rate</option>
-                <option>Tuition (Low to High)</option>
-              </select>
-            </div>
-          </div>
-        )}
+    const showingStart = filteredData.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+    const showingEnd = Math.min(currentPage * itemsPerPage, filteredData.length);
 
-        {/* Results Grid */}
-        {results.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
-            {results.map((u) => (
-              <UniversityCard
-                key={`${u.name}-${u.country}`}
-                university={u}
-                onDetails={(x) => {
-                  const slug = x.slug || x.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                  router.push(`/university/${slug}`);
-                }}
-                onApply={(x) => {
-                  router.push(`/apply-loan?university=${encodeURIComponent(x.name)}&country=${encodeURIComponent(x.country)}`);
-                }}
-              />
-            ))}
-          </div>
-        ) : !loading && (
-          <div className="text-center py-32 bg-white/50 border-2 border-dashed border-gray-100 rounded-[3rem]">
-            <div className="w-24 h-24 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-8 text-6xl shadow-sm">
-              🏛️
-            </div>
-            <h3 className="text-2xl font-black text-gray-900 mb-3">Your Journey Starts Here</h3>
-            <p className="text-gray-500 mb-10 max-w-sm mx-auto font-medium">
-              Select one or more countries and click search to discover top-tier universities for your study abroad adventure.
-            </p>
-          </div>
-        )}
-
-        {/* Features / Why VidyaLoan? */}
-        {!results.length && (
-          <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { icon: 'explore', title: 'Global Discovery', desc: 'Access 5000+ universities across 30 countries with up-to-date admission data.' },
-              { icon: 'auto_graph', title: 'ROI Intelligence', desc: 'Predict your future earnings and loan repayment capacity with GradRight insights.' },
-              { icon: 'account_balance', title: 'Smart Funding', desc: 'Check loan eligibility for specific programs before you even apply to the uni.' }
-            ].map((f, i) => (
-              <div key={i} className="p-10 bg-white rounded-[2rem] border border-gray-50 shadow-sm hover:shadow-md transition-all group">
-                <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 mb-6 group-hover:bg-purple-600 group-hover:text-white transition-all duration-500">
-                  <span className="material-symbols-outlined text-2xl">{f.icon}</span>
+    return (
+        <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12 pt-8 px-4 sm:px-6 font-sans">
+            {/* Header & Controls Bar */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-[#0A2540]">
+                        Global Universities Directory
+                    </h2>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">Explore 10,000+ verified institutions, global rankings, tuition & study loan funding</p>
                 </div>
-                <h3 className="text-xl font-black text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed font-medium">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleSearchClick}
+                        disabled={loading}
+                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                        <span className={`material-symbols-outlined text-[16px] ${loading ? "animate-spin" : ""}`}>refresh</span>
+                        {loading ? "Refreshing..." : "Refresh"}
+                    </button>
+                    <div className="relative">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                            placeholder="Search university or country..."
+                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm"
+                        />
+                    </div>
+                </div>
+            </div>
 
-      {/* University Details Modal */}
-      {active && <UniversityDetailsModal university={active} onClose={() => setActive(null)} />}
-    </div>
+            {/* Country Filters Bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                {POPULAR_COUNTRIES.map((c) => (
+                    <button
+                        key={c}
+                        onClick={() => { setSelectedCountry(c); setCurrentPage(1); }}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 cursor-pointer ${
+                            selectedCountry === c
+                                ? "bg-[#4F46E5] text-white border-indigo-600 shadow-sm"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                        }`}
+                    >
+                        {c}
+                    </button>
+                ))}
+            </div>
 
-  );
+            {/* Main Table Container */}
+            <div className="rounded-[24px] border border-slate-100 overflow-hidden shadow-sm bg-white">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <TableHeader>
+                            <th className="px-6 py-4">Institution Profile</th>
+                            <th className="px-6 py-4">Country & Location</th>
+                            <th className="px-6 py-4">Global Rank</th>
+                            <th className="px-6 py-4">Acceptance Rate</th>
+                            <th className="px-6 py-4">Estimated Tuition</th>
+                            <th className="px-6 py-4 text-center">Actions</th>
+                        </TableHeader>
+                        <tbody className={`divide-y divide-slate-50 ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
+                            {pagedData.length > 0 ? (
+                                pagedData.map((item) => {
+                                    const rowId = item.slug || item.name;
+                                    const initials = item.shortName || item.name.slice(0, 2).toUpperCase();
+
+                                    return (
+                                        <tr key={rowId} className="hover:bg-slate-50/30 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-xs text-[#4F46E5] shrink-0 overflow-hidden">
+                                                        {item.logo ? (
+                                                            <img
+                                                                src={item.logo}
+                                                                alt={item.name}
+                                                                className="w-full h-full object-contain p-1"
+                                                                onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                                            />
+                                                        ) : (
+                                                            <span>{initials}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p
+                                                            onClick={() => router.push(`/university/${item.slug}`)}
+                                                            className="text-sm font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors truncate max-w-[280px]"
+                                                            title={item.name}
+                                                        >
+                                                            {item.name}
+                                                        </p>
+                                                        <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                                                            {item.type || "University"} • Founded {item.founded || "—"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="space-y-0.5">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#4F46E5]/10 text-[#4F46E5] border border-indigo-200">
+                                                        {item.flag} {item.country}
+                                                    </span>
+                                                    <p className="text-[11px] text-slate-500 font-semibold">{item.location}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+                                                    <span className="material-symbols-outlined text-[14px]">workspace_premium</span>
+                                                    QS #{item.rank || "N/A"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-xs text-slate-700 font-bold">
+                                                    {item.acceptanceRate ? `${item.acceptanceRate}%` : "—"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-xs text-emerald-700 font-mono font-bold">
+                                                    {item.tuition ? `${item.currency === "INR" ? "₹" : "$"}${Number(item.tuition).toLocaleString()}/yr` : "—"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => router.push(`/university/${item.slug}`)}
+                                                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition-all border border-indigo-200 cursor-pointer flex items-center gap-1 active:scale-95"
+                                                        title="View full university details"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                        View Details
+                                                    </button>
+                                                    <button
+                                                        onClick={() => router.push(`/apply-loan?university=${encodeURIComponent(item.name)}&country=${encodeURIComponent(item.country)}`)}
+                                                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg transition-all border border-emerald-200 cursor-pointer flex items-center gap-1 active:scale-95"
+                                                        title="Apply for education loan"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">payments</span>
+                                                        Apply Loan
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="px-8 py-24 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-4 text-slate-400">
+                                            <span className="material-symbols-outlined text-5xl">domain_disabled</span>
+                                            <p className="text-[12px] font-black uppercase tracking-widest">No Universities Found</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {filteredData.length > itemsPerPage && (
+                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <p className="text-[11px] font-bold text-slate-700">
+                            Showing <span className="text-indigo-600">{showingStart}-{showingEnd}</span> of {filteredData.length} entries
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                disabled={currentPage === 1 || loading}
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                                Previous
+                            </button>
+                            <button
+                                disabled={currentPage >= totalPages || loading}
+                                onClick={() => setCurrentPage(prev => prev + 1)}
+                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                            >
+                                Next
+                                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 }

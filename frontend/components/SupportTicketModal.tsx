@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supportApi } from "@/lib/api";
 
 interface SupportTicketModalProps {
-    isOpen: boolean;
-    onClose: () => void;
+    isOpen?: boolean;
+    isModal?: boolean;
+    onClose?: () => void;
     userRole?: string;
     userInfo?: {
         id?: string;
@@ -64,7 +65,8 @@ const formatIST = (dateVal: any): string => {
 };
 
 export default function SupportTicketModal({
-    isOpen,
+    isOpen = true,
+    isModal = true,
     onClose,
     userRole = "student",
     userInfo,
@@ -204,38 +206,40 @@ export default function SupportTicketModal({
 
     if (!isOpen) return null;
 
-    return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="bg-white rounded-3xl border border-purple-100 shadow-2xl w-full max-w-2xl overflow-hidden relative font-sans max-h-[90vh] flex flex-col"
-                >
-                    {/* Header */}
-                    <div className="px-6 py-5 bg-gradient-to-r from-[#6605c7] to-indigo-700 text-white flex justify-between items-center shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                                <span className="material-symbols-outlined text-xl text-purple-200">support_agent</span>
-                            </div>
-                            <div>
-                                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                                    Help & Support Center
-                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/20 text-purple-100">
-                                        {userRole}
-                                    </span>
-                                </h3>
-                                <p className="text-xs text-purple-200 font-medium">Submit tickets & track resolution progress dynamically</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center text-white border-0 cursor-pointer"
-                        >
-                            <span className="material-symbols-outlined text-lg">close</span>
-                        </button>
+    const modalContent = (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.98, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: 10 }}
+            className={`bg-white rounded-3xl border border-purple-100 shadow-xl w-full overflow-hidden relative font-sans flex flex-col ${
+                isModal ? "max-w-2xl max-h-[90vh]" : "max-w-full"
+            }`}
+        >
+            {/* Header */}
+            <div className="px-6 py-5 bg-gradient-to-r from-[#6605c7] to-indigo-700 text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                        <span className="material-symbols-outlined text-xl text-purple-200">support_agent</span>
                     </div>
+                    <div>
+                        <h3 className="text-base font-bold text-white flex items-center gap-2">
+                            Help & Support Center
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/20 text-purple-100">
+                                {userRole}
+                            </span>
+                        </h3>
+                        <p className="text-xs text-purple-200 font-medium">Submit tickets & track resolution progress dynamically</p>
+                    </div>
+                </div>
+                {onClose && (
+                    <button
+                        onClick={onClose}
+                        className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center text-white border-0 cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-lg">close</span>
+                    </button>
+                )}
+            </div>
 
                     {/* Navigation Tabs */}
                     <div className="flex border-b border-gray-100 px-6 bg-purple-50/30 shrink-0">
@@ -587,7 +591,17 @@ export default function SupportTicketModal({
                             )
                         )}
                     </div>
-                </motion.div>
+        </motion.div>
+    );
+
+    if (!isModal) {
+        return modalContent;
+    }
+
+    return (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto">
+                {modalContent}
             </div>
         </AnimatePresence>
     );

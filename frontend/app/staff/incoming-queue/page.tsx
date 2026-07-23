@@ -157,7 +157,7 @@ const getApplicationStageLabel = (app: any, progress: number): string => {
 };
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
-    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[10px] uppercase tracking-widest font-['Playfair_Display',serif] font-bold text-left">
+    <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 text-[11px] uppercase tracking-wider font-sans font-bold text-left">
         <tr>{children}</tr>
     </thead>
 );
@@ -366,7 +366,7 @@ export default function IncomingQueuePage() {
 
     
 
-    const handleApproveApplication = async (item: any) => {
+    const handleMoveToActivePipeline = async (item: any) => {
         const appId = item.id || item._id;
         if (!appId) {
             alert("Application ID is missing.");
@@ -389,6 +389,7 @@ export default function IncomingQueuePage() {
             alert(e?.message || 'Failed to approve application');
         }
     };
+    const handleApproveApplication = handleMoveToActivePipeline;
 
     const handleMoveToInactivePipeline = async (item: any) => {
         const appId = item.id || item._id;
@@ -459,21 +460,15 @@ export default function IncomingQueuePage() {
         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">
-                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-sans font-semibold text-blue-700 ml-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                            AWAITING DISTRIBUTION
-                        </span>
-                    </p>
-                    <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
+                    <h2 className="text-2xl font-bold tracking-tight text-[#0A2540]">
                         Incoming Queue
-
                     </h2>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">Newly submitted applications awaiting initial review & verification</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={loadData}
-                        className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
                     >
                         <span className="material-symbols-outlined text-[16px]">refresh</span>
                         Refresh
@@ -485,7 +480,7 @@ export default function IncomingQueuePage() {
                             value={searchQuery}
                             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                             placeholder="Search incoming queue..."
-                            className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-['Playfair_Display',serif] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm"
+                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm"
                         />
                     </div>
                 </div>
@@ -495,13 +490,12 @@ export default function IncomingQueuePage() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <TableHeader>
-                            <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">APPLICANT PROFILE</span></th>
-                            <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">COLLEGE NAME</span></th>
-                            
-                            <th className="px-5 py-5 w-48"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">PROGRESS</span></th>
-                            <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">CURRENT STATUS</span></th>
-                            <th className="px-5 py-5 w-52"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">FOLLOW UP</span></th>
-                            <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
+                            <th className="px-6 py-4">Applicant Profile</th>
+                            <th className="px-6 py-4">College Name</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4">Follow Up</th>
+                            <th className="px-6 py-4">Timestamp</th>
+                            <th className="px-6 py-4 text-center">Actions</th>
                         </TableHeader>
                         <tbody className={`divide-y divide-slate-50 ${loading ? 'opacity-60 pointer-events-none transition-opacity duration-300' : 'transition-opacity duration-300'}`}>
                             {loading && data.length === 0 ? (
@@ -525,218 +519,124 @@ export default function IncomingQueuePage() {
                                     const isExpanded = !!expandedRows[rowId];
 
                                     return (
-                                        <tr key={rowId} className="group hover:bg-slate-50/30 transition-colors">
-                                            <td className={`sticky left-0 z-10 bg-white px-5 border-b border-slate-50 group-hover:bg-slate-50/50 transition-all ${isExpanded ? 'py-6' : 'py-4'}`} style={{ minWidth: 260, maxWidth: 280 }}>
-                                                <div className={`flex ${isExpanded ? 'items-start' : 'items-center'} gap-3`}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => toggleRowExpanded(rowId)}
-                                                        className={`shrink-0 w-6 h-6 rounded-md hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors ${isExpanded ? 'mt-1' : ''}`}
-                                                        title={isExpanded ? "Collapse Details" : "Expand Details"}
-                                                    >
-                                                        <span className="material-symbols-outlined text-[18px] transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                                                            expand_more
-                                                        </span>
-                                                    </button>
-
-                                                    {isExpanded && (
-                                                        <div
+                                        <tr key={rowId} className="hover:bg-slate-50/30 transition-colors">
+                                            {/* 1. Applicant Profile */}
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">
+                                                        {initials.toUpperCase()}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p
                                                             onClick={() => {
                                                                 const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                                const email = item.email || item.student?.email;
                                                                 if (uid) {
-                                                                    router.push(`/staff/chat-customer?userId=${uid}`);
+                                                                    window.open(`/staff/users/${uid}${email ? `?email=${encodeURIComponent(email)}` : ''}`, '_blank');
+                                                                } else {
+                                                                    router.push(`/staff/users?search=${encodeURIComponent(item.firstName || '')}`);
                                                                 }
                                                             }}
-                                                            className="relative shrink-0 group/avatar hover:scale-105 transition-all cursor-pointer"
-                                                            title="Click to Chat with Student"
+                                                            className="text-[15px] font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors truncate max-w-[220px]"
+                                                            title="Click to view Student Profile"
                                                         >
-                                                            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 hover:border-indigo-500 hover:text-indigo-600 flex items-center justify-center font-medium text-[13px] text-slate-600 transition-all relative overflow-hidden">
-                                                                <span>{initials}</span>
-                                                            </div>
-                                                            {isOnline && (
-                                                                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm shadow-emerald-500/30" />
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    <div className="min-w-0 flex-1 flex items-start justify-between gap-3">
-                                                        <div className="min-w-0 flex-col gap-1">
-                                                            <p
-                                                                onClick={() => {
-                                                                    const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
-                                                                    const email = item.email || item.student?.email;
-                                                                    if (uid) window.open(`/staff/users/${uid}${email ? `?email=${email}` : ''}`, '_blank');
-                                                                }}
-                                                                className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-tight truncate cursor-pointer hover:text-indigo-600 transition-all"
-                                                                title="Click to view Student Profile"
-                                                            >
-                                                                {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
-                                                            </p>
-                                                            {isExpanded && (
-                                                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                                    {(item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-') || item.applicationNumber.startsWith('VTU-BNK-') || item.applicationNumber.startsWith('VL-APP-'))) && (
-                                                                        <p
-                                                                            onClick={() => router.push(`/staff/applications/${item.id || item._id}`)}
-                                                                            className="text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-indigo-700 cursor-pointer transition-all font-bold uppercase tracking-widest inline-flex items-center gap-1.5 px-2 py-1 rounded whitespace-nowrap border border-slate-200"
-                                                                            title="Click to open Application Page"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-[12px]">description</span>
-                                                                            {item.applicationNumber}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {isExpanded && (
-                                                            <div className="flex flex-col items-end shrink-0 pt-1">
-                                                                <div className="flex items-center gap-2 relative">
-                                                                    <button
-                                                                        onClick={() => setActiveContactPopup(popup?.id === rowId && popup?.type === 'phone' ? null : { id: rowId, type: 'phone' })}
-                                                                        className="w-7 h-7 rounded bg-white border border-slate-200 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all"
-                                                                        title="Phone number"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-[14px]">phone_enabled</span>
-                                                                    </button>
-
-                                                                    <button
-                                                                        onClick={() => setActiveContactPopup(popup?.id === rowId && popup?.type === 'email' ? null : { id: rowId, type: 'email' })}
-                                                                        className="w-7 h-7 rounded bg-white border border-slate-200 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all"
-                                                                        title="Email address"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-[14px]">mail</span>
-                                                                    </button>
-
-                                                                    {popup && popup.id === rowId && (
-                                                                        <>
-                                                                            <div className="fixed inset-0 z-40" onClick={() => setActiveContactPopup(null)} />
-                                                                            <div className="absolute right-0 top-7 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2.5 flex items-center gap-2.5 animate-in fade-in slide-in-from-top-1 duration-150 font-sans w-max max-w-[260px]">
-                                                                                <span className="material-symbols-outlined text-slate-400 text-[15px]">
-                                                                                    {popup.type === 'email' ? 'mail' : 'call'}
-                                                                                </span>
-                                                                                <span className="text-[12px] font-semibold text-slate-700 select-all truncate max-w-[160px]">
-                                                                                    {popup.type === 'email'
-                                                                                        ? (item.email || item.student?.email || 'No email')
-                                                                                        : (item.phone || item.mobile || item.phoneNumber || item.student?.phone || 'No phone')}
-                                                                                </span>
-                                                                                {popup.type === 'email' && (
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            const email = item.email || item.student?.email;
-                                                                                            const name = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim();
-                                                                                            if (email) openEmailModal(email, name);
-                                                                                            setActiveContactPopup(null);
-                                                                                        }}
-                                                                                        className="w-5 h-5 rounded hover:bg-indigo-50 flex items-center justify-center text-indigo-600 hover:text-indigo-800"
-                                                                                        title="Compose Email"
-                                                                                    >
-                                                                                        <span className="material-symbols-outlined text-[14px]">mail</span>
-                                                                                    </button>
-                                                                                )}
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        const textToCopy = popup.type === 'email'
-                                                                                            ? (item.email || item.student?.email || '')
-                                                                                            : (item.phone || item.mobile || item.phoneNumber || item.student?.phone || '');
-                                                                                        navigator.clipboard.writeText(textToCopy);
-                                                                                        alert(`${popup.type === 'email' ? 'Email' : 'Phone'} copied to clipboard!`);
-                                                                                    }}
-                                                                                    className="w-5 h-5 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600"
-                                                                                    title="Copy to clipboard"
-                                                                                >
-                                                                                    <span className="material-symbols-outlined text-[13px]">content_copy</span>
-                                                                                </button>
-                                                                            </div>
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
+                                                            {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
+                                                        </p>
+                                                        <p className="text-xs font-mono text-slate-400 mt-0.5">
+                                                            {item.applicationNumber || "VTU-APP-PENDING"}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                {item.universityName || item.college ? (() => {
-                                                    const collegeName = item.universityName || item.college;
-                                                    const slug = collegeName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-                                                    return (
-                                                        <Link
-                                                            href={`/university/${slug}`}
-                                                            target="_blank"
-                                                            className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] hover:text-slate-800 cursor-pointer transition-all block truncate max-w-[180px]"
-                                                            title="Click to view University Details"
-                                                        >
-                                                            {collegeName}
-                                                        </Link>
-                                                    );
-                                                })() : (
-                                                    <p className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">—</p>
-                                                )}
+
+                                            {/* 2. College Name */}
+                                            <td className="px-6 py-4">
+                                                <span className="text-[15px] font-semibold text-slate-800 block truncate max-w-[220px]" title={item.universityName || item.college || "—"}>
+                                                    {item.universityName || item.college || "—"}
+                                                </span>
                                             </td>
-                                            <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 160 }}>
-                                                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
-                                                    <div className={`h-1.5 rounded-full transition-all duration-700 ${progress === 100 ? 'bg-emerald-500' : 'bg-[#4f46e5]'}`} style={{ width: `${progress}%` }} />
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-[10px]">✨</span>
-                                                    <p className="text-[10px] font-bold text-slate-700">{stageLabel}</p>
-                                                    <span className="text-[10px] font-bold text-[#4f46e5] ml-auto">{progress}%</span>
-                                                </div>
+
+                                            {/* 3. Status */}
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                                                    statusKey === 'submitted' || statusKey === 'pending'
+                                                        ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                                        : statusKey === 'processing' || statusKey === 'under_review'
+                                                        ? 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                                                        : statusKey === 'approved' || statusKey === 'verified'
+                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                        : statusKey === 'rejected'
+                                                        ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                                                        : 'bg-amber-50 text-amber-600 border border-amber-200'
+                                                }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                                        statusKey === 'rejected' ? 'bg-rose-500' : ['approved', 'verified'].includes(statusKey) ? 'bg-emerald-500' : 'bg-blue-500'
+                                                    }`} />
+                                                    {item.status ? item.status.replace('_', ' ') : 'SUBMITTED'}
+                                                </span>
                                             </td>
-                                            <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                <div className="flex flex-col items-start gap-1.5">
-                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-black uppercase tracking-wider border ${statusColors[statusKey] || 'bg-amber-50/50 text-amber-600 border-amber-200'}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${statusKey === 'rejected' ? 'bg-rose-500' : statusKey === 'approved' || statusKey === 'verified' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                                        {item.status || 'DRAFT'}
-                                                    </span>
-                                                    <div className="text-[12px] text-slate-500 font-medium">
-                                                        <p>Submitted: {item.submittedAt ? formatIST(item.submittedAt, true) : '—'}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                <div className="relative">
-                                                    {followUpDates[rowId] ? (
-                                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-full text-[10px] font-black uppercase tracking-wider">
-                                                            <span>
-                                                                {(() => {
-                                                                    const dateObj = new Date(followUpDates[rowId].date + 'T00:00:00');
-                                                                    const day = String(dateObj.getDate()).padStart(2, '0');
-                                                                    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-                                                                    const monthLabel = months[dateObj.getMonth()] || 'JUN';
-                                                                    return `${day} ${monthLabel} ${followUpDates[rowId].time || '__:__'}`;
-                                                                })()}
-                                                            </span>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => openFollowUpModal(rowId, item)}
-                                                                className="material-symbols-outlined text-[13px] text-rose-500 hover:text-rose-700 cursor-pointer border-0 bg-transparent p-0 flex items-center justify-center active:scale-95"
-                                                            >
-                                                                edit
-                                                            </button>
-                                                        </div>
-                                                    ) : (
+
+                                            {/* 4. Follow Up */}
+                                            <td className="px-6 py-4">
+                                                {followUpDates[rowId] ? (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 border border-rose-200 rounded-full text-[11px] font-black uppercase tracking-wider">
+                                                        <span>
+                                                            {(() => {
+                                                                const dateObj = new Date(followUpDates[rowId].date + 'T00:00:00');
+                                                                const day = String(dateObj.getDate()).padStart(2, '0');
+                                                                const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                                                                const monthLabel = months[dateObj.getMonth()] || 'JUN';
+                                                                return `${day} ${monthLabel} ${followUpDates[rowId].time || ''}`;
+                                                            })()}
+                                                        </span>
                                                         <button
                                                             type="button"
                                                             onClick={() => openFollowUpModal(rowId, item)}
-                                                            className="px-4 py-1 border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-full text-[10px] font-extrabold text-slate-400 hover:text-indigo-600 transition-colors bg-white active:scale-95 cursor-pointer"
+                                                            className="material-symbols-outlined text-[14px] text-rose-500 hover:text-rose-700 cursor-pointer border-0 bg-transparent p-0 flex items-center justify-center active:scale-95"
                                                         >
-                                                            Add +
+                                                            edit
                                                         </button>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openFollowUpModal(rowId, item)}
+                                                        className="px-3.5 py-1.5 border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-xl text-xs font-extrabold text-slate-500 hover:text-indigo-600 transition-colors bg-white active:scale-95 cursor-pointer"
+                                                    >
+                                                        Add +
+                                                    </button>
+                                                )}
                                             </td>
-                                            <td className="px-5 py-4 text-center border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setActiveDockApp(item);
-                                                    }}
-                                                    className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-all shadow-sm mx-auto"
-                                                    title="Open Action Dock"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">more_vert</span>
-                                                </button>
+
+                                            {/* 5. Timestamp */}
+                                            <td className="px-6 py-4">
+                                                <span className="text-xs text-slate-600 font-semibold">
+                                                    {formatIST(item.submittedAt || item.createdAt || item.updatedAt, true)}
+                                                </span>
+                                            </td>
+
+                                            {/* 6. Actions */}
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => handleMoveToActivePipeline(item)}
+                                                        className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all border border-indigo-200 cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-2xs"
+                                                        title="Move application to Active Pipeline"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                                                        Move to Active Pipeline
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setActiveDockApp(item);
+                                                        }}
+                                                        className="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-900 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                                                        title="More Actions"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );

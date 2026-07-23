@@ -365,8 +365,8 @@ export default function StaffDashboardPage() {
                                     <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                 </button>
                                 <button onClick={() => router.push('/staff/applications')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center gap-3 bg-white shadow-sm cursor-pointer">
-                                    <span className="material-symbols-outlined text-emerald-500 text-[18px]">manage_accounts</span>
-                                    <span className="text-[12px] font-semibold text-slate-800">Applicant Profiles</span>
+                                    <span className="material-symbols-outlined text-emerald-500 text-[18px]">folder_open</span>
+                                    <span className="text-[12px] font-semibold text-slate-800">Active Pipeline</span>
                                     <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                 </button>
                                 <button onClick={() => router.push('/staff/inactive-pipeline')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-rose-300 hover:bg-rose-50/30 transition-all flex items-center gap-3 bg-white shadow-sm cursor-pointer">

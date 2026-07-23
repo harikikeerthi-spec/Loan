@@ -8,10 +8,10 @@ import ApplicationDetailView from "@/components/staff/ApplicationDetailView";
 
 interface StandaloneApplicationViewProps {
     id: string;
-    activeTab: "application_details" | "student" | "exams" | "bankdecisions" | "ai_underwriting";
+    activeTab?: "application_details" | "student" | "exams" | "bankdecisions" | "ai_underwriting" | string;
 }
 
-export default function StandaloneApplicationView({ id, activeTab }: StandaloneApplicationViewProps) {
+export default function StandaloneApplicationView({ id, activeTab = "application_details" }: StandaloneApplicationViewProps) {
     const router = useRouter();
     const { token, user, isLoading: authLoading } = useAuth();
     const [loading, setLoading] = useState(true);
@@ -53,10 +53,10 @@ export default function StandaloneApplicationView({ id, activeTab }: StandaloneA
             <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center gap-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 <p className="text-slate-500 font-semibold">Application not found</p>
                 <button
-                    onClick={() => router.push("/staff/dashboard?section=applications")}
+                    onClick={() => router.push("/staff/incoming-queue")}
                     className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shadow-md"
                 >
-                    Go Back to Dashboard
+                    Go Back to Incoming Queue
                 </button>
             </div>
         );
@@ -65,7 +65,7 @@ export default function StandaloneApplicationView({ id, activeTab }: StandaloneA
     return (
         <ApplicationDetailView
             application={application}
-            onBack={() => router.push("/staff/dashboard?section=applications")}
+            onBack={() => router.push("/staff/incoming-queue")}
             isStandalone={true}
             activeSidebarMenu={activeTab}
             onApplicationUpdated={fetchApplicationDetails}

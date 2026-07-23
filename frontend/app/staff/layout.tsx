@@ -55,17 +55,17 @@ const NavItem = ({ section, icon, label, badge, active, expanded }: any) => {
         <Link
             href={path}
             title={label}
-            className={`w-full text-left px-3 py-1.5 rounded flex items-center gap-3 transition-colors text-xs font-medium ${isActive
-                ? 'bg-indigo-500/10 text-indigo-400 font-medium'
+            className={`w-full text-left px-3.5 py-2 rounded-xl flex items-center gap-3 transition-colors text-sm font-semibold ${isActive
+                ? 'bg-indigo-500/10 text-indigo-400 font-bold'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                 }`}
         >
-            <span className={`material-symbols-outlined text-[16px] flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>{icon}</span>
+            <span className={`material-symbols-outlined text-[19px] flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`}>{icon}</span>
             <span className={`flex-1 transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
                 {label}
             </span>
             {badge > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-sm text-[13px] font-medium transition-opacity duration-200 ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'} ${expanded ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold transition-opacity duration-200 ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'} ${expanded ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>
                     {badge > 99 ? '99+' : badge}
                 </span>
             )}
@@ -309,7 +309,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     const navItems = [
         { section: "dashboard", path: "/staff/dashboard", icon: "dashboard", label: "Dashboard", badge: 0 },
         { section: "incoming_queue", path: "/staff/incoming-queue", icon: "move_to_inbox", label: "Incoming Queue", badge: incomingCount },
-        { section: "applications", path: "/staff/applications", icon: "description", label: "Active Pipeline", badge: pendingCount },
+        { section: "applications", path: "/staff/applications", icon: "folder_open", label: "Active Pipeline", badge: pendingCount },
         { section: "inactive_applications", path: "/staff/inactive-pipeline", icon: "archive", label: "Inactive Pipeline", badge: 0 },
         { section: "users", path: "/staff/users", icon: "group", label: "Bank & Staff Members", badge: 0 },
         { section: "performance", path: "/staff/performance", icon: "insights", label: "Performance", badge: 0 },

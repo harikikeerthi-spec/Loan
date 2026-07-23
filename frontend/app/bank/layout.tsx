@@ -24,39 +24,31 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
     return (
         <Link
             href={path}
-            className={`flex items-center py-2.5 px-3.5 rounded-md transition-all duration-300 relative group overflow-hidden ${active
-                ? "text-[#0A2540] bg-[#4F46E5]/10 font-bold opacity-100"
-                : "text-gray-500 hover:text-[#0A2540] hover:bg-gray-50 hover:opacity-100"
+            title={label}
+            className={`w-full text-left px-3.5 py-2 rounded-xl flex items-center gap-3 transition-colors text-sm font-semibold relative ${active
+                ? "bg-indigo-500/10 text-indigo-400 font-bold"
+                : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                 }`}
         >
-            {/* Active state vertical indicator on left edge */}
-            {active && (
-                <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-[#4F46E5] rounded-r-md" />
+            <span className={`material-symbols-outlined text-[19px] flex-shrink-0 ${active ? "text-indigo-400" : "text-slate-400"}`}>
+                {icon}
+            </span>
+
+            {!collapsed && (
+                <span className="flex-1 tracking-wide whitespace-nowrap truncate font-sans">
+                    {label}
+                </span>
             )}
 
-            <div className="flex items-center gap-3.5 min-w-0 flex-1 relative z-10">
-                <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${active ? "scale-110 text-[#4F46E5]" : "group-hover:scale-105 text-gray-500 group-hover:text-[#0A2540]"
+            {(typeof badge === 'number' ? badge > 0 : !!badge) && !collapsed && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 transition-opacity duration-200 ${active
+                    ? "bg-indigo-500 text-white"
+                    : "bg-slate-700 text-slate-300"
                     }`}>
-                    {icon}
+                    {badge > 99 ? '99+' : badge}
                 </span>
-
-                {!collapsed && (
-                    <span className={`text-[13px] tracking-wide whitespace-nowrap truncate font-sans ${active ? "text-[#0A2540] font-semibold" : "text-gray-650 font-medium"
-                        }`}>
-                        {label}
-                    </span>
-                )}
-
-                {(typeof badge === 'number' ? badge > 0 : !!badge) && !collapsed && (
-                    <span className={`px-1.5 py-0.5 rounded-full text-[8.5px] font-bold shrink-0 ${active
-                        ? "bg-[#4F46E5] text-white"
-                        : "bg-gray-200 text-gray-700"
-                        }`}>
-                        {badge}
-                    </span>
-                )}
-            </div>
-        </Link >
+            )}
+        </Link>
     );
 };
 

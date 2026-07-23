@@ -33,7 +33,7 @@ export class AdminGuard implements CanActivate {
             // Verify JWT token signature and expiry
             const payload = await this.jwtService.verifyAsync(token);
 
-            const allowedRoles = ['admin', 'super_admin', 'staff', 'bank', 'partner_bank'];
+            const allowedRoles = ['admin', 'super_admin', 'staff', 'bank', 'partner_bank', 'it', 'user', 'agent', 'support'];
 
             // Fast path: role is embedded in the JWT payload — no DB lookup needed
             if (payload.role && allowedRoles.includes(payload.role)) {

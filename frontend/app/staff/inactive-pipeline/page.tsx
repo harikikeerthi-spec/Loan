@@ -246,7 +246,7 @@ export default function InactivePipelinePage() {
                                         <tr key={rowId} className="hover:bg-slate-50/30 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-600">
+                                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">
                                                         {initials.toUpperCase()}
                                                     </div>
                                                     <div>
@@ -260,68 +260,63 @@ export default function InactivePipelinePage() {
                                                                     router.push(`/staff/users?search=${encodeURIComponent(item.firstName || '')}`);
                                                                 }
                                                             }}
-                                                            className="text-sm font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors"
+                                                            className="text-[15px] font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors"
                                                             title="Click to view Student Profile"
                                                         >
                                                             {item.firstName || item.student?.firstName || "—"} {item.lastName || item.student?.lastName || ""}
                                                         </p>
-                                                        <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                                                        <p className="text-xs font-mono text-slate-400 mt-0.5">
                                                             {item.applicationNumber || "Pending"}
                                                         </p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="text-sm font-semibold text-slate-700 block truncate max-w-[200px]">
+                                                <span className="text-[15px] font-semibold text-slate-800 block truncate max-w-[220px]">
                                                     {item.universityName || item.college || "—"}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200">
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200">
                                                     {item.status || "Rejected"}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="text-xs text-slate-500 font-medium block truncate max-w-[250px]" title={item.rejectionReason || item.remarks}>
+                                                <span className="text-xs text-slate-600 font-medium block truncate max-w-[250px]" title={item.rejectionReason || item.remarks}>
                                                     {item.rejectionReason || item.remarks || "No reason specified"}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="text-xs text-slate-500 font-semibold">
+                                                <span className="text-xs text-slate-600 font-semibold">
                                                     {formatIST(item.updatedAt || item.submittedAt, true)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => setSelectedApp(item)}
-                                                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all border-0 cursor-pointer"
-                                                    >
-                                                        View
-                                                    </button>
+
                                                     <button
                                                         onClick={() => handleMoveToActivePipeline(item)}
                                                         disabled={isActionLoading === rowId}
-                                                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition-all border border-indigo-200 cursor-pointer flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                                                        className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all border border-indigo-200 cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-2xs"
                                                         title="Move application to Active Pipeline"
                                                     >
                                                         {isActionLoading === rowId ? (
                                                             <div className="w-3.5 h-3.5 border-2 border-indigo-700 border-t-transparent rounded-full animate-spin" />
                                                         ) : (
-                                                            <span className="material-symbols-outlined text-[14px]">play_arrow</span>
+                                                            <span className="material-symbols-outlined text-[16px]">play_arrow</span>
                                                         )}
                                                         Move to Active Pipeline
                                                     </button>
                                                     <button
                                                         onClick={() => handleMoveToIncomingQueue(item)}
                                                         disabled={isActionLoading === rowId}
-                                                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg transition-all border border-emerald-200 cursor-pointer flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                                                        className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition-all border border-emerald-200 cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-2xs"
                                                         title="Move application back to Incoming Queue"
                                                     >
                                                         {isActionLoading === rowId ? (
                                                             <div className="w-3.5 h-3.5 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin" />
                                                         ) : (
-                                                            <span className="material-symbols-outlined text-[14px]">move_to_inbox</span>
+                                                            <span className="material-symbols-outlined text-[16px]">move_to_inbox</span>
                                                         )}
                                                         Add to Incoming Queue
                                                     </button>
@@ -330,7 +325,7 @@ export default function InactivePipelinePage() {
                                         </tr>
                                     );
                                 })
-                             ) : (
+                            ) : (
                                 <tr>
                                     <td colSpan={6} className="px-8 py-24 text-center">
                                         <div className="flex flex-col items-center justify-center gap-4 text-slate-400">

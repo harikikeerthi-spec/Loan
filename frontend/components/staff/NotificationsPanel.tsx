@@ -408,11 +408,7 @@ const NotificationsPanel = ({
           bodyLower.includes('rejected') ||
           bodyLower.includes('query');
 
-        if (isBankDecisionOrQuery) {
-          router.push(`/staff/applications/${appId}/bank-decisions`);
-        } else {
-          router.push(`/staff/applications/${appId}`);
-        }
+        router.push(`/staff/applications/${appId}`);
       } else if (userId) {
         router.push(`/staff/users/${userId}`);
       } else if (notification.type === 'application_created' || notification.type === 'application_submitted') {

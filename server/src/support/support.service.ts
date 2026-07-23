@@ -165,12 +165,13 @@ export class SupportService {
 
     if (status && status !== 'all') q = q.eq('status', status);
     if (priority && priority !== 'all') q = q.eq('priority', priority);
-    const isAdmin = user && ['admin', 'super_admin'].includes(user.role);
+    const userRole = (user?.role || '').toLowerCase();
+    const isStudentOnly = userRole === 'user';
     if (assignedToId) q = q.eq('assignedToId', assignedToId);
-    if (!isAdmin && user) {
-      q = q.eq('createdById', user.id);
-    } else if (createdById) {
+    if (createdById) {
       q = q.eq('createdById', createdById);
+    } else if (isStudentOnly && user) {
+      q = q.eq('createdById', user.id);
     }
 
     const col = sortBy === 'created_at' ? 'createdAt' : sortBy === 'updated_at' ? 'updatedAt' : sortBy;
@@ -215,7 +216,7 @@ export class SupportService {
 
     if (error || !ticket) throw new NotFoundException(`Ticket ${id} not found`);
 
-    const isAdmin = ['admin', 'super_admin', 'staff'].includes(user.role);
+    const isAdmin = ['admin', 'super_admin', 'staff', 'it', 'support', 'bank'].includes(user.role);
 
     let commentsQ = this.db
       .from('SupportComment')

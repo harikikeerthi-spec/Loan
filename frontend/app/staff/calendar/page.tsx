@@ -94,7 +94,7 @@ export default function DeadlineCalendarPage() {
                                     </div>
                                     {evt.applicationId && (
                                         <button
-                                            onClick={() => router.push(`/staff/applications?id=${evt.applicationId}`)}
+                                            onClick={() => router.push(`/staff/applications/${evt.applicationId}`)}
                                             className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm hover:shadow shrink-0 self-end md:self-center"
                                         >
                                             <span className="material-symbols-outlined text-[14px]">visibility</span>

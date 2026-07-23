@@ -328,7 +328,7 @@ export default function ApplicationsTab() {
                 </div>
                 <button
                     onClick={() => setIsAddAppOpen(true)}
-                    className="px-4 py-2 bg-[#0F766E] hover:bg-[#115E59] text-[#FFFFFF] text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg hover:shadow-[#0F766E]/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                 >
                     <span className="material-symbols-outlined text-[16px]">add_circle</span>
                     Add Loan Application

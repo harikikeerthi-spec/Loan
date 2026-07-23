@@ -135,25 +135,7 @@ export default function MyProfilePage() {
                 </div>
             </div>
 
-            {/* Support Tickets Section */}
-            <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-indigo-600">confirmation_number</span>
-                            Support Tickets & Requests
-                        </h3>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">Manage, track, and raise support tickets directly from your dedicated support desk</p>
-                    </div>
-                    <button
-                        onClick={() => router.push('/staff/support-tickets')}
-                        className="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
-                    >
-                        <span className="material-symbols-outlined text-[16px]">confirmation_number</span>
-                        Open Support Tickets Desk
-                    </button>
-                </div>
-            </div>
+
         </div>
     );
 }
