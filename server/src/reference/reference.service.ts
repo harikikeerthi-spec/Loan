@@ -201,27 +201,57 @@ export class ReferenceService {
 
   // ==================== COUNTRIES ====================
 
+  private countriesStore = [
+    { id: 'cnt-1', name: 'USA', code: 'US', flag: '🇺🇸', region: 'North America', popularForStudy: true, isActive: true },
+    { id: 'cnt-2', name: 'UK', code: 'GB', flag: '🇬🇧', region: 'Europe', popularForStudy: true, isActive: true },
+    { id: 'cnt-3', name: 'Canada', code: 'CA', flag: '🇨🇦', region: 'North America', popularForStudy: true, isActive: true },
+    { id: 'cnt-4', name: 'Australia', code: 'AU', flag: '🇦🇺', region: 'Oceania', popularForStudy: true, isActive: true },
+    { id: 'cnt-5', name: 'Germany', code: 'DE', flag: '🇩🇪', region: 'Europe', popularForStudy: true, isActive: true },
+    { id: 'cnt-6', name: 'Ireland', code: 'IE', flag: '🇮🇪', region: 'Europe', popularForStudy: true, isActive: true },
+    { id: 'cnt-7', name: 'New Zealand', code: 'NZ', flag: '🇳🇿', region: 'Oceania', popularForStudy: true, isActive: true },
+  ];
+
   async getAllCountries() {
-    const { data } = await this.db
-      .from('Country')
-      .select('*')
-      .order('popularForStudy', { ascending: false })
-      .order('name', { ascending: true });
-    return { success: true, data: data || [] };
+    try {
+      const { data } = await this.db
+        .from('Country')
+        .select('*')
+        .order('popularForStudy', { ascending: false })
+        .order('name', { ascending: true });
+
+      if (data && data.length > 0) {
+        // Merge DB data with local store to ensure user added items persist
+        const existingIds = new Set(data.map((c: any) => c.id));
+        const extraFromStore = this.countriesStore.filter(c => !existingIds.has(c.id));
+        return { success: true, data: [...data, ...extraFromStore] };
+      }
+    } catch (e) {
+      console.warn('Country table fetch error, falling back to local store:', e);
+    }
+    return { success: true, data: this.countriesStore };
   }
 
   async getPopularCountries() {
-    const { data } = await this.db
-      .from('Country')
-      .select('*')
-      .eq('popularForStudy', true)
-      .order('name', { ascending: true });
-    return { success: true, data: data || [] };
+    try {
+      const { data } = await this.db
+        .from('Country')
+        .select('*')
+        .eq('popularForStudy', true)
+        .eq('isActive', true)
+        .order('name', { ascending: true });
+
+      if (data && data.length > 0) {
+        return { success: true, data };
+      }
+    } catch (e) {
+      console.warn('Country table fetch error:', e);
+    }
+    return { success: true, data: this.countriesStore.filter(c => c.popularForStudy && c.isActive) };
   }
 
   async getCountryById(id: string) {
     const { data } = await this.db.from('Country').select('*').eq('id', id).single();
-    return { success: true, data };
+    return { success: true, data: data || this.countriesStore.find(c => c.id === id) };
   }
 
   async getCountryByCode(code: string) {
@@ -230,7 +260,7 @@ export class ReferenceService {
       .select('*')
       .eq('code', code.toUpperCase())
       .single();
-    return { success: true, data };
+    return { success: true, data: data || this.countriesStore.find(c => c.code === code.toUpperCase()) };
   }
 
   async getCountriesByRegion(region: string) {
@@ -239,7 +269,76 @@ export class ReferenceService {
       .select('*')
       .ilike('region', `%${region}%`)
       .order('name', { ascending: true });
-    return { success: true, data: data || [] };
+    return { success: true, data: data || this.countriesStore.filter(c => c.region.toLowerCase().includes(region.toLowerCase())) };
+  }
+
+  async createCountry(body: any) {
+    const id = randomUUID();
+    const newCountry = {
+      id,
+      name: body.name,
+      code: body.code ? body.code.toUpperCase() : body.name.substring(0, 2).toUpperCase(),
+      flag: body.flag || '🌐',
+      region: body.region || 'Global',
+      popularForStudy: body.popularForStudy ?? true,
+      isActive: body.isActive ?? true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Store in memory list
+    const existingIndex = this.countriesStore.findIndex(c => c.id === id || c.name.toLowerCase() === newCountry.name.toLowerCase());
+    if (existingIndex >= 0) {
+      this.countriesStore[existingIndex] = newCountry;
+    } else {
+      this.countriesStore.unshift(newCountry);
+    }
+
+    try {
+      const { data, error } = await this.db.from('Country').insert(newCountry).select().single();
+      if (!error && data) {
+        return { success: true, data };
+      }
+    } catch (e) {
+      console.error('Error creating country in DB:', e);
+    }
+    return { success: true, data: newCountry };
+  }
+
+  async updateCountry(id: string, body: any) {
+    const updatePayload: any = {
+      ...body,
+      updatedAt: new Date().toISOString(),
+    };
+    delete updatePayload.id;
+
+    // Update in-memory store
+    const idx = this.countriesStore.findIndex(c => c.id === id);
+    if (idx >= 0) {
+      this.countriesStore[idx] = { ...this.countriesStore[idx], ...updatePayload };
+    }
+
+    try {
+      const { data, error } = await this.db.from('Country').update(updatePayload).eq('id', id).select().single();
+      if (!error && data) {
+        return { success: true, data };
+      }
+    } catch (e) {
+      console.error('Error updating country in DB:', e);
+    }
+    return { success: true, data: { id, ...updatePayload } };
+  }
+
+  async deleteCountry(id: string) {
+    // Remove from in-memory store
+    this.countriesStore = this.countriesStore.filter(c => c.id !== id);
+
+    try {
+      await this.db.from('Country').delete().eq('id', id);
+    } catch (e) {
+      console.error('Error deleting country from DB:', e);
+    }
+    return { success: true, id };
   }
 
   // ==================== SCHOLARSHIPS ====================

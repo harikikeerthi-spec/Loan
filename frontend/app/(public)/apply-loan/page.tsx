@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
 import { getAllCountries } from "@/lib/countriesData";
-import { applicationApi, authApi, aiApi } from "@/lib/api";
+import { applicationApi, authApi, aiApi, referenceApi } from "@/lib/api";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -115,7 +115,25 @@ export default function ApplyLoanPage() {
     const [suggestedUniversities, setSuggestedUniversities] = useState<any[]>([]);
     const [loadingUniversities, setLoadingUniversities] = useState(false);
     const [showUniversitySuggestions, setShowUniversitySuggestions] = useState(false);
+    const [countryOptions, setCountryOptions] = useState<string[]>(popularCountries);
     const [countryAiLoaded, setCountryAiLoaded] = useState<string>(""); // tracks which country AI has been fetched for
+
+    // Load dynamic study destination countries from backend (configured by Admin)
+    useEffect(() => {
+        referenceApi.getCountries()
+            .then((res: any) => {
+                if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+                    const activeNames: string[] = res.data
+                        .filter((c: any) => c.isActive !== false)
+                        .map((c: any) => c.name);
+                    if (activeNames.length > 0) {
+                        const filtered = activeNames.filter((n: string) => n !== "Other");
+                        setCountryOptions([...filtered, "Other"]);
+                    }
+                }
+            })
+            .catch((err) => console.error("Failed to fetch reference countries:", err));
+    }, []);
 
     // Pre-fill personal info from user profile and URL params
     useEffect(() => {
@@ -644,7 +662,7 @@ export default function ApplyLoanPage() {
                                         setSuggestedUniversities([]);
                                         setShowUniversitySuggestions(true);
                                     }}
-                                        options={popularCountries.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
+                                        options={countryOptions.map((c) => ({ value: c, label: c }))} error={stepErrors.country} />
                                     {formData.country === "Other" && (
                                         <div className="md:col-span-2">
                                             <SearchableSelectField label="Specify Destination Country" icon="public" value={formData.otherCountry} onChange={(v) => {

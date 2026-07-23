@@ -105,8 +105,11 @@ export default function SupportTicketModal({
     const fetchMyTickets = async () => {
         setLoadingTickets(true);
         try {
-            const res = await supportApi.getTickets({}) as any;
-            setMyTickets(res?.data || []);
+            const params: Record<string, any> = { limit: 100, sortBy: "createdAt", sortOrder: "desc" };
+            if (userInfo?.id) params.createdById = userInfo.id;
+            const res = await supportApi.getTickets(params) as any;
+            const data = res?.data || res || {};
+            setMyTickets(Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []);
         } catch (err: any) {
             console.error("Failed to fetch tickets:", err);
         } finally {
@@ -181,7 +184,7 @@ export default function SupportTicketModal({
     const handleSelectTicket = async (ticket: any) => {
         try {
             const detail = await supportApi.getTicket(ticket.id) as any;
-            setSelectedTicket(detail);
+            setSelectedTicket(detail?.data || detail);
         } catch (err) {
             setSelectedTicket(ticket);
         }
@@ -191,14 +194,15 @@ export default function SupportTicketModal({
         e.preventDefault();
         if (!replyText.trim() || !selectedTicket) return;
         setReplying(true);
+        setError("");
         try {
             await supportApi.addComment(selectedTicket.id, replyText.trim());
             setReplyText("");
             const updated = await supportApi.getTicket(selectedTicket.id) as any;
-            setSelectedTicket(updated);
-            fetchMyTickets();
+            setSelectedTicket(updated?.data || updated);
         } catch (err: any) {
             console.error("Failed to send reply:", err);
+            setError(err?.message || "Failed to send reply. Please try again.");
         } finally {
             setReplying(false);
         }

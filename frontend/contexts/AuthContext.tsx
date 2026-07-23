@@ -76,7 +76,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type Portal = "student" | "staff" | "admin" | "bank" | "agent";
+type Portal = "student" | "staff" | "admin" | "bank" | "agent" | "it";
 
 function getPortalFromPathname(pathname?: string): Portal {
     if (!pathname) return "student";
@@ -84,6 +84,7 @@ function getPortalFromPathname(pathname?: string): Portal {
     if (pathname.startsWith("/staff")) return "staff";
     if (pathname.startsWith("/bank")) return "bank";
     if (pathname.startsWith("/agent")) return "agent";
+    if (pathname.startsWith("/it")) return "it";
     return "student";
 }
 
@@ -128,6 +129,16 @@ function getStorageKeys(portal: Portal) {
             loginPath: "/agent/login",
         };
     }
+    if (portal === "it") {
+        return {
+            token: "itAccessToken",
+            refreshToken: "itRefreshToken",
+            email: "itUserEmail",
+            userId: "itUserId",
+            user: "itAuthUser",
+            loginPath: "/it/login",
+        };
+    }
     return {
         token: "accessToken",
         refreshToken: "refreshToken",
@@ -145,6 +156,7 @@ function getStoredUser(portal: Portal): AuthUser | null {
         let raw = localStorage.getItem(keys.user);
         
         if (!raw) raw = localStorage.getItem("adminAuthUser");
+        if (!raw) raw = localStorage.getItem("itAuthUser");
         if (!raw) raw = localStorage.getItem("staffAuthUser");
         if (!raw) raw = localStorage.getItem("authUser");
         
@@ -165,6 +177,9 @@ function getStoredToken(portal: Portal): string | null {
     const adminToken = localStorage.getItem("adminAccessToken");
     if (adminToken) return adminToken;
 
+    const itToken = localStorage.getItem("itAccessToken");
+    if (itToken) return itToken;
+
     const staffToken = localStorage.getItem("staffAccessToken");
     if (staffToken) return staffToken;
     
@@ -180,6 +195,9 @@ function getStoredRefreshToken(portal: Portal): string | null {
 
     const adminRefresh = localStorage.getItem("adminRefreshToken");
     if (adminRefresh) return adminRefresh;
+
+    const itRefresh = localStorage.getItem("itRefreshToken");
+    if (itRefresh) return itRefresh;
 
     const staffRefresh = localStorage.getItem("staffRefreshToken");
     if (staffRefresh) return staffRefresh;

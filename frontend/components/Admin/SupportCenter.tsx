@@ -839,7 +839,7 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
   const [assignTeam, setAssignTeam] = useState(ticket.teamName || "");
   const [actionLoading, setActionLoading] = useState(false);
 
-  const isAdmin = ["admin", "super_admin", "staff"].includes(user?.role || "");
+  const isAdmin = ["admin", "super_admin", "staff", "it", "support"].includes(user?.role || "");
 
   const refreshTicket = async () => {
     setLoading(true);

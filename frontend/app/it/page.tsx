@@ -19,24 +19,36 @@ export default function ITOverviewPage() {
         const loadDashboard = async () => {
             setLoading(true);
             try {
-                const [ticketsRes, blogsRes]: [any, any] = await Promise.all([
-                    supportApi.getTickets().catch(() => ({ data: [] })),
+                const [ticketsRes, dashRes, blogsRes]: [any, any, any] = await Promise.all([
+                    supportApi.getTickets({ limit: 25, sortBy: "createdAt", sortOrder: "desc" }).catch(() => ({ data: [] })),
+                    supportApi.getDashboard().catch(() => null),
                     blogApi.getAll(1, 10).catch(() => ({ data: [] }))
                 ]);
 
-                const ticketList = ticketsRes.data || [];
-                const open = ticketList.filter((t: any) => t.status === "open" || t.status === "in_progress").length;
-                const resolved = ticketList.filter((t: any) => t.status === "resolved" || t.status === "closed").length;
-                const critical = ticketList.filter((t: any) => t.priority === "critical" || t.priority === "high").length;
+                // Prefer dashboard stats (accurate server-side counts)
+                if (dashRes?.stats) {
+                    const s = dashRes.stats;
+                    setTicketStats({
+                        total: s.totalTickets || 0,
+                        open: s.openTickets || 0,
+                        resolved: (s.resolvedTickets || 0) + (s.closedTickets || 0),
+                        critical: s.criticalTickets || 0,
+                    });
+                } else {
+                    // Fallback to computing from ticket list
+                    const tData = ticketsRes?.data || ticketsRes || {};
+                    const ticketList = Array.isArray(tData.data) ? tData.data : Array.isArray(tData) ? tData : [];
+                    const open = ticketList.filter((t: any) => t.status === "open" || t.status === "in_progress").length;
+                    const resolved = ticketList.filter((t: any) => t.status === "resolved" || t.status === "closed").length;
+                    const critical = ticketList.filter((t: any) => t.priority === "critical" || t.priority === "high").length;
+                    setTicketStats({ total: ticketList.length, open, resolved, critical });
+                }
 
-                setTicketStats({
-                    total: ticketList.length,
-                    open,
-                    resolved,
-                    critical
-                });
+                // Recent tickets for the table
+                const tData = ticketsRes?.data || ticketsRes || {};
+                const ticketList = Array.isArray(tData.data) ? tData.data : Array.isArray(tData) ? tData : [];
                 setRecentTickets(ticketList.slice(0, 5));
-                setBlogs(blogsRes.data || []);
+                setBlogs(blogsRes?.data || []);
             } catch (e) {
                 console.error("IT Dashboard error:", e);
             } finally {

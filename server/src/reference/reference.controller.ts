@@ -226,6 +226,33 @@ export class ReferenceController {
         return this.referenceService.getCountriesByRegion(region);
     }
 
+    /**
+     * Create a new country (Admin)
+     * POST /reference/countries
+     */
+    @Post('countries')
+    async createCountry(@Body() body: any) {
+        return this.referenceService.createCountry(body);
+    }
+
+    /**
+     * Update country details or toggle status (Admin)
+     * PUT /reference/countries/:id
+     */
+    @Put('countries/:id')
+    async updateCountry(@Param('id') id: string, @Body() body: any) {
+        return this.referenceService.updateCountry(id, body);
+    }
+
+    /**
+     * Delete a country (Admin)
+     * DELETE /reference/countries/:id
+     */
+    @Delete('countries/:id')
+    async deleteCountry(@Param('id') id: string) {
+        return this.referenceService.deleteCountry(id);
+    }
+
     // ==================== SCHOLARSHIPS ====================
 
     /**

@@ -9,6 +9,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import CampaignsDashboard from "@/components/Admin/CampaignsDashboard";
 import AdminBanksSection from "@/components/Admin/AdminBanksSection";
+import AdminCountriesSection from "@/components/Admin/AdminCountriesSection";
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -682,6 +683,7 @@ export default function AdminDashboardPage() {
         { section: "system", icon: "admin_panel_settings", label: "System Control", badge: announcements.length },
         { section: "users", icon: "people", label: "Users", badge: 0 },
         { section: "banks", icon: "account_balance", label: "Bank Partners", badge: 0 },
+        { section: "countries", icon: "public", label: "Study Countries", badge: 0 },
         { section: "chat", icon: "forum", label: "Student Chat", badge: 0 },
         { section: "community", icon: "groups", label: "Community", badge: 0 },
         { section: "audit_logs", icon: "policy", label: "Audit Logs", badge: 0 },
@@ -709,6 +711,7 @@ export default function AdminDashboardPage() {
         system: 'System Control',
         users: 'User Management',
         banks: 'Bank Partners Management',
+        countries: 'Supported Study Destinations',
         blogs: 'Blog Management',
         chat: 'Student Chat',
         community: 'Community Forum',
@@ -1600,6 +1603,10 @@ export default function AdminDashboardPage() {
 
                     {activeSection === "banks" && (
                         <AdminBanksSection />
+                    )}
+
+                    {activeSection === "countries" && (
+                        <AdminCountriesSection />
                     )}
 
                     {/* ─── USERS MANAGEMENT DASHBOARD ──────────────────────────────────────── */}

@@ -22,7 +22,7 @@ export function notifyTokenChange(token: string | null) {
     tokenChangeListeners.forEach(cb => cb(token));
 }
 
-type Portal = "student" | "staff" | "admin" | "bank" | "agent";
+type Portal = "student" | "staff" | "admin" | "bank" | "agent" | "it";
 
 function getPortalFromPathname(pathname?: string): Portal {
     if (!pathname) return "student";
@@ -30,6 +30,7 @@ function getPortalFromPathname(pathname?: string): Portal {
     if (pathname.startsWith("/staff")) return "staff";
     if (pathname.startsWith("/bank")) return "bank";
     if (pathname.startsWith("/agent")) return "agent";
+    if (pathname.startsWith("/it")) return "it";
     return "student";
 }
 
@@ -72,6 +73,16 @@ function getStorageKeys(portal: Portal) {
             userId: "agentUserId",
             user: "agentAuthUser",
             loginPath: "/agent/login",
+        };
+    }
+    if (portal === "it") {
+        return {
+            token: "itAccessToken",
+            refreshToken: "itRefreshToken",
+            email: "itUserEmail",
+            userId: "itUserId",
+            user: "itAuthUser",
+            loginPath: "/it/login",
         };
     }
     return {
@@ -250,11 +261,15 @@ export function getToken(): string | null {
     const adminToken = localStorage.getItem("adminAccessToken");
     if (adminToken) return adminToken;
 
-    // 3. Try Staff token - useful if staff navigates to other common areas
+    // 3. Try IT token
+    const itToken = localStorage.getItem("itAccessToken");
+    if (itToken) return itToken;
+
+    // 4. Try Staff token - useful if staff navigates to other common areas
     const staffToken = localStorage.getItem("staffAccessToken");
     if (staffToken) return staffToken;
 
-    // 4. Fallback to generic student token
+    // 5. Fallback to generic student token
     return localStorage.getItem("accessToken");
 }
 
@@ -830,6 +845,20 @@ export const referenceApi = {
         apiFetch(`${API_URL}/reference/banks/slug/${slug}`),
     getCountries: () =>
         apiFetch(HttpApiPaths.reference.countries()),
+    createCountry: (data: any) =>
+        apiFetch(HttpApiPaths.reference.countries(), {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    updateCountry: (id: string, data: any) =>
+        apiFetch(`${API_URL}/reference/countries/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+    deleteCountry: (id: string) =>
+        apiFetch(`${API_URL}/reference/countries/${id}`, {
+            method: "DELETE",
+        }),
     getUniversities: () =>
         apiFetch(HttpApiPaths.reference.universities()),
 };
