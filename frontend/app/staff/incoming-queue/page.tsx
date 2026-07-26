@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffLayout } from "@/app/staff/layout";
@@ -8,7 +8,7 @@ import { adminApi, staffProfileApi, apiFetch } from "@/lib/api";
 import Link from "next/link";
 import SendEmailModal from "@/components/staff/SendEmailModal";
 import ShareWithBankModal from "@/components/staff/ShareWithBankModal";
- 
+
 import { useDialog } from "@/contexts/DialogContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { checkFollowUpConflict, DEFAULT_TIME_SLOTS, formatSlot12Hr, getTodayDateString } from "@/lib/followUpUtils";
@@ -162,7 +162,167 @@ const TableHeader = ({ children }: { children: React.ReactNode }) => (
     </thead>
 );
 
+const StudentContactDropdownBesideName = ({
+    phone,
+    email,
+    name,
+    onOpenEmailModal
+}: {
+    phone?: string;
+    email?: string;
+    name?: string;
+    onOpenEmailModal?: (email: string, name: string) => void;
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [copiedText, setCopiedText] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleCopy = (text: string, label: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!text || text === '—') return;
+        navigator.clipboard.writeText(text);
+        setCopiedText(label);
+        setTimeout(() => setCopiedText(null), 2000);
+        setIsOpen(false);
+    };
+
+    const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : '';
+    const whatsappPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+    const hasPhone = Boolean(phone && phone !== '—');
+    const hasEmail = Boolean(email && email !== '—');
+
+    if (!hasPhone && !hasEmail) return null;
+
+    return (
+        <div ref={menuRef} className="relative inline-flex items-center">
+            {/* Single Dropdown Button beside student name */}
+            <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                className="w-6 h-6 rounded-full bg-purple-50 hover:bg-purple-100 text-[#6605c7] border border-purple-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 ml-1.5"
+                title="Click for Phone & Email options"
+            >
+                <span className="material-symbols-outlined text-[15px]">
+                    {isOpen ? 'expand_less' : 'expand_more'}
+                </span>
+            </button>
+
+            {copiedText && (
+                <span className="absolute left-8 top-0 whitespace-nowrap text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-fade-in z-50">
+                    {copiedText} Copied!
+                </span>
+            )}
+
+            {/* Dropdown Options Popover */}
+            {isOpen && (
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute left-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-2 min-w-[220px] text-xs font-semibold text-slate-700 divide-y divide-slate-100 animate-fade-in"
+                >
+                    {/* Phone Options */}
+                    {hasPhone && (
+                        <div className="py-1">
+                            <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[13px] text-[#6605c7]">call</span>
+                                <span className="font-mono text-slate-600">{phone}</span>
+                            </div>
+
+                            <a
+                                href={`tel:${cleanPhone}`}
+                                onClick={() => setIsOpen(false)}
+                                className="flex items-center gap-2 px-3 py-1.5 hover:bg-purple-50 hover:text-[#6605c7] transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-[14px] text-emerald-600">phone_in_talk</span>
+                                <span>Call {cleanPhone}</span>
+                            </a>
+
+                            {whatsappPhone && (
+                                <a
+                                    href={`https://wa.me/${whatsappPhone}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => setIsOpen(false)}
+                                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-[14px] text-emerald-600">chat</span>
+                                    <span>WhatsApp Chat</span>
+                                </a>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={(e) => handleCopy(phone!, 'Phone', e)}
+                                className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
+                            >
+                                <span className="material-symbols-outlined text-[14px] text-slate-400">content_copy</span>
+                                <span>Copy Phone Number</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Email Options */}
+                    {hasEmail && (
+                        <div className="py-1">
+                            <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[13px] text-[#6605c7]">mail</span>
+                                <span className="font-mono text-slate-600 truncate max-w-[150px]" title={email}>{email}</span>
+                            </div>
+
+                            {onOpenEmailModal && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); onOpenEmailModal(email!, name || ''); }}
+                                    className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
+                                >
+                                    <span className="material-symbols-outlined text-[14px] text-indigo-600">send</span>
+                                    <span>Send Email (Modal)</span>
+                                </button>
+                            )}
+
+                            <a
+                                href={`mailto:${email}`}
+                                onClick={() => setIsOpen(false)}
+                                className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-[14px] text-slate-400">mail</span>
+                                <span>Open Default Mail App</span>
+                            </a>
+
+                            <button
+                                type="button"
+                                onClick={(e) => handleCopy(email!, 'Email', e)}
+                                className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
+                            >
+                                <span className="material-symbols-outlined text-[14px] text-slate-400">content_copy</span>
+                                <span>Copy Email Address</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function IncomingQueuePage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-slate-500">Loading incoming queue...</div>}>
+            <IncomingQueuePageInner />
+        </Suspense>
+    );
+}
+
+function IncomingQueuePageInner() {
     const router = useRouter();
     const { user, token } = useAuth();
     const { onlineEmails, fetchBadgeStats } = useStaffLayout();
@@ -175,13 +335,13 @@ export default function IncomingQueuePage() {
     const [searchQuery, setSearchQuery] = useState("");
     const applicationsPerPage = 20;
 
-    
+
 
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
     const [activeContactPopup, setActiveContactPopup] = useState<{ id: string; type: 'email' | 'phone' } | null>(null);
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-    
+
     const [activeDockApp, setActiveDockApp] = useState<any | null>(null);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [routingApp, setRoutingApp] = useState<any | null>(null);
@@ -191,7 +351,7 @@ export default function IncomingQueuePage() {
     const [emailModalRecipient, setEmailModalRecipient] = useState("");
     const [emailModalRecipientName, setEmailModalRecipientName] = useState("");
 
-    
+
 
     // Rejection Modal
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -205,10 +365,10 @@ export default function IncomingQueuePage() {
     const [tempFollowUpNotes, setTempFollowUpNotes] = useState("");
     const [followUpItem, setFollowUpItem] = useState<any | null>(null);
 
-    const followUpKey = user?.id 
-        ? `staff_follow_up_dates_${user.id}` 
-        : user?.email 
-            ? `staff_follow_up_dates_${user.email}` 
+    const followUpKey = user?.id
+        ? `staff_follow_up_dates_${user.id}`
+        : user?.email
+            ? `staff_follow_up_dates_${user.email}`
             : `staff_follow_up_dates_default`;
 
     useEffect(() => {
@@ -342,7 +502,7 @@ export default function IncomingQueuePage() {
         loadData();
     }, [loadData]);
 
-    
+
 
     const toggleRowExpanded = (rowId: string) => {
         setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
@@ -354,7 +514,7 @@ export default function IncomingQueuePage() {
         setIsEmailModalOpen(true);
     };
 
-    
+
 
     const logActivity = async (type: string, msg: string, icon: string, color: string) => {
         try {
@@ -364,7 +524,7 @@ export default function IncomingQueuePage() {
         }
     };
 
-    
+
 
     const handleMoveToActivePipeline = async (item: any) => {
         const appId = item.id || item._id;
@@ -517,34 +677,71 @@ export default function IncomingQueuePage() {
                                     const popup = activeContactPopup;
                                     const rowId = item.id || item._id || String(idx);
                                     const isExpanded = !!expandedRows[rowId];
+                                    const userEmail = item.email || item.student?.email || item.user?.email || "";
+                                    const userPhone = item.phone || item.mobile || item.student?.phone || item.student?.mobile || item.user?.phone || item.user?.mobile || "";
 
                                     return (
                                         <tr key={rowId} className="hover:bg-slate-50/30 transition-colors">
                                             {/* 1. Applicant Profile */}
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">
-                                                        {initials.toUpperCase()}
+                                                <div className="flex items-start gap-3">
+                                                    <div
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                            const fName = item.firstName || item.student?.firstName || "";
+                                                            const lName = item.lastName || item.student?.lastName || "";
+                                                            const appNum = item.applicationNumber || "";
+
+                                                            const query = new URLSearchParams();
+                                                            if (uid) query.set("userId", uid);
+                                                            if (userEmail) query.set("email", userEmail);
+                                                            if (fName) query.set("firstName", fName);
+                                                            if (lName) query.set("lastName", lName);
+                                                            if (userPhone) query.set("phone", userPhone);
+                                                            if (item.id || item._id) query.set("applicationId", item.id || item._id);
+                                                            if (appNum) query.set("applicationNumber", appNum);
+
+                                                            router.push(`/staff/chat-customer?${query.toString()}`);
+                                                        }}
+                                                        className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 cursor-pointer transition-all shadow-xs hover:scale-105 group/avatar"
+                                                        title="Click to open Support Chat with Student"
+                                                    >
+                                                        <span className="group-hover/avatar:hidden">{initials.toUpperCase()}</span>
                                                     </div>
-                                                    <div className="min-w-0">
-                                                        <p
-                                                            onClick={() => {
-                                                                const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
-                                                                const email = item.email || item.student?.email;
-                                                                if (uid) {
-                                                                    window.open(`/staff/users/${uid}${email ? `?email=${encodeURIComponent(email)}` : ''}`, '_blank');
-                                                                } else {
-                                                                    router.push(`/staff/users?search=${encodeURIComponent(item.firstName || '')}`);
-                                                                }
-                                                            }}
-                                                            className="text-[15px] font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors truncate max-w-[220px]"
-                                                            title="Click to view Student Profile"
-                                                        >
-                                                            {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
-                                                        </p>
-                                                        <p className="text-xs font-mono text-slate-400 mt-0.5">
-                                                            {item.applicationNumber || "VTU-APP-PENDING"}
-                                                        </p>
+                                                    <div className="min-w-0 space-y-0.5">
+                                                        <div className="min-w-0 space-y-0.5">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <p
+                                                                    onClick={() => {
+                                                                        const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                                        const email = item.email || item.student?.email;
+                                                                        if (uid) {
+                                                                            window.open(`/staff/users/${uid}${email ? `?email=${encodeURIComponent(email)}` : ''}`, '_blank');
+                                                                        } else {
+                                                                            router.push(`/staff/users?search=${encodeURIComponent(item.firstName || '')}`);
+                                                                        }
+                                                                    }}
+                                                                    className="text-[15px] font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors truncate max-w-[220px]"
+                                                                    title="Click to view Student Profile"
+                                                                >
+                                                                    {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
+                                                                </p>
+                                                                <StudentContactDropdownBesideName
+                                                                    phone={userPhone}
+                                                                    email={userEmail}
+                                                                    name={`${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim()}
+                                                                    onOpenEmailModal={(email, name) => {
+                                                                        setEmailModalRecipient(email);
+                                                                        setEmailModalRecipientName(name);
+                                                                        setIsEmailModalOpen(true);
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <p className="text-xs font-mono text-slate-400">
+                                                                {item.applicationNumber || "VTU-APP-PENDING"}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -558,20 +755,18 @@ export default function IncomingQueuePage() {
 
                                             {/* 3. Status */}
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
-                                                    statusKey === 'submitted' || statusKey === 'pending'
-                                                        ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                                                        : statusKey === 'processing' || statusKey === 'under_review'
+                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${statusKey === 'submitted' || statusKey === 'pending'
+                                                    ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                                    : statusKey === 'processing' || statusKey === 'under_review'
                                                         ? 'bg-indigo-50 text-indigo-600 border border-indigo-200'
                                                         : statusKey === 'approved' || statusKey === 'verified'
-                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                        : statusKey === 'rejected'
-                                                        ? 'bg-rose-50 text-rose-600 border border-rose-200'
-                                                        : 'bg-amber-50 text-amber-600 border border-amber-200'
-                                                }`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${
-                                                        statusKey === 'rejected' ? 'bg-rose-500' : ['approved', 'verified'].includes(statusKey) ? 'bg-emerald-500' : 'bg-blue-500'
-                                                    }`} />
+                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                            : statusKey === 'rejected'
+                                                                ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                                                                : 'bg-amber-50 text-amber-600 border border-amber-200'
+                                                    }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${statusKey === 'rejected' ? 'bg-rose-500' : ['approved', 'verified'].includes(statusKey) ? 'bg-emerald-500' : 'bg-blue-500'
+                                                        }`} />
                                                     {item.status ? item.status.replace('_', ' ') : 'SUBMITTED'}
                                                 </span>
                                             </td>
@@ -619,12 +814,15 @@ export default function IncomingQueuePage() {
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
-                                                        onClick={() => handleMoveToActivePipeline(item)}
-                                                        className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all border border-indigo-200 cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-2xs"
-                                                        title="Move application to Active Pipeline"
+                                                        onClick={() => {
+                                                            setRoutingApp(item);
+                                                            setIsShareModalOpen(true);
+                                                        }}
+                                                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                                                        title="Approve application & select target bank"
                                                     >
-                                                        <span className="material-symbols-outlined text-[16px]">play_arrow</span>
-                                                        Move to Active Pipeline
+                                                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                                                        Approve & Select Bank
                                                     </button>
                                                     <button
                                                         onClick={(e) => {
@@ -708,9 +906,9 @@ export default function IncomingQueuePage() {
                             <div>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Set a due date</p>
                                 <div className="flex items-center gap-2">
-                                    {[{label: '1 Day', days: 1}, {label: '3 Days', days: 3}, {label: '1 Week', days: 7}].map(opt => {
+                                    {[{ label: '1 Day', days: 1 }, { label: '3 Days', days: 3 }, { label: '1 Week', days: 7 }].map(opt => {
                                         const pd = new Date(); pd.setDate(pd.getDate() + opt.days);
-                                        const val = `${pd.getFullYear()}-${String(pd.getMonth()+1).padStart(2,'0')}-${String(pd.getDate()).padStart(2,'0')}`;
+                                        const val = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}-${String(pd.getDate()).padStart(2, '0')}`;
                                         const isActive = tempFollowUpDate === val;
                                         return (
                                             <button key={opt.label} type="button" onClick={() => applyQuickDate(opt.days)}
@@ -836,7 +1034,7 @@ export default function IncomingQueuePage() {
                 </div>
             )}
 
-            
+
 
             <AnimatePresence>
                 {activeDockApp && (
@@ -859,13 +1057,13 @@ export default function IncomingQueuePage() {
                         </div>
 
                         {/* View Profile */}
-                        <button
+                        {/* <button
                             onClick={() => router.push(`/staff/applications/${activeDockApp.id || activeDockApp._id}`)}
                             className="shrink-0 h-11 px-5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-wider text-slate-700 transition-all flex items-center gap-2 active:scale-95"
                         >
                             <span className="material-symbols-outlined text-[16px] text-slate-500">visibility</span>
                             View Application
-                        </button>
+                        </button> */}
 
                         {/* Select Target Banks: Pills style */}
                         {/* <div className="flex-1 flex flex-col gap-1 min-w-0">
@@ -919,13 +1117,23 @@ export default function IncomingQueuePage() {
                                 Move to Inactive Pipeline
                             </button>
 
-                            {/* Approve button: moves application to active pipeline */}
+                            {/* Direct Approve & Move to Active Pipeline button */}
+                            <button
+                                onClick={() => handleMoveToActivePipeline(activeDockApp)}
+                                className="h-11 px-5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95"
+                                title="Approve and move application to Active Pipeline"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                                Approve & Move to Active Pipeline
+                            </button>
+
+                            {/* Approve & Select Bank button */}
                             <button
                                 onClick={() => {
                                     setRoutingApp(activeDockApp);
                                     setIsShareModalOpen(true);
                                 }}
-                                className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg cursor-pointer"
+                                className="h-11 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg cursor-pointer active:scale-95"
                             >
                                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
                                 Approve & Select Bank

@@ -81,8 +81,12 @@ export default function InactivePipelinePage() {
             };
             const res: any = await adminApi.getApplications(params);
             if (res && res.data) {
-                // Filter client-side to only show rejected applications (inactive pipeline)
-                const inactiveApps = res.data.filter((app: any) => app.status === "rejected" || app.status === "cancelled");
+                // Filter client-side to only show rejected & cancelled applications (inactive pipeline)
+                const inactiveApps = res.data.filter((app: any) => {
+                    const s = (app.status || "").toLowerCase();
+                    const bw = (app.bankWorkflowStatus || "").toUpperCase();
+                    return s === "rejected" || s === "cancelled" || bw === "REJECTED";
+                });
                 setData(inactiveApps);
                 setTotalItems(inactiveApps.length);
             } else {

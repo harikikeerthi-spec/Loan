@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffLayout } from "@/app/staff/layout";
@@ -48,6 +48,158 @@ const getApplicationStageLabel = (app: any, progress: number): string => {
     return "Disbursement";
 };
 
+const StudentContactDropdownBesideName = ({
+    phone,
+    email,
+    name,
+    onOpenEmailModal
+}: {
+    phone?: string;
+    email?: string;
+    name?: string;
+    onOpenEmailModal?: (email: string, name: string) => void;
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [copiedText, setCopiedText] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleCopy = (text: string, label: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!text || text === '—') return;
+        navigator.clipboard.writeText(text);
+        setCopiedText(label);
+        setTimeout(() => setCopiedText(null), 2000);
+        setIsOpen(false);
+    };
+
+    const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : '';
+    const whatsappPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+    const hasPhone = Boolean(phone && phone !== '—');
+    const hasEmail = Boolean(email && email !== '—');
+
+    if (!hasPhone && !hasEmail) return null;
+
+    return (
+        <div ref={menuRef} className="relative inline-flex items-center">
+            {/* Single Dropdown Button beside student name */}
+            <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                className="w-6 h-6 rounded-full bg-purple-50 hover:bg-purple-100 text-[#6605c7] border border-purple-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                title="Click for Phone & Email options"
+            >
+                <span className="material-symbols-outlined text-[15px]">
+                    {isOpen ? 'expand_less' : 'expand_more'}
+                </span>
+            </button>
+
+            {copiedText && (
+                <span className="absolute left-8 top-0 whitespace-nowrap text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-fade-in z-50">
+                    {copiedText} Copied!
+                </span>
+            )}
+
+            {/* Dropdown Options Popover */}
+            {isOpen && (
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute left-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-2 min-w-[220px] text-xs font-semibold text-slate-700 divide-y divide-slate-100 animate-fade-in"
+                >
+                    {/* Phone Options */}
+                    {hasPhone && (
+                        <div className="py-1">
+                            <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[13px] text-[#6605c7]">call</span>
+                                <span className="font-mono text-slate-600">{phone}</span>
+                            </div>
+
+                            <a
+                                href={`tel:${cleanPhone}`}
+                                onClick={() => setIsOpen(false)}
+                                className="flex items-center gap-2 px-3 py-1.5 hover:bg-purple-50 hover:text-[#6605c7] transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-[14px] text-emerald-600">phone_in_talk</span>
+                                <span>Call {cleanPhone}</span>
+                            </a>
+
+                            {whatsappPhone && (
+                                <a
+                                    href={`https://wa.me/${whatsappPhone}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => setIsOpen(false)}
+                                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-[14px] text-emerald-600">chat</span>
+                                    <span>WhatsApp Chat</span>
+                                </a>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={(e) => handleCopy(phone!, 'Phone', e)}
+                                className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
+                            >
+                                <span className="material-symbols-outlined text-[14px] text-slate-400">content_copy</span>
+                                <span>Copy Phone Number</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Email Options */}
+                    {hasEmail && (
+                        <div className="py-1">
+                            <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[13px] text-[#6605c7]">mail</span>
+                                <span className="font-mono text-slate-600 truncate max-w-[150px]" title={email}>{email}</span>
+                            </div>
+
+                            {onOpenEmailModal && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setIsOpen(false); onOpenEmailModal(email!, name || ''); }}
+                                    className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
+                                >
+                                    <span className="material-symbols-outlined text-[14px] text-indigo-600">send</span>
+                                    <span>Send Email (Modal)</span>
+                                </button>
+                            )}
+
+                            <a
+                                href={`mailto:${email}`}
+                                onClick={() => setIsOpen(false)}
+                                className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-[14px] text-slate-400">mail</span>
+                                <span>Open Default Mail App</span>
+                            </a>
+
+                            <button
+                                type="button"
+                                onClick={(e) => handleCopy(email!, 'Email', e)}
+                                className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
+                            >
+                                <span className="material-symbols-outlined text-[14px] text-slate-400">content_copy</span>
+                                <span>Copy Email Address</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 function ApplicationsPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -92,17 +244,25 @@ function ApplicationsPageInner() {
 
     const filteredData = useMemo(() => {
         return data.filter(item => {
+            const status = (item.status || "draft").toLowerCase();
+            const bankWorkflow = (item.bankWorkflowStatus || "").toUpperCase();
+
+            // Rejected and cancelled applications belong strictly to Inactive Pipeline
+            if (status === "rejected" || status === "cancelled" || bankWorkflow === "REJECTED") {
+                return false;
+            }
+
             const fullName = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.toLowerCase();
             const college = (item.universityName || item.college || '').toLowerCase();
+            const email = (item.email || item.student?.email || item.user?.email || '').toLowerCase();
+            const phone = (item.phone || item.mobile || item.student?.phone || item.student?.mobile || item.user?.phone || '').toLowerCase();
             const query = searchQuery.toLowerCase();
-            const matchesSearch = fullName.includes(query) || college.includes(query);
+            const matchesSearch = fullName.includes(query) || college.includes(query) || email.includes(query) || phone.includes(query);
             if (!matchesSearch) return false;
             if (filterStatus === "all") return true;
-            const status = (item.status || "draft").toLowerCase();
             if (filterStatus === "pending") return ["pending", "draft", "submitted"].includes(status);
             if (filterStatus === "processing") return ["processing", "submitted_to_bank", "routed_multiparty", "file_logged", "docs_received", "staff_verified", "under_review", "docs_uploaded"].includes(status);
             if (filterStatus === "approved") return ["approved", "verified", "disbursed", "disbursement_confirmed"].includes(status);
-            if (filterStatus === "rejected") return status === "rejected";
             return status === filterStatus;
         });
     }, [data, searchQuery, filterStatus]);
@@ -162,17 +322,55 @@ function ApplicationsPageInner() {
                                 const stageLabel = getApplicationStageLabel(item, progress);
                                 const statusKey = (item.status || 'draft').toLowerCase();
                                 const bankName = item.bank || item.targetBank || item.lender || "IDFC FIRST Bank";
+                                const userEmail = item.email || item.student?.email || item.user?.email || "";
+                                const userPhone = item.phone || item.mobile || item.student?.phone || item.student?.mobile || item.user?.phone || item.user?.mobile || "";
 
                                 return (
                                     <tr key={rowId} className="hover:bg-slate-50/30 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">{initials.toUpperCase()}</div>
-                                                <div>
-                                                    <p onClick={() => { const uid = item.userId || item.user_id || item.student?.id; const email = item.email || item.student?.email; if (uid) { window.open(`/staff/users/${uid}${email ? `?email=${encodeURIComponent(email)}` : ''}`, '_blank'); } else { router.push(`/staff/users?search=${encodeURIComponent(item.firstName || '')}`); } }} className="text-[15px] font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors" title="Click to view Student Profile">
-                                                        {item.firstName || item.student?.firstName || "—"} {item.lastName || item.student?.lastName || ""}
-                                                    </p>
-                                                    <p className="text-xs font-mono text-slate-400 mt-0.5">{item.applicationNumber || "Pending"}</p>
+                                            <div className="flex items-start gap-3">
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                        const fName = item.firstName || item.student?.firstName || "";
+                                                        const lName = item.lastName || item.student?.lastName || "";
+                                                        const appNum = item.applicationNumber || "";
+
+                                                        const query = new URLSearchParams();
+                                                        if (uid) query.set("userId", uid);
+                                                        if (userEmail) query.set("email", userEmail);
+                                                        if (fName) query.set("firstName", fName);
+                                                        if (lName) query.set("lastName", lName);
+                                                        if (userPhone) query.set("phone", userPhone);
+                                                        if (item.id || item._id) query.set("applicationId", item.id || item._id);
+                                                        if (appNum) query.set("applicationNumber", appNum);
+
+                                                        router.push(`/staff/chat-customer?${query.toString()}`);
+                                                    }}
+                                                    className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 cursor-pointer transition-all shadow-xs hover:scale-105 group/avatar"
+                                                    title="Click to open Support Chat with Student"
+                                                >
+                                                    <span className="group-hover/avatar:hidden">{initials.toUpperCase()}</span>
+
+                                                </div>
+                                                <div className="min-w-0 space-y-0.5">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p onClick={() => { const uid = item.userId || item.user_id || item.student?.id; const email = item.email || item.student?.email; if (uid) { window.open(`/staff/users/${uid}${email ? `?email=${encodeURIComponent(email)}` : ''}`, '_blank'); } else { router.push(`/staff/users?search=${encodeURIComponent(item.firstName || '')}`); } }} className="text-[15px] font-bold text-slate-950 hover:text-indigo-600 cursor-pointer transition-colors" title="Click to view Student Profile">
+                                                            {item.firstName || item.student?.firstName || "—"} {item.lastName || item.student?.lastName || ""}
+                                                        </p>
+                                                        <StudentContactDropdownBesideName
+                                                            phone={userPhone}
+                                                            email={userEmail}
+                                                            name={`${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim()}
+                                                            onOpenEmailModal={(email, name) => {
+                                                                setEmailModalRecipient(email);
+                                                                setEmailModalRecipientName(name);
+                                                                setIsEmailModalOpen(true);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <p className="text-xs font-mono text-slate-400">{item.applicationNumber || "Pending"}</p>
                                                 </div>
                                             </div>
                                         </td>
