@@ -513,7 +513,8 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     </div>
                 </header>
 
-                <style dangerouslySetInnerHTML={{ __html: `
+                <style dangerouslySetInnerHTML={{
+                    __html: `
                     .bank-portal main > div > div {
                         padding: 0 !important;
                     }

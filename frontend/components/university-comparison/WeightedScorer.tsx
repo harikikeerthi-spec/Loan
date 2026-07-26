@@ -184,7 +184,7 @@ export default function WeightedScorer({
             const percentage = (score / maxScore) * 100;
 
             return (
-              <div key={uni.id} className="p-8 hover:bg-white/40 transition-colors">
+              <div key={`score-${uni.id}-${idx}`} className="p-8 hover:bg-white/40 transition-colors">
                 <div className="flex items-start justify-between mb-5 flex-wrap gap-4">
                   <div className="flex items-center gap-4">
                     <span className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${getRankBadgeStyle(idx)}`}>

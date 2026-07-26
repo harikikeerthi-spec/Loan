@@ -11,6 +11,7 @@ const SUPPORT_TABS = [
     { section: "support_assigned", icon: "person", label: "Assigned" },
     { section: "support_waiting", icon: "hourglass_empty", label: "Waiting" },
     { section: "support_resolved", icon: "check_circle", label: "Resolved" },
+    { section: "support_out_of_scope", icon: "cancel", label: "Out of Scope" },
     { section: "support_closed", icon: "lock", label: "Closed" },
     { section: "support_high", icon: "priority_high", label: "High Priority" },
     { section: "support_sla", icon: "timer", label: "SLA Monitor" },

@@ -128,13 +128,13 @@ export default function MetricComparison({
                   </p>
 
                   <div className="space-y-4">
-                    {universities.map((uni) => {
+                    {universities.map((uni, idx) => {
                       const value = uni[metric.key as keyof University] as number | undefined;
                       const percentage = getPercentage(value, absMax);
                       const isChampion = value === extremeValue;
 
                       return (
-                        <div key={uni.id} className="group">
+                        <div key={`met-${uni.id}-${idx}`} className="group">
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-xs font-bold text-gray-800 flex items-center gap-2">
                               {uni.name}
@@ -185,9 +185,9 @@ export default function MetricComparison({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {universities.map((uni) => (
+          {universities.map((uni, idx) => (
             <div
-              key={uni.id}
+              key={`rec-${uni.id}-${idx}`}
               className="bg-white/60 p-6 rounded-2xl border border-white/80 shadow-sm flex flex-col justify-between"
             >
               <div>

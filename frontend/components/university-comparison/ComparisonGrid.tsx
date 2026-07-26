@@ -70,9 +70,9 @@ export default function ComparisonGrid({
               <th className="sticky left-0 px-6 py-5 text-left bg-[#fcfaff] text-xs font-black text-gray-400 uppercase tracking-widest z-10 rounded-tl-2xl">
                 Metric Comparison
               </th>
-              {universities.map((uni) => (
+              {universities.map((uni, idx) => (
                 <th
-                  key={uni.id}
+                  key={`head-${uni.id}-${idx}`}
                   className="px-6 py-5 text-center min-w-[200px]"
                 >
                   <div className="text-sm font-black text-gray-900 leading-tight">
@@ -94,9 +94,9 @@ export default function ComparisonGrid({
                 <td className="sticky left-0 px-6 py-4.5 text-xs font-bold text-gray-500 bg-[#fcfaff] border-r border-gray-50 z-10 whitespace-nowrap">
                   {metric.label}
                 </td>
-                {universities.map((uni) => (
+                {universities.map((uni, idx) => (
                   <td
-                    key={uni.id}
+                    key={`cell-${uni.id}-${idx}`}
                     className="px-6 py-4.5 text-center text-sm font-bold text-gray-900"
                   >
                     {metric.format(

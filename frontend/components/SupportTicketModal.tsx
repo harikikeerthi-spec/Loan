@@ -477,31 +477,49 @@ export default function SupportTicketModal({
                                                 <h4 className="text-base font-bold text-gray-900">{selectedTicket.subject}</h4>
                                             </div>
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${selectedTicket.status === "resolved" ? "bg-emerald-100 text-emerald-700" :
+                                                selectedTicket.status === "out_of_scope" ? "bg-rose-100 text-rose-700 border border-rose-200" :
                                                 selectedTicket.status === "closed" ? "bg-gray-100 text-gray-700" :
                                                     selectedTicket.status === "in_progress" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
                                                 }`}>
-                                                {selectedTicket.status.replace("_", " ")}
+                                                {selectedTicket.status === "out_of_scope" ? "Out of Scope" : selectedTicket.status.replace("_", " ")}
                                             </span>
                                         </div>
 
                                         <p className="text-xs text-gray-700 font-medium whitespace-pre-line leading-relaxed">{selectedTicket.description}</p>
 
                                         {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
-                                            <div className="pt-2 border-t border-purple-100">
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Proof Attachments</span>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {selectedTicket.attachments.map((att: any) => (
-                                                        <a
-                                                            key={att.id}
-                                                            href={`http://localhost:5000${att.filePath}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-purple-200 rounded-xl text-xs font-bold text-[#6605c7] hover:bg-purple-100 transition-colors"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">attachment</span>
-                                                            {att.fileName}
-                                                        </a>
-                                                    ))}
+                                            <div className="pt-2 border-t border-purple-100 space-y-2">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Proof Attachments & Images</span>
+                                                <div className="space-y-2">
+                                                    {selectedTicket.attachments.map((att: any) => {
+                                                        const isImg = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i);
+                                                        const fileUrl = att.filePath?.startsWith('http') || att.filePath?.startsWith('data:') ? att.filePath : `http://localhost:5000${att.filePath.startsWith('/') ? '' : '/'}${att.filePath}`;
+                                                        if (isImg) {
+                                                            return (
+                                                                <div key={att.id} className="rounded-xl border border-purple-100 bg-white p-2.5 space-y-2">
+                                                                    <div className="flex items-center justify-between text-xs font-bold text-[#6605c7]">
+                                                                        <span className="truncate">{att.fileName}</span>
+                                                                        <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="hover:underline text-[11px] shrink-0">Open Image ↗</a>
+                                                                    </div>
+                                                                    <div className="rounded-lg overflow-hidden border border-gray-100 max-h-60 bg-gray-50 flex items-center justify-center">
+                                                                        <img src={fileUrl} alt={att.fileName} className="max-h-60 w-auto object-contain rounded-lg" />
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <a
+                                                                key={att.id}
+                                                                href={fileUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-purple-200 rounded-xl text-xs font-bold text-[#6605c7] hover:bg-purple-100 transition-colors"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">attachment</span>
+                                                                {att.fileName}
+                                                            </a>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         )}

@@ -69,6 +69,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string
   in_progress: { label: "In Progress", color: "bg-indigo-100 text-indigo-700 border-indigo-200", icon: "autorenew" },
   waiting_customer: { label: "Waiting Customer", color: "bg-purple-100 text-purple-700 border-purple-200", icon: "hourglass_empty" },
   resolved: { label: "Resolved", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: "check_circle" },
+  out_of_scope: { label: "Out of Scope", color: "bg-rose-100 text-rose-700 border-rose-200", icon: "cancel" },
   closed: { label: "Closed", color: "bg-slate-100 text-slate-600 border-slate-200", icon: "lock" },
 };
 
@@ -889,15 +890,19 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
       }
       setComment("");
       await refreshTicket();
-    } catch { } finally { setCommentLoading(false); }
+    } catch (err: any) {
+      console.error("Failed to post note/reply:", err);
+      alert(err?.message || "Failed to post comment");
+    } finally { setCommentLoading(false); }
   };
 
   const STATUS_TRANSITIONS: Record<string, string[]> = {
-    open: ["assigned", "in_progress", "closed"],
-    assigned: ["in_progress", "waiting_customer", "resolved", "closed"],
-    in_progress: ["waiting_customer", "resolved", "closed"],
-    waiting_customer: ["in_progress", "resolved", "closed"],
+    open: ["assigned", "in_progress", "out_of_scope", "closed"],
+    assigned: ["in_progress", "waiting_customer", "out_of_scope", "resolved", "closed"],
+    in_progress: ["waiting_customer", "out_of_scope", "resolved", "closed"],
+    waiting_customer: ["in_progress", "out_of_scope", "resolved", "closed"],
     resolved: ["closed", "open"],
+    out_of_scope: ["open", "in_progress", "closed"],
     closed: ["open"],
   };
   const nextStatuses = STATUS_TRANSITIONS[ticket.status] || [];
@@ -938,54 +943,90 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
             <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{ticket.description}</p>
           </div>
 
-          {/* Uploaded Proof Attachments */}
+          {/* Uploaded Proof Attachments & Screenshots */}
           {((ticket.attachments && ticket.attachments.length > 0) || (ticket as any).attachmentUrl) && (
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-indigo-600">attachment</span>
-                  Uploaded Problem Proof & Attachments ({ticket.attachments?.length || 1})
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-indigo-600">image</span>
+                  Uploaded Problem Proof & Images ({ticket.attachments?.length || 1})
                 </h3>
-                <span className="text-[10px] text-slate-400 font-medium">Click to view file</span>
+                <span className="text-[10px] text-slate-400 font-medium">Stored securely in DB & server storage</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {(ticket.attachments && ticket.attachments.length > 0
-                  ? ticket.attachments
-                  : [{ fileName: "Proof Attachment", filePath: (ticket as any).attachmentUrl }]
-                ).map((att: any, idx: number) => {
-                  const url = getAttachmentUrl(att);
-                  const isImage = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif)$/i);
-                  const isPdf = (att.mimeType || att.fileName || att.filePath || "").match(/\.pdf$/i);
 
+              {/* Render Images in Inline Large Preview Cards */}
+              {(ticket.attachments && ticket.attachments.length > 0
+                ? ticket.attachments
+                : [{ fileName: "Proof Screenshot", filePath: (ticket as any).attachmentUrl }]
+              ).map((att: any, idx: number) => {
+                const url = getAttachmentUrl(att);
+                const isImage = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i) || att.filePath?.startsWith('data:image');
+                const isPdf = (att.mimeType || att.fileName || att.filePath || "").match(/\.pdf$/i);
+
+                if (isImage) {
                   return (
-                    <a
-                      key={att.id || idx}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-indigo-50/70 border border-slate-200 hover:border-indigo-300 rounded-xl transition-all group"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-indigo-100/70 border border-indigo-200/60 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform shrink-0 overflow-hidden">
-                        {isImage ? (
-                          <img src={url} alt="Attachment" className="w-full h-full object-cover rounded-lg" />
-                        ) : (
-                          <span className="material-symbols-outlined text-[22px]">
-                            {isPdf ? "picture_as_pdf" : "description"}
-                          </span>
-                        )}
+                    <div key={att.id || idx} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 hover:border-indigo-200 transition-all">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="material-symbols-outlined text-indigo-600 text-sm">photo_library</span>
+                          <span className="text-xs font-bold text-slate-800 truncate">{att.fileName || att.name || "Uploaded Screenshot / Issue Image"}</span>
+                          {att.fileSize && <span className="text-[10px] text-slate-400 font-mono">({(att.fileSize / 1024).toFixed(1)} KB)</span>}
+                        </div>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-indigo-600 font-bold hover:underline inline-flex items-center gap-1 shrink-0"
+                        >
+                          View Full Image <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                        </a>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate transition-colors">
-                          {att.fileName || att.name || "Uploaded Attachment"}
-                        </p>
-                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                          {att.fileSize ? `${(att.fileSize / 1024).toFixed(1)} KB` : "Problem attachment"} • Open File ↗
-                        </p>
+                      
+                      {/* Inline Image Container */}
+                      <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900/5 group max-h-[450px] flex items-center justify-center p-2">
+                        <img
+                          src={url}
+                          alt={att.fileName || "Uploaded issue screenshot"}
+                          className="max-h-[420px] w-auto object-contain rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-[1.01]"
+                        />
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 backdrop-blur-[2px]"
+                        >
+                          <span className="material-symbols-outlined text-xl">zoom_in</span>
+                          Click to Expand / Open Original File
+                        </a>
                       </div>
-                    </a>
+                    </div>
                   );
-                })}
-              </div>
+                }
+
+                return (
+                  <a
+                    key={att.id || idx}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-indigo-50/70 border border-slate-200 hover:border-indigo-300 rounded-xl transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-indigo-100/70 border border-indigo-200/60 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform shrink-0">
+                      <span className="material-symbols-outlined text-[22px]">
+                        {isPdf ? "picture_as_pdf" : "description"}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate transition-colors">
+                        {att.fileName || att.name || "Uploaded Attachment"}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                        {att.fileSize ? `${(att.fileSize / 1024).toFixed(1)} KB` : "Document attachment"} • Open File ↗
+                      </p>
+                    </div>
+                  </a>
+                );
+              })}
             </div>
           )}
 
@@ -1882,6 +1923,9 @@ export default function SupportCenter({ activeView, setActiveSection, user }: Su
 
     case "support_resolved":
       return <TicketTable filter={{ status: "resolved" }} onSelectTicket={handleSelectTicket} user={user} />;
+
+    case "support_out_of_scope":
+      return <TicketTable filter={{ status: "out_of_scope" }} onSelectTicket={handleSelectTicket} user={user} />;
 
     case "support_closed":
       return <TicketTable filter={{ status: "closed" }} onSelectTicket={handleSelectTicket} user={user} />;

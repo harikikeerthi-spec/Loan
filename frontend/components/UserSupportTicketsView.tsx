@@ -596,6 +596,8 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
                                             className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shrink-0 ${
                                                 selectedTicket.status === "resolved"
                                                     ? "bg-emerald-100 text-emerald-700"
+                                                    : selectedTicket.status === "out_of_scope"
+                                                    ? "bg-rose-100 text-rose-700 border border-rose-200"
                                                     : selectedTicket.status === "closed"
                                                     ? "bg-gray-100 text-gray-700"
                                                     : selectedTicket.status === "in_progress"
@@ -603,7 +605,7 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
                                                     : "bg-amber-100 text-amber-700"
                                             }`}
                                         >
-                                            {selectedTicket.status.replace("_", " ")}
+                                            {selectedTicket.status === "out_of_scope" ? "Out of Scope" : selectedTicket.status.replace("_", " ")}
                                         </span>
                                     </div>
 
@@ -613,23 +615,43 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
                                         <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-line font-medium">{selectedTicket.description}</p>
                                     </div>
 
-                                    {/* Proof Attachments */}
+                                    {/* Proof Attachments & Image Previews */}
                                     {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
-                                        <div className="space-y-2">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block">Proof Attachments</span>
-                                            <div className="flex flex-wrap gap-2">
-                                                {selectedTicket.attachments.map((att: any) => (
-                                                    <a
-                                                        key={att.id}
-                                                        href={`http://localhost:5000${att.filePath}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center gap-2 px-4 py-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-xs font-bold text-[#6605c7] transition-all"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">attachment</span>
-                                                        {att.fileName}
-                                                    </a>
-                                                ))}
+                                        <div className="space-y-3">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block">Uploaded Proof & Attachments</span>
+                                            <div className="space-y-3">
+                                                {selectedTicket.attachments.map((att: any) => {
+                                                    const isImg = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i);
+                                                    const fileUrl = att.filePath?.startsWith('http') || att.filePath?.startsWith('data:') ? att.filePath : `http://localhost:5000${att.filePath.startsWith('/') ? '' : '/'}${att.filePath}`;
+                                                    if (isImg) {
+                                                        return (
+                                                            <div key={att.id} className="rounded-2xl border border-purple-100 bg-purple-50/20 p-3.5 space-y-2.5">
+                                                                <div className="flex items-center justify-between text-xs font-bold text-[#6605c7]">
+                                                                    <span className="truncate flex items-center gap-1.5">
+                                                                        <span className="material-symbols-outlined text-sm">photo_library</span>
+                                                                        {att.fileName}
+                                                                    </span>
+                                                                    <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="hover:underline text-[11px] shrink-0 font-bold">Open Full Image ↗</a>
+                                                                </div>
+                                                                <div className="rounded-xl overflow-hidden border border-purple-100 max-h-80 bg-slate-900/5 flex items-center justify-center p-2">
+                                                                    <img src={fileUrl} alt={att.fileName} className="max-h-72 w-auto object-contain rounded-lg shadow-xs" />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <a
+                                                            key={att.id}
+                                                            href={fileUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-xs font-bold text-[#6605c7] transition-all"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">attachment</span>
+                                                            {att.fileName}
+                                                        </a>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}

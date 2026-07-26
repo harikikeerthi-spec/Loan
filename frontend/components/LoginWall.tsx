@@ -21,8 +21,32 @@ export default function LoginWall({ children }: { children: React.ReactNode }) {
 
     // Skip pages that are meant to be fully public or are the login/signup flow
     const skipList = ["/", "/login", "/signup", "/api-test", "/test-admin-system", "/visa-mock", "/connected", "/referral"];
-    // Also skip static/marketing pages if user wants (about-us etc)
-    const alwaysPublic = ["/about-us", "/faq", "/terms-conditions", "/privacy-policy", "/contact", "/how-it-works", "/cookies", "/blog", "/community", "/community-events", "/discussion", "/sop-writer", "/sop-analyzer", "/admit-predictor", "/compare-universities", "/grade-converter", "/emi", "/loan-eligibility"];
+    // Also skip static/marketing/bank detail pages without triggering login wall
+    const alwaysPublic = [
+        "/about-us",
+        "/faq",
+        "/terms-conditions",
+        "/privacy-policy",
+        "/contact",
+        "/how-it-works",
+        "/cookies",
+        "/blog",
+        "/community",
+        "/community-events",
+        "/discussion",
+        "/sop-writer",
+        "/sop-analyzer",
+        "/admit-predictor",
+        "/compare-universities",
+        "/grade-converter",
+        "/emi",
+        "/loan-eligibility",
+        "/bank",
+        "/bank-reviews",
+        "/compare-loans",
+        "/find-university",
+        "/university"
+    ];
 
     if (skipList.includes(pathname) || alwaysPublic.some(p => pathname.startsWith(p))) {
         return <>{children}</>;

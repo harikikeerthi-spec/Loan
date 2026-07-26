@@ -7,11 +7,12 @@ import { randomUUID } from 'crypto';
 
 // Ticket status transitions
 const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
-  open: ['assigned', 'in_progress', 'closed'],
-  assigned: ['in_progress', 'waiting_customer', 'resolved', 'closed'],
-  in_progress: ['waiting_customer', 'resolved', 'closed'],
-  waiting_customer: ['in_progress', 'resolved', 'closed'],
+  open: ['assigned', 'in_progress', 'out_of_scope', 'closed'],
+  assigned: ['in_progress', 'waiting_customer', 'out_of_scope', 'resolved', 'closed'],
+  in_progress: ['waiting_customer', 'out_of_scope', 'resolved', 'closed'],
+  waiting_customer: ['in_progress', 'out_of_scope', 'resolved', 'closed'],
   resolved: ['closed', 'open'],
+  out_of_scope: ['open', 'in_progress', 'closed'],
   closed: ['open'],
 };
 
@@ -222,7 +223,7 @@ export class SupportService {
       .from('SupportComment')
       .select('*')
       .eq('ticketId', id)
-      .order('created_at', { ascending: true });
+      .order('createdAt', { ascending: true });
 
     if (!isAdmin) {
       commentsQ = commentsQ.eq('isInternal', false);
@@ -235,8 +236,8 @@ export class SupportService {
       { data: watchers },
     ] = await Promise.all([
       commentsQ,
-      this.db.from('SupportAttachment').select('*').eq('ticketId', id).order('created_at', { ascending: true }),
-      this.db.from('SupportActivityLog').select('*').eq('ticketId', id).order('created_at', { ascending: false }),
+      this.db.from('SupportAttachment').select('*').eq('ticketId', id).order('createdAt', { ascending: true }),
+      this.db.from('SupportActivityLog').select('*').eq('ticketId', id).order('createdAt', { ascending: false }),
       this.db.from('SupportWatcher').select('*').eq('ticketId', id),
     ]);
 
@@ -407,7 +408,7 @@ export class SupportService {
       .from('SupportTicket').select('*').eq('id', ticketId).single();
     if (findError || !ticket) throw new NotFoundException(`Ticket ${ticketId} not found`);
 
-    const isAdmin = ['admin', 'super_admin', 'staff'].includes(user.role);
+    const isAdmin = ['admin', 'super_admin', 'staff', 'it', 'support', 'bank'].includes(user.role);
     const isInternal = dto.isInternal && isAdmin;
     const now = new Date().toISOString();
 

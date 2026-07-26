@@ -250,8 +250,8 @@ export default function UniversityComparisonFlow({
       try {
         const res = await referenceApi.getUniversities() as any;
         if (res?.success && res.data?.length > 0) {
-          const mapped = res.data.map((u: any) => ({
-            id: u.id || u._id,
+          const mapped = res.data.map((u: any, idx: number) => ({
+            id: u.id || u._id || u.slug || `uni-${idx}`,
             name: u.name,
             country: u.country,
             city: u.city || u.location || '',
@@ -264,11 +264,15 @@ export default function UniversityComparisonFlow({
             description: u.description || '',
             website: u.website || '',
             loan: u.loanSupported ?? true,
+            slug: u.slug || u.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
           }));
-          setDbUnis(mapped);
+          const uniqueMapped = mapped.filter((u: any, index: number, self: any[]) =>
+            index === self.findIndex((t) => t.id === u.id)
+          );
+          setDbUnis(uniqueMapped);
           
           if (initialUnis && initialUnis.length > 0) {
-            const unis = mapped.filter((u: any) =>
+            const unis = uniqueMapped.filter((u: any) =>
               initialUnis.some((id) => u.id === id || u.slug === id || u.name.toLowerCase().includes(id.toLowerCase()))
             );
             if (unis.length > 0) {
@@ -587,9 +591,9 @@ export default function UniversityComparisonFlow({
                     <span>AI searching globally...</span>
                   </div>
                 )}
-                {searchResults.map((uni) => (
+                {searchResults.map((uni, idx) => (
                   <button
-                    key={uni.id}
+                    key={`search-${uni.id}-${idx}`}
                     onClick={() => handleAddUni(uni)}
                     className="w-full text-left px-6 py-4 hover:bg-[#6605c7]/5 flex justify-between items-center transition-colors"
                   >
@@ -613,9 +617,9 @@ export default function UniversityComparisonFlow({
 
           {/* Selected Universities Tags */}
           <div className="flex flex-wrap gap-2.5 mb-6">
-            {selectedUnis.map((uni) => (
+            {selectedUnis.map((uni, idx) => (
               <div
-                key={uni.id}
+                key={`sel-${uni.id}-${idx}`}
                 className="flex items-center gap-3 pl-4 pr-2 py-2 bg-gradient-to-r from-[#6605c7]/5 to-[#6605c7]/10 border border-[#6605c7]/10 rounded-xl"
               >
                 <div className="flex flex-col">
@@ -647,11 +651,11 @@ export default function UniversityComparisonFlow({
               Quick Add Popular Universities
             </p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {activeUnis.slice(0, 5).map((uni) => {
+              {activeUnis.slice(0, 5).map((uni, idx) => {
                 const isSelected = selectedUnis.some(u => u.id === uni.id);
                 return (
                   <button
-                    key={uni.id}
+                    key={`pop-${uni.id}-${idx}`}
                     disabled={isSelected || selectedUnis.length >= 5}
                     onClick={() => handleAddUni(uni)}
                     className={`p-4 rounded-2xl border text-left transition-all relative ${
