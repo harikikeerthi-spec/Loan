@@ -632,16 +632,24 @@ export class StaffProfileService {
    * Returns the N most recent dashboard activity entries (for the sidebar widget).
    */
   async getDashboardActivities(limit: number = 15) {
-    const { data, error } = await this.db
-      .from('AuditLog')
-      .select('id, entityId, changes, createdAt')
-      .eq('action', 'STAFF_ACTIVITY')
-      .eq('entityType', 'staff_dashboard')
-      .order('createdAt', { ascending: false })
-      .limit(limit);
+    try {
+      const { data, error } = await this.db
+        .from('AuditLog')
+        .select('id, entityId, changes, createdAt')
+        .eq('action', 'STAFF_ACTIVITY')
+        .eq('entityType', 'staff_dashboard')
+        .order('createdAt', { ascending: false })
+        .limit(limit);
 
-    if (error) throw error;
-    return (data || []).map((row: any) => this.formatDashboardActivity(row));
+      if (error) {
+        console.error('[getDashboardActivities] Error:', error);
+        return [];
+      }
+      return (data || []).map((row: any) => this.formatDashboardActivity(row));
+    } catch (e) {
+      console.error('[getDashboardActivities] Exception:', e);
+      return [];
+    }
   }
 
   /**
@@ -653,32 +661,40 @@ export class StaffProfileService {
     type?: string;
     search?: string;
   }) {
-    const limit = Math.max(1, Math.min(opts.limit || 50, 100));
-    const offset = Math.max(0, opts.offset || 0);
+    try {
+      const limit = Math.max(1, Math.min(opts.limit || 50, 100));
+      const offset = Math.max(0, opts.offset || 0);
 
-    let query = this.db
-      .from('AuditLog')
-      .select('id, entityId, changes, createdAt', { count: 'exact' })
-      .eq('action', 'STAFF_ACTIVITY')
-      .eq('entityType', 'staff_dashboard')
-      .order('createdAt', { ascending: false })
-      .range(offset, offset + limit - 1);
+      let query = this.db
+        .from('AuditLog')
+        .select('id, entityId, changes, createdAt', { count: 'exact' })
+        .eq('action', 'STAFF_ACTIVITY')
+        .eq('entityType', 'staff_dashboard')
+        .order('createdAt', { ascending: false })
+        .range(offset, offset + limit - 1);
 
-    if (opts.type && opts.type !== 'all') {
-      query = query.eq('entityId', opts.type);
+      if (opts.type && opts.type !== 'all') {
+        query = query.eq('entityId', opts.type);
+      }
+
+      if (opts.search?.trim()) {
+        query = query.ilike('changes->>msg', `%${opts.search.trim()}%`);
+      }
+
+      const { data, error, count } = await query;
+      if (error) {
+        console.error('[getAllDashboardActivities] Error:', error);
+        return { items: [], total: 0 };
+      }
+
+      return {
+        items: (data || []).map((row: any) => this.formatDashboardActivity(row)),
+        total: count || 0,
+      };
+    } catch (e) {
+      console.error('[getAllDashboardActivities] Exception:', e);
+      return { items: [], total: 0 };
     }
-
-    if (opts.search?.trim()) {
-      query = query.ilike('changes->>msg', `%${opts.search.trim()}%`);
-    }
-
-    const { data, error, count } = await query;
-    if (error) throw error;
-
-    return {
-      items: (data || []).map((row: any) => this.formatDashboardActivity(row)),
-      total: count || 0,
-    };
   }
 
   private formatDashboardActivity(row: any) {
@@ -1549,57 +1565,69 @@ export class StaffProfileService {
 
   // ─── Today's Dashboard API (F29) ──────────────────────────────────────────
   async getTodayDashboard(user: any) {
-    const now = new Date();
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    try {
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: urgentApps, error: err1 } = await this.db
-      .from('LoanApplication')
-      .select('*')
-      .or('priorityLevel.eq.high,priority.eq.high,priority.eq.urgent');
+      const [
+        { data: allApps },
+        { data: resolvedQueries }
+      ] = await Promise.all([
+        this.db.from('LoanApplication').select('id, applicationNumber, firstName, lastName, bank, status, amount, submittedAt, priorityLevel, priority, disbursedAmount, sanctionAmount'),
+        this.db.from('queries').select('*, application:LoanApplication(*)').eq('status', 'resolved')
+      ]);
 
-    const { data: newApps, error: err2 } = await this.db
-      .from('LoanApplication')
-      .select('*')
-      .gte('submittedAt', twentyFourHoursAgo);
+      const apps = allApps || [];
 
-    const { data: resolvedQueries, error: err3 } = await this.db
-      .from('queries')
-      .select('*, application:LoanApplication(*)')
-      .eq('status', 'resolved');
+      const urgentApps = apps.filter(a =>
+        a.priorityLevel === 'high' || a.priority === 'high' || a.priority === 'urgent'
+      );
 
-    const { data: pendingDisb, error: err4 } = await this.db
-      .from('LoanApplication')
-      .select('*')
-      .in('status', ['sanctioned', 'partially_disbursed', 'approved'])
-      .or('disbursedAmount.is.null,disbursedAmount.lt.sanctionAmount');
+      const newApps = apps.filter(a =>
+        a.submittedAt && a.submittedAt >= twentyFourHoursAgo
+      );
 
-    const { data: pendingDecisions, error: err5 } = await this.db
-      .from('LoanApplication')
-      .select('*')
-      .in('status', ['submitted_to_bank', 'file_logged', 'under_bank_review', 'query_raised']);
+      const pendingDisb = apps.filter(a =>
+        ['sanctioned', 'partially_disbursed', 'approved'].includes(a.status) &&
+        (!a.disbursedAmount || (a.sanctionAmount && a.disbursedAmount < a.sanctionAmount))
+      );
 
-    return {
-      urgent: {
-        count: urgentApps?.length || 0,
-        items: urgentApps || []
-      },
-      newFiles: {
-        count: newApps?.length || 0,
-        items: newApps || []
-      },
-      respondedQueries: {
-        count: resolvedQueries?.length || 0,
-        items: resolvedQueries || []
-      },
-      pendingDisbursements: {
-        count: pendingDisb?.length || 0,
-        items: pendingDisb || []
-      },
-      pendingDecisions: {
-        count: pendingDecisions?.length || 0,
-        items: pendingDecisions || []
-      }
-    };
+      const pendingDecisions = apps.filter(a =>
+        ['submitted_to_bank', 'file_logged', 'under_bank_review', 'query_raised'].includes(a.status)
+      );
+
+      return {
+        urgent: {
+          count: urgentApps.length,
+          items: urgentApps
+        },
+        newFiles: {
+          count: newApps.length,
+          items: newApps
+        },
+        respondedQueries: {
+          count: resolvedQueries?.length || 0,
+          items: resolvedQueries || []
+        },
+        pendingDisbursements: {
+          count: pendingDisb.length,
+          items: pendingDisb
+        },
+        pendingDecisions: {
+          count: pendingDecisions.length,
+          items: pendingDecisions
+        }
+      };
+    } catch (e) {
+      console.error('[getTodayDashboard] Exception:', e);
+      return {
+        urgent: { count: 0, items: [] },
+        newFiles: { count: 0, items: [] },
+        respondedQueries: { count: 0, items: [] },
+        pendingDisbursements: { count: 0, items: [] },
+        pendingDecisions: { count: 0, items: [] }
+      };
+    }
   }
 
   // ─── Dashboard Summary APIs (F13) ─────────────────────────────────────────

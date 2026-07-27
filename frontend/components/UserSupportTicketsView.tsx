@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { supportApi } from "@/lib/api";
 
 interface UserSupportTicketsViewProps {
@@ -201,24 +202,48 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
     const inProgressCount = tickets.filter((t) => t.status === "in_progress" || t.status === "assigned").length;
     const resolvedCount = tickets.filter((t) => t.status === "resolved" || t.status === "closed").length;
 
+    const homeUrl = userRole === 'staff'
+        ? '/staff/dashboard'
+        : userRole === 'bank'
+        ? '/bank/dashboard'
+        : userRole === 'agent'
+        ? '/agent/dashboard'
+        : '/dashboard';
+
     return (
         <div className="space-y-6 font-sans">
             {/* Header & Main Page Navigation Banner */}
             <div className="bg-gradient-to-r from-[#6605c7] to-indigo-700 rounded-3xl p-6 md:p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="space-y-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-black uppercase tracking-wider text-purple-200 border border-white/20">
-                        <span className="material-symbols-outlined text-sm">support_agent</span>
-                        Help & Support Center
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-white/20 text-white">
-                            {userRole}
-                        </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                            href={homeUrl}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md text-xs font-black uppercase tracking-wider text-white border border-white/25 no-underline transition-all cursor-pointer shadow-sm"
+                        >
+                            <span className="material-symbols-outlined text-sm">arrow_back</span>
+                            Go to Home
+                        </Link>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-black uppercase tracking-wider text-purple-200 border border-white/20">
+                            <span className="material-symbols-outlined text-sm">support_agent</span>
+                            Help & Support Center
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-white/20 text-white">
+                                {userRole}
+                            </span>
+                        </div>
                     </div>
                     <h2 className="text-2xl md:text-3xl font-black tracking-tight">Support Desk</h2>
                     <p className="text-xs md:text-sm text-purple-200 font-medium">Submit tickets & track resolution progress dynamically in real-time.</p>
                 </div>
 
                 {/* Page Navigation Tabs */}
-                <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-2xl border border-white/20 shrink-0 w-full md:w-auto">
+                <div className="flex flex-wrap items-center gap-2 bg-white/10 p-1.5 rounded-2xl border border-white/20 shrink-0 w-full md:w-auto">
+                    <Link
+                        href={homeUrl}
+                        className="flex-1 md:flex-none px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 border-0 text-white hover:bg-white/20 no-underline cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-base">home</span>
+                        Go to Home
+                    </Link>
                     <button
                         type="button"
                         onClick={() => { setActiveTab("my_tickets"); setCreatedTicketNum(null); }}

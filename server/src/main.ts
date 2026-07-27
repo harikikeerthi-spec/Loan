@@ -1,4 +1,12 @@
 import 'dotenv/config';
+import * as dns from 'dns';
+
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {
+  // ignore if unsupported
+}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as express from 'express';

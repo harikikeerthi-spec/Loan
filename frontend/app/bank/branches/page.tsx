@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -137,7 +137,7 @@ export default function BranchMatrix() {
     if (!mounted) return null;
 
     return (
-        <div className="p-8 lg:p-12 space-y-8 max-w-7xl mx-auto relative z-10">
+        <div className="w-full space-y-8 relative z-10">
             {/* Header */}
             <PageHeader 
                 title="Branch Allocation Matrix" 

@@ -26,7 +26,7 @@ export default function BankChatPage() {
     const conversationId = searchParams.get("conversationId");
 
     return (
-        <div className="p-6 space-y-4 animate-fade-in relative z-10 h-[calc(100vh-80px)] overflow-hidden flex flex-col">
+        <div className="w-full space-y-4 animate-fade-in relative z-10 h-[calc(100vh-120px)] overflow-hidden flex flex-col">
             <div className="flex justify-between items-end gap-6 mb-1">
                 <div>
                     <h2 className="text-2xl font-black font-display mb-1 text-gray-900 tracking-tight">ACTIVE TRANSMISSIONS</h2>

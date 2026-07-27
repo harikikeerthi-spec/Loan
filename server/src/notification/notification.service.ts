@@ -183,6 +183,16 @@ export class NotificationService {
     }
   }
 
+  private formatAppRef(appNumber?: string, applicationId?: string): string {
+    if (appNumber && appNumber !== 'null' && appNumber !== 'undefined' && appNumber.trim() !== '') {
+      return `Application #${appNumber}`;
+    }
+    if (applicationId && applicationId !== 'null' && applicationId !== 'undefined' && applicationId.trim() !== '') {
+      return `Application #${applicationId.slice(-6).toUpperCase()}`;
+    }
+    return 'Application';
+  }
+
   /**
    * Event listener for application creation
    * Creates a notification for staff about new application
@@ -191,10 +201,12 @@ export class NotificationService {
   async handleApplicationCreated(payload: any) {
     try {
       const candidateName = payload.candidateName || 'Candidate';
+      const appRef = this.formatAppRef(payload.applicationNumber, payload.applicationId);
+      const loanTypeStr = payload.loanType ? ` (${payload.loanType})` : '';
       await this.createNotification(
         'staff',
         `📋 New Application Created: ${candidateName}`,
-        `${candidateName} created a new loan application (${payload.loanType}) for ${payload.bank || 'a bank'}. Application #${payload.applicationNumber}`,
+        `${candidateName} created a new loan application${loanTypeStr} for ${payload.bank || 'a bank'}.${appRef ? ' ' + appRef : ''}`,
         'application_created',
         {
           applicationId: payload.applicationId,
@@ -226,11 +238,12 @@ export class NotificationService {
       if (matches) {
         cleanRemarks = matches[1];
       }
+      const appRef = this.formatAppRef(payload.applicationNumber, payload.applicationId);
 
       await this.createNotification(
         'staff',
         `📝 Bank Note Added: ${candidateName}`,
-        `A new note was added by ${payload.updatedBy || 'Bank Partner'}: "${cleanRemarks.length > 60 ? cleanRemarks.substring(0, 57) + '...' : cleanRemarks}" (App #${payload.applicationNumber})`,
+        `A new note was added by ${payload.updatedBy || 'Bank Partner'}: "${cleanRemarks.length > 60 ? cleanRemarks.substring(0, 57) + '...' : cleanRemarks}"${appRef ? ' (' + appRef + ')' : ''}`,
         'bank_note_added',
         {
           applicationId: payload.applicationId,
@@ -255,10 +268,11 @@ export class NotificationService {
   async handleApplicationSubmitted(payload: any) {
     try {
       const candidateName = payload.candidateName || 'Candidate';
+      const appRef = this.formatAppRef(payload.applicationNumber, payload.applicationId);
       await this.createNotification(
         'staff',
         `🚀 Application Submitted: ${candidateName}`,
-        `${candidateName} submitted a loan application for ${payload.bank || 'a bank'}. Application #${payload.applicationNumber}`,
+        `${candidateName} submitted a loan application for ${payload.bank || 'a bank'}.${appRef ? ' ' + appRef : ''}`,
         'application_submitted',
         {
           applicationId: payload.applicationId,
@@ -286,10 +300,11 @@ export class NotificationService {
     try {
       const candidateName = payload.candidateName || 'Candidate';
       const docName = payload.documentName || payload.documentType;
+      const appRef = this.formatAppRef(payload.applicationNumber, payload.applicationId);
       await this.createNotification(
         'staff',
         `📄 Document Uploaded: ${docName}`,
-        `${candidateName} has uploaded ${docName} for application #${payload.applicationNumber}. Status: ${payload.status}`,
+        `${candidateName} has uploaded ${docName}${appRef ? ' for ' + appRef : ''}. Status: ${payload.status}`,
         'document_uploaded',
         {
           applicationId: payload.applicationId,

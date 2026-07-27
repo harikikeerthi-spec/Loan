@@ -398,11 +398,7 @@ export default function DocumentReviewCenter() {
     const isAbroad = selectedApp && selectedApp.universityName && !selectedApp.universityName.toLowerCase().includes("india") && (selectedApp.universityName.toLowerCase().includes("stanford") || selectedApp.universityName.toLowerCase().includes("usc") || selectedApp.universityName.toLowerCase().includes("carnegie") || selectedApp.universityName.toLowerCase().includes("abroad") || selectedApp.universityName.toLowerCase().includes("nyu") || selectedApp.universityName.toLowerCase().includes("london") || selectedApp.universityName.toLowerCase().includes("mit") || selectedApp.universityName.toLowerCase().includes("harvard") || selectedApp.universityName.toLowerCase().includes("university of") || true);
 
     return (
-        <div
-            className="min-h-screen bg-[#F8FAFC] p-8 lg:p-12 transition-all duration-300 -mt-20 pt-28"
-            style={{ position: "relative", zIndex: 10 }}
-        >
-            <div className="max-w-[1600px] mx-auto space-y-6">
+        <div className="w-full space-y-6 relative z-10">
 
                 {/* Page Header */}
                 <PageHeader
@@ -803,7 +799,6 @@ export default function DocumentReviewCenter() {
                         </div>
                     </div>
                 </div>
-            </div>
 
             {/* Premium Fullscreen View Modal */}
             <AnimatePresence>

@@ -484,8 +484,7 @@ export default function ApplicationManagement() {
     if (!mounted) return null;
 
     return (
-        <div className="px-6 py-6 lg:px-10 lg:py-8 transition-all duration-300">
-            <div className="max-w-7xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
 
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
@@ -746,7 +745,6 @@ export default function ApplicationManagement() {
                         )}
                     </div>
                 </div>
-            </div>
 
             {/* Sidebar Details Drawer */}
             <AnimatePresence>

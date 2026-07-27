@@ -259,7 +259,7 @@ export default function AnalyticsReports() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen p-5 lg:p-8 space-y-6 relative z-10">
+        <div className="w-full space-y-6 relative z-10">
             {/* Header */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-2">
                 <div className="space-y-3">

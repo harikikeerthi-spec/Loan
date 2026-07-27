@@ -469,8 +469,7 @@ export default function IncomingQueuePage() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen p-6 lg:p-10 transition-all duration-300">
-            <div className="max-w-7xl mx-auto space-y-8">
+        <div className="w-full space-y-8">
 
                 {/* Page Header */}
                 <PageHeader
@@ -585,7 +584,6 @@ export default function IncomingQueuePage() {
                         />
                     )}
                 </div>
-            </div>
 
             {/* Log File Modal (Task 9) */}
             <AnimatePresence>

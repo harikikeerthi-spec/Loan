@@ -109,7 +109,7 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
     ];
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 relative overflow-hidden pb-16">
+        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 relative overflow-hidden">
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-10">
                 {/* Header Actions */}
                 <div className="mb-6 flex justify-between items-center">
@@ -117,7 +117,7 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                         onClick={handleBack}
                         className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 text-xs font-black uppercase tracking-widest transition-all cursor-pointer group"
                     >
-                        <span className="material-symbols-outlined text-[16px] transition-transform group-hover:-translate-x-1">arrow_back</span>
+                        <span className="material-symbols-outlined text-[13px] transition-transform group-hover:-translate-x-1">arrow_back</span>
                         Back to Members
                     </button>
                 </div>

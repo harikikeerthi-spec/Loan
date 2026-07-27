@@ -246,18 +246,6 @@ const StudentContactDropdownBesideName = ({
                                 <span>Call {cleanPhone}</span>
                             </a>
 
-                            {whatsappPhone && (
-                                <a
-                                    href={`https://wa.me/${whatsappPhone}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={() => setIsOpen(false)}
-                                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-[14px] text-emerald-600">chat</span>
-                                    <span>WhatsApp Chat</span>
-                                </a>
-                            )}
 
                             <button
                                 type="button"
@@ -285,18 +273,11 @@ const StudentContactDropdownBesideName = ({
                                     className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
                                 >
                                     <span className="material-symbols-outlined text-[14px] text-indigo-600">send</span>
-                                    <span>Send Email (Modal)</span>
+                                    <span>Send Email</span>
                                 </button>
                             )}
 
-                            <a
-                                href={`mailto:${email}`}
-                                onClick={() => setIsOpen(false)}
-                                className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-                            >
-                                <span className="material-symbols-outlined text-[14px] text-slate-400">mail</span>
-                                <span>Open Default Mail App</span>
-                            </a>
+
 
                             <button
                                 type="button"

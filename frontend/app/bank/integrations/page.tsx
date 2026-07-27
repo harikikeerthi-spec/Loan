@@ -109,8 +109,7 @@ export default function Integrations() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen p-8 lg:p-12 transition-all duration-300">
-            <div className="max-w-7xl mx-auto space-y-12">
+        <div className="w-full space-y-12">
                 
                 {/* Header */}
                 <motion.div 
@@ -610,8 +609,6 @@ export default function Integrations() {
 
                     </div>
                 </div>
-
             </div>
-        </div>
     );
 }

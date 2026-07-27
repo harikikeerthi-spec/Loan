@@ -985,7 +985,7 @@ export default function DecisionsHub() {
     if (!mounted) return null;
 
     return (
-        <div className="px-6 py-6 lg:px-10 lg:py-8 space-y-6 max-w-[1500px] mx-auto relative z-10">
+        <div className="w-full space-y-6 relative z-10">
             {/* Header */}
             <PageHeader 
                 title="Underwriting Appraisal Workspace" 

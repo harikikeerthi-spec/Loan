@@ -492,7 +492,7 @@ export default function BankDashboard() {
     }
 
     return (
-        <div className="p-5 lg:p-8 space-y-6 animate-fade-in relative z-10">
+        <div className="w-full space-y-6 animate-fade-in relative z-10">
             {/* <AnimatePresence>
                 {incomingAlert && (
                     <motion.div

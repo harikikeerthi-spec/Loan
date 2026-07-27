@@ -425,18 +425,29 @@ export class UsersService {
   }
 
   async getUserStats() {
-    const { count: bank } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'bank');
-    const { count: staff } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.staff,role.eq.staff_admin');
-    const total = (bank || 0) + (staff || 0);
+    try {
+      const { data: users } = await this.db
+        .from('User')
+        .select('role')
+        .or('role.eq.bank,role.eq.staff,role.eq.staff_admin');
 
-    return {
-      total: total || 0,
-      student: 0,
-      bank: bank || 0,
-      staff: staff || 0,
-      admin: 0,
-      other: 0
-    };
+      const all = users || [];
+      const bank = all.filter((u: any) => u.role === 'bank').length;
+      const staff = all.filter((u: any) => u.role === 'staff' || u.role === 'staff_admin').length;
+      const total = bank + staff;
+
+      return {
+        total,
+        student: 0,
+        bank,
+        staff,
+        admin: 0,
+        other: 0
+      };
+    } catch (e) {
+      console.error('[getUserStats] Exception:', e);
+      return { total: 0, student: 0, bank: 0, staff: 0, admin: 0, other: 0 };
+    }
   }
 
   async updateUserDetails(

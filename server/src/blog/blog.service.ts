@@ -400,22 +400,23 @@ export class BlogService {
   }
 
   async getBlogStatistics() {
-    const [
-      { count: total },
-      { count: published },
-      { count: draft },
-      { count: featured },
-      { data: viewsData },
-    ] = await Promise.all([
-      this.db.from('Blog').select('*', { count: 'exact', head: true }),
-      this.db.from('Blog').select('*', { count: 'exact', head: true }).eq('isPublished', true),
-      this.db.from('Blog').select('*', { count: 'exact', head: true }).eq('isPublished', false),
-      this.db.from('Blog').select('*', { count: 'exact', head: true }).eq('isFeatured', true).eq('isPublished', true),
-      this.db.from('Blog').select('views'),
-    ]);
+    try {
+      const { data: blogs } = await this.db
+        .from('Blog')
+        .select('isPublished, isFeatured, views');
 
-    const totalViews = (viewsData || []).reduce((sum: number, b: any) => sum + (b.views || 0), 0);
-    return { success: true, data: { total: total || 0, published: published || 0, draft: draft || 0, featured: featured || 0, totalViews } };
+      const all = blogs || [];
+      const total = all.length;
+      const published = all.filter((b: any) => b.isPublished).length;
+      const draft = all.filter((b: any) => !b.isPublished).length;
+      const featured = all.filter((b: any) => b.isFeatured && b.isPublished).length;
+      const totalViews = all.reduce((sum: number, b: any) => sum + (b.views || 0), 0);
+
+      return { success: true, data: { total, published, draft, featured, totalViews } };
+    } catch (e) {
+      console.error('[getBlogStatistics] Exception:', e);
+      return { success: true, data: { total: 0, published: 0, draft: 0, featured: 0, totalViews: 0 } };
+    }
   }
 
   async bulkDeleteBlogs(blogIds: string[]) {

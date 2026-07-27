@@ -409,8 +409,7 @@ export default function DynamicBankDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full space-y-6">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Bank Dashboard</h1>
@@ -449,9 +448,8 @@ export default function DynamicBankDashboard() {
             {activeTab === "audit" && <AuditContent />}
           </motion.div>
         </AnimatePresence>
-      </div>
 
-      <FileLoggingModal />
-    </div>
-  );
+        <FileLoggingModal />
+      </div>
+    );
 }

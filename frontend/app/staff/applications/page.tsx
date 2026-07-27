@@ -132,18 +132,7 @@ const StudentContactDropdownBesideName = ({
                                 <span>Call {cleanPhone}</span>
                             </a>
 
-                            {whatsappPhone && (
-                                <a
-                                    href={`https://wa.me/${whatsappPhone}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={() => setIsOpen(false)}
-                                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-[14px] text-emerald-600">chat</span>
-                                    <span>WhatsApp Chat</span>
-                                </a>
-                            )}
+
 
                             <button
                                 type="button"
@@ -171,18 +160,9 @@ const StudentContactDropdownBesideName = ({
                                     className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
                                 >
                                     <span className="material-symbols-outlined text-[14px] text-indigo-600">send</span>
-                                    <span>Send Email (Modal)</span>
+                                    <span>Send Email</span>
                                 </button>
                             )}
-
-                            <a
-                                href={`mailto:${email}`}
-                                onClick={() => setIsOpen(false)}
-                                className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-                            >
-                                <span className="material-symbols-outlined text-[14px] text-slate-400">mail</span>
-                                <span>Open Default Mail App</span>
-                            </a>
 
                             <button
                                 type="button"
@@ -285,12 +265,12 @@ function ApplicationsPageInner() {
                 </div>
                 <div className="flex items-center gap-3">
                     <button onClick={loadData} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
-                        <span className="material-symbols-outlined text-[16px]">refresh</span>Refresh
+                        <span className="material-symbols-outlined text-[16px]">refresh</span>
                     </button>
-                    <div className="relative">
+                    {/* <div className="relative">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
                         <input type="text" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} placeholder="Search active pipeline..." className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm" />
-                    </div>
+                    </div> */}
                     <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold uppercase tracking-wider text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all shadow-sm">
                         <option value="all">All Statuses</option>
                         <option value="pending">Pending</option>

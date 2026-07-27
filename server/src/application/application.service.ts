@@ -1388,43 +1388,26 @@ export class ApplicationService {
         }
       }
 
-      let totalQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
-      let allAppsQuery = this.db.from('LoanApplication').select('status, loanType, amount');
-      let recentAppsQuery = this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, submittedAt, firstName, lastName');
-      let thisMonthQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
-      let lastMonthQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
+      let allAppsQuery = this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, submittedAt, firstName, lastName');
 
       if (isBank && bankName) {
         const excludeStr = '("submitted","pending","draft","docs_received","staff_verified","application_submitted")';
-        totalQuery = totalQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
         allAppsQuery = allAppsQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
-        recentAppsQuery = recentAppsQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
-        thisMonthQuery = thisMonthQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
-        lastMonthQuery = lastMonthQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
       }
 
-      console.log(`[Stats] Executing queries for ${bankName || 'all banks'}...`);
-      const [
-        totalRes,
-        allAppsRes,
-        recentAppsRes,
-        thisMonthRes,
-        lastMonthRes,
-      ] = await Promise.all([
-        Promise.resolve(totalQuery).catch(e => { console.error('Total query failed:', e); return { count: 0 } as any; }),
-        Promise.resolve(allAppsQuery).catch(e => { console.error('All apps query failed:', e); return { data: [] } as any; }),
-        Promise.resolve(recentAppsQuery.order('submittedAt', { ascending: false }).limit(5)).catch(e => { console.error('Recent apps query failed:', e); return { data: [] } as any; }),
-        Promise.resolve(thisMonthQuery.gte('submittedAt', thisMonthStart)).catch(e => { console.error('This month query failed:', e); return { count: 0 } as any; }),
-        Promise.resolve(lastMonthQuery.gte('submittedAt', lastMonthStart).lt('submittedAt', thisMonthStart)).catch(e => { console.error('Last month query failed:', e); return { count: 0 } as any; }),
-      ]);
+      console.log(`[Stats] Executing single query for ${bankName || 'all banks'}...`);
+      const { data: allAppsData, error: qErr } = await allAppsQuery;
+      if (qErr) console.error('[Stats] Query failed:', qErr);
 
-      console.log(`[Stats] Queries completed. Success: ${!!allAppsRes.data}, Count: ${allAppsRes.data?.length}`);
+      const allApps = allAppsData || [];
+      const total = allApps.length;
 
-      const total = totalRes.count || 0;
-      const allApps = allAppsRes.data || [];
-      const recentApps = recentAppsRes.data || [];
-      const thisMonth = thisMonthRes.count || 0;
-      const lastMonth = lastMonthRes.count || 0;
+      const recentApps = [...allApps]
+        .sort((a: any, b: any) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime())
+        .slice(0, 5);
+
+      const tm = allApps.filter((a: any) => a.submittedAt && a.submittedAt >= thisMonthStart).length;
+      const lm = allApps.filter((a: any) => a.submittedAt && a.submittedAt >= lastMonthStart && a.submittedAt < thisMonthStart).length;
 
       const statusStats: Record<string, number> = {};
       const loanTypeMap: Record<string, { count: number; totalAmount: number }> = {};
@@ -1448,9 +1431,6 @@ export class ApplicationService {
         count: stats.count, 
         totalAmount: stats.totalAmount 
       }));
-
-      const tm = thisMonth || 0;
-      const lm = lastMonth || 0;
 
       return {
         success: true,

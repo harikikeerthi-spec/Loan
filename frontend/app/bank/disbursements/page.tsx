@@ -268,7 +268,7 @@ export default function DisbursementTracker() {
                 )}
             </AnimatePresence>
 
-            <div className="px-6 py-6 lg:px-10 lg:py-8 space-y-6 max-w-7xl mx-auto relative z-10">
+            <div className="w-full space-y-6 relative z-10">
 
                 {/* Ambient background gradient blobs */}
                 <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>

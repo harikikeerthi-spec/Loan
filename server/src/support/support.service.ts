@@ -404,60 +404,85 @@ export class SupportService {
 
   // ─── Add Comment ──────────────────────────────────────────────────────────────
   async addComment(ticketId: string, dto: CreateCommentDto, user: any) {
-    const { data: ticket, error: findError } = await this.db
-      .from('SupportTicket').select('*').eq('id', ticketId).single();
-    if (findError || !ticket) throw new NotFoundException(`Ticket ${ticketId} not found`);
+    try {
+      const { data: ticket, error: findError } = await this.db
+        .from('SupportTicket').select('*').eq('id', ticketId).single();
+      if (findError || !ticket) throw new NotFoundException(`Ticket ${ticketId} not found`);
 
-    const isAdmin = ['admin', 'super_admin', 'staff', 'it', 'support', 'bank'].includes(user.role);
-    const isInternal = dto.isInternal && isAdmin;
-    const now = new Date().toISOString();
+      const isAdmin = ['admin', 'super_admin', 'staff', 'it', 'support', 'bank'].includes(user?.role);
+      const isInternal = dto.isInternal && isAdmin;
+      const now = new Date().toISOString();
 
-    const { data: comment, error } = await this.db
-      .from('SupportComment')
-      .insert({
-        id: randomUUID(),
-        ticketId,
-        authorId: user.id,
-        authorName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
-        authorRole: user.role,
-        content: dto.content,
-        type: isInternal ? 'internal_note' : 'public',
-        isInternal: isInternal || false,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .select()
-      .single();
+      const authorId = user?.id || user?.sub || user?.uid || user?.email || 'user';
+      const authorName = (`${user?.firstName || ''} ${user?.lastName || ''}`.trim()) || user?.name || user?.email || 'User';
+      const authorRole = user?.role || 'user';
 
-    if (error) throw new BadRequestException(error.message);
+      const { data: comment, error } = await this.db
+        .from('SupportComment')
+        .insert({
+          id: randomUUID(),
+          ticketId,
+          authorId,
+          authorName,
+          authorRole,
+          content: dto.content,
+          type: isInternal ? 'internal_note' : 'public',
+          isInternal: isInternal || false,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .select()
+        .single();
 
-    // Update first response time
-    if (isAdmin && !ticket.firstResponseAt) {
-      await this.db.from('SupportTicket')
-        .update({ firstResponseAt: now })
-        .eq('id', ticketId);
+      if (error) {
+        console.error('[SupportService.addComment] Comment Insert Error:', error);
+        throw new BadRequestException(error.message);
+      }
+
+      // Update first response time
+      if (isAdmin && !ticket.firstResponseAt) {
+        await this.db.from('SupportTicket')
+          .update({ firstResponseAt: now })
+          .eq('id', ticketId);
+      }
+
+      const effectiveAuthorName = comment?.authorName || authorName;
+
+      try {
+        await this.db.from('SupportActivityLog').insert({
+          id: randomUUID(),
+          ticketId,
+          actorId: authorId,
+          actorName: effectiveAuthorName,
+          action: isInternal ? 'internal_note_added' : 'commented',
+          createdAt: now,
+        });
+      } catch (logErr) {
+        console.warn('[SupportService.addComment] Activity log warning:', logErr);
+      }
+
+      if (!isInternal && ticket.createdById) {
+        try {
+          await this.createNotification({
+            ticketId,
+            userId: ticket.createdById,
+            title: `New Comment on ${ticket.ticketNumber || 'Ticket'}`,
+            message: `${effectiveAuthorName} replied to your ticket`,
+            type: 'comment_added',
+          });
+        } catch (notifErr) {
+          console.warn('[SupportService.addComment] Notification warning:', notifErr);
+        }
+      }
+
+      return comment;
+    } catch (err: any) {
+      console.error('[SupportService.addComment] Exception:', err);
+      if (err instanceof NotFoundException || err instanceof BadRequestException) {
+        throw err;
+      }
+      throw new BadRequestException(err?.message || 'Failed to add comment');
     }
-
-    await this.db.from('SupportActivityLog').insert({
-      id: randomUUID(),
-      ticketId,
-      actorId: user.id,
-      actorName: comment.authorName,
-      action: isInternal ? 'internal_note_added' : 'commented',
-      createdAt: now,
-    });
-
-    if (!isInternal) {
-      await this.createNotification({
-        ticketId,
-        userId: ticket.createdById,
-        title: `New Comment on ${ticket.ticketNumber}`,
-        message: `${comment.authorName} replied to your ticket`,
-        type: 'comment_added',
-      });
-    }
-
-    return comment;
   }
 
   // ─── Dashboard Stats ──────────────────────────────────────────────────────────

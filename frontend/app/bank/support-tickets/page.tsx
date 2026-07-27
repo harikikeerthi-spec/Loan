@@ -7,7 +7,7 @@ export default function BankSupportTicketsPage() {
     const { user } = useAuth();
 
     return (
-        <div className="max-w-[1400px] mx-auto animate-fade-in p-6 pb-12">
+        <div className="w-full space-y-6 animate-fade-in">
             <UserSupportTicketsView
                 userRole="bank"
                 userInfo={{
