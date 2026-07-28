@@ -614,16 +614,7 @@ function IncomingQueuePageInner() {
                         <span className="material-symbols-outlined text-[16px]">refresh</span>
                         Refresh
                     </button>
-                    <div className="relative">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                            placeholder="Search incoming queue..."
-                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm"
-                        />
-                    </div>
+
                 </div>
             </div>
 
@@ -720,7 +711,7 @@ function IncomingQueuePageInner() {
                                                                 />
                                                             </div>
                                                             <p className="text-xs font-mono text-slate-400">
-                                                                {item.applicationNumber || "VTU-APP-PENDING"}
+                                                                {(item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-') || item.applicationNumber.startsWith('VTU-BNK-'))) ? item.applicationNumber : "VTU-APP-PENDING"}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -1031,10 +1022,10 @@ function IncomingQueuePageInner() {
                             {/* <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] block">Processing Lead</span> */}
                             <h4 className="text-[16px] font-black text-slate-800 tracking-tight mt-0.5">
                                 {activeDockApp.firstName || activeDockApp.student?.firstName || '—'} {activeDockApp.lastName || activeDockApp.student?.lastName || ''}
+                                <span className="text-[10px] font-bold text-slate-400 block mt-0.5">
+                                    {(activeDockApp.applicationNumber && (activeDockApp.applicationNumber.startsWith('VTU-APP-') || activeDockApp.applicationNumber.startsWith('VTU-BNK-'))) ? activeDockApp.applicationNumber : 'VTU-APP-PENDING'}
+                                </span>
                             </h4>
-                            <span className="text-[10px] font-bold text-slate-400 block mt-0.5">
-                                {(activeDockApp.applicationNumber && (activeDockApp.applicationNumber.startsWith('VTU-APP-') || activeDockApp.applicationNumber.startsWith('VTU-BNK-') || activeDockApp.applicationNumber.startsWith('VL-APP-'))) ? activeDockApp.applicationNumber : ''}
-                            </span>
                         </div>
 
                         {/* View Profile */}
@@ -1099,14 +1090,14 @@ function IncomingQueuePageInner() {
                             </button>
 
                             {/* Direct Approve & Move to Active Pipeline button */}
-                            <button
+                            {/* <button
                                 onClick={() => handleMoveToActivePipeline(activeDockApp)}
                                 className="h-11 px-5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95"
                                 title="Approve and move application to Active Pipeline"
                             >
                                 <span className="material-symbols-outlined text-[16px]">play_arrow</span>
                                 Approve & Move to Active Pipeline
-                            </button>
+                            </button> */}
 
                             {/* Approve & Select Bank button */}
                             <button

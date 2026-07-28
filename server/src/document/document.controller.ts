@@ -155,12 +155,15 @@ export class DocumentController {
         console.error('[UPLOAD] Local write failed:', localWriteError.message);
       }
 
-      // Also upload to S3 storage if available
+      // Upload to S3 storage
       try {
         await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
         console.log(`[UPLOAD] Verified document stored in S3: ${s3Key}`);
       } catch (s3Error: any) {
-        console.warn(`[UPLOAD] S3 Upload notice: ${s3Error.message || s3Error}`);
+        console.error(`[UPLOAD] S3 Upload failed for ${s3Key}:`, s3Error.message || s3Error);
+        throw new BadRequestException(
+          `Document storage failed: Could not store file in S3 bucket (${s3Error.message || 'Storage error'}). Please try uploading again.`
+        );
       }
 
       // ── 3. Build Verification Metadata & Update User profile ─────────────
@@ -183,7 +186,7 @@ export class DocumentController {
       ) {
         await this.usersService.updateExtractedDetails(userId, {
           documentVerified: true,
-          ...maskSensitiveIds(kycResult.extracted_data, docType),
+          ...kycResult.extracted_data,
         }, docType);
       }
 
@@ -347,7 +350,7 @@ export class DocumentController {
     ) {
       await this.usersService.updateExtractedDetails(userId, {
         documentVerified: true,
-        ...maskSensitiveIds(kycResult.extracted_data, docType),
+        ...kycResult.extracted_data,
       }, docType);
     }
 
@@ -492,11 +495,14 @@ export class DocumentController {
     }
 
     // Try fetching file buffer from S3 using doc.filePath, vault, and documents paths
+    const fileExt = doc.filePath ? path.extname(doc.filePath) : '';
     const s3CandidateKeys = Array.from(
       new Set([
         doc.filePath,
+        `vault/${userId}/${docType}${fileExt}`,
         `vault/${userId}/${docType}`,
         `documents/${userId}/${docType}`,
+        `documents/${userId}/${docType}${fileExt}`,
       ]),
     ).filter(Boolean);
 

@@ -2396,13 +2396,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                 {/* Left Side: Document Preview */}
                 <div className="w-1/2 bg-slate-900 flex items-center justify-center relative group">
                   <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none" />
-                  <img
+                  <iframe
                     src={`/api/documents/view/${userId}/${selectedDocForSync.docType}`}
-                    alt="Document Preview"
-                    className="max-h-[90%] max-w-[90%] object-contain shadow-2xl rounded-lg border border-white/10"
-                    onError={(e: any) => {
-                      e.target.src = "https://images.unsplash.com/photo-1586281380349-631531a34d4f?q=80&w=2070&auto=format&fit=crop";
-                    }}
+                    title="Document Preview"
+                    className="w-full h-full border-0"
                   />
                   <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <p className="text-white text-[11px] font-medium text-center">Original scan provided by the applicant</p>

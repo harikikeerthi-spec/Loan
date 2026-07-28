@@ -11,20 +11,23 @@ async function run() {
   const supabaseService = app.get(SupabaseService);
   const db = supabaseService.getClient();
 
-  const testUserId = 'VL-STU-2026-00040'; // waeq rewr
-
   try {
+    const { data: firstUser } = await db.from('User').select('id').limit(1).single();
+    if (!firstUser) {
+      console.log('No user found in database');
+      return;
+    }
+    const testUserId = firstUser.id;
+    console.log(`Using testUserId: ${testUserId}`);
+
     // 1. Get initial User & LoanApplication state
     console.log('\n=== Checking initial DB State ===');
     const { data: userBefore } = await db.from('User').select('id, family, coApplicant').eq('id', testUserId).single();
     const { data: appsBefore } = await db.from('LoanApplication').select('id, fatherName, motherName, coApplicantName').eq('userId', testUserId);
     
-    console.log('User family before:', userBefore.family);
-    console.log('User coApplicant before:', userBefore.coApplicant);
+    console.log('User family before:', userBefore ? userBefore.family : null);
+    console.log('User coApplicant before:', userBefore ? userBefore.coApplicant : null);
     console.log('Loan applications count before:', appsBefore ? appsBefore.length : 0);
-    if (appsBefore && appsBefore.length > 0) {
-      console.log('First App before:', appsBefore[0]);
-    }
 
     // 2. Simulate Father Document OCR Upload
     console.log('\n=== Simulating Father Document OCR Upload ===');
@@ -38,7 +41,8 @@ async function run() {
     console.log('\n=== Simulating Mother Document OCR Upload ===');
     await usersService.updateExtractedDetails(testUserId, {
       documentVerified: true,
-      name: 'Sunita Devi Rewr',
+      mother_name: 'Sunita Devi Rewr',
+      aadhaar_number: '987654321098',
       pan_number: 'ABCDE1234F'
     }, 'mother_pan');
 
@@ -55,8 +59,16 @@ async function run() {
     const { data: userAfter } = await db.from('User').select('id, family, coApplicant').eq('id', testUserId).single();
     const { data: appsAfter } = await db.from('LoanApplication').select('id, fatherName, motherName, coApplicantName').eq('userId', testUserId);
 
-    console.log('User family after:', userAfter.family);
-    console.log('User coApplicant after:', userAfter.coApplicant);
+    console.log('User family after:', userAfter ? userAfter.family : null);
+    console.log('User coApplicant after:', userAfter ? userAfter.coApplicant : null);
+
+    // 6. Test getUserDashboardData
+    console.log('\n=== Testing getUserDashboardData ===');
+    const dashboardData = await usersService.getUserDashboardData(testUserId);
+    console.log('Dashboard User Mother Name:', dashboardData.user.motherName);
+    console.log('Dashboard User Mother Aadhar:', dashboardData.user.motherAadhar);
+    console.log('Dashboard User Mother PAN:', dashboardData.user.motherPan);
+    console.log('Dashboard User Family Obj:', dashboardData.user.family);
     if (appsAfter && appsAfter.length > 0) {
       console.log('First App after:', appsAfter[0]);
     }

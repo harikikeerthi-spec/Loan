@@ -717,14 +717,14 @@ export default function DashboardPage() {
                                     </>
                                 )}
                             </button>
-                            <button
+                            {/* <button
                                 type="button"
                                 onClick={() => setIsSupportOpen(true)}
                                 className="px-5 py-2.5 bg-[#6605c7] hover:bg-[#5204a3] text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-purple-600/20 flex items-center gap-2 cursor-pointer border-0"
                             >
                                 <span className="material-symbols-outlined text-sm">confirmation_number</span>
                                 Raise Support Ticket
-                            </button>
+                            </button> */}
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
                                 Speak with Counsellor
                             </Link>
@@ -923,18 +923,16 @@ export default function DashboardPage() {
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`group relative px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${
-                                activeTab === tab
-                                    ? "text-[#0F172A] font-extrabold"
-                                    : "text-slate-400 hover:text-slate-700"
-                            }`}
+                            className={`group relative px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === tab
+                                ? "text-[#0F172A] font-extrabold"
+                                : "text-slate-400 hover:text-slate-700"
+                                }`}
                         >
                             {tab.replace("_", " ")}
                             {/* Sliding underline */}
                             <span
-                                className={`absolute bottom-0 left-0 h-[2px] bg-[#6605c7] transition-all duration-300 ease-out ${
-                                    activeTab === tab ? "w-full" : "w-0 group-hover:w-full"
-                                }`}
+                                className={`absolute bottom-0 left-0 h-[2px] bg-[#6605c7] transition-all duration-300 ease-out ${activeTab === tab ? "w-full" : "w-0 group-hover:w-full"
+                                    }`}
                             />
                         </button>
                     ))}
@@ -1281,7 +1279,7 @@ export default function DashboardPage() {
                     </div>
                 )} */}
 
-                                {/* Profile Tab */}
+                {/* Profile Tab */}
                 {activeTab === "profile" && (
                     <UserProfileView
                         user={user}

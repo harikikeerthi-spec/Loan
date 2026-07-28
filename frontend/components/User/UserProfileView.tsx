@@ -959,8 +959,8 @@ export default function UserProfileView({
                                                 {fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName || "—"}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
-                                                {renderTableAadhar(fatherData?.aadharNumber, "father_aadhar")}
-                                                {renderTablePan(fatherData?.panNumber, "father_pan")}
+                                                {renderTableAadhar(fatherData?.aadharNumber || activeProfile?.family?.fatherAadhar || activeProfile?.fatherAadhar, "father_aadhar")}
+                                                {renderTablePan(fatherData?.panNumber || activeProfile?.family?.fatherPan || activeProfile?.fatherPan, "father_pan")}
                                             </td>
                                         </tr>
                                         {/* Mother Row */}
@@ -970,8 +970,8 @@ export default function UserProfileView({
                                                 {motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName || "—"}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
-                                                {renderTableAadhar(motherData?.aadharNumber, "mother_aadhar")}
-                                                {renderTablePan(motherData?.panNumber, "mother_pan")}
+                                                {renderTableAadhar(motherData?.aadharNumber || activeProfile?.family?.motherAadhar || activeProfile?.motherAadhar, "mother_aadhar")}
+                                                {renderTablePan(motherData?.panNumber || activeProfile?.family?.motherPan || activeProfile?.motherPan, "mother_pan")}
                                             </td>
                                         </tr>
                                         {/* Co-Applicant Row */}
@@ -997,8 +997,8 @@ export default function UserProfileView({
                                                         <span className="font-medium text-slate-800">{firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone}</span>
                                                     </div>
                                                 ) : null}
-                                                {renderTableAadhar(coapplicantData?.aadharNumber, "coapp_aadhar")}
-                                                {renderTablePan(coapplicantData?.panNumber, "coapp_pan")}
+                                                {renderTableAadhar(coapplicantData?.aadharNumber || activeProfile?.coApplicant?.aadhar || activeProfile?.coApplicantAadhar, "coapp_aadhar")}
+                                                {renderTablePan(coapplicantData?.panNumber || activeProfile?.coApplicant?.pan || activeProfile?.coApplicantPan, "coapp_pan")}
                                             </td>
                                         </tr>
                                     </tbody>

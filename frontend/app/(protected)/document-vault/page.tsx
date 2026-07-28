@@ -310,7 +310,12 @@ export default function DocumentVaultPage() {
         const baseProfile = profile || user || {};
 
         // Ensure family details have defaults if not present so parent documents are shown
-        const family = baseProfile.family || baseProfile.familyDetails || {};
+        let family = baseProfile.family || baseProfile.familyDetails || {};
+        if (typeof family === 'string') {
+            try { family = JSON.parse(family); } catch { family = {}; }
+        }
+        if (!family || typeof family !== 'object') family = {};
+
         const fatherName = family.fatherName || baseProfile.fatherName || "Father";
         const motherName = family.motherName || baseProfile.motherName || "Mother";
         const fatherEmploymentType = family.fatherEmploymentType || baseProfile.fatherEmploymentType || "employed";
@@ -321,7 +326,12 @@ export default function DocumentVaultPage() {
         const appCoappRelation = activeApp && activeApp.coApplicantRelation && activeApp.coApplicantRelation !== "none" ? activeApp.coApplicantRelation : "";
 
         // Ensure coApplicant has a default name and matches coappRelation
-        const coapp = baseProfile.coApplicant || {};
+        let coapp = baseProfile.coApplicant || {};
+        if (typeof coapp === 'string') {
+            try { coapp = JSON.parse(coapp); } catch { coapp = {}; }
+        }
+        if (!coapp || typeof coapp !== 'object') coapp = {};
+
         const dbRelation = appCoappRelation || baseProfile.coApplicantRelation || coapp.relation || "";
         const fallbackName = dbRelation ? dbRelation.charAt(0).toUpperCase() + dbRelation.slice(1) : "Co-applicant";
         const coappName = coapp.name || baseProfile.coApplicantName || activeApp?.coApplicantName || fallbackName;

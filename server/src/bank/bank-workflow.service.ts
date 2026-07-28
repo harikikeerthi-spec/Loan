@@ -155,9 +155,9 @@ export class BankWorkflowService {
       throw submitError;
     }
 
-    // Update LoanApplication with bank submission reference — preserve the existing applicationNumber, or generate new VTU-APP sequential one if it's missing/not bank format.
+    // Update LoanApplication with bank submission reference — preserve the existing VTU-APP applicationNumber, or generate new VTU-APP sequential one if it's missing/not bank format.
     let appNumber = application.applicationNumber;
-    if (!appNumber || (!appNumber.startsWith('VTU-APP-') && !appNumber.startsWith('VL-APP-') && !appNumber.startsWith('VTU-BNK-'))) {
+    if (!appNumber || (!appNumber.startsWith('VTU-APP-') && !appNumber.startsWith('VTU-BNK-'))) {
       appNumber = await this.generateBankApplicationNumber();
     }
 
@@ -2606,9 +2606,9 @@ export class BankWorkflowService {
       createdSubmissions.push(submission);
     }
 
-    // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list — preserve existing applicationNumber, or generate new VTU-APP sequential one if it's missing/not bank format.
+    // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list — preserve existing VTU-APP applicationNumber, or generate new VTU-APP sequential one if it's missing/not bank format.
     let appNumber = application.applicationNumber;
-    if (!appNumber || (!appNumber.startsWith('VTU-APP-') && !appNumber.startsWith('VL-APP-') && !appNumber.startsWith('VTU-BNK-'))) {
+    if (!appNumber || (!appNumber.startsWith('VTU-APP-') && !appNumber.startsWith('VTU-BNK-'))) {
       appNumber = await this.generateBankApplicationNumber();
     }
 

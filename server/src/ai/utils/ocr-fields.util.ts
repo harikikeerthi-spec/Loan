@@ -369,6 +369,18 @@ export function extractFullNameFromOcrRaw(
     }
 
     const direct = pickFirst(
+        raw.mother_name,
+        raw.motherName,
+        raw.mother_full_name,
+        raw.motherFullName,
+        raw.father_name,
+        raw.fatherName,
+        raw.father_full_name,
+        raw.fatherFullName,
+        raw.coapplicant_name,
+        raw.coApplicantName,
+        raw.co_applicant_name,
+        raw.coApplicant_name,
         raw.full_name,
         raw.fullName,
         raw.holder_name,

@@ -323,18 +323,16 @@ export default function DocumentsTab() {
                                     {/* Document preview thumbnail area */}
                                     <div className="relative h-36 bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border-b border-slate-100">
                                         {(doc.uploaded || doc.filePath) ? (
-                                            <img
+                                            <iframe
                                                 src={`/api/documents/view/${userId}/${doc.docType}`}
-                                                alt={docLabel}
-                                                className="h-full w-full object-cover opacity-80"
-                                                onError={(e) => {
-                                                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                                                }}
+                                                title={docLabel}
+                                                className="w-full h-full border-0 pointer-events-none opacity-90 overflow-hidden"
                                             />
-                                        ) : null}
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-[52px] text-slate-300">description</span>
-                                        </div>
+                                        ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-[52px] text-slate-300">description</span>
+                                            </div>
+                                        )}
                                         {/* Hover overlay */}
                                         {(doc.uploaded || doc.filePath) && (
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
