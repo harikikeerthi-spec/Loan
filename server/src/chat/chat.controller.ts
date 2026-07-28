@@ -38,6 +38,12 @@ export class ChatController {
     return { success: true, conversation: conv };
   }
 
+  @Put('conversations/:id/save-name')
+  async saveCustomerName(@Param('id') id: string, @Body() body: { name: string }) {
+    const updated = await this.chatService.updateCustomerName(id, body.name);
+    return { success: true, conversation: updated };
+  }
+
   @Get('messages/:conversationId')
   async getMessages(@Param('conversationId') conversationId: string) {
     return this.chatService.getMessages(conversationId);

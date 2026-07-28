@@ -1385,6 +1385,184 @@ export class EmailService {
     }
   }
 
+  /**
+   * Send a full, detailed application package email to the bank.
+   * Triggered manually by staff from the "Send Mail" action in the incoming queue.
+   * Includes all application fields, document list, and a portal login CTA.
+   */
+  async sendApplicationPackageToBank(
+    bankEmail: string,
+    bankName: string,
+    application: any,
+    studentName: string,
+  ) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const appNum = application.applicationNumber || 'N/A';
+    const loanType = application.loanType || 'Education Loan';
+    const amount = application.amount ? `₹${Number(application.amount).toLocaleString('en-IN')}` : 'N/A';
+    const university = application.universityName || 'N/A';
+    const course = application.courseName || application.courseType || 'N/A';
+    const duration = application.courseDuration ? `${application.courseDuration} months` : 'N/A';
+    const admission = application.admissionStatus || 'N/A';
+    const gender = application.gender || 'N/A';
+    const dob = application.dateOfBirth || 'N/A';
+
+    const documents: any[] = application.documents || [];
+    const docRows = documents.length > 0
+      ? documents.map((doc: any) => `
+        <tr>
+          <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155;">${(doc.name || doc.type || 'Document').replace(/_/g, ' ')}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
+            <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:${doc.status === 'verified' ? '#dcfce7' : doc.status === 'rejected' ? '#fee2e2' : '#fef3c7'};color:${doc.status === 'verified' ? '#166534' : doc.status === 'rejected' ? '#991b1b' : '#92400e'};">${(doc.status || 'pending').toUpperCase()}</span>
+          </td>
+        </tr>`).join('')
+      : `<tr><td colspan="2" style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">No documents attached</td></tr>`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Application Package – VidyaLoan</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:'Segoe UI',Arial,sans-serif;color:#334155;">
+  <div style="max-width:660px;margin:36px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:32px 36px;color:#fff;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div>
+          <h1 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
+          <p style="margin:4px 0 0;font-size:11px;opacity:0.85;text-transform:uppercase;letter-spacing:1.2px;">Bank Partner Portal · Application Package</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notice Banner -->
+    <div style="background:#eff6ff;border-bottom:1px solid #dbeafe;padding:14px 36px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">📥</span>
+      <p style="margin:0;font-size:13px;color:#1e40af;font-weight:600;">
+        Full application package for <strong>${studentName}</strong> has been sent to <strong>${bankName}</strong> for credit review.
+      </p>
+    </div>
+
+    <div style="padding:32px 36px;line-height:1.6;">
+
+      <!-- Application Summary -->
+      <h2 style="margin:0 0 6px;font-size:16px;font-weight:700;color:#0f172a;">Application Reference</h2>
+      <p style="margin:0 0 20px;font-size:13px;color:#64748b;">Below is the complete file summary forwarded for your credit underwriting team.</p>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="font-size:13px;">
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;width:170px;">Application No.</td>
+            <td style="padding:5px 0;color:#0f172a;font-weight:700;font-family:monospace;">#${appNum}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;">Loan Type</td>
+            <td style="padding:5px 0;color:#0f172a;">${loanType}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;">Requested Amount</td>
+            <td style="padding:5px 0;color:#0f172a;font-weight:700;">${amount}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Student Profile -->
+      <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.5px;">👤 Student Profile</h3>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="font-size:13px;">
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;width:170px;">Full Name</td>
+            <td style="padding:5px 0;color:#0f172a;font-weight:600;">${studentName}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;">Gender</td>
+            <td style="padding:5px 0;color:#0f172a;">${gender}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;">Date of Birth</td>
+            <td style="padding:5px 0;color:#0f172a;">${dob}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Academic Program -->
+      <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.5px;">🎓 Academic Program</h3>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:24px;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="font-size:13px;">
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;width:170px;">University</td>
+            <td style="padding:5px 0;color:#0f172a;">${university}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;">Course</td>
+            <td style="padding:5px 0;color:#0f172a;">${course}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;">Duration</td>
+            <td style="padding:5px 0;color:#0f172a;">${duration}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#64748b;font-weight:600;">Admission Status</td>
+            <td style="padding:5px 0;color:#0f172a;font-weight:600;text-transform:capitalize;">${admission}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Documents -->
+      <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:0.5px;">📎 Attached Documents</h3>
+      <div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:28px;">
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <thead>
+            <tr style="background:#f1f5f9;">
+              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Document Name</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${docRows}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- CTA -->
+      <div style="text-align:center;margin-bottom:24px;">
+        <a href="${frontendUrl}/bank/login" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;text-decoration:none;padding:13px 32px;border-radius:10px;font-weight:700;font-size:14px;box-shadow:0 4px 12px rgba(79,70,229,0.25);">
+          Open Partner Portal →
+        </a>
+      </div>
+
+      <p style="margin:0;font-size:12px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:20px;text-align:center;">
+        This is a system-generated application package from VidyaLoan.<br>
+        For support, contact <a href="mailto:support@vidyaloan.com" style="color:#4f46e5;">support@vidyaloan.com</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    try {
+      console.log(`[EmailService] Sending full application package to bank: ${bankEmail}`);
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        await this.transporter.sendMail({
+          from: process.env.EMAIL_FROM || '"VidyaLoan" <noreply@vidyaloan.com>',
+          to: bankEmail,
+          subject: `📋 Application Package – ${studentName} | ${appNum} | ${bankName}`,
+          html,
+          text: `Dear Partner at ${bankName},\n\nPlease find the full application package for ${studentName} (Ref: #${appNum}).\n\nAmount: ${amount}\nUniversity: ${university}\nCourse: ${course}\n\nLogin to the Partner Portal: ${frontendUrl}/bank/login\n\nRegards,\nVidyaLoan Team`,
+        });
+        console.log(`[EmailService] Application package sent to ${bankEmail}`);
+      } else {
+        console.log(`[EmailService] Email credentials not configured – package logged for ${bankEmail}`);
+      }
+    } catch (error) {
+      console.error(`[EmailService] Failed to send application package to ${bankEmail}:`, error);
+    }
+  }
+
   async sendApplicationAcceptedByBankEmail(email: string, userName: string, bankName: string, application: any, details?: any) {
     const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();

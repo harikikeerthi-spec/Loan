@@ -182,18 +182,22 @@ export class SupportService {
     const { data: tickets, count, error } = await q;
     if (error) throw new BadRequestException(error.message);
 
-    // Get comment counts
+    // Get comment counts and attachments
     const ticketsWithCounts = await Promise.all(
       (tickets || []).map(async (ticket: any) => {
         const { count: commentCount } = await this.db
           .from('SupportComment')
           .select('id', { count: 'exact', head: true })
           .eq('ticketId', ticket.id);
-        const { count: attachCount } = await this.db
+        const { data: attachments } = await this.db
           .from('SupportAttachment')
-          .select('id', { count: 'exact', head: true })
+          .select('*')
           .eq('ticketId', ticket.id);
-        return { ...ticket, _count: { comments: commentCount || 0, attachments: attachCount || 0 } };
+        return {
+          ...ticket,
+          attachments: attachments || [],
+          _count: { comments: commentCount || 0, attachments: (attachments || []).length }
+        };
       })
     );
 
@@ -549,6 +553,16 @@ export class SupportService {
       ? withFirstResp.reduce((s: number, t: any) => s + (new Date(t.firstResponseAt).getTime() - new Date(t.createdAt).getTime()) / 3600000, 0) / withFirstResp.length
       : 0;
 
+    const recentActivityWithAttachments = await Promise.all(
+      (recentTickets || []).map(async (t: any) => {
+        const { data: attachments } = await this.db
+          .from('SupportAttachment')
+          .select('*')
+          .eq('ticketId', t.id);
+        return { ...t, attachments: attachments || [] };
+      })
+    );
+
     return {
       stats: {
         totalTickets: totalTickets || 0,
@@ -561,7 +575,7 @@ export class SupportService {
         avgFirstResponseHours: Math.round(avgFirstResponseHours * 10) / 10,
         satisfactionScore: 4.2,
       },
-      recentActivity: recentTickets || [],
+      recentActivity: recentActivityWithAttachments,
       charts: {
         byCategory: Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([label, value]) => ({ label, value })),
         byPriority: Object.entries(byPriority).map(([label, value]) => ({ label, value })),

@@ -142,7 +142,7 @@ export function DataTable<T>({
     }, [data, sortKey, sortDirection]);
 
     return (
-        <div className="overflow-x-auto w-full no-scrollbar pb-4">
+        <div className="overflow-x-auto w-full no-scrollbar pb-12 min-h-[200px]">
             <div className="min-w-[1000px] flex flex-col gap-4">
                 {/* Header Row */}
                 <div 

@@ -50,6 +50,38 @@ export class BankWorkflowController {
   }
 
   /**
+   * Send application email to bank
+   * POST /api/bank/workflow/send-application-email
+   */
+  @Post('send-application-email')
+  async sendApplicationEmail(
+    @Body() body: {
+      applicationId: string;
+      bankId: string;
+      bankName: string;
+      sentBy: string;
+      recipientEmail?: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.sendApplicationEmailToBank(
+        body.applicationId,
+        body.bankId,
+        body.bankName,
+        body.sentBy,
+        body.recipientEmail,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
    * Log file with LAN number
    * POST /api/bank/workflow/:submissionId/log-file
    */

@@ -397,5 +397,20 @@ export class ChatService {
     }
     return true;
   }
+
+  async updateCustomerName(id: string, name: string) {
+    const { data, error } = await this.db
+      .from('Conversation')
+      .update({ customerName: name, updatedAt: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to update customer name for conversation ${id}`, error);
+      throw new HttpException(error.message || 'Failed to update customer name', HttpStatus.BAD_REQUEST);
+    }
+    return data;
+  }
 }
 

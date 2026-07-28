@@ -118,6 +118,8 @@ export const HttpApiPaths = {
             `${HTTP_API_PREFIX}/chat/conversations${httpApiQuery({ role, bankName })}`,
         singleConversation: (id: string) =>
             `${HTTP_API_PREFIX}/chat/conversations/single/${enc(id)}`,
+        saveName: (id: string) =>
+            `${HTTP_API_PREFIX}/chat/conversations/${enc(id)}/save-name`,
         messages: (conversationId: string) =>
             `${HTTP_API_PREFIX}/chat/messages/${enc(conversationId)}`,
         staffStart: () => `${HTTP_API_PREFIX}/chat/staff-start`,

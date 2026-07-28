@@ -55,6 +55,13 @@ export default function IncomingQueuePage() {
     const [confirmingLog, setConfirmingLog] = useState(false);
     const [savingLog, setSavingLog] = useState(false);
 
+    // Send Mail state
+    const [showSendMailModal, setShowSendMailModal] = useState(false);
+    const [sendMailApp, setSendMailApp] = useState<any | null>(null);
+    const [recipientEmail, setRecipientEmail] = useState("");
+    const [sendingMail, setSendingMail] = useState(false);
+    const [mailSentSuccess, setMailSentSuccess] = useState(false);
+
     // Drawer state for View Application
     const [showViewAppDrawer, setShowViewAppDrawer] = useState(false);
     const [token, setToken] = useState<string>("");
@@ -328,15 +335,52 @@ export default function IncomingQueuePage() {
         }
     };
 
+    const handleSendMail = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!sendMailApp) return;
+        if (!recipientEmail.trim()) {
+            alert("Please enter a valid recipient email address.");
+            return;
+        }
+        setSendingMail(true);
+        try {
+            const appId = sendMailApp.id || sendMailApp._id;
+            const bankId = currentBankId;
+            const bankName = sendMailApp.bank || currentBankId.toUpperCase();
+            const res: any = await bankApi.sendApplicationEmail({
+                applicationId: appId,
+                bankId,
+                bankName,
+                sentBy: "Bank Staff",
+                recipientEmail: recipientEmail.trim(),
+            });
+            if (res && res.success) {
+                setMailSentSuccess(true);
+                setTimeout(() => {
+                    setShowSendMailModal(false);
+                    setSendMailApp(null);
+                    setMailSentSuccess(false);
+                }, 2200);
+            } else {
+                alert(res?.message || "Failed to send mail. Please try again.");
+            }
+        } catch (err) {
+            console.error("Error sending application email:", err);
+            alert("Failed to send application email. Please try again.");
+        } finally {
+            setSendingMail(false);
+        }
+    };
+
     const columns = [
         {
             header: "Application ID",
             accessorKey: "applicationNumber",
             sortable: true,
             cell: (row: any) => (
-                <div className="font-mono text-gray-500 font-medium text-[13px] uppercase tracking-wider">
-                    {row.applicationNumber}
-                </div>
+                <span className="font-mono font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md uppercase text-[11.5px] border border-purple-100">
+                    {row.applicationNumber || "Pending"}
+                </span>
             )
         },
         {
@@ -344,13 +388,13 @@ export default function IncomingQueuePage() {
             accessorKey: "firstName",
             sortable: true,
             cell: (row: any) => (
-                <div className="flex flex-col">
-                    <span className="font-semibold text-[14px] text-[#111827] leading-tight font-sans">
+                <div>
+                    <p className="text-[14.5px] font-bold text-slate-950 font-sans leading-tight">
                         {row.firstName} {row.lastName}
-                    </span>
-                    <span className="text-[12px] text-[#6B7280] font-normal lowercase mt-0.5 font-sans">
+                    </p>
+                    <p className="text-xs text-slate-400 font-medium font-sans mt-0.5">
                         {row.email}
-                    </span>
+                    </p>
                 </div>
             )
         },
@@ -360,10 +404,10 @@ export default function IncomingQueuePage() {
             sortable: true,
             cell: (row: any) => (
                 <div>
-                    <p className="font-semibold text-gray-800 text-[13px] truncate max-w-[180px] font-sans">
+                    <p className="font-bold text-slate-900 text-[13.5px] truncate max-w-[180px] font-sans">
                         {row.universityName || "Foreign University"}
                     </p>
-                    <p className="text-[10px] text-[#4F46E5] font-semibold uppercase tracking-wider mt-0.5 font-sans">
+                    <p className="text-xs text-indigo-600 font-semibold uppercase tracking-wider mt-0.5 font-sans">
                         {row.courseName || "Master's Degree"}
                     </p>
                 </div>
@@ -375,7 +419,7 @@ export default function IncomingQueuePage() {
             sortable: true,
             align: "right" as const,
             cell: (row: any) => (
-                <span className="font-semibold text-[14px] text-[#111827] font-mono pr-4 block text-right">
+                <span className="font-bold text-[14px] text-slate-900 font-mono pr-4 block text-right">
                     ₹{(row.amount || 0).toLocaleString("en-IN")}
                 </span>
             )
@@ -386,10 +430,10 @@ export default function IncomingQueuePage() {
             sortable: true,
             cell: (row: any) => (
                 <div>
-                    <p className="font-semibold text-gray-700 text-[13px] font-sans">
+                    <p className="font-semibold text-slate-800 text-[13px] font-sans">
                         {row.submittedAt ? format(parseISO(row.submittedAt), "dd MMM yyyy") : "N/A"}
                     </p>
-                    <p className="text-[10px] text-gray-400 font-mono mt-0.5">
+                    <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                         {row.submittedAt ? format(parseISO(row.submittedAt), "HH:mm:ss") : ""}
                     </p>
                 </div>
@@ -439,10 +483,10 @@ export default function IncomingQueuePage() {
                                     <>
                                         <div className="fixed inset-0 z-45" onClick={() => setActiveMenuAppId(null)} />
                                         <motion.div
-                                            initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                                            initial={{ opacity: 0, scale: 0.95, y: -5 }}
                                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95, y: 5 }}
-                                            className="absolute right-0 mt-1 w-44 bg-white border border-gray-150 shadow-xl rounded-md z-50 py-1.5 overflow-hidden font-sans"
+                                            exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                                            className="absolute right-0 bottom-full mb-1.5 w-48 bg-white border border-gray-200 shadow-2xl rounded-xl z-50 py-1.5 overflow-hidden font-sans"
                                         >
                                             <button
                                                 onClick={(e) => {
@@ -454,6 +498,21 @@ export default function IncomingQueuePage() {
                                             >
                                                 <span className="material-symbols-outlined text-sm text-gray-450 font-normal">folder_open</span>
                                                 View Documents
+                                            </button>
+                                            <div className="mx-3 border-t border-gray-100 my-1" />
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveMenuAppId(null);
+                                                    setSendMailApp(row);
+                                                    setRecipientEmail(`${currentBankId}bank01@gmail.com`);
+                                                    setMailSentSuccess(false);
+                                                    setShowSendMailModal(true);
+                                                }}
+                                                className="w-full text-left px-3.5 py-2 hover:bg-blue-50/40 text-[10.5px] font-bold text-gray-700 hover:text-blue-600 transition-colors flex items-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-sm text-blue-400 font-normal">send</span>
+                                                Send Mail to Bank
                                             </button>
                                         </motion.div>
                                     </>
@@ -471,119 +530,236 @@ export default function IncomingQueuePage() {
     return (
         <div className="w-full space-y-8">
 
-                {/* Page Header */}
-                <PageHeader
-                    title="Incoming Loan Files"
-                    description="Incoming loan portfolios from VidyaLoans system awaiting validation and assignation of LAN."
-                    moduleName="Incoming Queue"
-                    icon="download"
-                />                {/* KPI Cards Grid */}
-                {/* KPI Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* KPI Card 1: Total Pending Reviews */}
-                    <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-[0_10px_25px_-5px_rgba(15,23,42,0.04)] flex items-center justify-between hover:shadow-[0_10px_20px_-5px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 transition-all duration-300">
-                        <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider font-sans">Total Pending Reviews</p>
-                            <h3 className={`text-[28px] font-bold leading-none font-sans ${kpiTotalPending === 0 ? "text-[#64748B]" : "text-[#0F172A]"}`}>{kpiTotalPending}</h3>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-[#2563EB]/10 flex items-center justify-center text-[#2563EB]">
-                            <span className="material-symbols-outlined text-xl">pending_actions</span>
-                        </div>
-                    </div>
-
-                    {/* KPI Card 2: High Value Loans */}
-                    <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-[0_10px_25px_-5px_rgba(15,23,42,0.04)] flex items-center justify-between hover:shadow-[0_10px_20px_-5px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 transition-all duration-300">
-                        <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider font-sans">High Value Loans (&gt; ₹25L)</p>
-                            <h3 className={`text-[28px] font-bold leading-none font-sans ${kpiHighValue === 0 ? "text-[#64748B]" : "text-[#0F172A]"}`}>{kpiHighValue}</h3>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-[#2563EB]/10 flex items-center justify-center text-[#2563EB]">
-                            <span className="material-symbols-outlined text-xl">payments</span>
-                        </div>
-                    </div>
-
-                    {/* KPI Card 3: SLA Breached Soon */}
-                    <div className="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-[0_10px_25px_-5px_rgba(15,23,42,0.04)] flex items-center justify-between hover:shadow-[0_10px_20px_-5px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 transition-all duration-300">
-                        <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider font-sans">SLA Breached Soon (&gt; 24h)</p>
-                            <h3 className={`text-[28px] font-bold leading-none font-sans ${kpiSlaBreached === 0 ? "text-[#64748B]" : "text-[#0F172A]"}`}>{kpiSlaBreached}</h3>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-[#EAB308]/10 flex items-center justify-center text-[#EAB308]">
-                            <span className="material-symbols-outlined text-xl">hourglass_bottom</span>
-                        </div>
-                    </div>
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 font-sans">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-[#0A2540]">
+                        Incoming Loan Files
+                    </h2>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                        Incoming loan portfolios from VidyaLoans system awaiting validation and assignation of LAN.
+                    </p>
                 </div>
-
-                {/* Main Table Card containing Search, Chips and Table */}
-                <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-[0_10px_25px_-5px_rgba(15,23,42,0.04)] p-6 space-y-6">
-                    {/* Header with Title and Pill Search Bar */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <h2 className="text-base font-bold text-[#0F172A] font-sans">Incoming Queue</h2>
-                            <p className="text-xs text-gray-500 mt-0.5 font-sans">Manage and assign LAN numbers to new loan applications</p>
-                        </div>
-
-                        {/* Pill-shaped search bar */}
-                        <div className="relative w-full sm:w-72">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => fetchApplications(currentBankId)}
+                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">refresh</span>
+                        Refresh
+                    </button>
+                    {/* <div className="relative">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
                             <input
                                 type="text"
-                                placeholder="Search student name, ID..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 bg-[#F1F5F9] hover:bg-[#E2E8F0]/50 border-0 rounded-full text-xs font-semibold focus:outline-none focus:bg-white focus:ring-4 focus:ring-blue-500/15 focus:border-[#3B82F6] transition-all font-sans text-slate-800 placeholder-slate-400"
+                                placeholder="Search student name, ID..."
+                                className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm"
                             />
-                            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
-                        </div>
-                    </div>
-
-                    {/* Filter Tabs */}
-                    <div className="flex border-b border-slate-100 pb-4">
-                        <div className="bg-[#F1F5F9] p-1 rounded-xl flex items-center gap-1">
-                            <button
-                                onClick={() => setActiveFilterChip("all")}
-                                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 cursor-pointer ${activeFilterChip === "all"
-                                    ? "bg-white text-[#2563EB] shadow-sm font-bold"
-                                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/40"
-                                    }`}
-                            >
-                                {activeFilterChip === "all" && <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />}
-                                All Portfolios
-                            </button>
-                            <button
-                                onClick={() => setActiveFilterChip("high_value")}
-                                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 cursor-pointer ${activeFilterChip === "high_value"
-                                    ? "bg-white text-[#2563EB] shadow-sm font-bold"
-                                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/40"
-                                    }`}
-                            >
-                                {activeFilterChip === "high_value" && <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />}
-                                High Value (&gt; ₹25L)
-                            </button>
-                            <button
-                                onClick={() => setActiveFilterChip("sla_close")}
-                                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-2 cursor-pointer ${activeFilterChip === "sla_close"
-                                    ? "bg-white text-[#2563EB] shadow-sm font-bold"
-                                    : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-200/40"
-                                    }`}
-                            >
-                                {activeFilterChip === "sla_close" && <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />}
-                                SLA Breached
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Queue Data Table */}
-                    {loading ? (
-                        <Spinner message="Retrieving incoming application pool..." />
-                    ) : (
-                        <DataTable
-                            data={filteredApps}
-                            columns={columns}
-                            emptyMessage="All clear! No incoming files in the queue needing LAN assignation."
-                            defaultSortKey="submittedAt"
-                        />
-                    )}
+                        </div> */}
                 </div>
+            </div>
+
+            {/* KPI Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-sans">
+                {/* KPI Card 1: Total Pending Reviews */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                    <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Pending Reviews</p>
+                        <h3 className={`text-[28px] font-bold leading-none ${kpiTotalPending === 0 ? "text-slate-400" : "text-slate-900"}`}>{kpiTotalPending}</h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
+                        <span className="material-symbols-outlined text-xl">pending_actions</span>
+                    </div>
+                </div>
+
+                {/* KPI Card 2: High Value Loans */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                    <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">High Value Loans (&gt; ₹25L)</p>
+                        <h3 className={`text-[28px] font-bold leading-none ${kpiHighValue === 0 ? "text-slate-400" : "text-slate-900"}`}>{kpiHighValue}</h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
+                        <span className="material-symbols-outlined text-xl">payments</span>
+                    </div>
+                </div>
+
+                {/* KPI Card 3: SLA Breached Soon */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                    <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">SLA Breached Soon (&gt; 24h)</p>
+                        <h3 className={`text-[28px] font-bold leading-none ${kpiSlaBreached === 0 ? "text-slate-400" : "text-slate-900"}`}>{kpiSlaBreached}</h3>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100">
+                        <span className="material-symbols-outlined text-xl">hourglass_bottom</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Table Card containing Search, Chips and Table */}
+            <div className="rounded-[24px] border border-slate-100 overflow-hidden shadow-sm bg-white font-sans">
+                {/* Filter Tabs Header */}
+                <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-white">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        {[
+                            { key: "all", label: "ALL PORTFOLIOS", count: incomingApps.length },
+                            { key: "high_value", label: "HIGH VALUE (> ₹25L)", count: kpiHighValue },
+                            { key: "sla_close", label: "SLA BREACHED", count: kpiSlaBreached },
+                        ].map((chip) => {
+                            const isActive = activeFilterChip === chip.key;
+                            return (
+                                <button
+                                    key={chip.key}
+                                    onClick={() => setActiveFilterChip(chip.key as any)}
+                                    className={`px-4 py-2.5 rounded-xl text-[11.5px] font-black uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${isActive
+                                            ? "bg-[#6605c7] text-white shadow-md shadow-purple-500/20"
+                                            : "bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200/60"
+                                        }`}
+                                >
+                                    <span>{chip.label}</span>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? "bg-white/20 text-white" : "bg-slate-200/80 text-slate-600"
+                                        }`}>
+                                        {chip.count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Queue Data Table */}
+                {loading ? (
+                    <Spinner message="Retrieving incoming application pool..." />
+                ) : (
+                    <DataTable
+                        data={filteredApps}
+                        columns={columns}
+                        emptyMessage="All clear! No incoming files in the queue needing LAN assignation."
+                        defaultSortKey="submittedAt"
+                    />
+                )}
+            </div>
+
+            {/* Send Mail Confirmation Modal */}
+            <AnimatePresence>
+                {showSendMailModal && sendMailApp && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => { if (!sendingMail) { setShowSendMailModal(false); setSendMailApp(null); } }} />
+
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                            className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl p-8 max-w-md w-full z-10 relative overflow-hidden"
+                        >
+                            {/* Decorative gradient blob */}
+                            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-blue-500/5 pointer-events-none" />
+
+                            {mailSentSuccess ? (
+                                <motion.div
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="flex flex-col items-center justify-center py-6 gap-4"
+                                >
+                                    <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-3xl text-emerald-500">check_circle</span>
+                                    </div>
+                                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight text-center">Mail Dispatched!</h3>
+                                    <p className="text-xs text-gray-500 font-medium text-center">
+                                        Application package for <strong>{sendMailApp.firstName} {sendMailApp.lastName}</strong> was sent to <strong className="text-blue-600 font-mono">{recipientEmail}</strong>.
+                                    </p>
+                                </motion.div>
+                            ) : (
+                                <form onSubmit={handleSendMail}>
+                                    {/* Icon + title */}
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-xl text-blue-500">forward_to_inbox</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Send Application to Bank</h3>
+                                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Email full application package</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Recipient Email Input Box */}
+                                    <div className="mb-4 text-left">
+                                        <label className="text-[9.5px] font-bold text-gray-600 uppercase tracking-wider block mb-1.5 font-sans">
+                                            Recipient Email Address <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="email"
+                                                required
+                                                placeholder="Enter recipient bank email..."
+                                                value={recipientEmail}
+                                                onChange={(e) => setRecipientEmail(e.target.value)}
+                                                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-sans text-slate-800 placeholder-slate-400"
+                                            />
+                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">mail</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Application summary preview */}
+                                    <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4 mb-4 space-y-2">
+                                        <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2">Package Contents Preview</p>
+                                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                            <div>
+                                                <span className="text-[8.5px] text-gray-400 font-bold uppercase tracking-wider block">Student</span>
+                                                <span className="font-bold text-gray-800">{sendMailApp.firstName} {sendMailApp.lastName}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[8.5px] text-gray-400 font-bold uppercase tracking-wider block">App No.</span>
+                                                <span className="font-bold text-gray-800 font-mono">{sendMailApp.applicationNumber || "—"}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[8.5px] text-gray-400 font-bold uppercase tracking-wider block">Amount</span>
+                                                <span className="font-bold text-gray-800">₹{(sendMailApp.amount || 0).toLocaleString("en-IN")}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[8.5px] text-gray-400 font-bold uppercase tracking-wider block">Bank</span>
+                                                <span className="font-bold text-gray-800 uppercase">{sendMailApp.bank || currentBankId}</span>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <span className="text-[8.5px] text-gray-400 font-bold uppercase tracking-wider block">University</span>
+                                                <span className="font-bold text-gray-800">{sendMailApp.universityName || "—"}</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-2.5 pt-2.5 border-t border-slate-200">
+                                            <p className="text-[9px] text-gray-500 font-medium leading-relaxed">
+                                                📎 Complete profile data, academic details, and attached document statuses will be sent to the email above.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowSendMailModal(false); setSendMailApp(null); }}
+                                            disabled={sendingMail}
+                                            className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={sendingMail}
+                                            className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                                        >
+                                            {sendingMail ? (
+                                                <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Sending...</>
+                                            ) : (
+                                                <><span className="material-symbols-outlined text-sm">send</span>Send Mail</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Log File Modal (Task 9) */}
             <AnimatePresence>

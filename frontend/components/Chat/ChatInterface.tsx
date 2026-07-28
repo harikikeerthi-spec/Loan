@@ -179,6 +179,91 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
         const [pendingFile, setPendingFile] = useState<File | null>(null);
         const [pendingVaultDoc, setPendingVaultDoc] = useState<StudentDocument | null>(null);
 
+        // Save Contact Name State
+        const [savedNames, setSavedNames] = useState<Record<string, string>>({});
+        const [showSaveNameModal, setShowSaveNameModal] = useState(false);
+        const [nameInput, setNameInput] = useState('');
+        const [savingName, setSavingName] = useState(false);
+        const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+
+        // Load saved names from localStorage on mount
+        useEffect(() => {
+            if (typeof window !== 'undefined') {
+                try {
+                    const stored = JSON.parse(localStorage.getItem('chat_saved_contact_names') || '{}');
+                    setSavedNames(stored);
+                } catch (e) {
+                    console.error('Failed to parse saved contact names', e);
+                }
+            }
+        }, []);
+
+        const getSavedNameForConv = (conv?: Conversation | null) => {
+            if (!conv) return '';
+            if (savedNames[conv.id]) return savedNames[conv.id];
+            if (conv.customerPhone && savedNames[conv.customerPhone]) return savedNames[conv.customerPhone];
+            const cleanPhone = conv.customerPhone ? conv.customerPhone.replace(/\D/g, '') : '';
+            if (cleanPhone && savedNames[cleanPhone]) return savedNames[cleanPhone];
+            if (conv.customerName) return conv.customerName;
+            return '';
+        };
+
+        const getConversationDisplayName = (conv: Conversation) => {
+            const saved = getSavedNameForConv(conv);
+            if (saved) return saved;
+            if (role === 'bank' && conv.metadata?.applicationId) {
+                return conv.metadata.applicationNumber || getFormattedAppId(conv.metadata.applicationId);
+            }
+            return conv.customerPhone || conv.customerEmail || "Chat Contact";
+        };
+
+        const handleSaveContactNameSubmit = async (e: React.FormEvent) => {
+            e.preventDefault();
+            const activeConv = conversations.find(c => c.id === activeConversation);
+            if (!activeConv || !nameInput.trim()) return;
+            const newName = nameInput.trim();
+            setSavingName(true);
+
+            try {
+                // Update local storage & state immediately
+                const updatedSaved = {
+                    ...savedNames,
+                    [activeConv.id]: newName,
+                };
+                if (activeConv.customerPhone) {
+                    updatedSaved[activeConv.customerPhone] = newName;
+                    const clean = activeConv.customerPhone.replace(/\D/g, '');
+                    if (clean) updatedSaved[clean] = newName;
+                }
+                setSavedNames(updatedSaved);
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('chat_saved_contact_names', JSON.stringify(updatedSaved));
+                }
+
+                // Update conversation list state
+                setConversations(prev => prev.map(c => c.id === activeConv.id ? { ...c, customerName: newName } : c));
+
+                // Call backend API to update conversation in DB if token exists
+                if (token) {
+                    await fetch(HttpApiPaths.chat.saveName(activeConv.id), {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ name: newName })
+                    }).catch(() => {});
+                }
+
+                setShowSaveNameModal(false);
+                setNameInput('');
+            } catch (err: any) {
+                console.error("Failed to save contact name", err);
+            } finally {
+                setSavingName(false);
+            }
+        };
+
         const messagesEndRef = useRef<HTMLDivElement>(null);
         const activeConversationRef = useRef<string | null>(null);
         const hasStartedInitialStudent = useRef(false);
@@ -1140,10 +1225,7 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                                                         </div>
                                                         <div className="min-w-0">
                                                             <span className="font-bold text-xs text-[#1A1D20] truncate block tracking-tight">
-                                                                {role === 'bank' && conv.metadata?.applicationId
-                                                                    ? (conv.metadata.applicationNumber || getFormattedAppId(conv.metadata.applicationId))
-                                                                    : (conv.customerName || conv.customerPhone)
-                                                                }
+                                                                {getConversationDisplayName(conv)}
                                                             </span>
                                                             <div className="flex items-center gap-1 mt-0.5">
                                                                 <span className={`w-1.5 h-1.5 rounded-full ${isBank ? 'bg-amber-500' : 'bg-[#10B981]'}`}></span>
@@ -1238,39 +1320,56 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                 <div className="flex-1 flex overflow-hidden bg-[#FFFFFF] relative">
                     {/* Chat column */}
                     <div className={`flex flex-col h-full transition-all duration-300 ${showDocPanel ? 'flex-1' : 'w-full'}`}>
-                        {activeConversation ? (
+                        {activeConversation ? (() => {
+                            const activeConv = conversations.find(c => c.id === activeConversation);
+                            const displayName = activeConv ? getConversationDisplayName(activeConv) : '';
+                            const savedName = activeConv ? getSavedNameForConv(activeConv) : '';
+
+                            return (
                             <>
                                 {/* Chat Header */}
-                                <div className="px-6 py-4 bg-[#FFFFFF] border-b border-[#E2E8F0] flex items-center justify-between shrink-0 h-20">
+                                <div className="px-6 py-4 bg-[#FFFFFF] border-b border-[#E2E8F0] flex items-center justify-between shrink-0 h-20 relative">
                                     <div className="flex items-center gap-4 min-w-0">
                                         <div className="relative shrink-0">
                                             <div className="w-10 h-10 rounded-xl bg-[#5A42E4] flex items-center justify-center font-bold text-lg text-white shadow-sm">
-                                                {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
-                                                    ? 'A'
-                                                    : (conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone)?.substring(0, 1)
-                                                }
+                                                {displayName ? displayName.substring(0, 1).toUpperCase() : 'C'}
                                             </div>
                                             <div className="absolute -right-0.5 -bottom-0.5 w-3 h-3 bg-[#10B981] border-2 border-white rounded-full"></div>
                                         </div>
                                         <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <h4 className="font-bold text-sm text-[#1A1D20] tracking-tight truncate">
-                                                    {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
-                                                        ? (conversations.find(c => c.id === activeConversation)?.metadata.applicationNumber || getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId))
-                                                        : (conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone)
-                                                    }
+                                                    {displayName}
                                                 </h4>
+
+                                                {/* Save / Edit Contact Name button right next to title */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setNameInput(savedName || activeConv?.customerName || '');
+                                                        setShowSaveNameModal(true);
+                                                    }}
+                                                    className="px-2.5 py-1 bg-[#F2F0FF] hover:bg-[#5A42E4] text-[#5A42E4] hover:text-white text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 border border-[#5A42E4]/25 cursor-pointer shadow-xs"
+                                                    title="Save or edit contact name for this number"
+                                                >
+                                                    <span className="material-symbols-outlined text-[14px]">edit_note</span>
+                                                    {savedName ? "Edit Name" : "+ Save Name"}
+                                                </button>
+
                                                 <span className="px-2 py-0.5 bg-[#F2F0FF] text-[#5A42E4] text-[9px] font-bold uppercase tracking-wider rounded border border-[#5A42E4]/20 whitespace-nowrap">
-                                                    {conversations.find(c => c.id === activeConversation)?.metadata?.type === 'agent_to_staff' ? 'RM DISCUSSION' : 'STAFF CHANNEL'}
+                                                    {activeConv?.metadata?.type === 'agent_to_staff' ? 'RM DISCUSSION' : 'STAFF CHANNEL'}
                                                 </span>
                                             </div>
-                                            <p className="text-[10px] text-[#8A94A6] truncate mt-0.5 font-medium">
-                                                {conversations.find(c => c.id === activeConversation)?.customerEmail || 'support@student-loan.org'}
+                                            <p className="text-[10px] text-[#8A94A6] truncate mt-0.5 font-medium flex items-center gap-2">
+                                                <span>{activeConv?.customerEmail || 'support@student-loan.org'}</span>
+                                                {activeConv?.customerPhone && (
+                                                    <span className="font-mono text-[#5A42E4]">({activeConv.customerPhone})</span>
+                                                )}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex items-center gap-2 shrink-0 relative">
                                         <button
                                             onClick={openStudentDocuments}
                                             className={`px-4 py-2 border rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer ${showDocPanel
@@ -1286,9 +1385,55 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                                                 </span>
                                             )}
                                         </button>
-                                        <button className="w-9 h-9 flex items-center justify-center text-[#8A94A6] hover:text-[#1A1D20] hover:bg-[#F8F9FC] rounded-xl border border-[#E2E8F0] transition-all cursor-pointer">
+                                        
+                                        {/* Options Menu Button (Three Dots) */}
+                                        <button
+                                            onClick={() => setShowHeaderMenu(prev => !prev)}
+                                            className="w-9 h-9 flex items-center justify-center text-[#8A94A6] hover:text-[#1A1D20] hover:bg-[#F8F9FC] rounded-xl border border-[#E2E8F0] transition-all cursor-pointer"
+                                            title="Chat Options"
+                                        >
                                             <span className="material-symbols-outlined text-[18px]">more_vert</span>
                                         </button>
+
+                                        {/* Options Dropdown Menu */}
+                                        {showHeaderMenu && (
+                                            <div className="absolute right-0 top-12 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-2 animate-scale-up font-sans">
+                                                <button
+                                                    onClick={() => {
+                                                        setShowHeaderMenu(false);
+                                                        setNameInput(savedName || activeConv?.customerName || '');
+                                                        setShowSaveNameModal(true);
+                                                    }}
+                                                    className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2.5 border-0 cursor-pointer"
+                                                >
+                                                    <span className="material-symbols-outlined text-base text-indigo-600">edit_note</span>
+                                                    Save / Edit Contact Name
+                                                </button>
+                                                {activeConv?.customerPhone && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowHeaderMenu(false);
+                                                            navigator.clipboard.writeText(activeConv.customerPhone);
+                                                            alert(`Phone number (${activeConv.customerPhone}) copied to clipboard!`);
+                                                        }}
+                                                        className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2.5 border-0 cursor-pointer"
+                                                    >
+                                                        <span className="material-symbols-outlined text-base text-slate-500">content_copy</span>
+                                                        Copy Phone Number
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => {
+                                                        setShowHeaderMenu(false);
+                                                        openStudentDocuments();
+                                                    }}
+                                                    className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2.5 border-0 cursor-pointer"
+                                                >
+                                                    <span className="material-symbols-outlined text-base text-slate-500">folder_open</span>
+                                                    View Student Documents
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -1590,7 +1735,8 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                                     </div>
                                 </div>
                             </>
-                        ) : (
+                            );
+                        })() : (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F8F9FC] font-sans">
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#5A42E4]/3 to-transparent"></div>
                                 <div className="text-center relative z-10 animate-fade-in px-6">
@@ -1824,6 +1970,83 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                         </div>
                     </div>
                 )}
+
+                {/* Save Contact Name Modal */}
+                {showSaveNameModal && (() => {
+                    const activeConv = conversations.find(c => c.id === activeConversation);
+                    const phone = activeConv?.customerPhone || activeConv?.id || '';
+
+                    return (
+                        <div
+                            className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+                            onClick={() => setShowSaveNameModal(false)}
+                        >
+                            <div
+                                className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200 font-sans"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold border border-indigo-200">
+                                            <span className="material-symbols-outlined text-xl">edit_note</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-bold text-slate-900">Save Contact Name</h3>
+                                            <p className="text-xs text-slate-500 font-medium">Assign a custom name to this number</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSaveNameModal(false)}
+                                        className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors border-0 cursor-pointer"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">close</span>
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleSaveContactNameSubmit} className="space-y-4">
+                                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Contact Number / ID</span>
+                                        <p className="text-xs font-bold font-mono text-indigo-600">{phone}</p>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                            Contact Name <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={nameInput}
+                                            onChange={e => setNameInput(e.target.value)}
+                                            placeholder="Enter name (e.g. Rahul Sharma, Priya P)"
+                                            className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all"
+                                            autoFocus
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-end gap-2.5 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowSaveNameModal(false)}
+                                            className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={savingName || !nameInput.trim()}
+                                            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                                        >
+                                            {savingName && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                            {savingName ? "Saving..." : "Save Contact Name"}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
         );
     }

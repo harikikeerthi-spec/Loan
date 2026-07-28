@@ -237,13 +237,6 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
 
                 {/* Page Navigation Tabs */}
                 <div className="flex flex-wrap items-center gap-2 bg-white/10 p-1.5 rounded-2xl border border-white/20 shrink-0 w-full md:w-auto">
-                    <Link
-                        href={homeUrl}
-                        className="flex-1 md:flex-none px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 border-0 text-white hover:bg-white/20 no-underline cursor-pointer"
-                    >
-                        <span className="material-symbols-outlined text-base">home</span>
-                        Go to Home
-                    </Link>
                     <button
                         type="button"
                         onClick={() => { setActiveTab("my_tickets"); setCreatedTicketNum(null); }}

@@ -231,6 +231,98 @@ export class BankWorkflowService {
   }
 
   /**
+   * Send (or re-send) the full application email package to the target bank.
+   * This is triggered manually from the Incoming Queue "Send Mail" action.
+   */
+  async sendApplicationEmailToBank(
+    applicationId: string,
+    bankId: string,
+    bankName: string,
+    sentBy: string,
+    recipientEmail?: string,
+  ) {
+    // Fetch application
+    const { data: application, error: appError } = await this.db.client
+      .from('LoanApplication')
+      .select('*')
+      .eq('id', applicationId)
+      .single();
+
+    if (appError || !application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    // Fetch documents list
+    let documents: any[] = [];
+    try {
+      const { data: docs } = await this.db.client
+        .from('Document')
+        .select('name, type, status, url')
+        .eq('applicationId', applicationId);
+      if (docs) documents = docs;
+    } catch (e: any) {
+      console.warn('[sendApplicationEmailToBank] Could not load documents:', e.message);
+    }
+
+    // Fetch student name
+    let studentName = 'Student';
+    try {
+      const { data: student } = await this.db.client
+        .from('User')
+        .select('firstName, lastName, email, phone')
+        .eq('id', application.userId)
+        .single();
+      if (student) {
+        studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student';
+      }
+    } catch (e: any) {
+      console.warn('[sendApplicationEmailToBank] Failed to load student name:', e.message);
+    }
+
+    // Resolve target bank email
+    let bankEmail = '';
+    try {
+      const { data: bankProfile } = await this.db.client
+        .from('Bank')
+        .select('email')
+        .eq('shortName', bankId)
+        .single();
+      if (bankProfile?.email) bankEmail = bankProfile.email;
+    } catch (e: any) {
+      console.warn('[sendApplicationEmailToBank] Failed to load bank email:', e.message);
+    }
+
+    const fallbackEmails: Record<string, string> = {
+      avanse: 'avansebank01@gmail.com',
+      auxilo: 'auxilobank01@gmail.com',
+      idfc: 'idfcbank01@gmail.com',
+      poonawalla: 'poonawallabank01@gmail.com',
+      credila: 'credilabank01@gmail.com',
+    };
+    const targetEmail = (recipientEmail && recipientEmail.trim()) || bankEmail || fallbackEmails[bankId] || `${bankId}bank01@gmail.com`;
+
+    // Build enriched application object for email
+    const enrichedApplication = {
+      ...application,
+      documents,
+    };
+
+    // Send the detailed application package email
+    await this.emailService.sendApplicationPackageToBank(
+      targetEmail,
+      bankName,
+      enrichedApplication,
+      studentName,
+    );
+
+    return {
+      success: true,
+      message: `Application package emailed to ${bankName} at ${targetEmail}`,
+      sentTo: targetEmail,
+    };
+  }
+
+  /**
    * Log file (FILE_LOGGED) - Bank assigns LAN and logs file
    */
   async logFile(

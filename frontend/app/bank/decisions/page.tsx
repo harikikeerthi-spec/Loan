@@ -42,7 +42,8 @@ export default function DecisionsHub() {
     // Workspace & Appraisal panel state
     const [selectedApp, setSelectedApp] = useState<any | null>(null);
     const [showWorkspace, setShowWorkspace] = useState(false);
-    
+    const [currentStep, setCurrentStep] = useState<number>(1);
+
     // F4 Tab selection: sanction | conditional | counter_offer | reject | queries | letter
     const [activeDecisionTab, setActiveDecisionTab] = useState<"sanction" | "conditional" | "counter_offer" | "reject" | "queries" | "letter">("sanction");
 
@@ -156,6 +157,9 @@ export default function DecisionsHub() {
     const [rejectionCategory, setRejectionCategory] = useState("CIBIL");
     const [rejectionReason, setRejectionReason] = useState("Unsatisfactory CIBIL/Credit Score");
 
+    const isStep1Valid = Boolean(dataConsentVerified);
+    const isStep2Valid = Boolean(interestRate && sanctionAmount);
+
     useEffect(() => {
         setMounted(true);
         if (typeof window !== "undefined") {
@@ -212,9 +216,9 @@ export default function DecisionsHub() {
                 setTimelineEvents(res.data.timeline.map((h: any) => ({
                     id: h.id,
                     icon: h.toStatus === 'sanctioned' || h.toStatus === 'approved' ? 'check_circle' :
-                          h.toStatus === 'rejected' ? 'cancel' :
-                          h.toStatus === 'query_raised' ? 'help_center' :
-                          h.toStatus === 'file_logged' ? 'assignment_ind' : 'info',
+                        h.toStatus === 'rejected' ? 'cancel' :
+                            h.toStatus === 'query_raised' ? 'help_center' :
+                                h.toStatus === 'file_logged' ? 'assignment_ind' : 'info',
                     actor: h.changedByName || "System",
                     text: h.changeReason || h.notes || `Status changed to ${h.toStatus}`,
                     timestamp: format(new Date(h.createdAt), "dd MMM yyyy, hh:mm a"),
@@ -262,6 +266,7 @@ export default function DecisionsHub() {
         setSelectedApp(row);
         setSanctionAmount(row.amount ? row.amount.toString() : "");
         setCounterAmount(row.amount ? (row.amount * 0.9).toString() : "");
+        setCurrentStep(1);
         setShowWorkspace(true);
 
         try {
@@ -304,7 +309,7 @@ export default function DecisionsHub() {
                             parsedConds = typeof condDecision.conditions === 'string'
                                 ? JSON.parse(condDecision.conditions)
                                 : condDecision.conditions;
-                        } catch (e) {}
+                        } catch (e) { }
                         if (Array.isArray(parsedConds)) {
                             setConditions(parsedConds.map((c: any, index: number) => ({
                                 id: c.id || String(index + 1),
@@ -329,7 +334,7 @@ export default function DecisionsHub() {
                             ? JSON.parse(counterDecision.counterOffer)
                             : (counterDecision.counterOffer || counterDecision.counterOfferTerms);
                         if (typeof terms === 'string') terms = JSON.parse(terms);
-                    } catch (e) {}
+                    } catch (e) { }
                     if (terms) {
                         setCounterAmount(terms.offeredAmount ? terms.offeredAmount.toString() : (terms.sanctionAmount ? terms.sanctionAmount.toString() : ""));
                         setCounterRate(terms.offeredRate ? terms.offeredRate.toString() : (terms.interestRate ? terms.interestRate.toString() : "9.25"));
@@ -420,7 +425,7 @@ export default function DecisionsHub() {
                 content: newQueryText.trim()
             });
             setNewQueryText("");
-            
+
             const detailRes = await bankApi.getFileDetail(selectedApp.id);
             if (detailRes) {
                 setSelectedApp(detailRes);
@@ -437,7 +442,7 @@ export default function DecisionsHub() {
         setSubmitting(true);
         try {
             const openQueries = selectedApp.queries?.filter((q: any) => q.status === 'open') || [];
-            
+
             for (const q of openQueries) {
                 await bankApi.resolveQuery(q.id).catch(err => console.error("Error resolving query", q.id, err));
             }
@@ -478,7 +483,7 @@ export default function DecisionsHub() {
     // Filtered Applications for Table
     const filteredApps = useMemo(() => {
         return applications.filter(app => {
-            const matchesSearch = 
+            const matchesSearch =
                 (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||
                 (`${app.firstName || ""} ${app.lastName || ""}`).toLowerCase().includes(search.toLowerCase()) ||
                 (app.lanNumber || "").toLowerCase().includes(search.toLowerCase());
@@ -642,7 +647,7 @@ export default function DecisionsHub() {
             await adminApi.updateApplication(selectedApp.id, { remarks: newRemarks });
             setIsHold(true);
             setShowHoldModal(false);
-            
+
             // Add note to audit trail
             await adminApi.addRemark(selectedApp.id, {
                 type: 'remark',
@@ -754,7 +759,7 @@ export default function DecisionsHub() {
         try {
             const amendedAmtVal = parseFloat(amendedAmount || sanctionAmount || selectedApp.amount);
             const amendedRateVal = parseFloat(amendedRate);
-            
+
             await bankApi.amendDecision(lastDecision.id, {
                 applicationId: selectedApp.id,
                 details: {
@@ -912,11 +917,11 @@ export default function DecisionsHub() {
             accessorKey: "firstName",
             cell: (row: any) => (
                 <div>
-                    <span className="font-bold text-gray-900 block uppercase tracking-tight">
+                    <span className="text-[14.5px] font-bold text-slate-950 block font-sans leading-tight">
                         {row.firstName} {row.lastName}
                     </span>
-                    <span className="text-[10px] text-gray-400 block truncate max-w-[220px]">
-                        {row.universityName}
+                    <span className="text-xs text-slate-400 block truncate max-w-[220px] font-sans mt-0.5 font-medium">
+                        {row.universityName || "Foreign University"}
                     </span>
                 </div>
             )
@@ -942,13 +947,12 @@ export default function DecisionsHub() {
                 const expiry = calculateExpiry(row.createdAt);
                 return (
                     <div>
-                        <span className={`inline-flex items-center px-2 py-0.5 border rounded-lg text-[8.5px] font-black uppercase tracking-wider ${
-                            expiry.statusColor === "red" 
-                                ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse" 
+                        <span className={`inline-flex items-center px-2 py-0.5 border rounded-lg text-[8.5px] font-black uppercase tracking-wider ${expiry.statusColor === "red"
+                                ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse"
                                 : expiry.statusColor === "yellow"
                                     ? "bg-amber-50 border-amber-200 text-amber-600"
                                     : "bg-emerald-50 border-emerald-200 text-emerald-600"
-                        }`}>
+                            }`}>
                             <span className="material-symbols-outlined text-[10px] mr-1">timer</span>
                             {expiry.isExpired ? "Expired" : `${expiry.daysLeft} days left`}
                         </span>
@@ -987,84 +991,85 @@ export default function DecisionsHub() {
     return (
         <div className="w-full space-y-6 relative z-10">
             {/* Header */}
-            <PageHeader 
-                title="Underwriting Appraisal Workspace" 
-                description="Perform credit appraisal, sanction rates, define covenants, customize counter-offers, and record final verdicts."
-                moduleName="Underwriting Matrix"
-                icon="gavel"
-                actionSlot={
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative">
-                            <input 
-                                type="text"
-                                placeholder="Search student, LAN, ID..." 
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-10 pr-4 py-2.5 w-full sm:w-64 bg-white/70 backdrop-blur-md border border-purple-100 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
-                            />
-                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
-                        </div>
-                        <button 
-                            onClick={handleRefresh}
-                            className="px-4 py-2.5 border border-purple-100 bg-white/70 hover:bg-white text-[10px] font-black uppercase tracking-widest text-[#6605c7] rounded-xl shadow-sm transition-all flex items-center gap-2"
-                        >
-                            <span className="material-symbols-outlined text-xs">sync</span> Refresh
-                        </button>
-                    </div>
-                }
-            />
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 font-sans">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-[#0A2540]">
+                        Underwriting Appraisal Workspace
+                    </h2>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                        Perform credit appraisal, sanction rates, define covenants, customize counter-offers, and record final verdicts.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleRefresh}
+                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">refresh</span>
+                        Refresh
+                    </button>
+                </div>
+            </div>
 
             {/* Credit Metrics Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="glass-card bg-white/70 p-4.5 rounded-2xl border-purple-100/50 flex items-center justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 font-sans">
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
                     <div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Appraisals Completed</p>
-                        <p className="text-2xl font-black text-gray-900 mt-1 font-display">{stats.totalDecisions}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Appraisals Completed</p>
+                        <p className="text-[28px] font-bold leading-none text-slate-900 mt-1.5">{stats.totalDecisions}</p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-[#6605c7]">
-                        <span className="material-symbols-outlined">verified</span>
+                    <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-700 border border-purple-100">
+                        <span className="material-symbols-outlined text-xl">verified</span>
                     </div>
                 </div>
-                <div className="glass-card bg-white/70 p-4.5 rounded-2xl border-purple-100/50 flex items-center justify-between">
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
                     <div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest font-sans">Pending Audit Files</p>
-                        <p className="text-2xl font-black text-gray-900 mt-1 font-display">{stats.pendingDecisions}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pending Audit Files</p>
+                        <p className="text-[28px] font-bold leading-none text-slate-900 mt-1.5">{stats.pendingDecisions}</p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-                        <span className="material-symbols-outlined">pending_actions</span>
+                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100">
+                        <span className="material-symbols-outlined text-xl">pending_actions</span>
                     </div>
                 </div>
-                <div className="glass-card bg-white/70 p-4.5 rounded-2xl border-purple-100/50 flex items-center justify-between">
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
                     <div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Active System Queries</p>
-                        <p className="text-2xl font-black text-gray-900 mt-1 font-display">{stats.queryRaised}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active System Queries</p>
+                        <p className="text-[28px] font-bold leading-none text-slate-900 mt-1.5">{stats.queryRaised}</p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                        <span className="material-symbols-outlined">help_center</span>
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
+                        <span className="material-symbols-outlined text-xl">help_center</span>
                     </div>
                 </div>
             </div>
 
             {/* Decisions Queue Table Card */}
-            <div className="bg-white/80 backdrop-blur-xl border border-purple-50 rounded-3xl shadow-xl p-6 overflow-hidden">
-                <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                    <div className="flex gap-2">
-                        {["all", "pending", "approved", "rejected"].map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setFilterStatus(tab)}
-                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                    filterStatus === tab
-                                        ? "bg-[#6605c7] text-white shadow-md shadow-purple-500/20"
-                                        : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                }`}
-                            >
-                                {tab === "all" ? "All Applications" : tab === "pending" ? "Pending Credit Evaluation" : tab}
-                            </button>
-                        ))}
+            <div className="rounded-[24px] border border-slate-100 overflow-hidden shadow-sm bg-white font-sans">
+                {/* Pill Tabs Header */}
+                <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-white">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        {[
+                            { key: "all", label: "ALL APPLICATIONS" },
+                            { key: "pending", label: "PENDING CREDIT EVALUATION" },
+                            { key: "approved", label: "APPROVED" },
+                            { key: "rejected", label: "REJECTED" },
+                        ].map((tab) => {
+                            const isActive = filterStatus === tab.key;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setFilterStatus(tab.key)}
+                                    className={`px-4 py-2.5 rounded-xl text-[11.5px] font-black uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${isActive
+                                            ? "bg-[#6605c7] text-white shadow-md shadow-purple-500/20"
+                                            : "bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200/60"
+                                        }`}
+                                >
+                                    <span>{tab.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest font-mono">
-                        Active Queue: {filteredApps.length} folders
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+                        ACTIVE QUEUE: {filteredApps.length} FOLDERS
                     </span>
                 </div>
 
@@ -1077,13 +1082,13 @@ export default function DecisionsHub() {
                 )}
             </div>
 
-            {/* Immersive Underwriting Workspace Side Panel (Overlay) */}
+            {/* Immersive Multi-Step Progressive Appraisal Workspace Side Panel (Overlay) */}
             <AnimatePresence>
                 {showWorkspace && selectedApp && (
-                    <div className="fixed inset-0 z-50 flex justify-end">
+                    <div className="fixed inset-0 z-[100] flex justify-end font-sans">
                         {/* Backdrop */}
                         <div className="fixed inset-0 bg-black/45 backdrop-blur-xs" onClick={() => setShowWorkspace(false)} />
-                        
+
                         {/* Appraisal Sidebar */}
                         <motion.div
                             initial={{ x: "100%" }}
@@ -1092,27 +1097,93 @@ export default function DecisionsHub() {
                             transition={{ type: "spring", damping: 30, stiffness: 220 }}
                             className="relative w-full max-w-[1100px] h-screen bg-[#faf9fc] shadow-2xl z-10 flex flex-col overflow-hidden border-l border-purple-100"
                         >
-                            {/* Workspace Header */}
-                            <div className="p-6 bg-white border-b border-purple-50 flex items-center justify-between sticky top-0 z-20">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-[#6605c7] bg-purple-50 px-2 py-0.5 rounded">
-                                            {selectedApp.applicationNumber}
-                                        </span>
-                                        <span className="text-[8.5px] font-black uppercase tracking-wider text-gray-400">
-                                            LAN: {selectedApp.lanNumber || "PENDING"}
-                                        </span>
+                            {/* TOP HEADER & STEPPER TRACK */}
+                            <div className="bg-slate-900 text-white p-6 pb-4 shrink-0 sticky top-0 z-20">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-purple-400 bg-purple-950 px-2 py-0.5 rounded border border-purple-800">
+                                                {selectedApp.applicationNumber}
+                                            </span>
+                                            <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-400">
+                                                LAN: {selectedApp.lanNumber || "PENDING"}
+                                            </span>
+                                        </div>
+                                        <h2 className="text-xl font-bold mt-1 text-white">
+                                            Credit Appraisal: {selectedApp.firstName} {selectedApp.lastName}
+                                        </h2>
                                     </div>
-                                    <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight mt-1 font-display">
-                                        Credit Appraisal: {selectedApp.firstName} {selectedApp.lastName}
-                                    </h2>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowWorkspace(false)}
+                                        className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-rose-900/50 hover:text-rose-400 transition-all border border-slate-700 cursor-pointer"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">close</span>
+                                    </button>
                                 </div>
-                                <button 
-                                    onClick={() => setShowWorkspace(false)}
-                                    className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-rose-50 hover:text-rose-500 transition-all border border-gray-100"
-                                >
-                                    <span className="material-symbols-outlined text-lg">close</span>
-                                </button>
+
+                                {/* PROGRESSIVE CANVAS STEPPER TRACK */}
+                                <div className="flex items-center justify-between max-w-3xl mx-auto pt-2 pb-1">
+                                    {/* STEP 1 */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentStep(1)}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
+                                            currentStep === 1
+                                                ? 'bg-[#6605c7] text-white shadow-lg shadow-purple-500/30'
+                                                : isStep1Valid
+                                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                                                : 'bg-slate-800 text-slate-400'
+                                        }`}
+                                    >
+                                        {isStep1Valid ? (
+                                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                                        ) : (
+                                            <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px]">1</span>
+                                        )}
+                                        <span>1. Risk & Verification</span>
+                                    </button>
+
+                                    <span className="material-symbols-outlined text-slate-600 text-sm">chevron_right</span>
+
+                                    {/* STEP 2 */}
+                                    <button
+                                        type="button"
+                                        onClick={() => isStep1Valid && setCurrentStep(2)}
+                                        disabled={!isStep1Valid}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
+                                            currentStep === 2
+                                                ? 'bg-[#6605c7] text-white shadow-lg shadow-purple-500/30'
+                                                : isStep2Valid
+                                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                                                : 'bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed'
+                                        }`}
+                                    >
+                                        {isStep2Valid ? (
+                                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                                        ) : (
+                                            <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px]">2</span>
+                                        )}
+                                        <span>2. Financials & Fees</span>
+                                    </button>
+
+                                    <span className="material-symbols-outlined text-slate-600 text-sm">chevron_right</span>
+
+                                    {/* STEP 3 */}
+                                    <button
+                                        type="button"
+                                        onClick={() => isStep1Valid && isStep2Valid && setCurrentStep(3)}
+                                        disabled={!isStep1Valid || !isStep2Valid}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
+                                            currentStep === 3
+                                                ? 'bg-[#6605c7] text-white shadow-lg shadow-purple-500/30'
+                                                : 'bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed'
+                                        }`}
+                                    >
+                                        <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px]">3</span>
+                                        <span>3. Final Verdict & Submission</span>
+                                    </button>
+                                </div>
                             </div>
 
                             {/* F11: Expiry Alerts Warnings */}
@@ -1138,10 +1209,10 @@ export default function DecisionsHub() {
 
                             {/* Split Workspace Body */}
                             <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col lg:flex-row min-h-0 bg-[#fbfbff]">
-                                
+
                                 {/* LEFT COLUMN: F4 Decision Forms workspace (60% width) */}
                                 <div className="flex-1 lg:w-3/5 p-6 space-y-6 overflow-y-auto custom-scrollbar border-r border-purple-50/50">
-                                    
+
                                     {/* Underwriting Dashboard Header Info & SLA Status (F33 SLA Status Banner) */}
                                     {isHold && (
                                         <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-[10.5px] font-bold flex items-center justify-between animate-pulse">
@@ -1159,156 +1230,172 @@ export default function DecisionsHub() {
                                         </div>
                                     )}
 
-                                    {/* Applicant brief & Metrics Dashboard */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Brief details Card */}
-                                        <div className="p-4 bg-white rounded-2xl border border-purple-50 shadow-sm space-y-3">
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Course Program</span>
-                                                    <span className="text-xs font-bold text-gray-900 block truncate">{selectedApp.courseName || "STEM Studies"}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Academic Body</span>
-                                                    <span className="text-xs font-bold text-gray-900 block truncate">{selectedApp.universityName}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-between items-center pt-2 border-t border-purple-50/50">
-                                                <div>
-                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Requested Quantum</span>
-                                                    <span className="text-xs font-black text-[#6605c7] block">₹{selectedApp.amount?.toLocaleString()}</span>
-                                                </div>
-                                                
-                                                {/* F22 Concurrent Files Warning Badge */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowCrossBankPop(true)}
-                                                    className="px-2.5 py-1 bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-100 text-[8px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1"
-                                                >
-                                                    <span className="material-symbols-outlined text-[10px] animate-pulse">report</span>
-                                                    2 Concurrent Files
-                                                </button>
-                                            </div>
-
-                                            {/* F33 Hold Toggle */}
-                                            <div className="flex justify-between items-center pt-2 border-t border-purple-50/50">
-                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Workflow State</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (isHold) {
-                                                            handleResumeFlow();
-                                                        } else {
-                                                            setShowHoldModal(true);
-                                                        }
-                                                    }}
-                                                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 ${
-                                                        isHold 
-                                                            ? "bg-amber-600 hover:bg-amber-700 text-white" 
-                                                            : "bg-gray-100 border border-gray-200 text-gray-650 hover:bg-gray-200"
-                                                    }`}
-                                                >
-                                                    <span className="material-symbols-outlined text-xs">{isHold ? "play_arrow" : "pause"}</span>
-                                                    {isHold ? "Resume SLA" : "Hold File"}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Underwriting Indicators (Consent, Quality, AI) */}
-                                        <div className="p-4 bg-white rounded-2xl border border-purple-50 shadow-sm space-y-3">
-                                            {/* F23 Consent Check Bar */}
-                                            <label className="flex items-center justify-between p-2 bg-emerald-50/40 border border-emerald-100 rounded-xl cursor-pointer select-none">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="material-symbols-outlined text-emerald-600 text-xs">verified_user</span>
-                                                    <span className="text-[9.5px] font-black text-emerald-700 uppercase tracking-wider">Data Consent</span>
-                                                </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={dataConsentVerified}
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setDataConsentVerified(checked);
-                                                        if (selectedApp) {
-                                                            try {
-                                                                await bankApi.recordConsent(selectedApp.id, { 
-                                                                    consentType: "officer_override" 
-                                                                });
-                                                            } catch (err) {
-                                                                console.error("Failed to record consent in backend:", err);
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="w-4 h-4 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded cursor-pointer animate-pulse"
-                                                />
-                                            </label>
-
-                                            {/* 4-Dimensional Quality Rating */}
-                                            <div className="space-y-2 border-t border-purple-50/50 pt-2.5 text-left">
-                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-2">Quality Rating Matrix</span>
-                                                
-                                                {[
-                                                    { label: "Document Completeness", val: qualityCompleteness, setVal: setQualityCompleteness },
-                                                    { label: "KYC Verification Check", val: qualityKyc, setVal: setQualityKyc },
-                                                    { label: "Income & Credit Stability", val: qualityIncome, setVal: setQualityIncome },
-                                                    { label: "Collateral & Course Validity", val: qualityCollateral, setVal: setQualityCollateral }
-                                                ].map((dim, dIdx) => (
-                                                    <div key={dIdx} className="flex justify-between items-center text-xs">
-                                                        <span className="text-gray-500 font-semibold">{dim.label}</span>
-                                                        <div className="flex items-center gap-0.5">
-                                                            {[1, 2, 3, 4, 5].map(star => (
-                                                                <span
-                                                                    key={star}
-                                                                    onClick={() => dim.setVal(star)}
-                                                                    className={`material-symbols-outlined text-xs cursor-pointer transition-all ${
-                                                                        star <= dim.val ? "text-amber-400" : "text-gray-300"
-                                                                    }`}
-                                                                    style={{ fontVariationSettings: star <= dim.val ? "'FILL' 1" : undefined }}
-                                                                >
-                                                                    star
-                                                                </span>
-                                                            ))}
+                                    {/* STEP 1: Risk & Verification */}
+                                    {currentStep === 1 && (
+                                        <div className="space-y-6 animate-fade-in">
+                                            {/* Applicant brief & Metrics Dashboard */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* Brief details Card */}
+                                                <div className="p-4 bg-white rounded-2xl border border-purple-50 shadow-sm space-y-3">
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Course Program</span>
+                                                            <span className="text-xs font-bold text-gray-900 block truncate">{selectedApp.courseName || "STEM Studies"}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Academic Body</span>
+                                                            <span className="text-xs font-bold text-gray-900 block truncate">{selectedApp.universityName}</span>
                                                         </div>
                                                     </div>
-                                                ))}
-                                                <div className="mt-2 flex gap-2 items-center">
-                                                    <div className="flex-1">
-                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Quality Comments</label>
-                                                        <textarea
-                                                            value={qualityComments}
-                                                            onChange={e => setQualityComments(e.target.value)}
-                                                            rows={2}
-                                                            className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold focus:outline-none focus:border-[#6605c7]"
-                                                            placeholder="Provide quality checks comments..."
-                                                        />
+                                                    <div className="flex justify-between items-center pt-2 border-t border-purple-50/50">
+                                                        <div>
+                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Requested Quantum</span>
+                                                            <span className="text-xs font-black text-[#6605c7] block">₹{selectedApp.amount?.toLocaleString()}</span>
+                                                        </div>
+
+                                                        {/* F22 Concurrent Files Warning Badge */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowCrossBankPop(true)}
+                                                            className="px-2.5 py-1 bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-100 text-[8px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[10px] animate-pulse">report</span>
+                                                            2 Concurrent Files
+                                                        </button>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            saveQualityRating(qualityCompleteness, qualityKyc, qualityIncome, qualityCollateral, qualityComments);
-                                                            alert("⭐ Quality ratings saved successfully!");
-                                                        }}
-                                                        className="px-2.5 py-1.5 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[8px] font-black uppercase rounded-lg shadow-sm self-end"
-                                                    >
-                                                        Save
-                                                    </button>
+
+                                                    {/* F33 Hold Toggle */}
+                                                    <div className="flex justify-between items-center pt-2 border-t border-purple-50/50">
+                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Workflow State</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (isHold) {
+                                                                    handleResumeFlow();
+                                                                } else {
+                                                                    setShowHoldModal(true);
+                                                                }
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 ${isHold
+                                                                    ? "bg-amber-600 hover:bg-amber-700 text-white"
+                                                                    : "bg-gray-100 border border-gray-200 text-gray-650 hover:bg-gray-200"
+                                                                }`}
+                                                        >
+                                                            <span className="material-symbols-outlined text-xs">{isHold ? "play_arrow" : "pause"}</span>
+                                                            {isHold ? "Resume SLA" : "Hold File"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Underwriting Indicators (Consent, Quality, AI) */}
+                                                <div className="p-4 bg-white rounded-2xl border border-purple-50 shadow-sm space-y-3">
+                                                    {/* F23 Consent Check Bar */}
+                                                    <label className="flex items-center justify-between p-2 bg-emerald-50/40 border border-emerald-100 rounded-xl cursor-pointer select-none">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-emerald-600 text-xs">verified_user</span>
+                                                            <span className="text-[9.5px] font-black text-emerald-700 uppercase tracking-wider">Data Consent</span>
+                                                        </div>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={dataConsentVerified}
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setDataConsentVerified(checked);
+                                                                if (selectedApp) {
+                                                                    try {
+                                                                        await bankApi.recordConsent(selectedApp.id, {
+                                                                            consentType: "officer_override"
+                                                                        });
+                                                                    } catch (err) {
+                                                                        console.error("Failed to record consent in backend:", err);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded cursor-pointer animate-pulse"
+                                                        />
+                                                    </label>
+
+                                                    {/* 4-Dimensional Quality Rating */}
+                                                    <div className="space-y-2 border-t border-purple-50/50 pt-2.5 text-left">
+                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-2">Quality Rating Matrix</span>
+
+                                                        {[
+                                                            { label: "Document Completeness", val: qualityCompleteness, setVal: setQualityCompleteness },
+                                                            { label: "KYC Verification Check", val: qualityKyc, setVal: setQualityKyc },
+                                                            { label: "Income & Credit Stability", val: qualityIncome, setVal: setQualityIncome },
+                                                            { label: "Collateral & Course Validity", val: qualityCollateral, setVal: setQualityCollateral }
+                                                        ].map((dim, dIdx) => (
+                                                            <div key={dIdx} className="flex justify-between items-center text-xs">
+                                                                <span className="text-gray-500 font-semibold">{dim.label}</span>
+                                                                <div className="flex items-center gap-0.5">
+                                                                    {[1, 2, 3, 4, 5].map(star => (
+                                                                        <span
+                                                                            key={star}
+                                                                            onClick={() => dim.setVal(star)}
+                                                                            className={`material-symbols-outlined text-xs cursor-pointer transition-all ${star <= dim.val ? "text-amber-400" : "text-gray-300"
+                                                                                }`}
+                                                                            style={{ fontVariationSettings: star <= dim.val ? "'FILL' 1" : undefined }}
+                                                                        >
+                                                                            star
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        <div className="mt-2 flex gap-2 items-center">
+                                                            <div className="flex-1">
+                                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Quality Comments</label>
+                                                                <textarea
+                                                                    value={qualityComments}
+                                                                    onChange={e => setQualityComments(e.target.value)}
+                                                                    rows={2}
+                                                                    className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold focus:outline-none focus:border-[#6605c7]"
+                                                                    placeholder="Provide quality checks comments..."
+                                                                />
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    saveQualityRating(qualityCompleteness, qualityKyc, qualityIncome, qualityCollateral, qualityComments);
+                                                                    alert("⭐ Quality ratings saved successfully!");
+                                                                }}
+                                                                className="px-2.5 py-1.5 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[8px] font-black uppercase rounded-lg shadow-sm self-end"
+                                                            >
+                                                                Save
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* F47 AI Credit Score Gauge */}
+                                                    <div className="flex justify-between items-center pt-2 border-t border-purple-50/50">
+                                                        <div>
+                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block font-sans">AI Risk Profile</span>
+                                                            <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider mt-0.5 block">LOW RISK EXPOSURE</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="relative w-8 h-8 rounded-full border-2 border-emerald-500/20 flex items-center justify-center">
+                                                                <span className="text-[10px] font-black text-emerald-600 font-mono">{aiScore}%</span>
+                                                                <div className="absolute inset-0 rounded-full border-2 border-emerald-500 border-t-transparent border-r-transparent animate-spin-slow pointer-events-none" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            
-                                            {/* F47 AI Credit Score Gauge */}
-                                            <div className="flex justify-between items-center pt-2 border-t border-purple-50/50">
-                                                <div>
-                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block font-sans">AI Risk Profile</span>
-                                                    <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider mt-0.5 block">LOW RISK EXPOSURE</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="relative w-8 h-8 rounded-full border-2 border-emerald-500/20 flex items-center justify-center">
-                                                        <span className="text-[10px] font-black text-emerald-600 font-mono">{aiScore}%</span>
-                                                        <div className="absolute inset-0 rounded-full border-2 border-emerald-500 border-t-transparent border-r-transparent animate-spin-slow pointer-events-none" />
-                                                    </div>
-                                                </div>
+
+                                            {/* Step 1 Navigation Action */}
+                                            <div className="flex justify-end pt-4 border-t border-purple-50">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentStep(2)}
+                                                    disabled={!isStep1Valid}
+                                                    className="px-6 py-3 bg-[#6605c7] hover:bg-[#5203a4] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2 cursor-pointer"
+                                                >
+                                                    <span>Proceed to Financials</span>
+                                                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                                </button>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     {/* F22 Concurrent Comparison Popover Overlay */}
                                     <AnimatePresence>
@@ -1326,8 +1413,8 @@ export default function DecisionsHub() {
                                                             <span className="material-symbols-outlined text-sm animate-pulse">report</span>
                                                             Concurrent Active Applications Found
                                                         </h4>
-                                                        <button 
-                                                            type="button" 
+                                                        <button
+                                                            type="button"
                                                             onClick={() => setShowCrossBankPop(false)}
                                                             className="text-gray-400 hover:text-rose-500 text-xs"
                                                         >
@@ -1359,995 +1446,939 @@ export default function DecisionsHub() {
                                         )}
                                     </AnimatePresence>
 
-                                    {/* F4: 4-Tab Forms Panel */}
-                                    <div className="bg-white rounded-3xl border border-purple-50 shadow-sm overflow-hidden">
-                                        
-                                        {/* Tab Headers */}
-                                        <div className="grid grid-cols-3 sm:grid-cols-6 bg-gray-50/70 border-b border-purple-50 p-1">
-                                            {[
-                                                { id: "sanction", label: "Sanction", icon: "check_circle" },
-                                                { id: "conditional", label: "Conditional", icon: "rule" },
-                                                { id: "counter_offer", label: "Counter", icon: "compare_arrows" },
-                                                { id: "reject", label: "Reject", icon: "cancel" },
-                                                { id: "queries", label: "Queries", icon: "question_answer" },
-                                                { id: "letter", label: "Letter", icon: "rate_review" }
-                                            ].map((tab) => (
-                                                <button
-                                                    key={tab.id}
-                                                    type="button"
-                                                    onClick={() => setActiveDecisionTab(tab.id as any)}
-                                                    className={`py-2 rounded-xl text-[8.5px] font-black uppercase tracking-wider flex flex-col items-center justify-center gap-1 transition-all ${
-                                                        activeDecisionTab === tab.id
-                                                            ? "bg-white text-[#6605c7] shadow-sm border border-purple-100/50"
-                                                            : "text-gray-400 hover:text-gray-600"
-                                                    }`}
-                                                >
-                                                    <span className="material-symbols-outlined text-[12px]">{tab.icon}</span>
-                                                    <span className="text-[7.5px] truncate max-w-[70px] sm:max-w-none">{tab.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                                    {/* STEP 2: Financials & Fees */}
+                                    {currentStep === 2 && (
+                                        <div className="bg-white p-6 rounded-3xl border border-purple-50 shadow-sm space-y-6 animate-fade-in">
+                                            {/* F5: ROI Entry Form */}
+                                            <div className="space-y-4">
+                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-xs">percent</span>
+                                                    ROI Entry Form & Benchmark
+                                                </h3>
 
-                                        {/* Tab Content Box */}
-                                        <div className="p-6">
-                                            {activeDecisionTab !== "queries" && activeDecisionTab !== "letter" && selectedApp.BankDecision && selectedApp.BankDecision.length > 0 ? (
-                                                <div className="p-6 bg-gray-50 border border-gray-200 border-dashed rounded-2xl text-center mt-4">
-                                                    <span className="material-symbols-outlined block text-3xl mb-3 text-purple-400">task_alt</span>
-                                                    <p className="text-sm text-gray-600 font-bold">Decision already registered: <span className="text-[#6605c7] uppercase">{selectedApp.BankDecision[selectedApp.BankDecision.length - 1].decision.replace(/_/g, ' ')}</span></p>
-                                                    <p className="text-xs text-gray-400 mt-2">Check the Activity Timeline for specific decision history.</p>
+                                                {/* Base reference display */}
+                                                <div className="px-3.5 py-2.5 bg-purple-50/50 border border-purple-100/50 rounded-xl text-[10px] text-purple-700 font-semibold italic flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-xs">info</span>
+                                                    <span>{baseRateRef}</span>
                                                 </div>
-                                            ) : (
-                                                <form onSubmit={handleDecisionSubmit} className="space-y-6">
-                                                
-                                                {/* TAB 1: SANCTION (F5 & F9 Nested) */}
-                                                {activeDecisionTab === "sanction" && (
-                                                    <div className="space-y-6 animate-fade-in-up">
-                                                        
-                                                        {/* F5: ROI Entry Form */}
-                                                        <div className="space-y-4">
-                                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
-                                                                <span className="material-symbols-outlined text-xs">percent</span>
-                                                                ROI Entry Form
-                                                            </h3>
 
-                                                            {/* Base reference display */}
-                                                            <div className="px-3.5 py-2.5 bg-purple-50/50 border border-purple-100/50 rounded-xl text-[10px] text-purple-700 font-semibold italic flex items-center gap-2">
-                                                                <span className="material-symbols-outlined text-xs">info</span>
-                                                                <span>{baseRateRef}</span>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                                {/* Fixed/Floating Radio */}
-                                                                <div>
-                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Rate Benchmark</label>
-                                                                    <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => setRoiType("floating")}
-                                                                            className={`py-2 rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all ${
-                                                                                roiType === "floating"
-                                                                                    ? "bg-[#6605c7] text-white shadow-sm"
-                                                                                    : "text-gray-400 hover:text-gray-600"
-                                                                            }`}
-                                                                        >
-                                                                            Floating ROI
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => setRoiType("fixed")}
-                                                                            className={`py-2 rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all ${
-                                                                                roiType === "fixed"
-                                                                                    ? "bg-[#6605c7] text-white shadow-sm"
-                                                                                    : "text-gray-400 hover:text-gray-600"
-                                                                            }`}
-                                                                        >
-                                                                            Fixed ROI
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Rate Input */}
-                                                                <div>
-                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Interest Rate (%)</label>
-                                                                    <div className="relative">
-                                                                        <input
-                                                                            type="number"
-                                                                            step="0.01"
-                                                                            required
-                                                                            value={interestRate}
-                                                                            onChange={(e) => setInterestRate(e.target.value)}
-                                                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                        />
-                                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">%</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Subsidy fields */}
-                                                            <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-3">
-                                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={hasSubsidy}
-                                                                        onChange={(e) => setHasSubsidy(e.target.checked)}
-                                                                        className="w-4 h-4 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded"
-                                                                    />
-                                                                    <span className="text-[10px] font-black text-gray-700 uppercase tracking-wider">Apply Rate Subsidy Waiver</span>
-                                                                </label>
-
-                                                                <AnimatePresence>
-                                                                    {hasSubsidy && (
-                                                                        <motion.div
-                                                                            initial={{ height: 0, opacity: 0 }}
-                                                                            animate={{ height: "auto", opacity: 1 }}
-                                                                            exit={{ height: 0, opacity: 0 }}
-                                                                            className="space-y-3 pt-2 border-t border-gray-100 overflow-hidden"
-                                                                        >
-                                                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                                                <div className="sm:col-span-1">
-                                                                                    <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">Subsidy Rate (%)</label>
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        step="0.01"
-                                                                                        value={subsidyPercentage}
-                                                                                        onChange={(e) => setSubsidyPercentage(e.target.value)}
-                                                                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="sm:col-span-2">
-                                                                                    <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">Scheme / Description</label>
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        value={subsidyDescription}
-                                                                                        onChange={(e) => setSubsidyDescription(e.target.value)}
-                                                                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7]"
-                                                                                    />
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="text-[9.5px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                                                                                <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                                                                                <span>Effective Lending ROI: {(parseFloat(interestRate) - parseFloat(subsidyPercentage)).toFixed(2)}%</span>
-                                                                            </div>
-                                                                        </motion.div>
-                                                                    )}
-                                                                </AnimatePresence>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* F5: Processing Fee Form */}
-                                                        <div className="space-y-4">
-                                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
-                                                                <span className="material-symbols-outlined text-xs">account_balance_wallet</span>
-                                                                Processing Fee Section
-                                                            </h3>
-
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                                {/* Amount */}
-                                                                <div>
-                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Base Fee Amount (₹)</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        required
-                                                                        disabled={hasWaiver}
-                                                                        value={hasWaiver ? "0" : feeAmount}
-                                                                        onChange={(e) => setFeeAmount(e.target.value)}
-                                                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] disabled:bg-gray-100 disabled:text-gray-400"
-                                                                    />
-                                                                </div>
-
-                                                                {/* Payment mode dropdown */}
-                                                                <div>
-                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Collection Mode</label>
-                                                                    <select
-                                                                        value={feePaymentMode}
-                                                                        onChange={(e) => setFeePaymentMode(e.target.value)}
-                                                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                    >
-                                                                        <option value="upfront">Upfront direct debit</option>
-                                                                        <option value="deducted">Deduct from 1st disbursement</option>
-                                                                        <option value="capitalized">Capitalize in loan / EMI</option>
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* GST auto-calculation & waiver option */}
-                                                            <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-4">
-                                                                <div className="flex flex-col sm:flex-row justify-between gap-4 border-b border-gray-100 pb-3">
-                                                                    <div>
-                                                                        <span className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block">GST Calculation (18%)</span>
-                                                                        <span className="text-xs font-black text-gray-700">₹{gstValue.toLocaleString()}</span>
-                                                                    </div>
-                                                                    <div>
-                                                                        <span className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block">Total Processing Fee</span>
-                                                                        <span className="text-xs font-black text-[#6605c7]">₹{totalFeeValue.toLocaleString()}</span>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Waiver option */}
-                                                                <div className="space-y-3">
-                                                                    <label className="flex items-center gap-2 cursor-pointer">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={hasWaiver}
-                                                                            onChange={(e) => setHasWaiver(e.target.checked)}
-                                                                            className="w-4 h-4 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded"
-                                                                        />
-                                                                        <span className="text-[10px] font-black text-gray-700 uppercase tracking-wider">Waive Processing Fees</span>
-                                                                    </label>
-
-                                                                    <AnimatePresence>
-                                                                        {hasWaiver && (
-                                                                            <motion.div
-                                                                                initial={{ height: 0, opacity: 0 }}
-                                                                                animate={{ height: "auto", opacity: 1 }}
-                                                                                exit={{ height: 0, opacity: 0 }}
-                                                                                className="pt-2 overflow-hidden"
-                                                                            >
-                                                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Reason for Waiver</label>
-                                                                                <textarea
-                                                                                    required
-                                                                                    value={waiverReason}
-                                                                                    onChange={(e) => setWaiverReason(e.target.value)}
-                                                                                    placeholder="Provide reasoning for fee waiver..."
-                                                                                    rows={2}
-                                                                                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7]"
-                                                                                />
-                                                                            </motion.div>
-                                                                        )}
-                                                                    </AnimatePresence>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* F9: Partial Sanction details */}
-                                                        <div className="space-y-4">
-                                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
-                                                                <span className="material-symbols-outlined text-xs">align_horizontal_left</span>
-                                                                Proposed Sanction Quantum
-                                                            </h3>
-
-                                                            <div>
-                                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Sanctioned Amount (₹)</label>
-                                                                <input
-                                                                    type="number"
-                                                                    required
-                                                                    value={sanctionAmount}
-                                                                    onChange={(e) => setSanctionAmount(e.target.value)}
-                                                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                />
-                                                            </div>
-
-                                                            {/* Shortfall warning UI (F9) */}
-                                                            <AnimatePresence>
-                                                                {shortfallValue > 0 && (
-                                                                    <motion.div
-                                                                        initial={{ scale: 0.95, opacity: 0 }}
-                                                                        animate={{ scale: 1, opacity: 1 }}
-                                                                        exit={{ scale: 0.95, opacity: 0 }}
-                                                                        className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-3 overflow-hidden"
-                                                                    >
-                                                                        <div className="flex justify-between items-start">
-                                                                            <div>
-                                                                                <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest">Partial Sanction Shortfall</p>
-                                                                                <p className="text-xs font-black text-gray-800 mt-1">Shortfall detected: ₹{shortfallValue.toLocaleString()}</p>
-                                                                                <p className="text-[10px] text-gray-500 mt-0.5 font-medium">Proposed amount is less than applicant's sought quantum.</p>
-                                                                            </div>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={handleRouteShortfall}
-                                                                                className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl shadow-sm transition-all flex items-center gap-1"
-                                                                            >
-                                                                                <span className="material-symbols-outlined text-xs">swap_horiz</span>
-                                                                                Route Shortfall
-                                                                            </button>
-                                                                        </div>
-                                                                    </motion.div>
-                                                                )}
-                                                            </AnimatePresence>
-
-                                                            {/* F35: Sanction Amendment Section */}
-                                                            {selectedApp.BankDecision && selectedApp.BankDecision.length > 0 ? (
-                                                                <div className="p-4 bg-purple-50/20 border border-purple-100/50 rounded-2xl space-y-4 mt-4 text-left">
-                                                                    <div className="flex justify-between items-center">
-                                                                        <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">Sanction Amendment Workspace</span>
-                                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest font-mono">Revision Node</span>
-                                                                    </div>
-                                                                    
-                                                                    <div className="grid grid-cols-2 gap-4">
-                                                                        <div>
-                                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended Amount (₹)</label>
-                                                                            <input 
-                                                                                type="number"
-                                                                                value={amendedAmount || sanctionAmount || selectedApp.amount}
-                                                                                onChange={e => setAmendedAmount(e.target.value)}
-                                                                                className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                            />
-                                                                        </div>
-                                                                        <div>
-                                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended ROI (%)</label>
-                                                                            <input 
-                                                                                type="number"
-                                                                                step="0.01"
-                                                                                value={amendedRate}
-                                                                                onChange={e => setAmendedRate(e.target.value)}
-                                                                                className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div className="grid grid-cols-2 gap-4">
-                                                                        <div>
-                                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended Fee (₹)</label>
-                                                                            <input 
-                                                                                type="number"
-                                                                                value={amendedFee}
-                                                                                onChange={e => setAmendedFee(e.target.value)}
-                                                                                className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                            />
-                                                                        </div>
-                                                                        <div>
-                                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Effective Date</label>
-                                                                            <input 
-                                                                                type="date"
-                                                                                value={amendmentEffectiveDate}
-                                                                                onChange={e => setAmendmentEffectiveDate(e.target.value)}
-                                                                                className="w-full px-3 py-1 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div>
-                                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Reason for Revision</label>
-                                                                        <textarea
-                                                                            value={amendmentReason}
-                                                                            onChange={e => setAmendmentReason(e.target.value)}
-                                                                            rows={2}
-                                                                            placeholder="Provide adjustment reason..."
-                                                                            className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs"
-                                                                        />
-                                                                    </div>
-
-                                                                    <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100/50 text-[10px] text-gray-650">
-                                                                        <strong>Side-by-Side Comparison:</strong>
-                                                                        <div className="grid grid-cols-3 gap-2 mt-2 font-mono text-[9px]">
-                                                                            <div>Original: ₹{(selectedApp.amount).toLocaleString()}</div>
-                                                                            <div>Amended: ₹{parseFloat(amendedAmount || sanctionAmount || selectedApp.amount).toLocaleString()}</div>
-                                                                            <div>Diff: ₹{(parseFloat(amendedAmount || sanctionAmount || selectedApp.amount) - selectedApp.amount).toLocaleString()}</div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={handleSaveAmendment}
-                                                                        className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-xs">edit_note</span>
-                                                                        Apply Sanction Amendment
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="p-6 bg-gray-50 border border-gray-200 border-dashed rounded-2xl text-center mt-4">
-                                                                    <span className="material-symbols-outlined block text-2xl mb-2 text-gray-400">gavel</span>
-                                                                    <p className="text-xs text-gray-500 font-medium">No existing sanction decision found to amend.</p>
-                                                                    <p className="text-[10px] text-gray-400 mt-1">Please submit a sanction first from the Underwriting tab.</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* TAB 2: CONDITIONAL (F8 UI) */}
-                                                {activeDecisionTab === "conditional" && (
-                                                    <div className="space-y-6 animate-fade-in-up">
-                                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
-                                                            <span className="material-symbols-outlined text-xs">playlist_add_check</span>
-                                                            Conditions Editor
-                                                        </h3>
-
-                                                        {/* Conditions List */}
-                                                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                                                            {conditions.map((cond) => (
-                                                                <div 
-                                                                    key={cond.id}
-                                                                    className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-purple-100/50 shadow-sm transition-all"
-                                                                >
-                                                                    <div className="flex-1 pr-4">
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
-                                                                                cond.type === "mandatory" 
-                                                                                    ? "bg-rose-50 text-rose-600 border border-rose-100" 
-                                                                                    : "bg-blue-50 text-blue-600 border border-blue-100"
-                                                                            }`}>
-                                                                                {cond.type}
-                                                                            </span>
-                                                                            <span className="text-[9.5px] font-bold text-gray-400 font-mono">
-                                                                                Deadline: {format(new Date(cond.deadline), "dd MMM yyyy")}
-                                                                            </span>
-                                                                        </div>
-                                                                        <p className="text-xs font-bold text-gray-700 mt-1">{cond.text}</p>
-                                                                    </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => removeCondition(cond.id)}
-                                                                        className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-rose-50 hover:text-rose-500 transition-all border border-gray-100"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-sm">delete</span>
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-
-                                                        {/* Add New Condition Editor */}
-                                                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-4">
-                                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Append Custom Condition</p>
-                                                            
-                                                            <div>
-                                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Condition text</label>
-                                                                <textarea
-                                                                    value={newConditionText}
-                                                                    onChange={(e) => setNewConditionText(e.target.value)}
-                                                                    placeholder="e.g. Applicant must deposit 3 months interest accrual backup..."
-                                                                    rows={2}
-                                                                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7]"
-                                                                />
-                                                            </div>
-
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                                <div>
-                                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Severity / Badge</label>
-                                                                    <select
-                                                                        value={newConditionType}
-                                                                        onChange={(e) => setNewConditionType(e.target.value as any)}
-                                                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                    >
-                                                                        <option value="mandatory">Mandatory (Disbursement Pre-req)</option>
-                                                                        <option value="advisory">Advisory (Post-Disbursement)</option>
-                                                                    </select>
-                                                                </div>
-                                                                <div>
-                                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Deadline Date Picker</label>
-                                                                    <input
-                                                                        type="date"
-                                                                        value={newConditionDeadline}
-                                                                        onChange={(e) => setNewConditionDeadline(e.target.value)}
-                                                                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                    />
-                                                                </div>
-                                                            </div>
-
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {/* Fixed/Floating Radio */}
+                                                    <div>
+                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Rate Benchmark</label>
+                                                        <div className="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
                                                             <button
                                                                 type="button"
-                                                                onClick={addCondition}
-                                                                className="w-full py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                                                onClick={() => setRoiType("floating")}
+                                                                className={`py-2 rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all ${roiType === "floating"
+                                                                        ? "bg-[#6605c7] text-white shadow-sm"
+                                                                        : "text-gray-400 hover:text-gray-600"
+                                                                    }`}
                                                             >
-                                                                <span className="material-symbols-outlined text-xs">add</span>
-                                                                Append Condition Badge
+                                                                Floating ROI
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setRoiType("fixed")}
+                                                                className={`py-2 rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all ${roiType === "fixed"
+                                                                        ? "bg-[#6605c7] text-white shadow-sm"
+                                                                        : "text-gray-400 hover:text-gray-600"
+                                                                    }`}
+                                                            >
+                                                                Fixed ROI
                                                             </button>
                                                         </div>
                                                     </div>
-                                                )}
 
-                                                {/* TAB 3: COUNTER-OFFER (F10 UI) */}
-                                                {activeDecisionTab === "counter_offer" && (
-                                                    <div className="space-y-6 animate-fade-in-up">
-                                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
-                                                            <span className="material-symbols-outlined text-xs">compare_arrows</span>
-                                                            Counter-Offer Workspace
-                                                        </h3>
-
-                                                        {/* Side-by-side comparison table */}
-                                                        <div className="overflow-hidden border border-purple-100 rounded-2xl bg-white shadow-sm">
-                                                            <table className="w-full text-left border-collapse">
-                                                                <thead>
-                                                                    <tr className="bg-gray-50 border-b border-purple-50">
-                                                                        <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-gray-400">Parameter</th>
-                                                                        <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-gray-400">Original sought</th>
-                                                                        <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-purple-700 bg-purple-50/50">Bank proposed Counter</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody className="divide-y divide-gray-100 text-xs">
-                                                                    <tr>
-                                                                        <td className="px-4 py-3.5 font-bold text-gray-500">Principal Amount</td>
-                                                                        <td className="px-4 py-3.5 font-bold text-gray-700">₹{selectedApp.amount?.toLocaleString()}</td>
-                                                                        <td className="px-4 py-2 bg-purple-50/20">
-                                                                            <input
-                                                                                type="number"
-                                                                                value={counterAmount}
-                                                                                onChange={(e) => setCounterAmount(e.target.value)}
-                                                                                className="w-full px-2.5 py-1 border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7] bg-white"
-                                                                            />
-                                                                        </td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <td className="px-4 py-3.5 font-bold text-gray-500">Interest Rate (%)</td>
-                                                                        <td className="px-4 py-3.5 font-bold text-gray-700">{selectedApp.interestRate || 9.55}%</td>
-                                                                        <td className="px-4 py-2 bg-purple-50/20">
-                                                                            <input
-                                                                                type="number"
-                                                                                step="0.01"
-                                                                                value={counterRate}
-                                                                                onChange={(e) => setCounterRate(e.target.value)}
-                                                                                className="w-full px-2.5 py-1 border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7] bg-white"
-                                                                            />
-                                                                        </td>
-                                                                    </tr>
-                                                                    <tr>
-                                                                        <td className="px-4 py-3.5 font-bold text-gray-500">Tenure (months)</td>
-                                                                        <td className="px-4 py-3.5 font-bold text-gray-700">{selectedApp.tenure || 180} months</td>
-                                                                        <td className="px-4 py-2 bg-purple-50/20">
-                                                                            <input
-                                                                                type="number"
-                                                                                value={counterTenure}
-                                                                                onChange={(e) => setCounterTenure(e.target.value)}
-                                                                                className="w-full px-2.5 py-1 border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7] bg-white"
-                                                                            />
-                                                                        </td>
-                                                                    </tr>
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-
-                                                        {/* Staff actions simulator */}
-                                                        <div className="p-4.5 bg-purple-50/50 border border-purple-100 rounded-2xl space-y-3">
-                                                            <div className="flex justify-between items-center">
-                                                                <div>
-                                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Simulator status</p>
-                                                                    <p className="text-xs font-black text-gray-800 mt-0.5">Student Offer State: 
-                                                                        <span className={`ml-1.5 uppercase text-[9px] px-2 py-0.5 rounded font-black ${
-                                                                            counterOfferStatus === "accepted"
-                                                                                ? "bg-emerald-100 text-emerald-700"
-                                                                                : counterOfferStatus === "rejected"
-                                                                                    ? "bg-rose-100 text-rose-700"
-                                                                                    : "bg-amber-100 text-amber-700"
-                                                                        }`}>
-                                                                            {counterOfferStatus}
-                                                                        </span>
-                                                                    </p>
-                                                                </div>
-                                                                <div className="flex gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={async () => {
-                                                                            try {
-                                                                                await adminApi.updateApplication(selectedApp.id, { status: "sanctioned" });
-                                                                                await adminApi.addRemark(selectedApp.id, {
-                                                                                    type: 'remark',
-                                                                                    content: `Student ACCEPTED Counter-Offer (₹${(parseFloat(counterAmount) || 0).toLocaleString()} @ ${counterRate}%)`
-                                                                                });
-                                                                                setCounterOfferStatus("accepted");
-                                                                                await fetchTimeline(selectedApp.id);
-                                                                                await fetchRemarks(selectedApp.id);
-                                                                                fetchApplications(currentBankId);
-                                                                            } catch (err) {
-                                                                                console.error(err);
-                                                                                alert("Failed to accept offer");
-                                                                            }
-                                                                        }}
-                                                                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all"
-                                                                    >
-                                                                        Accept Offer
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={async () => {
-                                                                            try {
-                                                                                await adminApi.updateApplication(selectedApp.id, { status: "rejected" });
-                                                                                await adminApi.addRemark(selectedApp.id, {
-                                                                                    type: 'remark',
-                                                                                    content: `Student REJECTED Counter-Offer`
-                                                                                });
-                                                                                setCounterOfferStatus("rejected");
-                                                                                await fetchTimeline(selectedApp.id);
-                                                                                await fetchRemarks(selectedApp.id);
-                                                                                fetchApplications(currentBankId);
-                                                                            } catch (err) {
-                                                                                console.error(err);
-                                                                                alert("Failed to reject offer");
-                                                                            }
-                                                                        }}
-                                                                        className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all"
-                                                                    >
-                                                                        Reject Offer
-                                                                    </button>
-                                                                </div>
-                                                            </div>
+                                                    {/* Rate Input */}
+                                                    <div>
+                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Interest Rate (%)</label>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                required
+                                                                value={interestRate}
+                                                                onChange={(e) => setInterestRate(e.target.value)}
+                                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                            />
+                                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">%</span>
                                                         </div>
                                                     </div>
-                                                )}
+                                                </div>
 
-                                                {/* TAB 4: REJECT */}
-                                                {activeDecisionTab === "reject" && (
-                                                    <div className="space-y-6 animate-fade-in-up">
-                                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-600 border-b border-rose-100 pb-1.5 flex items-center gap-1">
-                                                            <span className="material-symbols-outlined text-xs">cancel</span>
-                                                            Rejection Categorization
-                                                        </h3>
+                                                {/* Subsidy fields */}
+                                                <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-3">
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={hasSubsidy}
+                                                            onChange={(e) => setHasSubsidy(e.target.checked)}
+                                                            className="w-4 h-4 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded"
+                                                        />
+                                                        <span className="text-[10px] font-black text-gray-700 uppercase tracking-wider">Apply Rate Subsidy Waiver</span>
+                                                    </label>
 
-                                                        <div className="space-y-4">
-                                                            <div>
-                                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Rejection Category</label>
-                                                                <select
-                                                                    required
-                                                                    value={rejectionCategory}
-                                                                    onChange={(e) => {
-                                                                        setRejectionCategory(e.target.value);
-                                                                        if (e.target.value === "CIBIL") setRejectionReason("Unsatisfactory CIBIL/Credit Score");
-                                                                        else if (e.target.value === "INCOME") setRejectionReason("High DTI (Debt-to-Income) Ratio");
-                                                                        else if (e.target.value === "DOCS") setRejectionReason("Document Discrepancy / Missing Verification Docs");
-                                                                        else if (e.target.value === "FRAUD") setRejectionReason("Verification Deficiencies / Fraud");
-                                                                        else if (e.target.value === "POLICY") setRejectionReason("Ineligible University/Program Tier or Policy Deviation");
-                                                                        else if (e.target.value === "TECHNICAL") setRejectionReason("Technical validation or collateral valuation failure");
-                                                                        else if (e.target.value === "OTHER") setRejectionReason("Other credit policy deviation");
-                                                                    }}
-                                                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-rose-500"
-                                                                >
-                                                                    <option value="CIBIL">Unsatisfactory CIBIL/Credit Score</option>
-                                                                    <option value="INCOME">High DTI (Debt-to-Income) Ratio</option>
-                                                                    <option value="DOCS">Verification Deficiencies / Missing Docs</option>
-                                                                    <option value="FRAUD">Fraudulent Documentation / Activity</option>
-                                                                    <option value="POLICY">Policy / Program Ineligibility</option>
-                                                                    <option value="TECHNICAL">Technical / Valuation Issue</option>
-                                                                    <option value="OTHER">Other Reasons</option>
-                                                                </select>
+                                                    <AnimatePresence>
+                                                        {hasSubsidy && (
+                                                            <motion.div
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                className="space-y-3 pt-2 border-t border-gray-100 overflow-hidden"
+                                                            >
+                                                                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                                                                    <div className="sm:col-span-1">
+                                                                                                        <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">Subsidy Rate (%)</label>
+                                                                                                        <input
+                                                                                                            type="number"
+                                                                                                            step="0.01"
+                                                                                                            value={subsidyPercentage}
+                                                                                                            onChange={(e) => setSubsidyPercentage(e.target.value)}
+                                                                                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                    <div className="sm:col-span-2">
+                                                                                                        <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">Scheme / Description</label>
+                                                                                                        <input
+                                                                                                            type="text"
+                                                                                                            value={subsidyDescription}
+                                                                                                            onChange={(e) => setSubsidyDescription(e.target.value)}
+                                                                                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7]"
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <div className="text-[9.5px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                                                                                                    <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                                                                                                    <span>Effective Lending ROI: {(parseFloat(interestRate) - parseFloat(subsidyPercentage)).toFixed(2)}%</span>
+                                                                                                </div>
+                                                                                            </motion.div>
+                                                                                        )}
+                                                                                    </AnimatePresence>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* F5: Processing Fee Form */}
+                                                                            <div className="space-y-4">
+                                                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
+                                                                                    <span className="material-symbols-outlined text-xs">account_balance_wallet</span>
+                                                                                    Processing Fee Section
+                                                                                </h3>
+
+                                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                                    {/* Amount */}
+                                                                                    <div>
+                                                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Base Fee Amount (₹)</label>
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            required
+                                                                                            disabled={hasWaiver}
+                                                                                            value={hasWaiver ? "0" : feeAmount}
+                                                                                            onChange={(e) => setFeeAmount(e.target.value)}
+                                                                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] disabled:bg-gray-100 disabled:text-gray-400"
+                                                                                        />
+                                                                                    </div>
+
+                                                                                    {/* Payment mode dropdown */}
+                                                                                    <div>
+                                                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Collection Mode</label>
+                                                                                        <select
+                                                                                            value={feePaymentMode}
+                                                                                            onChange={(e) => setFeePaymentMode(e.target.value)}
+                                                                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                                                        >
+                                                                                            <option value="upfront">Upfront direct debit</option>
+                                                                                            <option value="deducted">Deduct from 1st disbursement</option>
+                                                                                            <option value="capitalized">Capitalize in loan / EMI</option>
+                                                                                        </select>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {/* GST auto-calculation & waiver option */}
+                                                                                <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-4">
+                                                                                    <div className="flex flex-col sm:flex-row justify-between gap-4 border-b border-gray-100 pb-3">
+                                                                                        <div>
+                                                                                            <span className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block">GST Calculation (18%)</span>
+                                                                                            <span className="text-xs font-black text-gray-700">₹{gstValue.toLocaleString()}</span>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <span className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block">Total Processing Fee</span>
+                                                                                            <span className="text-xs font-black text-[#6605c7]">₹{totalFeeValue.toLocaleString()}</span>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* Waiver option */}
+                                                                                    <div className="space-y-3">
+                                                                                        <label className="flex items-center gap-2 cursor-pointer">
+                                                                                            <input
+                                                                                                type="checkbox"
+                                                                                                checked={hasWaiver}
+                                                                                                onChange={(e) => setHasWaiver(e.target.checked)}
+                                                                                                className="w-4 h-4 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded"
+                                                                                            />
+                                                                                            <span className="text-[10px] font-black text-gray-700 uppercase tracking-wider">Waive Processing Fees</span>
+                                                                                        </label>
+
+                                                                                        <AnimatePresence>
+                                                                                            {hasWaiver && (
+                                                                                                <motion.div
+                                                                                                    initial={{ height: 0, opacity: 0 }}
+                                                                                                    animate={{ height: "auto", opacity: 1 }}
+                                                                                                    exit={{ height: 0, opacity: 0 }}
+                                                                                                    className="pt-2 overflow-hidden"
+                                                                                                >
+                                                                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Reason for Waiver</label>
+                                                                                                    <textarea
+                                                                                                        required
+                                                                                                        value={waiverReason}
+                                                                                                        onChange={(e) => setWaiverReason(e.target.value)}
+                                                                                                        placeholder="Provide reasoning for fee waiver..."
+                                                                                                        rows={2}
+                                                                                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7]"
+                                                                                                    />
+                                                                                                </motion.div>
+                                                                                            )}
+                                                                                        </AnimatePresence>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* F9: Partial Sanction details */}
+                                                                            <div className="space-y-4">
+                                                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
+                                                                                    <span className="material-symbols-outlined text-xs">align_horizontal_left</span>
+                                                                                    Proposed Sanction Quantum
+                                                                                </h3>
+
+                                                                                <div>
+                                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Sanctioned Amount (₹)</label>
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        required
+                                                                                        value={sanctionAmount}
+                                                                                        onChange={(e) => setSanctionAmount(e.target.value)}
+                                                                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                                                    />
+                                                                                </div>
+
+                                                                                {/* Shortfall warning UI (F9) */}
+                                                                                <AnimatePresence>
+                                                                                    {shortfallValue > 0 && (
+                                                                                        <motion.div
+                                                                                            initial={{ scale: 0.95, opacity: 0 }}
+                                                                                            animate={{ scale: 1, opacity: 1 }}
+                                                                                            exit={{ scale: 0.95, opacity: 0 }}
+                                                                                            className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-3 overflow-hidden"
+                                                                                        >
+                                                                                            <div className="flex justify-between items-start">
+                                                                                                <div>
+                                                                                                    <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest">Partial Sanction Shortfall</p>
+                                                                                                    <p className="text-xs font-black text-gray-800 mt-1">Shortfall detected: ₹{shortfallValue.toLocaleString()}</p>
+                                                                                                    <p className="text-[10px] text-gray-500 mt-0.5 font-medium">Proposed amount is less than applicant's sought quantum.</p>
+                                                                                                </div>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={handleRouteShortfall}
+                                                                                                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 transition-all flex items-center gap-1 cursor-pointer"
+                                                                                                >
+                                                                                                    <span className="material-symbols-outlined text-xs">swap_horiz</span>
+                                                                                                    Route Shortfall
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </motion.div>
+                                                                                    )}
+                                                                                </AnimatePresence>
+                                                                            </div>
+
+                                                                            {/* Step 2 Navigation Actions */}
+                                                                            <div className="flex justify-between pt-4 border-t border-purple-50">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setCurrentStep(1)}
+                                                                                    className="px-5 py-3 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
+                                                                                >
+                                                                                    ← Back to Step 1
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setCurrentStep(3)}
+                                                                                    disabled={!isStep2Valid}
+                                                                                    className="px-6 py-3 bg-[#6605c7] hover:bg-[#5203a4] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2 cursor-pointer"
+                                                                                >
+                                                                                    <span>Proceed to Verdict</span>
+                                                                                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* STEP 3: Final Verdict & Submission */}
+                                                                    {currentStep === 3 && (
+                                                                        <div className="bg-white rounded-3xl border border-purple-50 shadow-sm overflow-hidden animate-fade-in">
+                                                                            {/* Tab Headers */}
+                                                                            <div className="grid grid-cols-3 sm:grid-cols-6 bg-gray-50/70 border-b border-purple-50 p-1">
+                                                                                {[
+                                                                                    { id: "sanction", label: "Sanction", icon: "check_circle" },
+                                                                                    { id: "conditional", label: "Conditional", icon: "rule" },
+                                                                                    { id: "counter_offer", label: "Counter", icon: "compare_arrows" },
+                                                                                    { id: "reject", label: "Reject", icon: "cancel" },
+                                                                                    { id: "queries", label: "Queries", icon: "question_answer" },
+                                                                                    { id: "letter", label: "Letter", icon: "rate_review" }
+                                                                                ].map((tab) => (
+                                                                                    <button
+                                                                                        key={tab.id}
+                                                                                        type="button"
+                                                                                        onClick={() => setActiveDecisionTab(tab.id as any)}
+                                                                                        className={`py-2 rounded-xl text-[8.5px] font-black uppercase tracking-wider flex flex-col items-center justify-center gap-1 transition-all ${activeDecisionTab === tab.id
+                                                                                                ? "bg-white text-[#6605c7] shadow-sm border border-purple-100/50"
+                                                                                                : "text-gray-400 hover:text-gray-600"
+                                                                                            }`}
+                                                                                    >
+                                                                                        <span className="material-symbols-outlined text-[12px]">{tab.icon}</span>
+                                                                                        <span className="text-[7.5px] truncate max-w-[70px] sm:max-w-none">{tab.label}</span>
+                                                                                    </button>
+                                                                                ))}
+                                                                            </div>
+
+                                                                            {/* Tab Content Box */}
+                                                                            <div className="p-6">
+                                                                                {activeDecisionTab !== "queries" && activeDecisionTab !== "letter" && selectedApp.BankDecision && selectedApp.BankDecision.length > 0 ? (
+                                                                                    <div className="p-6 bg-gray-50 border border-gray-200 border-dashed rounded-2xl text-center mt-4">
+                                                                                        <span className="material-symbols-outlined block text-3xl mb-3 text-purple-400">task_alt</span>
+                                                                                        <p className="text-sm text-gray-600 font-bold">Decision already registered: <span className="text-[#6605c7] uppercase">{selectedApp.BankDecision[selectedApp.BankDecision.length - 1].decision.replace(/_/g, ' ')}</span></p>
+                                                                                        <p className="text-xs text-gray-400 mt-2">Check the Activity Timeline for specific decision history.</p>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <form onSubmit={handleDecisionSubmit} className="space-y-6">
+
+                                                                                        {/* TAB 1: SANCTION SUMMARY */}
+                                                                                        {activeDecisionTab === "sanction" && (
+                                                                                            <div className="p-4 bg-purple-50/40 border border-purple-100 rounded-2xl space-y-3">
+                                                                                                <div className="flex items-center gap-2 text-purple-700 text-xs font-bold">
+                                                                                                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                                                                                                    <span>Full Sanction Decision Summary</span>
+                                                                                                </div>
+                                                                                                <p className="text-[11px] text-gray-600">The loan will be sanctioned with the configured Interest Rate ({interestRate}%), Base Fee (₹{feeAmount}), and Quantum (₹{parseFloat(sanctionAmount || "0").toLocaleString()}). Ensure officer remarks are filled below before final submission.</p>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {/* TAB 2: CONDITIONAL */}
+                                                                                        {activeDecisionTab === "conditional" && (
+                                                                                            <div className="space-y-6 animate-fade-in-up">
+                                                                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
+                                                                                                    <span className="material-symbols-outlined text-xs">playlist_add_check</span>
+                                                                                                    Conditions Editor
+                                                                                                </h3>
+
+                                                                                                {/* Conditions List */}
+                                                                                                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                                                                                    {conditions.map((cond) => (
+                                                                                                        <div
+                                                                                                            key={cond.id}
+                                                                                                            className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-purple-100/50 shadow-sm transition-all"
+                                                                                                        >
+                                                                        <div className="flex-1 pr-4">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${cond.type === "mandatory"
+                                                                                        ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                                                                        : "bg-blue-50 text-blue-600 border border-blue-100"
+                                                                                    }`}>
+                                                                                    {cond.type}
+                                                                                </span>
+                                                                                <span className="text-[9.5px] font-bold text-gray-400 font-mono">
+                                                                                    Deadline: {format(new Date(cond.deadline), "dd MMM yyyy")}
+                                                                                </span>
+                                                                            </div>
+                                                                            <p className="text-xs font-bold text-gray-700 mt-1">{cond.text}</p>
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeCondition(cond.id)}
+                                                                            className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-rose-50 hover:text-rose-500 transition-all border border-gray-100"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-sm">delete</span>
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
                                                             </div>
 
-                                                            <div>
-                                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Detailed Rejection Reason</label>
-                                                                <textarea
-                                                                    required
-                                                                    value={rejectionReason}
-                                                                    onChange={(e) => setRejectionReason(e.target.value)}
-                                                                    placeholder="Provide specific reason for rejection..."
-                                                                    rows={2}
-                                                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-rose-500 text-gray-700"
-                                                                />
-                                                            </div>
+                                                            {/* Add New Condition Editor */}
+                                                            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-4">
+                                                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Append Custom Condition</p>
 
-                                                            {/* F36: Cancellation flow */}
-                                                            <div className="p-4.5 bg-rose-50/30 border border-rose-100/50 rounded-2xl space-y-4 mt-4 text-left">
-                                                                <div className="flex justify-between items-center border-b border-rose-100 pb-2">
-                                                                    <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest font-sans">Active Cancellation Dossier</span>
-                                                                    <span className="px-2 py-0.5 bg-rose-100 text-rose-700 text-[8px] font-black rounded-lg">Termination Pending</span>
+                                                                <div>
+                                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Condition text</label>
+                                                                    <textarea
+                                                                        value={newConditionText}
+                                                                        onChange={(e) => setNewConditionText(e.target.value)}
+                                                                        placeholder="e.g. Applicant must deposit 3 months interest accrual backup..."
+                                                                        rows={2}
+                                                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7]"
+                                                                    />
                                                                 </div>
 
-                                                                <div className="text-xs space-y-3 bg-white p-3 rounded-xl border border-rose-50 font-medium text-gray-650">
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                                     <div>
-                                                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Request Date</span>
-                                                                        <p className="font-bold text-gray-750">
-                                                                            {selectedApp?.updatedAt ? format(new Date(selectedApp.updatedAt), "dd MMM yyyy, HH:mm") : format(new Date(), "dd MMM yyyy, HH:mm")}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Cancellation Category</label>
+                                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Severity / Badge</label>
                                                                         <select
-                                                                            value={cancelCategory}
-                                                                            onChange={(e) => setCancelCategory(e.target.value)}
-                                                                            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:border-rose-500 text-gray-700"
+                                                                            value={newConditionType}
+                                                                            onChange={(e) => setNewConditionType(e.target.value as any)}
+                                                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
                                                                         >
-                                                                            <option value="applicant_withdrew">Applicant Withdrew</option>
-                                                                            <option value="lender_rejected">Lender Rejected</option>
-                                                                            <option value="duplicate_file">Duplicate File</option>
-                                                                            <option value="other">Other</option>
+                                                                            <option value="mandatory">Mandatory (Disbursement Pre-req)</option>
+                                                                            <option value="advisory">Advisory (Post-Disbursement)</option>
                                                                         </select>
                                                                     </div>
                                                                     <div>
-                                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Refund Reversal Remarks</label>
-                                                                        <textarea
-                                                                            value={cancelRefundDetails}
-                                                                            onChange={(e) => setCancelRefundDetails(e.target.value)}
-                                                                            placeholder="Describe reversal details..."
-                                                                            rows={2}
-                                                                            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium focus:outline-none focus:border-rose-500 text-gray-750"
+                                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Deadline Date Picker</label>
+                                                                        <input
+                                                                            type="date"
+                                                                            value={newConditionDeadline}
+                                                                            onChange={(e) => setNewConditionDeadline(e.target.value)}
+                                                                            className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
                                                                         />
                                                                     </div>
                                                                 </div>
 
-                                                                <div>
-                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Refund Policy Decision</label>
-                                                                    <div className="grid grid-cols-3 gap-2">
-                                                                        {[
-                                                                            { id: "full", label: "Full (₹15k)" },
-                                                                            { id: "partial", label: "Partial (₹7.5k)" },
-                                                                            { id: "none", label: "No Refund" }
-                                                                        ].map(opt => (
-                                                                            <button
-                                                                                key={opt.id}
-                                                                                type="button"
-                                                                                onClick={() => setCancelRefundOption(opt.id)}
-                                                                                className={`py-2 text-[8.5px] font-black uppercase rounded-lg border text-center transition-all ${
-                                                                                    cancelRefundOption === opt.id 
-                                                                                        ? "bg-rose-600 border-rose-650 text-white" 
-                                                                                        : "bg-white border-gray-250 text-gray-655 hover:bg-gray-50"
-                                                                                }`}
-                                                                            >
-                                                                                {opt.label}
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="flex gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={handleRejectCancellation}
-                                                                        className="flex-1 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-550 text-[9px] font-black uppercase tracking-wider rounded-lg"
-                                                                    >
-                                                                        Reject Request
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={handleConfirmCancellation}
-                                                                        className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg shadow-sm"
-                                                                    >
-                                                                        Confirm Reversal
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* TAB 5: QUERIES (F6 UI) */}
-                                                {activeDecisionTab === "queries" && (
-                                                    <div className="space-y-4 animate-fade-in-up text-left">
-                                                        <div className="flex justify-between items-center border-b border-purple-50 pb-1.5">
-                                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-1">
-                                                                <span className="material-symbols-outlined text-xs">question_answer</span>
-                                                                Verification Queries & Clarifications
-                                                            </h3>
-                                                            <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-[8px] text-[8.5px] font-black uppercase tracking-wider animate-pulse">
-                                                                SLA: 48h Response Target
-                                                            </span>
-                                                        </div>
-
-                                                        {/* Document Checklist Pinning */}
-                                                        <div className="p-3 bg-purple-50/30 border border-purple-100/50 rounded-xl space-y-2">
-                                                            <span className="text-[8px] font-black text-purple-700 uppercase tracking-widest block">Pin Query to Missing Documents</span>
-                                                            <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-gray-700">
-                                                                {[
-                                                                    { id: "m1", label: "10th/12th Marksheets" },
-                                                                    { id: "m2", label: "Guarantor Signature" },
-                                                                    { id: "m3", label: "Offer Letter PDF" },
-                                                                    { id: "m4", label: "Co-applicant ITR" }
-                                                                ].map(chk => (
-                                                                    <label key={chk.id} className="flex items-center gap-2 cursor-pointer select-none">
-                                                                        <input type="checkbox" defaultChecked className="w-3.5 h-3.5 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded" />
-                                                                        <span>{chk.label}</span>
-                                                                    </label>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        {/* Chat stream inside appraisal panel */}
-                                                        <div className="border border-purple-100 rounded-2xl bg-[#faf9fc] p-4 h-56 overflow-y-auto space-y-3 custom-scrollbar flex flex-col">
-                                                            {selectedApp?.queries && selectedApp.queries.length > 0 ? (
-                                                                selectedApp.queries.map((q: any) => {
-                                                                    const studentName = `${selectedApp.firstName || ''} ${selectedApp.lastName || ''}`.trim().toLowerCase();
-                                                                    const authorLower = (q.authorName || '').toLowerCase();
-                                                                    const isBank = !authorLower || 
-                                                                                   authorLower.includes('bank') || 
-                                                                                   authorLower.includes('officer') || 
-                                                                                   authorLower.includes('lender') || 
-                                                                                   authorLower.includes('underwriter') || 
-                                                                                   authorLower.includes('monitor') || 
-                                                                                   authorLower.includes('staff') ||
-                                                                                   authorLower.includes('jenkins') || 
-                                                                                   (!authorLower.includes(studentName) && 
-                                                                                    !(selectedApp.firstName && authorLower.includes(selectedApp.firstName.toLowerCase())) &&
-                                                                                    !(selectedApp.lastName && authorLower.includes(selectedApp.lastName.toLowerCase())));
-
-                                                                    return (
-                                                                        <div key={q.id} className={`flex flex-col max-w-[85%] ${isBank ? 'self-end items-end ml-auto' : 'self-start items-start mr-auto'}`}>
-                                                                            <span className="text-[7.5px] font-black text-gray-400 uppercase tracking-wider mb-1">
-                                                                                {isBank ? (q.authorName || 'Credit Officer') : (q.authorName || 'Student Applicant')}
-                                                                            </span>
-                                                                            <div className={`p-3 rounded-2xl text-xs font-semibold ${isBank ? 'bg-[#6605c7] text-white rounded-tr-none' : 'bg-white border border-purple-100 text-gray-800 rounded-tl-none shadow-sm'}`}>
-                                                                                {q.content}
-                                                                            </div>
-                                                                            <span className="text-[7px] text-gray-400 font-bold uppercase mt-1">
-                                                                                {q.createdAt ? format(new Date(q.createdAt), "MMM dd, HH:mm") : 'Just now'}
-                                                                            </span>
-                                                                        </div>
-                                                                    );
-                                                                })
-                                                            ) : (
-                                                                <div className="flex-grow flex flex-col items-center justify-center text-center p-4">
-                                                                    <span className="material-symbols-outlined text-purple-200 text-3xl mb-1">chat_bubble_outline</span>
-                                                                    <p className="text-[10px] font-bold text-purple-400/70 uppercase tracking-wider">No verification queries raised yet.</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* F42 Canned Template Presets picker */}
-                                                        <div className="space-y-1.5">
-                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Insert Template Preset</span>
-                                                            <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                                                                {[
-                                                                    { title: "Marksheet Verify", msg: "Please upload clear scanned copies of your 10th and 12th standard original marks sheets." },
-                                                                    { title: "Sign Pending", msg: "Guarantor signature has failed automated validation matching. Re-sign." },
-                                                                    { title: "Offer Document", msg: "Confirm if you hold a provisional or finalized offer letter for the STEM course." },
-                                                                    { title: "ITR Clarify", msg: "Co-applicant salary slip deductions require tax computation sheet verification." }
-                                                                ].map((preset, pIdx) => (
-                                                                    <button
-                                                                        key={pIdx}
-                                                                        type="button"
-                                                                        onClick={() => setNewQueryText(preset.msg)}
-                                                                        className="px-2.5 py-1.5 bg-white border border-purple-100 text-[#6605c7] hover:bg-[#6605c7] hover:text-white text-[8px] font-bold rounded-lg transition-all shrink-0 shadow-sm"
-                                                                    >
-                                                                        {preset.title}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Send query input */}
-                                                        <div className="flex gap-2">
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Type a new query parameter to student..."
-                                                                value={newQueryText}
-                                                                onChange={e => setNewQueryText(e.target.value)}
-                                                                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7] text-gray-700"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleDispatchQuery}
-                                                                className="px-3.5 py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl shadow-sm transition-all"
-                                                            >
-                                                                Dispatch
-                                                            </button>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleResolveQueries}
-                                                                className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
-                                                            >
-                                                                <span className="material-symbols-outlined text-xs">done_all</span>
-                                                                Resolve & Resume
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => alert("📄 Clarification Memo PDF template compiled! Sent to student portal.")}
-                                                                className="py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
-                                                            >
-                                                                <span className="material-symbols-outlined text-xs">assignment_late</span>
-                                                                Generate Memo
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* TAB 6: SANCTION LETTER (F49 UI) */}
-                                                {activeDecisionTab === "letter" && (
-                                                    <div className="space-y-4 animate-fade-in-up">
-                                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
-                                                            <span className="material-symbols-outlined text-xs">rate_review</span>
-                                                            Digital Sanction Letter Preview
-                                                        </h3>
-
-                                                        {/* Letter Mockup */}
-                                                        <div className="border border-purple-100 rounded-2xl p-5 bg-white space-y-4 text-[10px] leading-relaxed shadow-sm font-sans text-gray-805 h-80 overflow-y-auto custom-scrollbar">
-                                                            <div className="text-center border-b border-purple-50 pb-3">
-                                                                <h4 className="font-bold text-xs text-[#6605c7]">VIDYABANK SANCTION MEMORANDUM</h4>
-                                                                <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-0.5">Reference: VL-SAN-{selectedApp.applicationNumber}</p>
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <p><strong>To,</strong><br />{selectedApp.firstName} {selectedApp.lastName}<br />Subject: Sanction of Education Loan</p>
-                                                                <p>We are pleased to inform you that VidyaBank has sanctioned an educational credit facility under the following terms:</p>
-                                                                <div className="p-3 bg-purple-50/50 border border-purple-100/30 rounded-xl space-y-1 font-mono text-[9px] text-gray-700">
-                                                                    <div>• <strong>Approved Principal:</strong> ₹{parseFloat(sanctionAmount || selectedApp.amount).toLocaleString()}</div>
-                                                                    <div>• <strong>Benchmark ROI:</strong> {interestRate}% ({roiType})</div>
-                                                                    <div>• <strong>Processing Fees:</strong> ₹{totalFeeValue.toLocaleString()} ({feePaymentMode})</div>
-                                                                    <div>• <strong>University:</strong> {selectedApp.universityName}</div>
-                                                                </div>
-                                                                <p>This sanction is subject to compliance checks, execution of loan covenants, and verified data consent approvals.</p>
-                                                            </div>
-                                                            <div className="pt-4 border-t border-purple-50 flex justify-between items-center">
-                                                                <div>
-                                                                    <p className="text-[8px] text-gray-400 uppercase tracking-widest">Digital Signature Hash</p>
-                                                                    <p className="font-mono text-[8px] text-purple-700 font-bold">sha256: 8f92a10d93427f7e91...</p>
-                                                                </div>
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded text-[8px] font-black uppercase tracking-wider">
-                                                                    <span className="material-symbols-outlined text-[10px]">verified</span>
-                                                                    Signed
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Actions */}
-                                                        <div className="grid grid-cols-2 gap-3">
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleSignLetter}
-                                                                className="py-2.5 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
-                                                            >
-                                                                <span className="material-symbols-outlined text-xs">draw</span>
-                                                                Sign Letter
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => alert("⬇️ Downloading Sanction Letter PDF template...")}
-                                                                className="py-2.5 border border-purple-100 hover:bg-purple-50/50 text-[#6605c7] text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
-                                                            >
-                                                                <span className="material-symbols-outlined text-xs">download</span>
-                                                                Download PDF
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Common Remarks Field & Decisions Submission (Hidden for utility tabs) */}
-                                                {activeDecisionTab !== "queries" && activeDecisionTab !== "letter" && (
-                                                    <>
-                                                        <div>
-                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Credit Officer Comments & Remarks</label>
-                                                            <textarea
-                                                                required
-                                                                value={officerRemarks}
-                                                                onChange={(e) => setOfficerRemarks(e.target.value)}
-                                                                placeholder="Record loan approval note, waiver reasons, or risk mitigants..."
-                                                                rows={3}
-                                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium focus:outline-none focus:border-[#6605c7] text-gray-700"
-                                                            />
-                                                        </div>
-
-                                                        {/* Final Actions block */}
-                                                        {!dataConsentVerified && (
-                                                            <div className="text-[10px] text-amber-750 bg-amber-50 border border-amber-150 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-medium shadow-sm">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="material-symbols-outlined text-amber-500 text-sm animate-pulse">lock</span>
-                                                                    <span>Data Consent check is required. Verify and toggle the <strong>Data Consent</strong> indicator under Underwriting Indicators above, or authorize directly:</span>
-                                                                </div>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={async () => {
-                                                                        setDataConsentVerified(true);
-                                                                        if (selectedApp) {
-                                                                            try {
-                                                                                await bankApi.recordConsent(selectedApp.id, { 
-                                                                                    consentType: "officer_override" 
-                                                                                });
-                                                                            } catch (err) {
-                                                                                console.error("Failed to record consent in backend:", err);
-                                                                            }
-                                                                        }
-                                                                    }}
-                                                                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 transition-all flex items-center gap-1.5 self-end sm:self-auto cursor-pointer"
+                                                                    onClick={addCondition}
+                                                                    className="w-full py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                                                                 >
-                                                                    <span className="material-symbols-outlined text-xs">check_circle</span>
-                                                                    Verify & Grant Consent
+                                                                    <span className="material-symbols-outlined text-xs">add</span>
+                                                                    Append Condition Badge
                                                                 </button>
                                                             </div>
-                                                        )}
-                                                        <div className="flex gap-4 pt-3">
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => setShowWorkspace(false)}
-                                                                className="flex-1 py-3.5 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all font-sans"
-                                                            >
-                                                                Cancel appraisal
-                                                            </button>
-                                                            <button 
-                                                                type="submit"
-                                                                disabled={submitting || !dataConsentVerified}
-                                                                className="flex-1 py-3.5 bg-[#6605c7] hover:bg-[#8b24e5] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/10 transition-all flex items-center justify-center font-sans disabled:opacity-40 disabled:cursor-not-allowed"
-                                                            >
-                                                                {submitting ? "Saving appraisal..." : "Submit Appraisal"}
-                                                            </button>
                                                         </div>
-                                                    </>
-                                                )}
+                                                    )}
+
+                                                    {/* TAB 3: COUNTER-OFFER (F10 UI) */}
+                                                    {activeDecisionTab === "counter_offer" && (
+                                                        <div className="space-y-6 animate-fade-in-up">
+                                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-xs">compare_arrows</span>
+                                                                Counter-Offer Workspace
+                                                            </h3>
+
+                                                            {/* Side-by-side comparison table */}
+                                                            <div className="overflow-hidden border border-purple-100 rounded-2xl bg-white shadow-sm">
+                                                                <table className="w-full text-left border-collapse">
+                                                                    <thead>
+                                                                        <tr className="bg-gray-50 border-b border-purple-50">
+                                                                            <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-gray-400">Parameter</th>
+                                                                            <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-gray-400">Original sought</th>
+                                                                            <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-purple-700 bg-purple-50/50">Bank proposed Counter</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y divide-gray-100 text-xs">
+                                                                        <tr>
+                                                                            <td className="px-4 py-3.5 font-bold text-gray-500">Principal Amount</td>
+                                                                            <td className="px-4 py-3.5 font-bold text-gray-700">₹{selectedApp.amount?.toLocaleString()}</td>
+                                                                            <td className="px-4 py-2 bg-purple-50/20">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    value={counterAmount}
+                                                                                    onChange={(e) => setCounterAmount(e.target.value)}
+                                                                                    className="w-full px-2.5 py-1 border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7] bg-white"
+                                                                                />
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td className="px-4 py-3.5 font-bold text-gray-500">Interest Rate (%)</td>
+                                                                            <td className="px-4 py-3.5 font-bold text-gray-700">{selectedApp.interestRate || 9.55}%</td>
+                                                                            <td className="px-4 py-2 bg-purple-50/20">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    step="0.01"
+                                                                                    value={counterRate}
+                                                                                    onChange={(e) => setCounterRate(e.target.value)}
+                                                                                    className="w-full px-2.5 py-1 border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7] bg-white"
+                                                                                />
+                                                                            </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                            <td className="px-4 py-3.5 font-bold text-gray-500">Tenure (months)</td>
+                                                                            <td className="px-4 py-3.5 font-bold text-gray-700">{selectedApp.tenure || 180} months</td>
+                                                                            <td className="px-4 py-2 bg-purple-50/20">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    value={counterTenure}
+                                                                                    onChange={(e) => setCounterTenure(e.target.value)}
+                                                                                    className="w-full px-2.5 py-1 border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7] bg-white"
+                                                                                />
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+
+                                                            {/* Staff actions simulator */}
+                                                            <div className="p-4.5 bg-purple-50/50 border border-purple-100 rounded-2xl space-y-3">
+                                                                <div className="flex justify-between items-center">
+                                                                    <div>
+                                                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Simulator status</p>
+                                                                        <p className="text-xs font-black text-gray-800 mt-0.5">Student Offer State:
+                                                                            <span className={`ml-1.5 uppercase text-[9px] px-2 py-0.5 rounded font-black ${counterOfferStatus === "accepted"
+                                                                                    ? "bg-emerald-100 text-emerald-700"
+                                                                                    : counterOfferStatus === "rejected"
+                                                                                        ? "bg-rose-100 text-rose-700"
+                                                                                        : "bg-amber-100 text-amber-700"
+                                                                                }`}>
+                                                                                {counterOfferStatus}
+                                                                            </span>
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={async () => {
+                                                                                try {
+                                                                                    await adminApi.updateApplication(selectedApp.id, { status: "sanctioned" });
+                                                                                    await adminApi.addRemark(selectedApp.id, {
+                                                                                        type: 'remark',
+                                                                                        content: `Student ACCEPTED Counter-Offer (₹${(parseFloat(counterAmount) || 0).toLocaleString()} @ ${counterRate}%)`
+                                                                                    });
+                                                                                    setCounterOfferStatus("accepted");
+                                                                                    await fetchTimeline(selectedApp.id);
+                                                                                    await fetchRemarks(selectedApp.id);
+                                                                                    fetchApplications(currentBankId);
+                                                                                } catch (err) {
+                                                                                    console.error(err);
+                                                                                    alert("Failed to accept offer");
+                                                                                }
+                                                                            }}
+                                                                            className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all"
+                                                                        >
+                                                                            Accept Offer
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={async () => {
+                                                                                try {
+                                                                                    await adminApi.updateApplication(selectedApp.id, { status: "rejected" });
+                                                                                    await adminApi.addRemark(selectedApp.id, {
+                                                                                        type: 'remark',
+                                                                                        content: `Student REJECTED Counter-Offer`
+                                                                                    });
+                                                                                    setCounterOfferStatus("rejected");
+                                                                                    await fetchTimeline(selectedApp.id);
+                                                                                    await fetchRemarks(selectedApp.id);
+                                                                                    fetchApplications(currentBankId);
+                                                                                } catch (err) {
+                                                                                    console.error(err);
+                                                                                    alert("Failed to reject offer");
+                                                                                }
+                                                                            }}
+                                                                            className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all"
+                                                                        >
+                                                                            Reject Offer
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* TAB 4: REJECT */}
+                                                    {activeDecisionTab === "reject" && (
+                                                        <div className="space-y-6 animate-fade-in-up">
+                                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-600 border-b border-rose-100 pb-1.5 flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-xs">cancel</span>
+                                                                Rejection Categorization
+                                                            </h3>
+
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Rejection Category</label>
+                                                                    <select
+                                                                        required
+                                                                        value={rejectionCategory}
+                                                                        onChange={(e) => {
+                                                                            setRejectionCategory(e.target.value);
+                                                                            if (e.target.value === "CIBIL") setRejectionReason("Unsatisfactory CIBIL/Credit Score");
+                                                                            else if (e.target.value === "INCOME") setRejectionReason("High DTI (Debt-to-Income) Ratio");
+                                                                            else if (e.target.value === "DOCS") setRejectionReason("Document Discrepancy / Missing Verification Docs");
+                                                                            else if (e.target.value === "FRAUD") setRejectionReason("Verification Deficiencies / Fraud");
+                                                                            else if (e.target.value === "POLICY") setRejectionReason("Ineligible University/Program Tier or Policy Deviation");
+                                                                            else if (e.target.value === "TECHNICAL") setRejectionReason("Technical validation or collateral valuation failure");
+                                                                            else if (e.target.value === "OTHER") setRejectionReason("Other credit policy deviation");
+                                                                        }}
+                                                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-rose-500"
+                                                                    >
+                                                                        <option value="CIBIL">Unsatisfactory CIBIL/Credit Score</option>
+                                                                        <option value="INCOME">High DTI (Debt-to-Income) Ratio</option>
+                                                                        <option value="DOCS">Verification Deficiencies / Missing Docs</option>
+                                                                        <option value="FRAUD">Fraudulent Documentation / Activity</option>
+                                                                        <option value="POLICY">Policy / Program Ineligibility</option>
+                                                                        <option value="TECHNICAL">Technical / Valuation Issue</option>
+                                                                        <option value="OTHER">Other Reasons</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Detailed Rejection Reason</label>
+                                                                    <textarea
+                                                                        required
+                                                                        value={rejectionReason}
+                                                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                                                        placeholder="Provide specific reason for rejection..."
+                                                                        rows={2}
+                                                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-rose-500 text-gray-700"
+                                                                    />
+                                                                </div>
+
+                                                                {/* F36: Cancellation flow */}
+                                                                <div className="p-4.5 bg-rose-50/30 border border-rose-100/50 rounded-2xl space-y-4 mt-4 text-left">
+                                                                    <div className="flex justify-between items-center border-b border-rose-100 pb-2">
+                                                                        <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest font-sans">Active Cancellation Dossier</span>
+                                                                        <span className="px-2 py-0.5 bg-rose-100 text-rose-700 text-[8px] font-black rounded-lg">Termination Pending</span>
+                                                                    </div>
+
+                                                                    <div className="text-xs space-y-3 bg-white p-3 rounded-xl border border-rose-50 font-medium text-gray-650">
+                                                                        <div>
+                                                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Request Date</span>
+                                                                            <p className="font-bold text-gray-750">
+                                                                                {selectedApp?.updatedAt ? format(new Date(selectedApp.updatedAt), "dd MMM yyyy, HH:mm") : format(new Date(), "dd MMM yyyy, HH:mm")}
+                                                                            </p>
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Cancellation Category</label>
+                                                                            <select
+                                                                                value={cancelCategory}
+                                                                                onChange={(e) => setCancelCategory(e.target.value)}
+                                                                                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:border-rose-500 text-gray-700"
+                                                                            >
+                                                                                <option value="applicant_withdrew">Applicant Withdrew</option>
+                                                                                <option value="lender_rejected">Lender Rejected</option>
+                                                                                <option value="duplicate_file">Duplicate File</option>
+                                                                                <option value="other">Other</option>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Refund Reversal Remarks</label>
+                                                                            <textarea
+                                                                                value={cancelRefundDetails}
+                                                                                onChange={(e) => setCancelRefundDetails(e.target.value)}
+                                                                                placeholder="Describe reversal details..."
+                                                                                rows={2}
+                                                                                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium focus:outline-none focus:border-rose-500 text-gray-750"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Refund Policy Decision</label>
+                                                                        <div className="grid grid-cols-3 gap-2">
+                                                                            {[
+                                                                                { id: "full", label: "Full (₹15k)" },
+                                                                                { id: "partial", label: "Partial (₹7.5k)" },
+                                                                                { id: "none", label: "No Refund" }
+                                                                            ].map(opt => (
+                                                                                <button
+                                                                                    key={opt.id}
+                                                                                    type="button"
+                                                                                    onClick={() => setCancelRefundOption(opt.id)}
+                                                                                    className={`py-2 text-[8.5px] font-black uppercase rounded-lg border text-center transition-all ${cancelRefundOption === opt.id
+                                                                                            ? "bg-rose-600 border-rose-650 text-white"
+                                                                                            : "bg-white border-gray-250 text-gray-655 hover:bg-gray-50"
+                                                                                        }`}
+                                                                                >
+                                                                                    {opt.label}
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={handleRejectCancellation}
+                                                                            className="flex-1 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-550 text-[9px] font-black uppercase tracking-wider rounded-lg"
+                                                                        >
+                                                                            Reject Request
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={handleConfirmCancellation}
+                                                                            className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg shadow-sm"
+                                                                        >
+                                                                            Confirm Reversal
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* TAB 5: QUERIES (F6 UI) */}
+                                                    {activeDecisionTab === "queries" && (
+                                                        <div className="space-y-4 animate-fade-in-up text-left">
+                                                            <div className="flex justify-between items-center border-b border-purple-50 pb-1.5">
+                                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-1">
+                                                                    <span className="material-symbols-outlined text-xs">question_answer</span>
+                                                                    Verification Queries & Clarifications
+                                                                </h3>
+                                                                <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-[8px] text-[8.5px] font-black uppercase tracking-wider animate-pulse">
+                                                                    SLA: 48h Response Target
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Document Checklist Pinning */}
+                                                            <div className="p-3 bg-purple-50/30 border border-purple-100/50 rounded-xl space-y-2">
+                                                                <span className="text-[8px] font-black text-purple-700 uppercase tracking-widest block">Pin Query to Missing Documents</span>
+                                                                <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-gray-700">
+                                                                    {[
+                                                                        { id: "m1", label: "10th/12th Marksheets" },
+                                                                        { id: "m2", label: "Guarantor Signature" },
+                                                                        { id: "m3", label: "Offer Letter PDF" },
+                                                                        { id: "m4", label: "Co-applicant ITR" }
+                                                                    ].map(chk => (
+                                                                        <label key={chk.id} className="flex items-center gap-2 cursor-pointer select-none">
+                                                                            <input type="checkbox" defaultChecked className="w-3.5 h-3.5 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded" />
+                                                                            <span>{chk.label}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Chat stream inside appraisal panel */}
+                                                            <div className="border border-purple-100 rounded-2xl bg-[#faf9fc] p-4 h-56 overflow-y-auto space-y-3 custom-scrollbar flex flex-col">
+                                                                {selectedApp?.queries && selectedApp.queries.length > 0 ? (
+                                                                    selectedApp.queries.map((q: any) => {
+                                                                        const studentName = `${selectedApp.firstName || ''} ${selectedApp.lastName || ''}`.trim().toLowerCase();
+                                                                        const authorLower = (q.authorName || '').toLowerCase();
+                                                                        const isBank = !authorLower ||
+                                                                            authorLower.includes('bank') ||
+                                                                            authorLower.includes('officer') ||
+                                                                            authorLower.includes('lender') ||
+                                                                            authorLower.includes('underwriter') ||
+                                                                            authorLower.includes('monitor') ||
+                                                                            authorLower.includes('staff') ||
+                                                                            authorLower.includes('jenkins') ||
+                                                                            (!authorLower.includes(studentName) &&
+                                                                                !(selectedApp.firstName && authorLower.includes(selectedApp.firstName.toLowerCase())) &&
+                                                                                !(selectedApp.lastName && authorLower.includes(selectedApp.lastName.toLowerCase())));
+
+                                                                        return (
+                                                                            <div key={q.id} className={`flex flex-col max-w-[85%] ${isBank ? 'self-end items-end ml-auto' : 'self-start items-start mr-auto'}`}>
+                                                                                <span className="text-[7.5px] font-black text-gray-400 uppercase tracking-wider mb-1">
+                                                                                    {isBank ? (q.authorName || 'Credit Officer') : (q.authorName || 'Student Applicant')}
+                                                                                </span>
+                                                                                <div className={`p-3 rounded-2xl text-xs font-semibold ${isBank ? 'bg-[#6605c7] text-white rounded-tr-none' : 'bg-white border border-purple-100 text-gray-800 rounded-tl-none shadow-sm'}`}>
+                                                                                    {q.content}
+                                                                                </div>
+                                                                                <span className="text-[7px] text-gray-400 font-bold uppercase mt-1">
+                                                                                    {q.createdAt ? format(new Date(q.createdAt), "MMM dd, HH:mm") : 'Just now'}
+                                                                                </span>
+                                                                            </div>
+                                                                        );
+                                                                    })
+                                                                ) : (
+                                                                    <div className="flex-grow flex flex-col items-center justify-center text-center p-4">
+                                                                        <span className="material-symbols-outlined text-purple-200 text-3xl mb-1">chat_bubble_outline</span>
+                                                                        <p className="text-[10px] font-bold text-purple-400/70 uppercase tracking-wider">No verification queries raised yet.</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* F42 Canned Template Presets picker */}
+                                                            <div className="space-y-1.5">
+                                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Insert Template Preset</span>
+                                                                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                                                                    {[
+                                                                        { title: "Marksheet Verify", msg: "Please upload clear scanned copies of your 10th and 12th standard original marks sheets." },
+                                                                        { title: "Sign Pending", msg: "Guarantor signature has failed automated validation matching. Re-sign." },
+                                                                        { title: "Offer Document", msg: "Confirm if you hold a provisional or finalized offer letter for the STEM course." },
+                                                                        { title: "ITR Clarify", msg: "Co-applicant salary slip deductions require tax computation sheet verification." }
+                                                                    ].map((preset, pIdx) => (
+                                                                        <button
+                                                                            key={pIdx}
+                                                                            type="button"
+                                                                            onClick={() => setNewQueryText(preset.msg)}
+                                                                            className="px-2.5 py-1.5 bg-white border border-purple-100 text-[#6605c7] hover:bg-[#6605c7] hover:text-white text-[8px] font-bold rounded-lg transition-all shrink-0 shadow-sm"
+                                                                        >
+                                                                            {preset.title}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Send query input */}
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Type a new query parameter to student..."
+                                                                    value={newQueryText}
+                                                                    onChange={e => setNewQueryText(e.target.value)}
+                                                                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7] text-gray-700"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleDispatchQuery}
+                                                                    className="px-3.5 py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl shadow-sm transition-all"
+                                                                >
+                                                                    Dispatch
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleResolveQueries}
+                                                                    className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">done_all</span>
+                                                                    Resolve & Resume
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => alert("📄 Clarification Memo PDF template compiled! Sent to student portal.")}
+                                                                    className="py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">assignment_late</span>
+                                                                    Generate Memo
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* TAB 6: SANCTION LETTER (F49 UI) */}
+                                                    {activeDecisionTab === "letter" && (
+                                                        <div className="space-y-4 animate-fade-in-up">
+                                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-purple-50 pb-1.5 flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-xs">rate_review</span>
+                                                                Digital Sanction Letter Preview
+                                                            </h3>
+
+                                                            {/* Letter Mockup */}
+                                                            <div className="border border-purple-100 rounded-2xl p-5 bg-white space-y-4 text-[10px] leading-relaxed shadow-sm font-sans text-gray-805 h-80 overflow-y-auto custom-scrollbar">
+                                                                <div className="text-center border-b border-purple-50 pb-3">
+                                                                    <h4 className="font-bold text-xs text-[#6605c7]">VIDYABANK SANCTION MEMORANDUM</h4>
+                                                                    <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-0.5">Reference: VL-SAN-{selectedApp.applicationNumber}</p>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <p><strong>To,</strong><br />{selectedApp.firstName} {selectedApp.lastName}<br />Subject: Sanction of Education Loan</p>
+                                                                    <p>We are pleased to inform you that VidyaBank has sanctioned an educational credit facility under the following terms:</p>
+                                                                    <div className="p-3 bg-purple-50/50 border border-purple-100/30 rounded-xl space-y-1 font-mono text-[9px] text-gray-700">
+                                                                        <div>• <strong>Approved Principal:</strong> ₹{parseFloat(sanctionAmount || selectedApp.amount).toLocaleString()}</div>
+                                                                        <div>• <strong>Benchmark ROI:</strong> {interestRate}% ({roiType})</div>
+                                                                        <div>• <strong>Processing Fees:</strong> ₹{totalFeeValue.toLocaleString()} ({feePaymentMode})</div>
+                                                                        <div>• <strong>University:</strong> {selectedApp.universityName}</div>
+                                                                    </div>
+                                                                    <p>This sanction is subject to compliance checks, execution of loan covenants, and verified data consent approvals.</p>
+                                                                </div>
+                                                                <div className="pt-4 border-t border-purple-50 flex justify-between items-center">
+                                                                    <div>
+                                                                        <p className="text-[8px] text-gray-400 uppercase tracking-widest">Digital Signature Hash</p>
+                                                                        <p className="font-mono text-[8px] text-purple-700 font-bold">sha256: 8f92a10d93427f7e91...</p>
+                                                                    </div>
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded text-[8px] font-black uppercase tracking-wider">
+                                                                        <span className="material-symbols-outlined text-[10px]">verified</span>
+                                                                        Signed
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Actions */}
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleSignLetter}
+                                                                    className="py-2.5 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">draw</span>
+                                                                    Sign Letter
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => alert("⬇️ Downloading Sanction Letter PDF template...")}
+                                                                    className="py-2.5 border border-purple-100 hover:bg-purple-50/50 text-[#6605c7] text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">download</span>
+                                                                    Download PDF
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Common Remarks Field & Decisions Submission (Hidden for utility tabs) */}
+                                                    {activeDecisionTab !== "queries" && activeDecisionTab !== "letter" && (
+                                                        <>
+                                                            <div>
+                                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Credit Officer Comments & Remarks</label>
+                                                                <textarea
+                                                                    required
+                                                                    value={officerRemarks}
+                                                                    onChange={(e) => setOfficerRemarks(e.target.value)}
+                                                                    placeholder="Record loan approval note, waiver reasons, or risk mitigants..."
+                                                                    rows={3}
+                                                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium focus:outline-none focus:border-[#6605c7] text-gray-700"
+                                                                />
+                                                            </div>
+
+                                                            {/* Final Actions block */}
+                                                            {!dataConsentVerified && (
+                                                                <div className="text-[10px] text-amber-750 bg-amber-50 border border-amber-150 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-medium shadow-sm">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="material-symbols-outlined text-amber-500 text-sm animate-pulse">lock</span>
+                                                                        <span>Data Consent check is required. Verify and toggle the <strong>Data Consent</strong> indicator under Underwriting Indicators above, or authorize directly:</span>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={async () => {
+                                                                            setDataConsentVerified(true);
+                                                                            if (selectedApp) {
+                                                                                try {
+                                                                                    await bankApi.recordConsent(selectedApp.id, {
+                                                                                        consentType: "officer_override"
+                                                                                    });
+                                                                                } catch (err) {
+                                                                                    console.error("Failed to record consent in backend:", err);
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 transition-all flex items-center gap-1.5 self-end sm:self-auto cursor-pointer"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-xs">check_circle</span>
+                                                                        Verify & Grant Consent
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex gap-3 pt-3">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setCurrentStep(2)}
+                                                                    className="px-4 py-3.5 border border-gray-200 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all font-sans cursor-pointer shrink-0"
+                                                                >
+                                                                    ← Back
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowWorkspace(false)}
+                                                                    className="flex-1 py-3.5 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all font-sans"
+                                                                >
+                                                                    Cancel appraisal
+                                                                </button>
+                                                                <button
+                                                                    type="submit"
+                                                                    disabled={submitting || !dataConsentVerified}
+                                                                    className="flex-1 py-3.5 bg-[#6605c7] hover:bg-[#8b24e5] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/10 transition-all flex items-center justify-center font-sans disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                                                >
+                                                                    {submitting ? "Saving appraisal..." : "Submit Appraisal"}
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </form>
                                             )}
                                         </div>
                                     </div>
+                                    )}
                                 </div>
 
                                 {/* RIGHT COLUMN: F32 Notes & F31 Activity Timeline (40% width) */}
                                 <div className="w-full lg:w-2/5 p-6 bg-[#f7f5f9]/50 space-y-8 overflow-y-auto custom-scrollbar flex flex-col justify-between">
-                                    
+
                                     <div className="space-y-8">
                                         {/* F32: Internal Notes Panel */}
                                         <div className="space-y-4">
@@ -2382,7 +2413,7 @@ export default function DecisionsHub() {
                                             {/* Notes List */}
                                             <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                                                 {notesList.map((note) => (
-                                                    <div 
+                                                    <div
                                                         key={note.id}
                                                         className="p-3 bg-white border border-purple-50 rounded-2xl shadow-sm space-y-1 relative"
                                                     >
@@ -2428,7 +2459,7 @@ export default function DecisionsHub() {
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                 </div>
                             </div>
                         </motion.div>
@@ -2442,7 +2473,7 @@ export default function DecisionsHub() {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         {/* Modal Backdrop */}
                         <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowRoutingModal(false)} />
-                        
+
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -2492,14 +2523,14 @@ export default function DecisionsHub() {
                                     </label>
 
                                     <div className="flex gap-4 pt-3">
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             onClick={() => setShowRoutingModal(false)}
                                             className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all font-sans"
                                         >
                                             Cancel
                                         </button>
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={confirmRouting}
                                             className="flex-1 py-3 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all font-sans"
@@ -2519,7 +2550,7 @@ export default function DecisionsHub() {
                 {showHoldModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowHoldModal(false)} />
-                        
+
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -2552,7 +2583,7 @@ export default function DecisionsHub() {
 
                                 <div>
                                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Scheduled Resume Date</label>
-                                    <input 
+                                    <input
                                         type="date"
                                         value={holdResumeDate}
                                         onChange={e => setHoldResumeDate(e.target.value)}
@@ -2572,14 +2603,14 @@ export default function DecisionsHub() {
                                 </div>
 
                                 <div className="flex gap-4 pt-3">
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={() => setShowHoldModal(false)}
                                         className="flex-1 py-3 border border-gray-200 text-gray-505 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all font-sans"
                                     >
                                         Cancel
                                     </button>
-                                    <button 
+                                    <button
                                         type="button"
                                         disabled={!holdReason}
                                         onClick={handlePauseFlow}
@@ -2599,7 +2630,7 @@ export default function DecisionsHub() {
                 {showCancelModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowCancelModal(false)} />
-                        
+
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -2640,14 +2671,14 @@ export default function DecisionsHub() {
                                 </div>
 
                                 <div className="flex gap-4 pt-3">
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={() => setShowCancelModal(false)}
                                         className="flex-1 py-3 border border-gray-200 text-gray-505 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all font-sans"
                                     >
                                         Abort
                                     </button>
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={handleConfirmCancellation}
                                         className="flex-1 py-3 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 shadow-lg shadow-rose-500/10 transition-all font-sans"

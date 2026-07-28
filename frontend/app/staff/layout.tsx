@@ -291,18 +291,17 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     }, []);
 
     const sectionTitles: Record<string, string> = {
-        dashboard: 'Dashboard',
-        overview: 'Dashboard',
-        incoming_queue: 'Incoming Queue',
-        applications: 'Active Pipeline',
-        inactive_applications: 'Inactive Pipeline',
-        tasks: 'Reminders',
-        performance: 'Performance',
+        overview: 'Staff Dashboard Overview',
+        incoming_queue: 'Incoming Applications Queue',
+        applications: 'Loan Applications Management',
+        inactive_applications: 'Archived Applications Vault',
+        tasks: 'Reminders & Tasks',
+        performance: 'Performance Analytics',
         users: 'Bank & Staff Members',
         communications: 'Outreach Center',
-        support_tickets: 'Support Tickets',
-        my_profile: 'My Profile',
-        chat_customer: 'Support Chat',
+        support_tickets: 'Support Desk Center',
+        my_profile: 'My Staff Profile',
+        chat_customer: 'Live Customer Support Chat',
         onboarding: 'Applicant Onboarding',
     };
 

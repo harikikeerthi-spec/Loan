@@ -1550,6 +1550,8 @@ export const bankApi = {
     exportMis: () => apiFetch(HttpApiPaths.bank.exportMis()),
     getConsent: (applicationId: string) => apiFetch<any>(HttpApiPaths.bank.consent(applicationId)),
     recordConsent: (applicationId: string, data: any) => apiFetch<any>(HttpApiPaths.bank.consent(applicationId), { method: "POST", body: JSON.stringify(data) }),
+    sendApplicationEmail: (data: { applicationId: string; bankId: string; bankName: string; sentBy: string; recipientEmail?: string }) =>
+        apiFetch(`${API_URL}/bank/workflow/send-application-email`, { method: "POST", body: JSON.stringify(data) }),
 };
 
 // ─── Campaigns ─────────────────────────────────────────────────────────

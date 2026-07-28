@@ -204,9 +204,9 @@ export default function InactivePipelinePage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight text-[#0A2540]">
-                        Inactive Pipeline
+                        Inactive & Archived Pipeline
                     </h2>
-                    <p className="text-xs text-slate-500 font-semibold mt-0.5">Rejected or cancelled channels awaiting review or restore</p>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">Rejected, cancelled, or archived application channels awaiting review or restore</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
