@@ -32,12 +32,78 @@ export class BlogService {
     );
   }
 
+  private convertBlocksToHtml(blocks: any[]): string {
+    if (!Array.isArray(blocks)) return '';
+    return blocks
+      .map((block) => {
+        const styleStr = block.style
+          ? Object.entries(block.style)
+              .map(([k, v]) => {
+                const cssKey = k.replace(/([A-Z])/g, '-$1').toLowerCase();
+                return `${cssKey}: ${v};`;
+              })
+              .join(' ')
+          : '';
+        const styleAttr = styleStr ? ` style="${styleStr}"` : '';
+
+        switch (block.type) {
+          case 'heading':
+            return `<h2${styleAttr}>${block.content || ''}</h2>`;
+          case 'text':
+            return `<p${styleAttr}>${block.content || ''}</p>`;
+          case 'image':
+            return `<div class="blog-image-wrapper"><img src="${block.content || ''}" alt="Blog Image"${styleAttr} /></div>`;
+          case 'video':
+            return `<div class="blog-video-wrapper"><iframe src="${block.content || ''}" frameborder="0" allowfullscreen${styleAttr}></iframe></div>`;
+          case 'button':
+            return `<div class="blog-button-wrapper"><a href="#" class="blog-btn"${styleAttr}>${block.content || ''}</a></div>`;
+          case 'list':
+            const items = (block.content || '')
+              .split('\n')
+              .map((item: string) => `<li>${item.replace(/^[•\-\*\s]+/, '')}</li>`)
+              .join('');
+            return `<ul${styleAttr}>${items}</ul>`;
+          case 'quote':
+            return `<blockquote${styleAttr}>${block.content || ''}</blockquote>`;
+          case 'code':
+            return `<pre${styleAttr}><code>${block.content || ''}</code></pre>`;
+          case 'divider':
+            return `<hr${styleAttr} />`;
+          case 'spacer':
+            return `<div class="blog-spacer"${styleAttr}></div>`;
+          default:
+            return `<div${styleAttr}>${block.content || ''}</div>`;
+        }
+      })
+      .join('\n');
+  }
+
   private mapTags(blog: any) {
     if (!blog) return blog;
-    return {
+    const mapped = {
       ...blog,
       tags: (blog.tags || []).map((t: any) => (t.tag ? t.tag.name : t.name || t)),
     };
+
+    // Parse blocks from content metadata comment
+    const content = blog.content || '';
+    const match = content.match(/<!--BLOCKS_JSON_START-->([\s\S]*?)<!--BLOCKS_JSON_END-->/);
+    if (match) {
+      try {
+        mapped.blocks = JSON.parse(match[1]);
+        mapped.content = content.replace(/<!--BLOCKS_JSON_START-->[\s\S]*?<!--BLOCKS_JSON_END-->/, '').trim();
+      } catch (e) {
+        mapped.blocks = [];
+      }
+    } else {
+      mapped.blocks = [];
+    }
+
+    // Set subtitle/coverImage for compatibility with IT dashboard
+    mapped.subtitle = blog.excerpt || '';
+    mapped.coverImage = blog.featuredImage || '';
+
+    return mapped;
   }
 
   async getAllBlogs(options?: { category?: string; featured?: boolean; limit?: number; offset?: number }) {
@@ -160,17 +226,45 @@ export class BlogService {
   }
 
   async createBlog(data: any) {
-    if (!data.slug) {
-      data.slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const dbData: any = {};
+    dbData.title = data.title;
+    dbData.slug = data.slug || data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    dbData.category = data.category || 'Loan Guidance';
+    dbData.authorName = data.authorName || 'IT Staff';
+    dbData.authorId = data.authorId;
+    dbData.authorImage = data.authorImage;
+    dbData.authorRole = data.authorRole;
+    dbData.readTime = data.readTime !== undefined ? data.readTime : 5;
+    dbData.isFeatured = !!data.isFeatured;
+    
+    // Map published to isPublished
+    const isPub = data.published !== undefined ? !!data.published : (data.isPublished !== undefined ? !!data.isPublished : false);
+    dbData.isPublished = isPub;
+    dbData.publishedAt = isPub ? new Date().toISOString() : null;
+
+    // Map coverImage to featuredImage
+    dbData.featuredImage = data.coverImage || data.featuredImage || '';
+
+    // Map subtitle to excerpt
+    dbData.excerpt = data.excerpt || data.subtitle || '';
+
+    // Map blocks/content
+    let htmlContent = '';
+    let blocksArr = [];
+    if (data.blocks) {
+      blocksArr = data.blocks;
+      htmlContent = this.convertBlocksToHtml(blocksArr);
+    } else {
+      htmlContent = data.content || '';
     }
 
-    const { tags = [], ...rest } = data;
+    // Append metadata blocks JSON
+    dbData.content = `${htmlContent}\n\n<!--BLOCKS_JSON_START-->${JSON.stringify(blocksArr)}<!--BLOCKS_JSON_END-->`;
+
+    const { tags = [] } = data;
     const { data: blog, error } = await this.db
       .from('Blog')
-      .insert({
-        ...rest,
-        publishedAt: rest.isPublished ? new Date().toISOString() : null,
-      })
+      .insert(dbData)
       .select('id, title, slug, excerpt, content, category, authorName, authorImage, authorRole, featuredImage, readTime, isFeatured, isPublished, publishedAt, createdAt')
       .single();
 
@@ -191,17 +285,57 @@ export class BlogService {
   }
 
   async updateBlog(id: string, data: any) {
-    const { data: existingBlog } = await this.db.from('Blog').select('id, publishedAt').eq('id', id).single();
+    const { data: existingBlog } = await this.db.from('Blog').select('id, publishedAt, content').eq('id', id).single();
     if (!existingBlog) throw new NotFoundException('Blog not found');
 
-    const { tags, ...rest } = data;
-    const updateData: any = { ...rest };
-    if (data.isPublished && !existingBlog.publishedAt) {
-      updateData.publishedAt = new Date().toISOString();
+    const dbData: any = {};
+    if (data.title !== undefined) dbData.title = data.title;
+    if (data.slug !== undefined) dbData.slug = data.slug;
+    if (data.category !== undefined) dbData.category = data.category;
+    if (data.authorName !== undefined) dbData.authorName = data.authorName;
+    if (data.authorId !== undefined) dbData.authorId = data.authorId;
+    if (data.authorImage !== undefined) dbData.authorImage = data.authorImage;
+    if (data.authorRole !== undefined) dbData.authorRole = data.authorRole;
+    if (data.readTime !== undefined) dbData.readTime = data.readTime;
+    if (data.isFeatured !== undefined) dbData.isFeatured = !!data.isFeatured;
+
+    // Map published to isPublished
+    if (data.published !== undefined || data.isPublished !== undefined) {
+      const isPublished = data.published !== undefined ? !!data.published : !!data.isPublished;
+      dbData.isPublished = isPublished;
+      if (isPublished && !existingBlog.publishedAt) {
+        dbData.publishedAt = new Date().toISOString();
+      } else if (!isPublished) {
+        dbData.publishedAt = null;
+      }
     }
 
-    await this.db.from('Blog').update(updateData).eq('id', id);
+    // Map coverImage to featuredImage
+    if (data.coverImage !== undefined || data.featuredImage !== undefined) {
+      dbData.featuredImage = data.coverImage !== undefined ? data.coverImage : data.featuredImage;
+    }
 
+    // Map subtitle to excerpt
+    if (data.subtitle !== undefined || data.excerpt !== undefined) {
+      dbData.excerpt = data.excerpt !== undefined ? data.excerpt : data.subtitle;
+    }
+
+    // Map blocks/content
+    if (data.blocks !== undefined || data.content !== undefined) {
+      let htmlContent = '';
+      let blocksArr = [];
+      if (data.blocks !== undefined) {
+        blocksArr = data.blocks;
+        htmlContent = this.convertBlocksToHtml(blocksArr);
+      } else {
+        htmlContent = data.content || '';
+      }
+      dbData.content = `${htmlContent}\n\n<!--BLOCKS_JSON_START-->${JSON.stringify(blocksArr)}<!--BLOCKS_JSON_END-->`;
+    }
+
+    await this.db.from('Blog').update(dbData).eq('id', id);
+
+    const { tags } = data;
     if (tags !== undefined) {
       const tagRecords = await this.upsertTags(tags);
       await this.db.from('BlogTag').delete().eq('blogId', id);

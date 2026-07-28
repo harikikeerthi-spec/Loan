@@ -1612,7 +1612,7 @@ export const supportApi = {
     uploadAttachment: async (ticketId: string, file: File) => {
         const formData = new FormData();
         formData.append("file", file);
-        const token = typeof window !== "undefined" ? localStorage.getItem("token") || localStorage.getItem("auth_token") : "";
+        const token = getToken();
         const res = await fetch(`${API_URL}/support/tickets/${ticketId}/attachment`, {
             method: "POST",
             headers: token ? { Authorization: `Bearer ${token}` } : {},

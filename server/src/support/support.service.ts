@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { S3Service } from '../document/s3.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto, UpdateStatusDto, UpdatePriorityDto, AssignTicketDto } from './dto/update-ticket.dto';
 import { CreateCommentDto, CreateCategoryDto, CreateTeamDto, UpdateSlaDto, CreateKBArticleDto } from './dto/create-comment.dto';
 import { randomUUID } from 'crypto';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { extname, join } from 'path';
 
 // Ticket status transitions
 const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -45,7 +48,29 @@ export class SupportService {
     return this.supabase.getClient();
   }
 
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private s3Service: S3Service,
+  ) {}
+
+  // ─── Format Attachments with Presigned S3 URLs ──────────────────────────────
+  private async formatAttachments(attachments: any[]) {
+    if (!attachments || attachments.length === 0) return [];
+    return Promise.all(
+      attachments.map(async (att) => {
+        const path = att.filePath || att.fileUrl || '';
+        if (path && (path.startsWith('documents/') || path.startsWith('support-tickets/'))) {
+          try {
+            const presignedUrl = await this.s3Service.getPresignedUrl(path, 3600);
+            return { ...att, fileUrl: presignedUrl, s3Key: path };
+          } catch (e) {
+            return att;
+          }
+        }
+        return att;
+      })
+    );
+  }
 
   // ─── Ticket Number Generator ─────────────────────────────────────────────────
   private async generateTicketNumber(): Promise<string> {
@@ -189,14 +214,15 @@ export class SupportService {
           .from('SupportComment')
           .select('id', { count: 'exact', head: true })
           .eq('ticketId', ticket.id);
-        const { data: attachments } = await this.db
+        const { data: rawAttachments } = await this.db
           .from('SupportAttachment')
           .select('*')
           .eq('ticketId', ticket.id);
+        const formattedAttachments = await this.formatAttachments(rawAttachments || []);
         return {
           ...ticket,
-          attachments: attachments || [],
-          _count: { comments: commentCount || 0, attachments: (attachments || []).length }
+          attachments: formattedAttachments,
+          _count: { comments: commentCount || 0, attachments: formattedAttachments.length }
         };
       })
     );
@@ -235,7 +261,7 @@ export class SupportService {
 
     const [
       { data: comments },
-      { data: attachments },
+      { data: rawAttachments },
       { data: activityLogs },
       { data: watchers },
     ] = await Promise.all([
@@ -245,7 +271,15 @@ export class SupportService {
       this.db.from('SupportWatcher').select('*').eq('ticketId', id),
     ]);
 
-    return { ...ticket, comments: comments || [], attachments: attachments || [], activityLogs: activityLogs || [], watchers: watchers || [] };
+    const formattedAttachments = await this.formatAttachments(rawAttachments || []);
+
+    return {
+      ...ticket,
+      comments: comments || [],
+      attachments: formattedAttachments,
+      activityLogs: activityLogs || [],
+      watchers: watchers || []
+    };
   }
 
   // ─── Update Ticket ────────────────────────────────────────────────────────────
@@ -555,11 +589,12 @@ export class SupportService {
 
     const recentActivityWithAttachments = await Promise.all(
       (recentTickets || []).map(async (t: any) => {
-        const { data: attachments } = await this.db
+        const { data: rawAttachments } = await this.db
           .from('SupportAttachment')
           .select('*')
           .eq('ticketId', t.id);
-        return { ...t, attachments: attachments || [] };
+        const formattedAttachments = await this.formatAttachments(rawAttachments || []);
+        return { ...t, attachments: formattedAttachments };
       })
     );
 
@@ -727,19 +762,60 @@ export class SupportService {
     const { data: ticket } = await this.db.from('SupportTicket').select('id').eq('id', ticketId).single();
     if (!ticket) throw new NotFoundException(`Ticket ${ticketId} not found`);
 
+    let filePath = '';
+    let fileUrl: string | undefined = undefined;
+
+    // 1. Primary: Upload to AWS S3 if file buffer exists
+    if (file.buffer) {
+      const s3Key = this.s3Service.buildKey(user?.id || 'guest', `support-tickets/${ticketId}`, file.originalname);
+      try {
+        await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
+        filePath = s3Key;
+        console.log(`[SupportAttachment] Successfully uploaded image to AWS S3: ${s3Key}`);
+        try {
+          fileUrl = await this.s3Service.getPresignedUrl(s3Key, 3600);
+        } catch (pErr) {
+          console.warn(`[SupportAttachment] S3 Presigned URL error:`, pErr);
+        }
+      } catch (s3Error: any) {
+        console.error(`[SupportAttachment] S3 Upload error: ${s3Error.message || s3Error}. Falling back to disk storage.`);
+      }
+    }
+
+    // 2. Fallback to disk if S3 is unconfigured or failed
+    if (!filePath) {
+      if (file.filename) {
+        filePath = `/uploads/support/${file.filename}`;
+      } else if (file.buffer) {
+        const uploadsDir = join(__dirname, '..', '..', '..', 'uploads', 'support');
+        if (!existsSync(uploadsDir)) {
+          mkdirSync(uploadsDir, { recursive: true });
+        }
+        const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+        writeFileSync(join(uploadsDir, filename), file.buffer);
+        filePath = `/uploads/support/${filename}`;
+      } else {
+        filePath = `/uploads/support/${Date.now()}-${file.originalname}`;
+      }
+    }
+
     const { data, error } = await this.db.from('SupportAttachment').insert({
       id: randomUUID(),
       ticketId,
       fileName: file.originalname,
-      filePath: `/uploads/support/${file.filename}`,
+      filePath,
       fileSize: file.size,
       mimeType: file.mimetype,
-      uploadedBy: user.id,
-      uploadedByName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+      uploadedBy: user?.id || 'user',
+      uploadedByName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email || 'User',
       createdAt: new Date().toISOString(),
     }).select().single();
 
     if (error) throw new BadRequestException(error.message);
+
+    if (fileUrl) {
+      return { ...data, fileUrl };
+    }
     return data;
   }
 

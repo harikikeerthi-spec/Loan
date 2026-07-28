@@ -126,7 +126,17 @@ const getAttachmentUrl = (att: any) => {
   if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("blob:") || path.startsWith("data:")) {
     return path;
   }
-  return `http://localhost:5000${path.startsWith('/') ? '' : '/'}${path}`;
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  return `${apiBase.replace(/\/api$/, '')}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
+const isImageAttachment = (att: any) => {
+  if (!att) return false;
+  const mime = (att.mimeType || "").toLowerCase();
+  if (mime.startsWith("image/")) return true;
+  const nameOrPath = (att.fileName || att.filePath || att.fileUrl || att.url || "").toLowerCase();
+  const cleanPath = nameOrPath.split("?")[0];
+  return /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(cleanPath) || nameOrPath.startsWith("data:image");
 };
 
 // ─── Utility Components ───────────────────────────────────────────────────────
@@ -528,13 +538,24 @@ const TicketTable = ({
     } catch { } finally { setBulkLoading(false); }
   };
 
+  const [createProofFile, setCreateProofFile] = useState<File | null>(null);
+
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.subject || !createForm.description) return;
     setCreateLoading(true);
     try {
-      await supportApi.createTicket(createForm);
+      const res: any = await supportApi.createTicket(createForm);
+      const newTicket = res.data || res;
+      if (createProofFile && newTicket?.id) {
+        try {
+          await supportApi.uploadAttachment(newTicket.id, createProofFile);
+        } catch (uploadErr: any) {
+          console.error("Proof image upload warning:", uploadErr);
+        }
+      }
       setShowCreateModal(false);
+      setCreateProofFile(null);
       setCreateForm({ subject: "", description: "", category: "Loan Application", priority: "medium", loanApplicationNum: "", studentName: "", universityName: "", loanStage: "" });
       load();
     } catch (e: any) {
@@ -666,9 +687,7 @@ const TicketTable = ({
                       <div className="text-[9.5px] text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
                         <span>💬 {ticket.comments?.length || ticket._count?.comments || 0}</span>
                         {((ticket.attachments && ticket.attachments.length > 0) || (ticket._count?.attachments ?? 0) > 0) && (() => {
-                          const firstImg = (ticket.attachments || []).find((a: any) =>
-                            (a.mimeType || a.fileName || a.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i) || a.filePath?.startsWith("data:image")
-                          );
+                          const firstImg = (ticket.attachments || []).find((a: any) => isImageAttachment(a));
                           const imgUrl = firstImg ? getAttachmentUrl(firstImg) : null;
                           return (
                             <div className="flex items-center gap-1.5">
@@ -825,6 +844,39 @@ const TicketTable = ({
                       <option value="Disbursement">Disbursement</option>
                     </select>
                   </div>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-slate-100">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                  Proof Screenshot / Attachment (Optional, Uploads to S3)
+                </label>
+                <div className="border border-dashed border-indigo-200 hover:border-indigo-500 rounded-xl p-3 bg-indigo-50/30 transition-colors relative">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={e => {
+                      if (e.target.files && e.target.files[0]) {
+                        setCreateProofFile(e.target.files[0]);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  {createProofFile ? (
+                    <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-indigo-200 text-xs text-indigo-700 font-bold z-20 relative">
+                      <span className="truncate flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm">photo_library</span>
+                        {createProofFile.name}
+                      </span>
+                      <button type="button" onClick={() => setCreateProofFile(null)} className="text-rose-500 hover:text-rose-700 p-0.5 border-0 bg-transparent cursor-pointer z-30">
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2 text-xs font-bold text-indigo-600">
+                      <span className="material-symbols-outlined text-base">cloud_upload</span>
+                      <span>Click to attach issue proof image or screenshot</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1019,7 +1071,7 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
                   <div className="space-y-4">
                     {itemsToRender.map((att: any, idx: number) => {
                       const url = getAttachmentUrl(att);
-                      const isImage = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i) || att.filePath?.startsWith('data:image');
+                      const isImage = isImageAttachment(att);
                       const isPdf = (att.mimeType || att.fileName || att.filePath || "").match(/\.pdf$/i);
 
                       if (isImage) {
@@ -1092,11 +1144,18 @@ const TicketDetail = ({ ticket: initialTicket, onBack, user }: { ticket: Ticket;
                     })}
                   </div>
                 ) : (
-                  <div className="p-6 bg-slate-50 border border-slate-200 border-dashed rounded-2xl text-center space-y-2">
-                    <span className="material-symbols-outlined text-slate-400 text-3xl">add_photo_alternate</span>
-                    <p className="text-xs font-bold text-slate-700">No proof screenshot uploaded with ticket submission</p>
-                    <p className="text-[11px] text-slate-400">Click the button above to upload the real issue image or screenshot proof directly to this ticket.</p>
-                  </div>
+                  <label className="block cursor-pointer p-6 bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-300 border-dashed rounded-2xl text-center space-y-2 transition-all">
+                    <span className="material-symbols-outlined text-indigo-500 text-3xl">add_photo_alternate</span>
+                    <p className="text-xs font-bold text-slate-800">No proof screenshot uploaded with ticket submission</p>
+                    <p className="text-[11px] text-indigo-600 font-semibold">Click here or the button above to upload the real issue image or screenshot proof directly to this ticket (Uploads to S3).</p>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      disabled={uploadingFile}
+                    />
+                  </label>
                 )}
               </div>
             );

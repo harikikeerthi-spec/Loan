@@ -698,7 +698,7 @@ export default function ApplyLoanPage() {
                                         {loadingUniversities && (
                                             <div className="absolute right-4 top-[50px] flex items-center gap-1.5 text-xs text-[#6605c7] font-bold select-none">
                                                 <div className="w-3.5 h-3.5 border-2 border-[#6605c7] border-t-transparent rounded-full animate-spin" />
-                                                <span className="text-[10px] font-black uppercase tracking-wider">AI Searching...</span>
+
                                             </div>
                                         )}
 
@@ -707,11 +707,11 @@ export default function ApplyLoanPage() {
                                             (() => {
                                                 const queryText = (formData.university || "").trim().toLowerCase();
                                                 const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
-                                                
+
                                                 // Filter suggestedUniversities by typed query
-                                                let filtered = suggestedUniversities.filter(uni => 
-                                                    !queryText || 
-                                                    uni.name.toLowerCase().includes(queryText) || 
+                                                let filtered = suggestedUniversities.filter(uni =>
+                                                    !queryText ||
+                                                    uni.name.toLowerCase().includes(queryText) ||
                                                     (uni.loc && uni.loc.toLowerCase().includes(queryText))
                                                 );
 
@@ -764,12 +764,13 @@ export default function ApplyLoanPage() {
                                                                         <span className="text-[10px] text-gray-400 font-medium">{uni.loc || uni.country || "Target University"}</span>
                                                                     </div>
                                                                 </div>
+
                                                                 <span className="material-symbols-outlined text-[#6605c7] text-sm opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
                                                             </button>
                                                         ))}
                                                         {filtered.length === 0 && loadingUniversities && (
                                                             <div className="px-5 py-4 space-y-3">
-                                                                {[1,2,3,4,5].map(i => (
+                                                                {[1, 2, 3, 4, 5].map(i => (
                                                                     <div key={i} className="flex items-center gap-3 animate-pulse">
                                                                         <div className="w-7 h-7 rounded-xl bg-purple-100/70 shrink-0" />
                                                                         <div className="flex-1 space-y-1.5">

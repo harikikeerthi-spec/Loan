@@ -76,6 +76,15 @@ export default function ITOverviewPage() {
         return `${apiBase.replace(/\/api$/, '')}${path.startsWith('/') ? '' : '/'}${path}`;
     };
 
+    const isImageAttachment = (att: any) => {
+        if (!att) return false;
+        const mime = (att.mimeType || "").toLowerCase();
+        if (mime.startsWith("image/")) return true;
+        const nameOrPath = (att.fileName || att.filePath || att.fileUrl || att.url || "").toLowerCase();
+        const cleanPath = nameOrPath.split("?")[0];
+        return /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(cleanPath) || nameOrPath.startsWith("data:image");
+    };
+
     const handleInspectTicket = async (t: any) => {
         setSelectedTicket(t);
         setLoadingDetail(true);
@@ -192,9 +201,7 @@ export default function ITOverviewPage() {
                         ) : recentTickets.length > 0 ? (
                             recentTickets.map((t: any) => {
                                 const attachments = t.attachments || [];
-                                const imgAtt = attachments.find((a: any) =>
-                                    (a.mimeType || a.fileName || a.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i) || a.filePath?.startsWith("data:image")
-                                );
+                                const imgAtt = attachments.find((a: any) => isImageAttachment(a));
                                 const imgUrl = imgAtt ? getAttachmentUrl(imgAtt) : null;
 
                                 return (
@@ -378,7 +385,7 @@ export default function ITOverviewPage() {
                                                 <div className="space-y-4">
                                                     {allAtts.map((att: any, idx: number) => {
                                                         const url = getAttachmentUrl(att);
-                                                        const isImage = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i) || att.filePath?.startsWith('data:image');
+                                                        const isImage = isImageAttachment(att);
 
                                                         if (isImage) {
                                                             return (

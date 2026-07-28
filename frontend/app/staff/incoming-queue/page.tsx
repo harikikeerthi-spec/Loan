@@ -711,7 +711,7 @@ function IncomingQueuePageInner() {
                                                                 />
                                                             </div>
                                                             <p className="text-xs font-mono text-slate-400">
-                                                                {(item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-') || item.applicationNumber.startsWith('VTU-BNK-'))) ? item.applicationNumber : "VTU-APP-PENDING"}
+                                                                {item.userId || item.studentId || item.student?.id || item.user?.id || ((item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-') || item.applicationNumber.startsWith('VTU-BNK-'))) ? item.applicationNumber : "VTU-APP-PENDING")}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -1022,8 +1022,8 @@ function IncomingQueuePageInner() {
                             {/* <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] block">Processing Lead</span> */}
                             <h4 className="text-[16px] font-black text-slate-800 tracking-tight mt-0.5">
                                 {activeDockApp.firstName || activeDockApp.student?.firstName || '—'} {activeDockApp.lastName || activeDockApp.student?.lastName || ''}
-                                <span className="text-[10px] font-bold text-slate-400 block mt-0.5">
-                                    {(activeDockApp.applicationNumber && (activeDockApp.applicationNumber.startsWith('VTU-APP-') || activeDockApp.applicationNumber.startsWith('VTU-BNK-'))) ? activeDockApp.applicationNumber : 'VTU-APP-PENDING'}
+                                <span className="text-[10px] font-bold text-slate-400 block mt-0.5 font-mono">
+                                    {activeDockApp.userId || activeDockApp.studentId || activeDockApp.student?.id || activeDockApp.user?.id || '—'}
                                 </span>
                             </h4>
                         </div>

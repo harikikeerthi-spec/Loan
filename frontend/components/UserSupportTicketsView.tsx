@@ -640,7 +640,8 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
                                             <div className="space-y-3">
                                                 {selectedTicket.attachments.map((att: any) => {
                                                     const isImg = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i);
-                                                    const fileUrl = att.filePath?.startsWith('http') || att.filePath?.startsWith('data:') ? att.filePath : `http://localhost:5000${att.filePath.startsWith('/') ? '' : '/'}${att.filePath}`;
+                                                    const rawPath = att.fileUrl || att.url || att.filePath || "";
+                                                    const fileUrl = (rawPath.startsWith('http') || rawPath.startsWith('data:')) ? rawPath : `http://localhost:5000${rawPath.startsWith('/') ? '' : '/'}${rawPath}`;
                                                     if (isImg) {
                                                         return (
                                                             <div key={att.id} className="rounded-2xl border border-purple-100 bg-purple-50/20 p-3.5 space-y-2.5">

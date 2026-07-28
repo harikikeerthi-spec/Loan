@@ -14,8 +14,7 @@ import {
   MaxFileSizeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { memoryStorage } from 'multer';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SupportService } from './support.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -24,13 +23,7 @@ import { CreateCommentDto, CreateCategoryDto, CreateTeamDto, UpdateSlaDto, Creat
 import { AdminGuard } from '../auth/admin.guard';
 import { UserGuard } from '../auth/user.guard';
 
-const uploadStorage = diskStorage({
-  destination: join(__dirname, '..', '..', '..', 'uploads', 'support'),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-  },
-});
+const uploadStorage = memoryStorage();
 
 @ApiTags('Support')
 @ApiBearerAuth()
