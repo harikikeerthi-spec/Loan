@@ -885,7 +885,7 @@ export default function ApplyLoanPage() {
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <InputField label="Email Address" icon="mail" value={formData.email} onChange={(v) => update("email", v)} placeholder="rahul@example.com" type="email" error={stepErrors.email} required />
+                                        <InputField label="Email Address" icon="mail" value={formData.email} onChange={(v) => update("email", v.slice(0, 30))} placeholder="rahul@example.com" type="email" error={stepErrors.email} required maxLength={30} />
                                         <div className="space-y-3">
                                             <label className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-500 flex items-center justify-between">
                                                 <span>Mobile Number <span className="text-red-500 ml-1">*</span></span>
@@ -1067,7 +1067,7 @@ export default function ApplyLoanPage() {
                                                         return isNaN(fallback.getTime()) ? formData.dateOfBirth : fallback.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
                                                     })()
                                                 },
-                                                { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
+                                                { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant === "other" ? (formData.otherRelation ? formData.otherRelation.charAt(0).toUpperCase() + formData.otherRelation.slice(1) : "Other") : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
                                                 { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 // { label: "Collateral", value: formData.collateral.split(':')[0] },
                                                 { label: "Residential Pincode", value: formData.pincode },
@@ -1175,10 +1175,10 @@ export default function ApplyLoanPage() {
     );
 }
 
-function InputField({ label, icon, value, onChange, placeholder, type = "text", error, required, onFocus, onBlur }: {
+function InputField({ label, icon, value, onChange, placeholder, type = "text", error, required, onFocus, onBlur, maxLength }: {
     label: string; icon?: string; value: string; onChange: (v: string) => void;
     placeholder?: string; type?: string; error?: string; required?: boolean;
-    onFocus?: () => void; onBlur?: () => void;
+    onFocus?: () => void; onBlur?: () => void; maxLength?: number;
 }) {
     return (
         <div className="space-y-3">
@@ -1198,6 +1198,7 @@ function InputField({ label, icon, value, onChange, placeholder, type = "text", 
                     onFocus={onFocus}
                     onBlur={onBlur}
                     placeholder={placeholder}
+                    maxLength={maxLength}
                     className={`w-full ${icon ? 'pl-12' : 'px-6'} pr-6 py-4 bg-white/70 border rounded-2xl shadow-sm transition-all outline-none text-sm font-bold text-gray-900 focus:bg-white placeholder:text-gray-400 ${error ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#6605c7]/50 focus:ring-4 focus:ring-purple-100 hover:border-gray-300"}`}
                 />
             </div>

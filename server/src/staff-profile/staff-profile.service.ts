@@ -608,13 +608,22 @@ export class StaffProfileService {
       createdAt,
     };
 
-    const { data: inserted, error } = await this.db
-      .from('AuditLog')
-      .insert(payload)
-      .select('id, createdAt')
-      .single();
-
-    if (error) throw error;
+    let inserted: any = null;
+    try {
+      const { data, error } = await this.db
+        .from('AuditLog')
+        .insert(payload)
+        .select('id, createdAt')
+        .single();
+      
+      if (error) {
+        console.error('[StaffProfileService] Failed to insert AuditLog dashboard activity:', error);
+      } else {
+        inserted = data;
+      }
+    } catch (err) {
+      console.error('[StaffProfileService] Exception while inserting AuditLog dashboard activity:', err);
+    }
 
     this.eventEmitter.emit('dashboard.activity', {
       id: inserted?.id,

@@ -406,6 +406,7 @@ function IncomingQueuePageInner() {
             }
         }
 
+        // 1. Update app-level follow-up
         const updated = {
             ...followUpDates,
             [appId]: {
@@ -418,15 +419,77 @@ function IncomingQueuePageInner() {
         };
         setFollowUpDates(updated);
         localStorage.setItem(followUpKey, JSON.stringify(updated));
+
+        // 2. Update student-level follow-up (synchronization)
+        const sId = followUpItem?.userId || followUpItem?.studentId || followUpItem?.student?.id || followUpItem?.user?.id;
+        if (sId) {
+            const studentKey = `follow_ups_${staffId}_${sId}`;
+            const stored = localStorage.getItem(studentKey);
+            let currentList: any[] = [];
+            if (stored) {
+                try {
+                    currentList = JSON.parse(stored);
+                    if (!Array.isArray(currentList)) currentList = [];
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            
+            const pendingIndex = currentList.findIndex((f: any) => f.status === "pending");
+            if (pendingIndex > -1) {
+                currentList[pendingIndex] = {
+                    ...currentList[pendingIndex],
+                    date: tempFollowUpDate,
+                    time: selectedTime,
+                    notes: tempFollowUpNotes
+                };
+            } else {
+                currentList.push({
+                    id: Date.now().toString(),
+                    date: tempFollowUpDate,
+                    time: selectedTime,
+                    notes: tempFollowUpNotes,
+                    status: "pending",
+                    createdAt: new Date().toISOString(),
+                    studentId: sId,
+                    studentName,
+                    appNumber: appNumber || `VL-APP-${appId.slice(-5).toUpperCase()}`,
+                    appId
+                });
+            }
+            localStorage.setItem(studentKey, JSON.stringify(currentList));
+        }
+
         setEditingFollowUpId(null);
         setFollowUpItem(null);
     };
 
     const clearFollowUp = (appId: string) => {
+        // 1. Clear app-level follow-up
         const updated = { ...followUpDates };
         delete updated[appId];
         setFollowUpDates(updated);
         localStorage.setItem(followUpKey, JSON.stringify(updated));
+
+        // 2. Clear student-level follow-up (synchronization)
+        const staffId = user?.id || user?.email || "default";
+        const sId = followUpItem?.userId || followUpItem?.studentId || followUpItem?.student?.id || followUpItem?.user?.id;
+        if (sId) {
+            const studentKey = `follow_ups_${staffId}_${sId}`;
+            const stored = localStorage.getItem(studentKey);
+            if (stored) {
+                try {
+                    let currentList = JSON.parse(stored);
+                    if (Array.isArray(currentList)) {
+                        currentList = currentList.map((f: any) => f.status === "pending" ? { ...f, status: "cancelled" } : f);
+                        localStorage.setItem(studentKey, JSON.stringify(currentList));
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
         setEditingFollowUpId(null);
         setFollowUpItem(null);
     };
@@ -434,15 +497,42 @@ function IncomingQueuePageInner() {
     const openFollowUpModal = (rowId: string, item: any) => {
         setEditingFollowUpId(rowId);
         setFollowUpItem(item);
+        
+        // 1. Check app-level first
         if (followUpDates[rowId]) {
             setTempFollowUpDate(followUpDates[rowId].date);
             setTempFollowUpTime(followUpDates[rowId].time);
             setTempFollowUpNotes(followUpDates[rowId].notes || "");
-        } else {
-            setTempFollowUpDate("");
-            setTempFollowUpTime("");
-            setTempFollowUpNotes("");
+            return;
         }
+
+        // 2. Check student-level next
+        const sId = item.userId || item.studentId || item.student?.id || item.user?.id;
+        if (sId) {
+            const staffId = user?.id || user?.email || "default";
+            const studentKey = `follow_ups_${staffId}_${sId}`;
+            const stored = localStorage.getItem(studentKey);
+            if (stored) {
+                try {
+                    const list = JSON.parse(stored);
+                    if (Array.isArray(list)) {
+                        const pending = list.find((f: any) => f.status === "pending");
+                        if (pending) {
+                            setTempFollowUpDate(pending.date);
+                            setTempFollowUpTime(pending.time);
+                            setTempFollowUpNotes(pending.notes || "");
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
+        setTempFollowUpDate("");
+        setTempFollowUpTime("");
+        setTempFollowUpNotes("");
     };
 
     const applyQuickDate = (days: number) => {
@@ -482,6 +572,46 @@ function IncomingQueuePageInner() {
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    const getActiveFollowUp = (item: any) => {
+        if (typeof window === "undefined") return null;
+        const appId = item.id || item._id;
+        const staffId = user?.id || user?.email || "default";
+
+        // 1. Check app-level follow-up first
+        if (appId && followUpDates[appId]) {
+            return {
+                date: followUpDates[appId].date,
+                time: followUpDates[appId].time,
+                notes: followUpDates[appId].notes
+            };
+        }
+
+        // 2. Otherwise check student-level follow-up
+        const sId = item.userId || item.studentId || item.student?.id || item.user?.id;
+        if (sId) {
+            const studentKey = `follow_ups_${staffId}_${sId}`;
+            const stored = localStorage.getItem(studentKey);
+            if (stored) {
+                try {
+                    const list = JSON.parse(stored);
+                    if (Array.isArray(list)) {
+                        const pending = list.find((f: any) => f.status === "pending");
+                        if (pending) {
+                            return {
+                                date: pending.date,
+                                time: pending.time,
+                                notes: pending.notes
+                            };
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing student followups:", e);
+                }
+            }
+        }
+        return null;
+    };
 
 
 
@@ -711,7 +841,7 @@ function IncomingQueuePageInner() {
                                                                 />
                                                             </div>
                                                             <p className="text-xs font-mono text-slate-400">
-                                                                {item.userId || item.studentId || item.student?.id || item.user?.id || ((item.applicationNumber && (item.applicationNumber.startsWith('VTU-APP-') || item.applicationNumber.startsWith('VTU-BNK-'))) ? item.applicationNumber : "VTU-APP-PENDING")}
+                                                                {item.applicationNumber || "VTU-APP-PENDING"}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -745,34 +875,39 @@ function IncomingQueuePageInner() {
 
                                             {/* 4. Follow Up */}
                                             <td className="px-6 py-4">
-                                                {followUpDates[rowId] ? (
-                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 border border-rose-200 rounded-full text-[11px] font-black uppercase tracking-wider">
-                                                        <span>
-                                                            {(() => {
-                                                                const dateObj = new Date(followUpDates[rowId].date + 'T00:00:00');
-                                                                const day = String(dateObj.getDate()).padStart(2, '0');
-                                                                const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-                                                                const monthLabel = months[dateObj.getMonth()] || 'JUN';
-                                                                return `${day} ${monthLabel} ${followUpDates[rowId].time || ''}`;
-                                                            })()}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openFollowUpModal(rowId, item)}
-                                                            className="material-symbols-outlined text-[14px] text-rose-500 hover:text-rose-700 cursor-pointer border-0 bg-transparent p-0 flex items-center justify-center active:scale-95"
-                                                        >
-                                                            edit
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openFollowUpModal(rowId, item)}
-                                                        className="px-3.5 py-1.5 border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-xl text-xs font-extrabold text-slate-500 hover:text-indigo-600 transition-colors bg-white active:scale-95 cursor-pointer"
-                                                    >
-                                                        Add +
-                                                    </button>
-                                                )}
+                                                {(() => {
+                                                    const activeFU = getActiveFollowUp(item);
+                                                    if (activeFU) {
+                                                        const dateObj = new Date(activeFU.date + 'T00:00:00');
+                                                        const day = String(dateObj.getDate()).padStart(2, '0');
+                                                        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                                                        const monthLabel = months[dateObj.getMonth()] || 'JUN';
+                                                        return (
+                                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 border border-rose-200 rounded-full text-[11px] font-black uppercase tracking-wider">
+                                                                <span>
+                                                                    {`${day} ${monthLabel} ${activeFU.time || ''}`}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openFollowUpModal(rowId, item)}
+                                                                    className="material-symbols-outlined text-[14px] text-rose-500 hover:text-rose-700 cursor-pointer border-0 bg-transparent p-0 flex items-center justify-center active:scale-95"
+                                                                >
+                                                                    edit
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    } else {
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openFollowUpModal(rowId, item)}
+                                                                className="px-3.5 py-1.5 border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-xl text-xs font-extrabold text-slate-500 hover:text-indigo-600 transition-colors bg-white active:scale-95 cursor-pointer"
+                                                            >
+                                                                Add +
+                                                            </button>
+                                                        );
+                                                    }
+                                                })()}
                                             </td>
 
                                             {/* 5. Timestamp */}

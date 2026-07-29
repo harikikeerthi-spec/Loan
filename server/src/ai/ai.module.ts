@@ -15,9 +15,11 @@ import { UniversitySearchService } from './services/university-search.service';
 import { VisaInterviewService } from './services/visa-interview.service';
 import { KycService } from './services/kyc.service';
 
+import { AiSearchController } from './ai-search.controller';
+
 @Module({
   imports: [AuthModule, forwardRef(() => ChatModule)],
-  controllers: [AiController],
+  controllers: [AiController, AiSearchController],
   providers: [
     OpenRouterService,
     EligibilityService,
