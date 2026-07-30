@@ -548,8 +548,8 @@ export class BankService {
 
         // Build list of conditions for the chat content
         let conditionsStr = '';
-        if (Array.isArray(details.conditions) && details.conditions.length > 0) {
-          conditionsStr = details.conditions.map((c: any, index: number) => {
+        if (Array.isArray(detailsObj.conditions) && detailsObj.conditions.length > 0) {
+          conditionsStr = detailsObj.conditions.map((c: any, index: number) => {
             const num = index + 1;
             if (typeof c === 'string') {
               return `${num}. ${c}`;
@@ -563,11 +563,11 @@ export class BankService {
         }
 
         const messageContent = `🔔 **Conditional Sanction Submitted**\n\nThe bank has conditionally sanctioned the loan application.\n\n` +
-          `**Sanction Amount:** ₹${(details.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}\n` +
-          `**Interest Rate:** ${details.interestRate || application.interestRate || 'N/A'}% (${details.roiType || 'floating'})\n` +
-          `**Decision Deadline:** ${details.deadline || 'N/A'}\n\n` +
+          `**Sanction Amount:** ₹${(detailsObj.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}\n` +
+          `**Interest Rate:** ${detailsObj.interestRate || application.interestRate || 'N/A'}% (${detailsObj.roiType || 'floating'})\n` +
+          `**Decision Deadline:** ${detailsObj.deadline || 'N/A'}\n\n` +
           `**Conditions List:**\n${conditionsStr}\n\n` +
-          `**Remarks/Notes:** ${details.remarks || 'No additional remarks.'}`;
+          `**Remarks/Notes:** ${detailsObj.remarks || 'No additional remarks.'}`;
 
         // Save the support message in this conversation
         const savedMessage = await this.chatService.saveMessage({
@@ -591,9 +591,9 @@ export class BankService {
       try {
         await this.db.from('counter_offers').insert({
           applicationId: applicationId,
-          offeredAmount: details.offeredAmount || application.amount * 0.9,
-          offeredRate: details.offeredRate || 10.5,
-          offeredTenure: details.offeredTenure || 96,
+          offeredAmount: detailsObj.offeredAmount || application.amount * 0.9,
+          offeredRate: detailsObj.offeredRate || 10.5,
+          offeredTenure: detailsObj.offeredTenure || 96,
           status: 'pending'
         });
       } catch (coErr: any) {
@@ -619,15 +619,15 @@ export class BankService {
           }
         );
 
-        const offeredAmount = details.offeredAmount || details.sanctionAmount || (application.amount * 0.9);
-        const offeredRate = details.offeredRate || details.interestRate || 10.5;
-        const offeredTenure = details.offeredTenure || details.tenure || 96;
+        const offeredAmount = detailsObj.offeredAmount || detailsObj.sanctionAmount || (application.amount * 0.9);
+        const offeredRate = detailsObj.offeredRate || detailsObj.interestRate || 10.5;
+        const offeredTenure = detailsObj.offeredTenure || detailsObj.tenure || 96;
 
         const messageContent = `🔄 **Counter Offer Proposed**\n\nThe bank has proposed a counter offer for the loan application.\n\n` +
           `**Offered Amount:** ₹${(offeredAmount).toLocaleString('en-IN')}\n` +
           `**Offered Rate:** ${offeredRate}%\n` +
           `**Offered Tenure:** ${offeredTenure} months\n\n` +
-          `**Remarks/Notes:** ${details.remarks || 'No additional remarks.'}`;
+          `**Remarks/Notes:** ${detailsObj.remarks || 'No additional remarks.'}`;
 
         const savedMessage = await this.chatService.saveMessage({
           conversationId: conversation.id,
@@ -647,7 +647,7 @@ export class BankService {
       try {
         await this.db.from('rejections').insert({
           applicationId: applicationId,
-          reason: details.reason || 'Credit score shortfall',
+          reason: detailsObj.reason || 'Credit score shortfall',
           rejectedAt: nowStr
         });
       } catch (rjErr: any) {
@@ -674,9 +674,9 @@ export class BankService {
         );
 
         const messageContent = `🚨 **Application Rejected**\n\nThe bank has rejected the loan application.\n\n` +
-          `**Category:** ${details.rejectionCategory || details.category || 'N/A'}\n` +
-          `**Reason:** ${details.reason || 'Unspecified credit policy deviation'}\n\n` +
-          `**Remarks/Notes:** ${details.remarks || 'No additional remarks.'}`;
+          `**Category:** ${detailsObj.rejectionCategory || detailsObj.category || 'N/A'}\n` +
+          `**Reason:** ${detailsObj.reason || 'Unspecified credit policy deviation'}\n\n` +
+          `**Remarks/Notes:** ${detailsObj.remarks || 'No additional remarks.'}`;
 
         const savedMessage = await this.chatService.saveMessage({
           conversationId: conversation.id,

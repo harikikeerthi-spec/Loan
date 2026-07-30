@@ -45,12 +45,24 @@ export default function UserProfileView({
     const hscDoc = userDocs.find((d: any) => d.docType === 'marksheet_12' || d.docType === 'marksheet_12th');
     const ugDoc = userDocs.find((d: any) => d.docType === 'marksheet_ug' || d.docType === 'ug_degree' || d.docType === 'ug_transcript' || d.docType === 'degree_certificate');
 
-    const getExtractedField = (doc: any, fieldName: string) => {
-        if (!doc || !doc.verificationMetadata) return null;
-        const meta = doc.verificationMetadata;
-        const details = meta.details || {};
-        const ext = details.extractedFields || meta.extractedFields || details.extracted_data || meta.extracted_data || {};
-        return ext[fieldName] || meta[fieldName] || null;
+    const getExtractedField = (doc: any, fieldNames: string | string[]) => {
+        if (!doc) return null;
+        let meta = doc.verificationMetadata;
+        if (typeof meta === 'string') {
+            try { meta = JSON.parse(meta); } catch { meta = {}; }
+        }
+        if (!meta || typeof meta !== 'object') meta = {};
+        const details = meta.details || meta.ocrResult || meta.ocr_result || doc.ocrResult || doc.ocr_result || {};
+        const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || {};
+
+        const names = Array.isArray(fieldNames) ? fieldNames : [fieldNames];
+        for (const fn of names) {
+            if (ext[fn] && String(ext[fn]).trim()) return String(ext[fn]).trim();
+            if (details[fn] && String(details[fn]).trim()) return String(details[fn]).trim();
+            if (meta[fn] && String(meta[fn]).trim()) return String(meta[fn]).trim();
+            if (doc[fn] && String(doc[fn]).trim()) return String(doc[fn]).trim();
+        }
+        return null;
     };
 
     const getDocExtractedField = (docTypes: string[], fieldNames: string[]): string | undefined => {
@@ -61,29 +73,18 @@ export default function UserProfileView({
                 return type === target || type.includes(target) || target.includes(type);
             });
             if (doc) {
-                let meta = doc.verificationMetadata;
-                if (typeof meta === 'string') {
-                    try { meta = JSON.parse(meta); } catch { meta = {}; }
-                }
-                if (!meta || typeof meta !== 'object') meta = {};
-
-                const details = meta.details || meta.ocrResult || meta.ocr_result || doc.ocrResult || doc.ocr_result || {};
-                const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || {};
-
-                for (const fn of fieldNames) {
-                    if (ext[fn] && String(ext[fn]).trim()) return String(ext[fn]).trim();
-                    if (details[fn] && String(details[fn]).trim()) return String(details[fn]).trim();
-                    if (meta[fn] && String(meta[fn]).trim()) return String(meta[fn]).trim();
-                    if (doc[fn] && String(doc[fn]).trim()) return String(doc[fn]).trim();
-                }
+                const val = getExtractedField(doc, fieldNames);
+                if (val) return val;
             }
         }
         return undefined;
     };
 
     const getAcademicDetails = (doc: any) => {
-        const inst = getExtractedField(doc, 'institution') || getExtractedField(doc, 'university') || getExtractedField(doc, 'school_name') || getExtractedField(doc, 'college_name');
-        const pct = getExtractedField(doc, 'score') || getExtractedField(doc, 'percentage') || getExtractedField(doc, 'gpa') || getExtractedField(doc, 'cgpa');
+        const instKeys = ['institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body'];
+        const pctKeys = ['score', 'percentage', 'gpa', 'cgpa', 'marks_percentage', 'aggregate_percentage'];
+        const inst = getExtractedField(doc, instKeys);
+        const pct = getExtractedField(doc, pctKeys);
         return { institute: inst || "—", percentage: pct ? `${pct}%` : "—" };
     };
 

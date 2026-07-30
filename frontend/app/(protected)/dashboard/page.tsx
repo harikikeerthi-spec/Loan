@@ -717,14 +717,6 @@ export default function DashboardPage() {
                                     </>
                                 )}
                             </button>
-                            {/* <button
-                                type="button"
-                                onClick={() => setIsSupportOpen(true)}
-                                className="px-5 py-2.5 bg-[#6605c7] hover:bg-[#5204a3] text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-purple-600/20 flex items-center gap-2 cursor-pointer border-0"
-                            >
-                                <span className="material-symbols-outlined text-sm">confirmation_number</span>
-                                Raise Support Ticket
-                            </button> */}
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
                                 Speak with Counsellor
                             </Link>
@@ -919,7 +911,7 @@ export default function DashboardPage() {
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-8 overflow-x-auto no-scrollbar border-b border-slate-200/60 relative">
-                    {["overview", "applications", "documents", "support_tickets", "profile"].map((tab) => (
+                    {["overview", "applications", "documents", "profile"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -1290,13 +1282,7 @@ export default function DashboardPage() {
                     />
                 )}
 
-                {/* Support Tickets Tab */}
-                {activeTab === "support_tickets" && (
-                    <UserSupportTicketsView
-                        userRole={user?.role || "student"}
-                        userInfo={{ id: user?.id, name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email }}
-                    />
-                )}
+
 
 
                 {/* Documents Tab */}

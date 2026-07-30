@@ -32,6 +32,7 @@ final_token.txt
 .DS_Store
 .vscode/
 .idea/
+.claude/
 Thumbs.db
 *.log
 *.swp

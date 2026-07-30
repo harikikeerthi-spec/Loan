@@ -372,29 +372,52 @@ export default function ApplyLoanPage() {
         return Object.keys(errors).length === 0;
     };
 
+    const [resolvingPincode, setResolvingPincode] = useState(false);
+
     const resolvePincode = async (pin: string) => {
+        if (!pin || pin.length !== 6) return;
+        setResolvingPincode(true);
         try {
-            const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+            // Race fast Indian Postal API with timeout fallback
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            
+            const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`, { signal: controller.signal });
+            clearTimeout(timeoutId);
             const data = await res.json();
-            if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice[0]) {
-                const po = data[0].PostOffice[0];
-                const city = po.District || po.Taluk || po.Name;
-                const state = po.State;
-                if (city && state) {
+            
+            if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                const poList = data[0].PostOffice;
+                // Pick primary Post Office / area name
+                const primaryPO = poList[0];
+                const areaName = primaryPO.Name !== primaryPO.District ? primaryPO.Name : "";
+                const district = primaryPO.District || primaryPO.Taluk || "";
+                const state = primaryPO.State || "";
+
+                // Construct clear, accurate residential location format
+                const locationComponents = [areaName, district, state].filter(Boolean);
+                const locationStr = Array.from(new Set(locationComponents)).join(", ");
+
+                if (locationStr) {
                     setFormData(prev => {
                         const currentAddr = prev.address.trim();
-                        if (currentAddr) {
-                            if (currentAddr.includes(city) || currentAddr.includes(state)) {
-                                return prev;
-                            }
-                            return { ...prev, address: `${currentAddr}, ${city}, ${state}` };
+                        if (!currentAddr) {
+                            return { ...prev, address: locationStr };
                         }
-                        return { ...prev, address: `${city}, ${state}` };
+                        // Avoid duplication if area/district/state already written
+                        if (locationComponents.some(comp => currentAddr.toLowerCase().includes(comp.toLowerCase()))) {
+                            return prev;
+                        }
+                        return { ...prev, address: `${currentAddr}, ${locationStr}` };
                     });
                 }
             }
-        } catch (e) {
-            console.error("Failed to resolve pincode details:", e);
+        } catch (e: any) {
+            if (e.name !== 'AbortError') {
+                console.error("Failed to resolve pincode details:", e);
+            }
+        } finally {
+            setResolvingPincode(false);
         }
     };
 
@@ -441,9 +464,14 @@ export default function ApplyLoanPage() {
                 errors.coApplicantPhone = "Please enter a valid 10-digit phone number";
             }
 
-            if (!formData.coApplicantEmail.trim()) {
+            const coEmail = formData.coApplicantEmail.trim();
+            if (!coEmail) {
                 errors.coApplicantEmail = "Co-applicant email address is required";
-            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.coApplicantEmail.trim())) {
+            } else if (coEmail.length > 30) {
+                errors.coApplicantEmail = "Email must not exceed 30 characters";
+            } else if (/[^a-zA-Z0-9@._-]/.test(coEmail)) {
+                errors.coApplicantEmail = "Special characters are not allowed (only letters, numbers, @, ., _, -)";
+            } else if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(coEmail)) {
                 errors.coApplicantEmail = "Please enter a valid email address (e.g., name@gmail.com)";
             }
         }
@@ -947,26 +975,30 @@ export default function ApplyLoanPage() {
                                                 required
                                                 disabled={true}
                                             />
-                                            {/* <span className="absolute top-0 right-0 text-[9px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 pointer-events-none z-10">
-                                                <span className="material-symbols-outlined text-[11px]">lock</span>
-                                                Locked
-                                            </span> */}
                                         </div>
-                                        <InputField
-                                            label="Residential Pincode"
-                                            icon="pin_drop"
-                                            value={formData.pincode}
-                                            onChange={(v) => {
-                                                const numericVal = v.replace(/\D/g, "").slice(0, 6);
-                                                update("pincode", numericVal);
-                                                if (numericVal.length === 6) {
-                                                    resolvePincode(numericVal);
-                                                }
-                                            }}
-                                            placeholder="e.g. 400001"
-                                            error={stepErrors.pincode}
-                                            required
-                                        />
+                                        <div className="relative">
+                                            <InputField
+                                                label="Residential Pincode"
+                                                icon="pin_drop"
+                                                value={formData.pincode}
+                                                onChange={(v) => {
+                                                    const numericVal = v.replace(/\D/g, "").slice(0, 6);
+                                                    update("pincode", numericVal);
+                                                    if (numericVal.length === 6) {
+                                                        resolvePincode(numericVal);
+                                                    }
+                                                }}
+                                                placeholder="e.g. 400001"
+                                                error={stepErrors.pincode}
+                                                required
+                                            />
+                                            {resolvingPincode && (
+                                                <span className="absolute top-2 right-2 text-[10px] text-purple-600 font-semibold flex items-center gap-1 animate-pulse">
+                                                    <span className="material-symbols-outlined text-xs animate-spin">sync</span>
+                                                    Auto-filling location...
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-8">
@@ -1022,7 +1054,10 @@ export default function ApplyLoanPage() {
                                             label="Co-Applicant Email / Gmail"
                                             icon="mail"
                                             value={formData.coApplicantEmail}
-                                            onChange={(v) => update("coApplicantEmail", v)}
+                                            onChange={(v) => {
+                                                const cleaned = v.replace(/[^a-zA-Z0-9@._-]/g, "").slice(0, 30);
+                                                update("coApplicantEmail", cleaned);
+                                            }}
                                             placeholder="e.g. coapplicant@gmail.com"
                                             error={stepErrors.coApplicantEmail}
                                             required

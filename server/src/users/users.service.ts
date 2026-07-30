@@ -1618,6 +1618,7 @@ export class UsersService {
   }
 
   async upsertParentRecord(userId: string, relation: string, data: { name?: string; aadharNumber?: string; panNumber?: string }) {
+    // First try to find an existing record
     const { data: existing } = await this.db
       .from('parents')
       .select('*')
@@ -1630,20 +1631,32 @@ export class UsersService {
       relation,
       updatedAt: new Date().toISOString(),
     };
-    if (data.name !== undefined) payload.name = data.name;
-    if (data.aadharNumber !== undefined) payload.aadharNumber = data.aadharNumber;
-    if (data.panNumber !== undefined) payload.panNumber = data.panNumber;
 
     if (existing) {
-      payload.name = payload.name ?? existing.name;
-      payload.aadharNumber = payload.aadharNumber ?? existing.aadharNumber;
-      payload.panNumber = payload.panNumber ?? existing.panNumber;
-      const { data: updated, error } = await this.db.from('parents').update(payload).eq('id', existing.id).select().single();
+      // Merge: only overwrite if new value is provided
+      payload.name = data.name ?? existing.name;
+      payload.aadharNumber = data.aadharNumber ?? existing.aadharNumber;
+      payload.panNumber = data.panNumber ?? existing.panNumber;
+      const { data: updated, error } = await this.db
+        .from('parents')
+        .update(payload)
+        .eq('id', existing.id)
+        .select()
+        .single();
       if (error) throw error;
       return updated;
     } else {
-      payload.id = `${userId}_${relation}_${Date.now()}`;
-      const { data: inserted, error } = await this.db.from('parents').insert(payload).select().single();
+      // Insert with a proper UUID
+      payload.id = randomUUID();
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.aadharNumber !== undefined) payload.aadharNumber = data.aadharNumber;
+      if (data.panNumber !== undefined) payload.panNumber = data.panNumber;
+      payload.createdAt = new Date().toISOString();
+      const { data: inserted, error } = await this.db
+        .from('parents')
+        .insert(payload)
+        .select()
+        .single();
       if (error) throw error;
       return inserted;
     }
