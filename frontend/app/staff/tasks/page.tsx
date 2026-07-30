@@ -569,10 +569,10 @@ export default function RemindersPage() {
                                                                     }
                                                                 }}
                                                                 title={`${ev.studentName ? ev.studentName + " — " : ""}${displayId}`}
-                                                                className="w-full text-left px-1 py-0.5 rounded text-[8px] font-mono font-extrabold leading-none flex items-center gap-1 bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 transition-all cursor-pointer shadow-2xs"
+                                                                className="w-full text-left px-1 py-0.5 rounded text-[8px] font-mono font-extrabold leading-tight flex items-start gap-1 bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 transition-all cursor-pointer shadow-2xs"
                                                             >
                                                                 <span className="material-symbols-outlined text-[9px] shrink-0 text-rose-600">calendar_today</span>
-                                                                <span className="truncate tracking-tighter">{displayId}</span>
+                                                                <span className="break-all tracking-tighter leading-tight">{displayId}</span>
                                                             </button>
                                                         );
                                                     })}

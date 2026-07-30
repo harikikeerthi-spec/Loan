@@ -146,7 +146,7 @@ export class DocumentController {
         await fs.promises.mkdir(localDir, { recursive: true });
         const existingFiles = await fs.promises.readdir(localDir).catch(() => []);
         for (const existing of existingFiles) {
-          await fs.promises.unlink(path.join(localDir, existing)).catch(() => {});
+          await fs.promises.unlink(path.join(localDir, existing)).catch(() => { });
         }
         const localFilePath = path.join(localDir, `file${fileExt}`);
         await fs.promises.writeFile(localFilePath, file.buffer);

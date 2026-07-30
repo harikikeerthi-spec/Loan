@@ -21,8 +21,11 @@ const courses = ["B.Tech/B.E.", "MBA/PGDM", "MS/M.Tech", "MBBS/Medicine", "Law",
 const popularCountries = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "New Zealand", "Other"];
 const allCountries = getAllCountries();
 
-const formatIndianCurrency = (val: string): string => {
-    const clean = val.replace(/\D/g, "");
+const formatIndianCurrency = (val: string, maxDigits?: number): string => {
+    let clean = val.replace(/\D/g, "");
+    if (maxDigits && clean.length > maxDigits) {
+        clean = clean.slice(0, maxDigits);
+    }
     if (!clean) return "";
     const num = parseInt(clean, 10);
     if (isNaN(num)) return "";
@@ -93,6 +96,8 @@ export default function ApplyLoanPage() {
         livingCost: "",
         coApplicant: "",
         otherRelation: "",
+        coApplicantPhone: "",
+        coApplicantEmail: "",
         income: "",
         collateral: "no",
         firstName: "",
@@ -429,6 +434,19 @@ export default function ApplyLoanPage() {
         if (formData.coApplicant === "other" && !formData.otherRelation) {
             errors.otherRelation = "Please select other relation type";
         }
+        if (formData.coApplicant && formData.coApplicant !== "none") {
+            if (!formData.coApplicantPhone.trim()) {
+                errors.coApplicantPhone = "Co-applicant phone number is required";
+            } else if (!/^[\d+\-\s()]{7,15}$/.test(formData.coApplicantPhone.trim())) {
+                errors.coApplicantPhone = "Please enter a valid 10-digit phone number";
+            }
+
+            if (!formData.coApplicantEmail.trim()) {
+                errors.coApplicantEmail = "Co-applicant email address is required";
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.coApplicantEmail.trim())) {
+                errors.coApplicantEmail = "Please enter a valid email address (e.g., name@gmail.com)";
+            }
+        }
         const cleanIncome = formData.income.replace(/,/g, "");
         if (formData.coApplicant && (!cleanIncome || Number(cleanIncome) <= 0)) {
             errors.income = "Please enter co-applicant annual income";
@@ -480,6 +498,8 @@ export default function ApplyLoanPage() {
                 hasCoApplicant: !!formData.coApplicant && formData.coApplicant !== "none",
                 coApplicantName: capitalizedRelation || null,
                 coApplicantRelation: rel || null,
+                coApplicantPhone: formData.coApplicantPhone.trim() || null,
+                coApplicantEmail: formData.coApplicantEmail.trim() || null,
                 coApplicantIncome: isNaN(parsedIncome as number) ? undefined : parsedIncome,
                 coApplicant: rel || null,
                 country: formData.country === "Other" ? formData.otherCountry : formData.country,
@@ -503,6 +523,10 @@ export default function ApplyLoanPage() {
                         pincode: formData.pincode,
                         targetUniversity: formData.university,
                         studyDestination: formData.country === "Other" ? formData.otherCountry : formData.country,
+                        coApplicantPhone: formData.coApplicantPhone,
+                        coApplicantEmail: formData.coApplicantEmail,
+                        coApplicantRelation: rel,
+                        coApplicantIncome: parsedIncome,
                     });
                     await refreshUser();
                 } catch (err) {
@@ -885,25 +909,28 @@ export default function ApplyLoanPage() {
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <InputField label="Email Address" icon="mail" value={formData.email} onChange={(v) => update("email", v.slice(0, 30))} placeholder="rahul@example.com" type="email" error={stepErrors.email} required maxLength={30} />
+                                        <InputField label="Email Address" icon="mail" value={formData.email} onChange={(v) => update("email", v.slice(0, 30))} placeholder="rahul@example.com" type="email" error={stepErrors.email} required maxLength={30} disabled={true} />
                                         <div className="space-y-3">
                                             <label className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-500 flex items-center justify-between">
                                                 <span>Mobile Number <span className="text-red-500 ml-1">*</span></span>
+                                                {/* <span className="text-[9px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[11px]">lock</span>
+                                                    Locked
+                                                </span> */}
                                             </label>
                                             <div className="relative group">
-                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-gray-400 group-focus-within:text-[#3A2EAB] transition-all select-none">
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-gray-400 select-none">
                                                     <span className="text-lg">🇮🇳</span>
                                                     <span className="text-xs font-bold text-gray-500">+91</span>
                                                 </div>
                                                 <input
                                                     type="tel"
+                                                    disabled
+                                                    readOnly
                                                     value={formData.phone.startsWith("+91 ") ? formData.phone.replace("+91 ", "") : formData.phone.replace(/^\+91/, "")}
-                                                    onChange={(e) => {
-                                                        const cleanNum = e.target.value.replace(/\D/g, "").slice(0, 10);
-                                                        update("phone", cleanNum ? `+91 ${cleanNum}` : "");
-                                                    }}
+                                                    onChange={() => { }}
                                                     placeholder="98237 49821"
-                                                    className={`w-full pl-20 pr-6 py-4 bg-white/70 border rounded-2xl shadow-sm transition-all outline-none text-sm font-bold text-gray-900 focus:bg-white placeholder:text-gray-400 ${stepErrors.phone ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#3A2EAB]/50 focus:ring-4 focus:ring-[#3A2EAB]/10 hover:border-gray-300"}`}
+                                                    className="w-full pl-20 pr-6 py-4 bg-gray-100/80 cursor-not-allowed text-gray-500 border border-gray-200 rounded-2xl shadow-sm outline-none text-sm font-bold select-none"
                                                 />
                                             </div>
                                             {stepErrors.phone && <p className="text-red-500 text-[10px] font-black uppercase tracking-wider pl-1">{stepErrors.phone}</p>}
@@ -911,13 +938,20 @@ export default function ApplyLoanPage() {
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <DatePicker
-                                            label="Date of Birth"
-                                            value={formData.dateOfBirth}
-                                            onChange={(v) => update("dateOfBirth", v)}
-                                            error={stepErrors.dateOfBirth}
-                                            required
-                                        />
+                                        <div className="relative">
+                                            <DatePicker
+                                                label="Date of Birth"
+                                                value={formData.dateOfBirth}
+                                                onChange={(v) => update("dateOfBirth", v)}
+                                                error={stepErrors.dateOfBirth}
+                                                required
+                                                disabled={true}
+                                            />
+                                            {/* <span className="absolute top-0 right-0 text-[9px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 pointer-events-none z-10">
+                                                <span className="material-symbols-outlined text-[11px]">lock</span>
+                                                Locked
+                                            </span> */}
+                                        </div>
                                         <InputField
                                             label="Residential Pincode"
                                             icon="pin_drop"
@@ -974,6 +1008,26 @@ export default function ApplyLoanPage() {
                                             />
                                         )}
                                     </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <InputField
+                                            label="Co-Applicant Phone Number"
+                                            icon="call"
+                                            value={formData.coApplicantPhone}
+                                            onChange={(v) => update("coApplicantPhone", v.replace(/\D/g, "").slice(0, 10))}
+                                            placeholder="e.g. 9876543210"
+                                            error={stepErrors.coApplicantPhone}
+                                            required
+                                        />
+                                        <InputField
+                                            label="Co-Applicant Email / Gmail"
+                                            icon="mail"
+                                            value={formData.coApplicantEmail}
+                                            onChange={(v) => update("coApplicantEmail", v)}
+                                            placeholder="e.g. coapplicant@gmail.com"
+                                            error={stepErrors.coApplicantEmail}
+                                            required
+                                        />
+                                    </div>
 
                                     <div className="grid grid-cols-1 gap-8">
                                         <div className="space-y-3">
@@ -987,7 +1041,7 @@ export default function ApplyLoanPage() {
                                                 <input
                                                     type="text"
                                                     value={formData.income}
-                                                    onChange={(e) => update("income", formatIndianCurrency(e.target.value))}
+                                                    onChange={(e) => update("income", formatIndianCurrency(e.target.value, 8))}
                                                     placeholder="20,00,000"
                                                     className={`w-full pl-8 pr-44 py-4 bg-white border rounded-2xl shadow-sm outline-none text-sm font-bold text-gray-900 focus:bg-white transition-all ${stepErrors.income ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#3A2EAB]/50 focus:ring-4 focus:ring-[#3A2EAB]/10 hover:border-gray-300"}`}
                                                 />
@@ -1068,6 +1122,8 @@ export default function ApplyLoanPage() {
                                                     })()
                                                 },
                                                 { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant === "other" ? (formData.otherRelation ? formData.otherRelation.charAt(0).toUpperCase() + formData.otherRelation.slice(1) : "Other") : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
+                                                { label: "Co-Applicant Mobile", value: formData.coApplicantPhone },
+                                                { label: "Co-Applicant Email", value: formData.coApplicantEmail },
                                                 { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 // { label: "Collateral", value: formData.collateral.split(':')[0] },
                                                 { label: "Residential Pincode", value: formData.pincode },
@@ -1175,15 +1231,21 @@ export default function ApplyLoanPage() {
     );
 }
 
-function InputField({ label, icon, value, onChange, placeholder, type = "text", error, required, onFocus, onBlur, maxLength }: {
+function InputField({ label, icon, value, onChange, placeholder, type = "text", error, required, onFocus, onBlur, maxLength, disabled }: {
     label: string; icon?: string; value: string; onChange: (v: string) => void;
     placeholder?: string; type?: string; error?: string; required?: boolean;
-    onFocus?: () => void; onBlur?: () => void; maxLength?: number;
+    onFocus?: () => void; onBlur?: () => void; maxLength?: number; disabled?: boolean;
 }) {
     return (
         <div className="space-y-3">
             <label className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-500 flex items-center justify-between">
                 <span>{label} {required && <span className="text-red-500 ml-1">*</span>}</span>
+                {/* {disabled && (
+                    <span className="text-[9px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[11px]">lock</span>
+                        Locked
+                    </span>
+                )} */}
             </label>
             <div className="relative group">
                 {icon && (
@@ -1194,12 +1256,13 @@ function InputField({ label, icon, value, onChange, placeholder, type = "text", 
                 <input
                     type={type}
                     value={value}
-                    onChange={(e) => onChange(e.target.value)}
+                    onChange={(e) => !disabled && onChange(e.target.value)}
                     onFocus={onFocus}
                     onBlur={onBlur}
                     placeholder={placeholder}
                     maxLength={maxLength}
-                    className={`w-full ${icon ? 'pl-12' : 'px-6'} pr-6 py-4 bg-white/70 border rounded-2xl shadow-sm transition-all outline-none text-sm font-bold text-gray-900 focus:bg-white placeholder:text-gray-400 ${error ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#6605c7]/50 focus:ring-4 focus:ring-purple-100 hover:border-gray-300"}`}
+                    disabled={disabled}
+                    className={`w-full ${icon ? 'pl-12' : 'px-6'} pr-6 py-4 border rounded-2xl shadow-sm transition-all outline-none text-sm font-bold text-gray-900 placeholder:text-gray-400 ${disabled ? "bg-gray-100/80 cursor-not-allowed text-gray-500 border-gray-200 select-none" : "bg-white/70 focus:bg-white " + (error ? "border-red-300 ring-2 ring-red-100" : "border-gray-200 focus:border-[#6605c7]/50 focus:ring-4 focus:ring-purple-100 hover:border-gray-300")}`}
                 />
             </div>
             {error && <p className="text-red-500 text-[10px] font-black uppercase tracking-wider pl-1">{error}</p>}

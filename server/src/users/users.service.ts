@@ -561,7 +561,7 @@ export class UsersService {
           details.father_name || details.fatherName || details.father_full_name || details.fatherFullName ||
           details.coapplicant_name || details.coApplicantName || details.co_applicant_name ||
           details.full_name || details.fullName || details.name || details.holder_name || details.printed_name;
-        
+
         const nameToSave = extractedName && typeof extractedName === 'string' && extractedName.trim() ? extractedName.trim() : undefined;
 
         // Clean Aadhar (12 digits) if present
@@ -607,20 +607,20 @@ export class UsersService {
         let updated = false;
 
         if (relation === 'father') {
-          if (nameToSave) { family.fatherName = nameToSave; payload.fatherName = nameToSave; updated = true; }
-          if (aadharNum) { family.fatherAadhar = aadharNum; payload.fatherAadhar = aadharNum; updated = true; }
-          if (panNum) { family.fatherPan = panNum; payload.fatherPan = panNum; updated = true; }
-          if (updated) payload.family = JSON.stringify(family);
+          if (nameToSave) { family.fatherName = nameToSave; updated = true; }
+          if (aadharNum) { family.fatherAadhar = aadharNum; updated = true; }
+          if (panNum) { family.fatherPan = panNum; updated = true; }
+          if (updated) payload.family = typeof currentUser.family === 'object' && currentUser.family !== null ? family : JSON.stringify(family);
         } else if (relation === 'mother') {
-          if (nameToSave) { family.motherName = nameToSave; payload.motherName = nameToSave; updated = true; }
-          if (aadharNum) { family.motherAadhar = aadharNum; payload.motherAadhar = aadharNum; updated = true; }
-          if (panNum) { family.motherPan = panNum; payload.motherPan = panNum; updated = true; }
-          if (updated) payload.family = JSON.stringify(family);
+          if (nameToSave) { family.motherName = nameToSave; updated = true; }
+          if (aadharNum) { family.motherAadhar = aadharNum; updated = true; }
+          if (panNum) { family.motherPan = panNum; updated = true; }
+          if (updated) payload.family = typeof currentUser.family === 'object' && currentUser.family !== null ? family : JSON.stringify(family);
         } else if (relation === 'coapplicant') {
-          if (nameToSave) { coApplicant.name = nameToSave; payload.coApplicantName = nameToSave; updated = true; }
-          if (aadharNum) { coApplicant.aadhar = aadharNum; payload.coApplicantAadhar = aadharNum; updated = true; }
-          if (panNum) { coApplicant.pan = panNum; payload.coApplicantPan = panNum; updated = true; }
-          if (updated) payload.coApplicant = JSON.stringify(coApplicant);
+          if (nameToSave) { coApplicant.name = nameToSave; updated = true; }
+          if (aadharNum) { coApplicant.aadhar = aadharNum; updated = true; }
+          if (panNum) { coApplicant.pan = panNum; updated = true; }
+          if (updated) payload.coApplicant = typeof currentUser.coApplicant === 'object' && currentUser.coApplicant !== null ? coApplicant : JSON.stringify(coApplicant);
         }
 
         const parentName = nameToSave || (relation === 'mother' ? family.motherName : relation === 'father' ? family.fatherName : coApplicant.name);
@@ -652,6 +652,26 @@ export class UsersService {
             }
           } catch (syncErr: any) {
             console.error(`[UsersService.updateExtractedDetails] Error syncing name to LoanApplication: ${syncErr.message}`);
+          }
+        }
+      }
+
+      // Automatically sync gender if present on student's uploaded documents (like Passport)
+      if (!relation) {
+        const rawGender = details.gender || details.sex;
+        if (rawGender) {
+          const g = String(rawGender).toLowerCase().trim();
+          const genderVal = g.startsWith('m') ? 'Male' : g.startsWith('f') ? 'Female' : rawGender;
+
+          try {
+            await this.db
+              .from('LoanApplication')
+              .update({ gender: genderVal })
+              .eq('userId', userId)
+              .neq('status', 'cancelled');
+            console.log(`[UsersService.updateExtractedDetails] Automatically updated student gender to ${genderVal} on LoanApplication for user: ${userId}`);
+          } catch (syncErr: any) {
+            console.error(`[UsersService.updateExtractedDetails] Error syncing student gender to LoanApplication: ${syncErr.message}`);
           }
         }
       }
@@ -851,6 +871,8 @@ export class UsersService {
       notes?: string;
       intakeSeason?: string;
       pincode?: string;
+      city?: string;
+      state?: string;
       admissionStatus?: string;
     },
   ) {
@@ -888,6 +910,9 @@ export class UsersService {
       dateOfBirth: this.parseDate(data.dateOfBirth),
 
       address: data.address || null,
+      pincode: data.pincode || null,
+      city: data.city || null,
+      state: data.state || null,
       hasCoApplicant: !!data.coApplicant && data.coApplicant !== 'none',
       coApplicantName: data.coApplicantName || null,
       coApplicantRelation: data.coApplicant !== 'none' ? data.coApplicant : null,
@@ -1442,37 +1467,104 @@ export class UsersService {
       const coappRec = parentsList.find((p: any) => p.relation === 'coapplicant');
 
       if (fatherRec) {
-        if (fatherRec.name && !familyObj.fatherName) familyObj.fatherName = fatherRec.name;
-        if (fatherRec.aadharNumber && !familyObj.fatherAadhar) familyObj.fatherAadhar = fatherRec.aadharNumber;
-        if (fatherRec.panNumber && !familyObj.fatherPan) familyObj.fatherPan = fatherRec.panNumber;
+        if (fatherRec.name) familyObj.fatherName = fatherRec.name;
+        if (fatherRec.aadharNumber) familyObj.fatherAadhar = fatherRec.aadharNumber;
+        if (fatherRec.panNumber) familyObj.fatherPan = fatherRec.panNumber;
       }
 
       if (motherRec) {
-        if (motherRec.name && !familyObj.motherName) familyObj.motherName = motherRec.name;
-        if (motherRec.aadharNumber && !familyObj.motherAadhar) familyObj.motherAadhar = motherRec.aadharNumber;
-        if (motherRec.panNumber && !familyObj.motherPan) familyObj.motherPan = motherRec.panNumber;
+        if (motherRec.name) familyObj.motherName = motherRec.name;
+        if (motherRec.aadharNumber) familyObj.motherAadhar = motherRec.aadharNumber;
+        if (motherRec.panNumber) familyObj.motherPan = motherRec.panNumber;
       }
 
-      if (coappRec) {
-        if (coappRec.name && !coappObj.name) coappObj.name = coappRec.name;
-        if (coappRec.aadharNumber && !coappObj.aadhar) coappObj.aadhar = coappRec.aadharNumber;
-        if (coappRec.panNumber && !coappObj.pan) coappObj.pan = coappRec.panNumber;
+      const getDocFieldServer = (types: string[], fields: string[]) => {
+        for (const t of types) {
+          const d = (documents || []).find((doc: any) => {
+            const type = (doc.docType || '').toLowerCase();
+            const target = t.toLowerCase();
+            return type === target || type.includes(target) || target.includes(type);
+          });
+          if (d) {
+            let meta = d.verificationMetadata;
+            if (typeof meta === 'string') {
+              try { meta = JSON.parse(meta); } catch { meta = {}; }
+            }
+            if (!meta || typeof meta !== 'object') meta = {};
+            const details = meta.details || meta.ocrResult || meta.ocr_result || d.ocrResult || d.ocr_result || {};
+            const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || {};
+
+            for (const f of fields) {
+              if (ext[f] && String(ext[f]).trim()) return String(ext[f]).trim();
+              if (details[f] && String(details[f]).trim()) return String(details[f]).trim();
+              if (meta[f] && String(meta[f]).trim()) return String(meta[f]).trim();
+              if (d[f] && String(d[f]).trim()) return String(d[f]).trim();
+            }
+          }
+        }
+        return undefined;
+      };
+
+      const docMotherName = getDocFieldServer(['mother_aadhar', 'mother_pan'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'full_name', 'name', 'holder_name']);
+      const docMotherAadhar = getDocFieldServer(['mother_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']);
+      const docMotherPan = getDocFieldServer(['mother_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']);
+
+      const docFatherName = getDocFieldServer(['father_aadhar', 'father_pan'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'full_name', 'name', 'holder_name']);
+      const docFatherAadhar = getDocFieldServer(['father_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']);
+      const docFatherPan = getDocFieldServer(['father_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']);
+
+      if (!familyObj.motherName && docMotherName) familyObj.motherName = docMotherName;
+      if (!familyObj.motherAadhar && docMotherAadhar) familyObj.motherAadhar = docMotherAadhar;
+      if (!familyObj.motherPan && docMotherPan) familyObj.motherPan = docMotherPan;
+
+      if (!familyObj.fatherName && docFatherName) familyObj.fatherName = docFatherName;
+      if (!familyObj.fatherAadhar && docFatherAadhar) familyObj.fatherAadhar = docFatherAadhar;
+      if (!familyObj.fatherPan && docFatherPan) familyObj.fatherPan = docFatherPan;
+
+      // Auto-upsert into parents table if details exist
+      const finalMotherName = familyObj.motherName || motherRec?.name;
+      const finalMotherAadhar = familyObj.motherAadhar || motherRec?.aadharNumber;
+      const finalMotherPan = familyObj.motherPan || motherRec?.panNumber;
+      if (finalMotherName || finalMotherAadhar || finalMotherPan) {
+        this.upsertParentRecord(userId, 'mother', {
+          name: finalMotherName,
+          aadharNumber: finalMotherAadhar,
+          panNumber: finalMotherPan,
+        }).catch(() => {});
+      }
+
+      const finalFatherName = familyObj.fatherName || fatherRec?.name;
+      const finalFatherAadhar = familyObj.fatherAadhar || fatherRec?.aadharNumber;
+      const finalFatherPan = familyObj.fatherPan || fatherRec?.panNumber;
+      if (finalFatherName || finalFatherAadhar || finalFatherPan) {
+        this.upsertParentRecord(userId, 'father', {
+          name: finalFatherName,
+          aadharNumber: finalFatherAadhar,
+          panNumber: finalFatherPan,
+        }).catch(() => {});
       }
 
       const sanitizedUser = userWithActivity ? {
         ...userWithActivity,
         family: familyObj,
         coApplicant: coappObj,
-        motherName: familyObj.motherName || userWithActivity.motherName || motherRec?.name,
-        motherAadhar: familyObj.motherAadhar || userWithActivity.motherAadhar || motherRec?.aadharNumber,
-        motherPan: familyObj.motherPan || userWithActivity.motherPan || motherRec?.panNumber,
-        fatherName: familyObj.fatherName || userWithActivity.fatherName || fatherRec?.name,
-        fatherAadhar: familyObj.fatherAadhar || userWithActivity.fatherAadhar || fatherRec?.aadharNumber,
-        fatherPan: familyObj.fatherPan || userWithActivity.fatherPan || fatherRec?.panNumber,
+        motherName: finalMotherName,
+        motherAadhar: finalMotherAadhar,
+        motherPan: finalMotherPan,
+        fatherName: finalFatherName,
+        fatherAadhar: finalFatherAadhar,
+        fatherPan: finalFatherPan,
         parents: parentsList,
       } : null;
 
       if (sanitizedUser) {
+        const firstApp = applications[0] || {};
+        if (!sanitizedUser.targetUniversity) {
+          sanitizedUser.targetUniversity = firstApp.universityName || firstApp.targetUniversity || firstApp.university || null;
+        }
+        if (!sanitizedUser.studyDestination) {
+          sanitizedUser.studyDestination = firstApp.country || firstApp.destinationCountry || null;
+        }
         delete sanitizedUser.password;
         delete sanitizedUser.refreshToken;
       }

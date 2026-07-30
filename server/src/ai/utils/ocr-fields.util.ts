@@ -368,41 +368,89 @@ export function extractFullNameFromOcrRaw(
         }
     }
 
-    const direct = pickFirst(
-        raw.mother_name,
-        raw.motherName,
-        raw.mother_full_name,
-        raw.motherFullName,
-        raw.father_name,
-        raw.fatherName,
-        raw.father_full_name,
-        raw.fatherFullName,
-        raw.coapplicant_name,
-        raw.coApplicantName,
-        raw.co_applicant_name,
-        raw.coApplicant_name,
-        raw.full_name,
-        raw.fullName,
-        raw.holder_name,
-        raw.holderName,
-        raw.cardholder_name,
-        raw.cardholderName,
-        raw.candidate_name,
-        raw.candidateName,
-        raw.student_name,
-        raw.studentName,
-        raw.applicant_name,
-        raw.applicantName,
-        raw.account_holder_name,
-        raw.accountHolderName,
-        raw.taxpayer_name,
-        raw.taxpayerName,
-        raw.person_name,
-        raw.personName,
-        raw.printed_name,
-        raw.printedName,
-        raw.name,
-    );
+    const normType = (docType || '').toLowerCase();
+    let direct: string | undefined = undefined;
+
+    if (normType.includes('mother')) {
+        direct = pickFirst(
+            raw.mother_name,
+            raw.motherName,
+            raw.mother_full_name,
+            raw.motherFullName,
+            raw.full_name,
+            raw.fullName,
+            raw.holder_name,
+            raw.holderName,
+            raw.cardholder_name,
+            raw.cardholderName,
+            raw.person_name,
+            raw.personName,
+            raw.printed_name,
+            raw.printedName,
+            raw.name,
+        );
+    } else if (normType.includes('father')) {
+        direct = pickFirst(
+            raw.father_name,
+            raw.fatherName,
+            raw.father_full_name,
+            raw.fatherFullName,
+            raw.full_name,
+            raw.fullName,
+            raw.holder_name,
+            raw.holderName,
+            raw.cardholder_name,
+            raw.cardholderName,
+            raw.person_name,
+            raw.personName,
+            raw.printed_name,
+            raw.printedName,
+            raw.name,
+        );
+    } else if (normType.includes('coapplicant') || normType.includes('co_applicant')) {
+        direct = pickFirst(
+            raw.coapplicant_name,
+            raw.coApplicantName,
+            raw.co_applicant_name,
+            raw.coApplicant_name,
+            raw.full_name,
+            raw.fullName,
+            raw.holder_name,
+            raw.holderName,
+            raw.cardholder_name,
+            raw.cardholderName,
+            raw.person_name,
+            raw.personName,
+            raw.printed_name,
+            raw.printedName,
+            raw.name,
+        );
+    } else {
+        direct = pickFirst(
+            raw.full_name,
+            raw.fullName,
+            raw.holder_name,
+            raw.holderName,
+            raw.cardholder_name,
+            raw.cardholderName,
+            raw.candidate_name,
+            raw.candidateName,
+            raw.student_name,
+            raw.studentName,
+            raw.applicant_name,
+            raw.applicantName,
+            raw.account_holder_name,
+            raw.accountHolderName,
+            raw.taxpayer_name,
+            raw.taxpayerName,
+            raw.person_name,
+            raw.personName,
+            raw.printed_name,
+            raw.printedName,
+            raw.name,
+        );
+    }
+
     if (direct) {
         const cleaned = dedupeOcrFullName(String(direct));
         return cleaned || undefined;

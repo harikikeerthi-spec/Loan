@@ -490,10 +490,11 @@ export default function DecisionsHub() {
 
             if (!matchesSearch) return false;
 
+            const st = (app.status || "").toLowerCase();
             if (filterStatus === "all") return true;
-            if (filterStatus === "pending") return app.status === "processing" || app.status === "pending";
-            if (filterStatus === "approved") return app.status === "approved" || app.status === "sanctioned" || app.status === "disbursed" || app.status === "disbursement_confirmed";
-            if (filterStatus === "rejected") return app.status === "rejected";
+            if (filterStatus === "pending") return ["processing", "pending", "file_logged", "under_bank_review", "submitted_to_bank", "routed_multiparty"].includes(st);
+            if (filterStatus === "approved") return ["approved", "sanctioned", "conditional_sanction", "partial_sanction", "counter_offer", "disbursed", "disbursement_confirmed"].includes(st);
+            if (filterStatus === "rejected") return st === "rejected";
             return true;
         });
     }, [applications, search, filterStatus]);
@@ -504,12 +505,13 @@ export default function DecisionsHub() {
         let pendingDecisions = 0;
         let queryRaised = 0;
         applications.forEach(app => {
-            if (app.status === "approved" || app.status === "sanctioned" || app.status === "rejected" || app.status === "disbursed" || app.status === "disbursement_confirmed") {
+            const st = (app.status || "").toLowerCase();
+            if (["approved", "sanctioned", "conditional_sanction", "partial_sanction", "counter_offer", "rejected", "disbursed", "disbursement_confirmed"].includes(st)) {
                 totalDecisions++;
             } else {
                 pendingDecisions++;
             }
-            if (app.remarks && app.remarks.toLowerCase().includes("query")) {
+            if (st === "query_raised" || (app.remarks && app.remarks.toLowerCase().includes("query"))) {
                 queryRaised++;
             }
         });
@@ -989,7 +991,7 @@ export default function DecisionsHub() {
     if (!mounted) return null;
 
     return (
-        <div className="w-full space-y-6 relative z-10">
+        <div className="w-full space-y-6 relative">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 font-sans">
                 <div>
@@ -1097,94 +1099,95 @@ export default function DecisionsHub() {
                             transition={{ type: "spring", damping: 30, stiffness: 220 }}
                             className="relative w-full max-w-[1100px] h-screen bg-[#faf9fc] shadow-2xl z-10 flex flex-col overflow-hidden border-l border-purple-100"
                         >
-                            {/* TOP HEADER & STEPPER TRACK */}
-                            <div className="bg-slate-900 text-white p-6 pb-4 shrink-0 sticky top-0 z-20">
-                                <div className="flex justify-between items-center mb-4">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-purple-400 bg-purple-950 px-2 py-0.5 rounded border border-purple-800">
-                                                {selectedApp.applicationNumber}
-                                            </span>
-                                            <span className="text-[8.5px] font-black uppercase tracking-wider text-slate-400">
-                                                LAN: {selectedApp.lanNumber || "PENDING"}
-                                            </span>
-                                        </div>
-                                        <h2 className="text-xl font-bold mt-1 text-white">
-                                            Credit Appraisal: {selectedApp.firstName} {selectedApp.lastName}
-                                        </h2>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowWorkspace(false)}
-                                        className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-rose-900/50 hover:text-rose-400 transition-all border border-slate-700 cursor-pointer"
-                                    >
-                                        <span className="material-symbols-outlined text-lg">close</span>
-                                    </button>
-                                </div>
-
-                                {/* PROGRESSIVE CANVAS STEPPER TRACK */}
-                                <div className="flex items-center justify-between max-w-3xl mx-auto pt-2 pb-1">
-                                    {/* STEP 1 */}
-                                    <button
-                                        type="button"
-                                        onClick={() => setCurrentStep(1)}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
-                                            currentStep === 1
-                                                ? 'bg-[#6605c7] text-white shadow-lg shadow-purple-500/30'
-                                                : isStep1Valid
-                                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                                                : 'bg-slate-800 text-slate-400'
-                                        }`}
-                                    >
-                                        {isStep1Valid ? (
-                                            <span className="material-symbols-outlined text-sm">check_circle</span>
-                                        ) : (
-                                            <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px]">1</span>
-                                        )}
-                                        <span>1. Risk & Verification</span>
-                                    </button>
-
-                                    <span className="material-symbols-outlined text-slate-600 text-sm">chevron_right</span>
-
-                                    {/* STEP 2 */}
-                                    <button
-                                        type="button"
-                                        onClick={() => isStep1Valid && setCurrentStep(2)}
-                                        disabled={!isStep1Valid}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
-                                            currentStep === 2
-                                                ? 'bg-[#6605c7] text-white shadow-lg shadow-purple-500/30'
-                                                : isStep2Valid
-                                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                                                : 'bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed'
-                                        }`}
-                                    >
-                                        {isStep2Valid ? (
-                                            <span className="material-symbols-outlined text-sm">check_circle</span>
-                                        ) : (
-                                            <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px]">2</span>
-                                        )}
-                                        <span>2. Financials & Fees</span>
-                                    </button>
-
-                                    <span className="material-symbols-outlined text-slate-600 text-sm">chevron_right</span>
-
-                                    {/* STEP 3 */}
-                                    <button
-                                        type="button"
-                                        onClick={() => isStep1Valid && isStep2Valid && setCurrentStep(3)}
-                                        disabled={!isStep1Valid || !isStep2Valid}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
-                                            currentStep === 3
-                                                ? 'bg-[#6605c7] text-white shadow-lg shadow-purple-500/30'
-                                                : 'bg-slate-800 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed'
-                                        }`}
-                                    >
-                                        <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px]">3</span>
-                                        <span>3. Final Verdict & Submission</span>
-                                    </button>
-                                </div>
-                            </div>
+                             {/* TOP HEADER & STEPPER TRACK */}
+                             <div className="bg-white border-b border-slate-100 p-6 pb-5 shrink-0 sticky top-0 z-20 shadow-xs">
+                                 <div className="flex justify-between items-center mb-6">
+                                     <div>
+                                         <div className="flex items-center gap-2">
+                                             <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100">
+                                                 {selectedApp.applicationNumber}
+                                             </span>
+                                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                 LAN: {selectedApp.lanNumber || "PENDING"}
+                                             </span>
+                                         </div>
+                                         <h2 className="text-xl font-bold mt-2 text-slate-900">
+                                             Credit Appraisal &bull; <span className="text-slate-600">{selectedApp.firstName} {selectedApp.lastName}</span>
+                                         </h2>
+                                     </div>
+                                     <button
+                                         type="button"
+                                         onClick={() => setShowWorkspace(false)}
+                                         className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all border border-slate-200/60 cursor-pointer active:scale-95"
+                                     >
+                                         <span className="material-symbols-outlined text-lg">close</span>
+                                     </button>
+                                 </div>
+ 
+                                 {/* PROGRESSIVE CANVAS STEPPER TRACK */}
+                                 <div className="flex items-center justify-between max-w-4xl mx-auto pt-2 pb-1 relative">
+                                     {/* Background connecting line */}
+                                     <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-slate-150 -translate-y-1/2 z-0" />
+ 
+                                     {/* STEP 1 */}
+                                     <button
+                                         type="button"
+                                         onClick={() => setCurrentStep(1)}
+                                         className="relative z-10 flex items-center gap-2.5 px-4 py-2 bg-white rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer shadow-xs hover:border-slate-300"
+                                     >
+                                         {isStep1Valid ? (
+                                             <span className="material-symbols-outlined text-emerald-650 text-[18px]">check_circle</span>
+                                         ) : (
+                                             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                                                 currentStep === 1
+                                                     ? 'bg-[#6605c7] text-white'
+                                                     : 'bg-slate-100 text-slate-500'
+                                             }`}>1</span>
+                                         )}
+                                         <span className={currentStep === 1 ? 'text-[#6605c7]' : isStep1Valid ? 'text-slate-700' : 'text-slate-500'}>
+                                             Risk & Verification
+                                         </span>
+                                     </button>
+ 
+                                     {/* STEP 2 */}
+                                     <button
+                                         type="button"
+                                         onClick={() => isStep1Valid && setCurrentStep(2)}
+                                         disabled={!isStep1Valid}
+                                         className="relative z-10 flex items-center gap-2.5 px-4 py-2 bg-white rounded-xl text-xs font-bold transition-all border border-slate-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer shadow-xs hover:enabled:border-slate-300"
+                                     >
+                                         {isStep2Valid ? (
+                                             <span className="material-symbols-outlined text-emerald-650 text-[18px]">check_circle</span>
+                                         ) : (
+                                             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                                                 currentStep === 2
+                                                     ? 'bg-[#6605c7] text-white'
+                                                     : 'bg-slate-100 text-slate-500'
+                                             }`}>2</span>
+                                         )}
+                                         <span className={currentStep === 2 ? 'text-[#6605c7]' : isStep2Valid ? 'text-slate-700' : 'text-slate-500'}>
+                                             Financials & Fees
+                                         </span>
+                                     </button>
+ 
+                                     {/* STEP 3 */}
+                                     <button
+                                         type="button"
+                                         onClick={() => isStep1Valid && isStep2Valid && setCurrentStep(3)}
+                                         disabled={!isStep1Valid || !isStep2Valid}
+                                         className="relative z-10 flex items-center gap-2.5 px-4 py-2 bg-white rounded-xl text-xs font-bold transition-all border border-slate-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer shadow-xs hover:enabled:border-slate-300"
+                                     >
+                                         <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                                             currentStep === 3
+                                                 ? 'bg-[#6605c7] text-white'
+                                                 : 'bg-slate-100 text-slate-500'
+                                         }`}>3</span>
+                                         <span className={currentStep === 3 ? 'text-[#6605c7]' : 'text-slate-500'}>
+                                             Final Verdict & Submission
+                                         </span>
+                                     </button>
+                                 </div>
+                             </div>
 
                             {/* F11: Expiry Alerts Warnings */}
                             {(() => {

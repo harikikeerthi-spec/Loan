@@ -522,14 +522,7 @@ export class AiController {
     try {
       const result = await this.openRouterService.getJson<{ valid: boolean; correctedCountry?: string }>(prompt);
       
-      let finalValid = result.valid;
-      if (!finalValid) {
-        const hasAcademicKeyword = /university|hochschule|college|institute|fachhochschule|school|academy|polytechnic/i.test(data.university);
-        if (hasAcademicKeyword && targetCountryKey) {
-          console.warn(`[AI Validation Safeguard] Overriding invalid check for "${data.university}" in "${data.country}" to valid=true`);
-          finalValid = true;
-        }
-      }
+      const finalValid = result.valid ?? true;
 
       return {
         success: true,

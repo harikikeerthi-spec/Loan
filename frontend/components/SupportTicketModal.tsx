@@ -84,6 +84,18 @@ export default function SupportTicketModal({
     const [description, setDescription] = useState("");
     const [proofFile, setProofFile] = useState<File | null>(null);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 20 * 1024 * 1024) {
+                setError("File size exceeds 20MB limit.");
+                return;
+            }
+            setProofFile(file);
+            setError("");
+        }
+    };
+
     // Submission states
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
@@ -117,17 +129,7 @@ export default function SupportTicketModal({
         }
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 20 * 1024 * 1024) {
-                setError("File size exceeds 20MB limit.");
-                return;
-            }
-            setProofFile(file);
-            setError("");
-        }
-    };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -492,8 +494,8 @@ export default function SupportTicketModal({
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Proof Attachments & Images</span>
                                                 <div className="space-y-2">
                                                     {selectedTicket.attachments.map((att: any) => {
-                                                        const isImg = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i);
-                                                        const fileUrl = att.filePath?.startsWith('http') || att.filePath?.startsWith('data:') ? att.filePath : `http://localhost:5000${att.filePath.startsWith('/') ? '' : '/'}${att.filePath}`;
+                                                        const isImg = (att.mimeType || att.fileName || att.fileUrl || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i);
+                                                        const fileUrl = att.fileUrl || att.url || att.filePath || "";
                                                         if (isImg) {
                                                             return (
                                                                 <div key={att.id} className="rounded-xl border border-purple-100 bg-white p-2.5 space-y-2">

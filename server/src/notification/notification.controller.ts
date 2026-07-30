@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
+  Post,
   Param,
   Query,
   Req,
@@ -37,6 +39,8 @@ export class NotificationController {
   }
 
   @Put(':id/mark-read')
+  @Patch(':id/mark-read')
+  @Post(':id/mark-read')
   @HttpCode(HttpStatus.OK)
   async markRead(@Param('id') id: string, @Req() req: any) {
     const data = await this.notificationService.markAsRead(id, req.user);
@@ -44,12 +48,16 @@ export class NotificationController {
   }
 
   @Put(':id/read')
+  @Patch(':id/read')
+  @Post(':id/read')
   @HttpCode(HttpStatus.OK)
   async markReadAlias(@Param('id') id: string, @Req() req: any) {
     return this.markRead(id, req);
   }
 
   @Put('mark-all-read')
+  @Patch('mark-all-read')
+  @Post('mark-all-read')
   @HttpCode(HttpStatus.OK)
   async markAllRead(@Req() req: any) {
     const result = await this.notificationService.markAllAsRead(req.user);

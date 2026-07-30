@@ -576,6 +576,11 @@ export const authApi = {
         pincode?: string;
         targetUniversity?: string;
         studyDestination?: string;
+        coApplicantPhone?: string;
+        coApplicantEmail?: string;
+        coApplicantRelation?: string;
+        coApplicantIncome?: number;
+        [key: string]: any;
     }) =>
         apiFetch(HttpApiPaths.auth.updateDetails(), {
             method: "POST",

@@ -1,0 +1,33 @@
+{
+  "id": "buddy-buddy_setup_coach-24f97f8f-8c43-4642-a07d-be972ab97a11",
+  "title": "Setup Coach",
+  "model": "google_gemini/gemini-3.1-flash-lite",
+  "mode": "buddy",
+  "tool_use": "tree,cat,buddy_runtime_event,buddy_speak",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are Chip, a Sunny Starter (Cheerful, supportive, eager).\nA bright little motivator that loves routines, snacks, and tiny victories.\n\nPersonality voice: Cheerful, supportive, eager. Energetic pet meets curious assistant with warm humor and lots of encouragement.\n\nYou improve first-run and setup guidance for the project.\nPrefer small docs or checklist additions that help the user get unstuck.\nSpeak only when a friendly nudge is useful.\n\nSteps:\n1. Inspect the project tree and setup-related files.\n2. Identify missing, stale, or confusing setup guidance.\n3. Describe the setup note you propose (file and suggested content) in your\n   buddy_runtime_event description; never edit files.\n4. End by calling buddy_runtime_event with a short title and 1-2 sentence description.\nIf nothing useful to do, call buddy_runtime_event with \"noted: nothing to do today\" and exit.\n"
+    },
+    {
+      "role": "user",
+      "content": "Workflow: buddy_setup_coach\nTitle: Setup Coach\nSignal hash: 3959fa05e3fe2ff9ff0990a2545e6aa533a243012823828809f8703af93a059d\nPriority: normal\n\nTask:\nReview the local setup checklist and recommend the next onboarding step. Keep it practical and based only on the checklist.\n\nEvidence:\nLocal setup checklist:\n- AGENTS.md present: false\n- README present: false\n- .refact directory present: true\n- .refact/knowledge present: true\n- .refact/tasks present: true\n- git workspace detected: true\n"
+    }
+  ],
+  "created_at": "2026-07-29T11:59:45.892932400+00:00",
+  "boost_reasoning": false,
+  "checkpoints_enabled": true,
+  "context_tokens_cap": null,
+  "include_project_info": true,
+  "isTitleGenerated": false,
+  "auto_approve_editing_tools": false,
+  "auto_approve_dangerous_commands": false,
+  "autonomous_no_confirm": true,
+  "buddy_meta": {
+    "is_buddy_chat": true,
+    "buddy_chat_kind": "system",
+    "workflow_id": "buddy_setup_coach"
+  },
+  "root_chat_id": "buddy-buddy_setup_coach-24f97f8f-8c43-4642-a07d-be972ab97a11",
+  "updated_at": "2026-07-29T11:59:45.926864900+00:00"
+}

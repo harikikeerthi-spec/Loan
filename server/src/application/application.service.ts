@@ -971,7 +971,7 @@ export class ApplicationService {
       if (filters?.loanType) query = query.eq('loanType', filters.loanType);
       if (filters?.bank) {
         query = query.ilike('bank', `%${filters.bank}%`);
-        query = query.not('status', 'in', '("submitted","pending","draft","docs_received","staff_verified","application_submitted")');
+        query = query.not('status', 'in', '(submitted,pending,draft,docs_received,staff_verified,application_submitted)');
       }
       
       if (filters?.search) {
@@ -1392,7 +1392,7 @@ export class ApplicationService {
       let allAppsQuery = this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, submittedAt, firstName, lastName');
 
       if (isBank && bankName) {
-        const excludeStr = '("submitted","pending","draft","docs_received","staff_verified","application_submitted")';
+        const excludeStr = '(submitted,pending,draft,docs_received,staff_verified,application_submitted)';
         allAppsQuery = allAppsQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
       }
 

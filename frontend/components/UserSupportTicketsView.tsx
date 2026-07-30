@@ -73,9 +73,22 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
     const [priority, setPriority] = useState("medium");
     const [description, setDescription] = useState("");
     const [proofFile, setProofFile] = useState<File | null>(null);
+
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
     const [createdTicketNum, setCreatedTicketNum] = useState<string | null>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 20 * 1024 * 1024) {
+                setFormError("File size exceeds 20MB limit.");
+                return;
+            }
+            setProofFile(file);
+            setFormError("");
+        }
+    };
 
     useEffect(() => {
         loadTickets();
@@ -133,17 +146,7 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
         }
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (file.size > 20 * 1024 * 1024) {
-                setFormError("File size exceeds 20MB limit.");
-                return;
-            }
-            setProofFile(file);
-            setFormError("");
-        }
-    };
+
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -639,9 +642,8 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
                                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block">Uploaded Proof & Attachments</span>
                                             <div className="space-y-3">
                                                 {selectedTicket.attachments.map((att: any) => {
-                                                    const isImg = (att.mimeType || att.fileName || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i);
-                                                    const rawPath = att.fileUrl || att.url || att.filePath || "";
-                                                    const fileUrl = (rawPath.startsWith('http') || rawPath.startsWith('data:')) ? rawPath : `http://localhost:5000${rawPath.startsWith('/') ? '' : '/'}${rawPath}`;
+                                                    const isImg = (att.mimeType || att.fileName || att.fileUrl || att.filePath || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i);
+                                                    const fileUrl = att.fileUrl || att.url || att.filePath || "";
                                                     if (isImg) {
                                                         return (
                                                             <div key={att.id} className="rounded-2xl border border-purple-100 bg-purple-50/20 p-3.5 space-y-2.5">

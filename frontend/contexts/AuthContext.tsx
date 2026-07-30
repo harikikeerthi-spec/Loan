@@ -41,18 +41,25 @@ interface AuthUser {
     bankId?: string;
     bankName?: string;
     fatherName?: string;
+    fatherAadhar?: string;
+    fatherPan?: string;
     fatherPhone?: string;
     fatherEmail?: string;
     motherName?: string;
+    motherAadhar?: string;
+    motherPan?: string;
     motherPhone?: string;
     motherEmail?: string;
     coApplicantName?: string;
+    coApplicantAadhar?: string;
+    coApplicantPan?: string;
     coApplicantRelation?: string;
     coApplicantPhone?: string;
     coApplicantEmail?: string;
     coApplicantIncome?: number | string;
     family?: any;
     coApplicant?: any;
+    parents?: any[];
 }
 
 interface AuthContextType {
@@ -300,6 +307,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         studyDestination: mergeField((freshUser as any).studyDestination, prev?.studyDestination),
                         courseName: mergeField((freshUser as any).courseName, prev?.courseName),
                         targetUniversity: mergeField((freshUser as any).targetUniversity, prev?.targetUniversity),
+                        family: (freshUser as any).family || prev?.family,
+                        coApplicant: (freshUser as any).coApplicant || prev?.coApplicant,
+                        motherName: mergeField((freshUser as any).motherName, prev?.motherName),
+                        motherAadhar: mergeField((freshUser as any).motherAadhar, (prev as any)?.motherAadhar),
+                        motherPan: mergeField((freshUser as any).motherPan, (prev as any)?.motherPan),
+                        fatherName: mergeField((freshUser as any).fatherName, prev?.fatherName),
+                        fatherAadhar: mergeField((freshUser as any).fatherAadhar, (prev as any)?.fatherAadhar),
+                        fatherPan: mergeField((freshUser as any).fatherPan, (prev as any)?.fatherPan),
+                        coApplicantName: mergeField((freshUser as any).coApplicantName, prev?.coApplicantName),
+                        coApplicantAadhar: mergeField((freshUser as any).coApplicantAadhar, (prev as any)?.coApplicantAadhar),
+                        coApplicantPan: mergeField((freshUser as any).coApplicantPan, (prev as any)?.coApplicantPan),
+                        parents: (freshUser as any).parents || (prev as any)?.parents,
                     };
                     localStorage.setItem(keys.user, JSON.stringify(updated));
                     if (updated.id) localStorage.setItem(keys.userId, updated.id);

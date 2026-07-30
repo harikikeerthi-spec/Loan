@@ -49,8 +49,36 @@ export default function UserProfileView({
         if (!doc || !doc.verificationMetadata) return null;
         const meta = doc.verificationMetadata;
         const details = meta.details || {};
-        const ext = details.extractedFields || meta.extractedFields || {};
-        return ext[fieldName] || null;
+        const ext = details.extractedFields || meta.extractedFields || details.extracted_data || meta.extracted_data || {};
+        return ext[fieldName] || meta[fieldName] || null;
+    };
+
+    const getDocExtractedField = (docTypes: string[], fieldNames: string[]): string | undefined => {
+        for (const dt of docTypes) {
+            const doc = userDocs.find((d: any) => {
+                const type = (d.docType || '').toLowerCase();
+                const target = dt.toLowerCase();
+                return type === target || type.includes(target) || target.includes(type);
+            });
+            if (doc) {
+                let meta = doc.verificationMetadata;
+                if (typeof meta === 'string') {
+                    try { meta = JSON.parse(meta); } catch { meta = {}; }
+                }
+                if (!meta || typeof meta !== 'object') meta = {};
+
+                const details = meta.details || meta.ocrResult || meta.ocr_result || doc.ocrResult || doc.ocr_result || {};
+                const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || {};
+
+                for (const fn of fieldNames) {
+                    if (ext[fn] && String(ext[fn]).trim()) return String(ext[fn]).trim();
+                    if (details[fn] && String(details[fn]).trim()) return String(details[fn]).trim();
+                    if (meta[fn] && String(meta[fn]).trim()) return String(meta[fn]).trim();
+                    if (doc[fn] && String(doc[fn]).trim()) return String(doc[fn]).trim();
+                }
+            }
+        }
+        return undefined;
     };
 
     const getAcademicDetails = (doc: any) => {
@@ -605,8 +633,8 @@ export default function UserProfileView({
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {renderBentoField("Date of Birth", formatDob(activeProfile?.dateOfBirth), startPersonalEdit)}
                                 {renderBentoField("Nationality", activeProfile?.nationality || "Indian", startPersonalEdit)}
-                                {renderBentoField("Destination Country", activeProfile?.studyDestination, startPersonalEdit)}
-                                {renderBentoField("Target University", activeProfile?.targetUniversity || activeProfile?.universityName, startPersonalEdit)}
+                                {renderBentoField("Destination Country", activeProfile?.studyDestination || activeProfile?.country || firstApp?.country || firstApp?.destinationCountry || data?.applications?.[0]?.country, startPersonalEdit)}
+                                {renderBentoField("Target University", activeProfile?.targetUniversity || activeProfile?.universityName || firstApp?.universityName || firstApp?.targetUniversity || data?.applications?.[0]?.universityName || data?.applications?.[0]?.targetUniversity, startPersonalEdit)}
                             </div>
                         </div>
                     )}
@@ -956,22 +984,22 @@ export default function UserProfileView({
                                         <tr className="hover:bg-[#F8FAFC] transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Father</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
-                                                {fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName || "—"}
+                                                {fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName || getDocExtractedField(['father_aadhar', 'father_pan'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'full_name', 'name', 'holder_name']) || "—"}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
-                                                {renderTableAadhar(fatherData?.aadharNumber || activeProfile?.family?.fatherAadhar || activeProfile?.fatherAadhar, "father_aadhar")}
-                                                {renderTablePan(fatherData?.panNumber || activeProfile?.family?.fatherPan || activeProfile?.fatherPan, "father_pan")}
+                                                {renderTableAadhar(fatherData?.aadharNumber || activeProfile?.family?.fatherAadhar || activeProfile?.fatherAadhar || getDocExtractedField(['father_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']), "father_aadhar")}
+                                                {renderTablePan(fatherData?.panNumber || activeProfile?.family?.fatherPan || activeProfile?.fatherPan || getDocExtractedField(['father_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']), "father_pan")}
                                             </td>
                                         </tr>
                                         {/* Mother Row */}
                                         <tr className="hover:bg-[#F8FAFC] transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Mother</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
-                                                {motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName || "—"}
+                                                {motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName || getDocExtractedField(['mother_aadhar', 'mother_pan'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'full_name', 'name', 'holder_name']) || "—"}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
-                                                {renderTableAadhar(motherData?.aadharNumber || activeProfile?.family?.motherAadhar || activeProfile?.motherAadhar, "mother_aadhar")}
-                                                {renderTablePan(motherData?.panNumber || activeProfile?.family?.motherPan || activeProfile?.motherPan, "mother_pan")}
+                                                {renderTableAadhar(motherData?.aadharNumber || activeProfile?.family?.motherAadhar || activeProfile?.motherAadhar || getDocExtractedField(['mother_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']), "mother_aadhar")}
+                                                {renderTablePan(motherData?.panNumber || activeProfile?.family?.motherPan || activeProfile?.motherPan || getDocExtractedField(['mother_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']), "mother_pan")}
                                             </td>
                                         </tr>
                                         {/* Co-Applicant Row */}
@@ -979,7 +1007,7 @@ export default function UserProfileView({
                                             <td className="px-6 py-4 whitespace-nowrap font-bold text-[#6605c7]">Primary Co-Applicant</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
                                                 <div>
-                                                    <div className="font-bold text-[#0F172A]">{coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || "—"}</div>
+                                                    <div className="font-bold text-[#0F172A]">{coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || getDocExtractedField(['coapplicant_aadhar', 'coapplicant_pan'], ['full_name', 'name', 'holder_name']) || "—"}</div>
                                                     <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
                                                         Relation: {firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation || "—"}
                                                     </div>
@@ -997,8 +1025,8 @@ export default function UserProfileView({
                                                         <span className="font-medium text-slate-800">{firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone}</span>
                                                     </div>
                                                 ) : null}
-                                                {renderTableAadhar(coapplicantData?.aadharNumber || activeProfile?.coApplicant?.aadhar || activeProfile?.coApplicantAadhar, "coapp_aadhar")}
-                                                {renderTablePan(coapplicantData?.panNumber || activeProfile?.coApplicant?.pan || activeProfile?.coApplicantPan, "coapp_pan")}
+                                                {renderTableAadhar(coapplicantData?.aadharNumber || activeProfile?.coApplicant?.aadhar || activeProfile?.coApplicantAadhar || getDocExtractedField(['coapplicant_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']), "coapp_aadhar")}
+                                                {renderTablePan(coapplicantData?.panNumber || activeProfile?.coApplicant?.pan || activeProfile?.coApplicantPan || getDocExtractedField(['coapplicant_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']), "coapp_pan")}
                                             </td>
                                         </tr>
                                     </tbody>

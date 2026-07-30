@@ -78,7 +78,7 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
 
   const fatherName = family.fatherName || profile.fatherName;
   const motherName = family.motherName || profile.motherName;
-  
+
   // Dynamically determine relation and fallback co-applicant name
   const rawRelation = coApplicant.relation || coApplicant.coApplicantRelation || profile.coApplicantRelation || student.coApplicant || "";
   const relation = typeof rawRelation === "string" ? rawRelation : "";

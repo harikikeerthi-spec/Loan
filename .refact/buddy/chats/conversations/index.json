@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-07-29T12:00:50.950593400+00:00",
+  "entries": [
+    {
+      "id": "buddy-buddy_security_whisperer-ea4d355e-7958-4f1b-af0b-7c4a48c6f806",
+      "file_name": "buddy-buddy_security_whisperer-ea4d355e-7958-4f1b-af0b-7c4a48c6f806.json",
+      "source": {
+        "kind": "buddy"
+      },
+      "created_at": "2026-07-29T11:59:41.113481400+00:00",
+      "updated_at": "2026-07-29T11:59:41.124968900+00:00",
+      "title": "Security Whisperer",
+      "model": "google_gemini/gemini-3.1-flash-lite",
+      "mode": "buddy",
+      "message_count": 2,
+      "root_chat_id": "buddy-buddy_security_whisperer-ea4d355e-7958-4f1b-af0b-7c4a48c6f806",
+      "is_title_generated": false,
+      "total_lines_added": 0,
+      "total_lines_removed": 0,
+      "tasks_total": 0,
+      "tasks_done": 0,
+      "tasks_failed": 0,
+      "total_prompt_tokens": 0,
+      "total_completion_tokens": 0,
+      "total_tokens": 0,
+      "total_cache_read_tokens": 0,
+      "total_cache_creation_tokens": 0,
+      "displayable_chat": false,
+      "waiting_for_card_ids": [],
+      "file_len": 2722,
+      "file_modified_unix_ms": 1785326381121
+    },
+    {
+      "id": "buddy-buddy_setup_coach-24f97f8f-8c43-4642-a07d-be972ab97a11",
+      "file_name": "buddy-buddy_setup_coach-24f97f8f-8c43-4642-a07d-be972ab97a11.json",
+      "source": {
+        "kind": "buddy"
+      },
+      "created_at": "2026-07-29T11:59:45.892932400+00:00",
+      "updated_at": "2026-07-29T11:59:45.926864900+00:00",
+      "title": "Setup Coach",
+      "model": "google_gemini/gemini-3.1-flash-lite",
+      "mode": "buddy",
+      "message_count": 2,
+      "root_chat_id": "buddy-buddy_setup_coach-24f97f8f-8c43-4642-a07d-be972ab97a11",
+      "is_title_generated": false,
+      "total_lines_added": 0,
+      "total_lines_removed": 0,
+      "tasks_total": 0,
+      "tasks_done": 0,
+      "tasks_failed": 0,
+      "total_prompt_tokens": 0,
+      "total_completion_tokens": 0,
+      "total_tokens": 0,
+      "total_cache_read_tokens": 0,
+      "total_cache_creation_tokens": 0,
+      "displayable_chat": false,
+      "waiting_for_card_ids": [],
+      "file_len": 2331,
+      "file_modified_unix_ms": 1785326385925
+    },
+    {
+      "id": "buddy-buddy_docs_gardener-1d7b1b69-862d-4503-953a-f4546324c67f",
+      "file_name": "buddy-buddy_docs_gardener-1d7b1b69-862d-4503-953a-f4546324c67f.json",
+      "source": {
+        "kind": "buddy"
+      },
+      "created_at": "2026-07-29T12:00:50.929850500+00:00",
+      "updated_at": "2026-07-29T12:00:50.938728400+00:00",
+      "title": "Docs Gardener",
+      "model": "google_gemini/gemini-3.1-flash-lite",
+      "mode": "buddy",
+      "message_count": 2,
+      "root_chat_id": "buddy-buddy_docs_gardener-1d7b1b69-862d-4503-953a-f4546324c67f",
+      "is_title_generated": false,
+      "total_lines_added": 0,
+      "total_lines_removed": 0,
+      "tasks_total": 0,
+      "tasks_done": 0,
+      "tasks_failed": 0,
+      "total_prompt_tokens": 0,
+      "total_completion_tokens": 0,
+      "total_tokens": 0,
+      "total_cache_read_tokens": 0,
+      "total_cache_creation_tokens": 0,
+      "displayable_chat": false,
+      "waiting_for_card_ids": [],
+      "file_len": 2497,
+      "file_modified_unix_ms": 1785326450940
+    }
+  ]
+}

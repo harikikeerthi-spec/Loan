@@ -163,14 +163,18 @@ export default function ProfilePage() {
                         <div className="p-8">
                             {!editing ? (
                                 <div className="space-y-4">
-                                    {[
+                                     {[
                                         { label: "First Name", value: user?.firstName || "—" },
                                         { label: "Last Name", value: user?.lastName || "—" },
                                         { label: "Email", value: user?.email || "—" },
                                         { label: "Phone Number", value: user?.phoneNumber || "—" },
                                         { label: "Date of Birth", value: user?.dateOfBirth || "—" },
                                         { label: "Father's Full Name", value: user?.family?.fatherName || user?.fatherName || "—" },
+                                        { label: "Father's Aadhaar Number", value: user?.family?.fatherAadhar || user?.fatherAadhar ? `XXXX XXXX ${(user?.family?.fatherAadhar || user?.fatherAadhar).slice(-4)}` : "—" },
+                                        { label: "Father's PAN Number", value: user?.family?.fatherPan || user?.fatherPan || "—" },
                                         { label: "Mother's Full Name", value: user?.family?.motherName || user?.motherName || "—" },
+                                        { label: "Mother's Aadhaar Number", value: user?.family?.motherAadhar || user?.motherAadhar ? `XXXX XXXX ${(user?.family?.motherAadhar || user?.motherAadhar).slice(-4)}` : "—" },
+                                        { label: "Mother's PAN Number", value: user?.family?.motherPan || user?.motherPan || "—" },
                                         { label: "Co-Applicant Name", value: user?.coApplicant?.name || user?.coApplicantName || "—" },
                                         { label: "Co-Applicant Relation", value: user?.coApplicant?.relation || user?.coApplicant?.relationship || user?.coApplicantRelation || "—" },
                                         { label: "Co-Applicant Phone", value: user?.coApplicant?.mobile || user?.coApplicant?.phone || user?.coApplicantPhone || "—" },

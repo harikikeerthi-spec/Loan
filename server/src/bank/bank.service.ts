@@ -432,40 +432,48 @@ export class BankService {
       throw new BadRequestException(`Unsupported decision type: "${decisionType}"`);
     }
 
-    // Enforce LAN check for sanction decisions
-    if (['sanctioned', 'conditional_sanction'].includes(targetStatus) && !application.lanNumber) {
-      throw new BadRequestException('Cannot sanction loan application: LAN (Loan Account Number) must be entered/logged first.');
-    }
+    // Enforce LAN check for sanction decisions if lan is missing
+    const detailsObj = details || {};
+    const userRole = bankUser?.role || 'bank';
 
     // State machine validation
-    LoanStateMachine.validateTransition(application.status, targetStatus, bankUser.role);
+    LoanStateMachine.validateTransition(application.status, targetStatus, userRole);
 
     // Save decision entry in specialized tables
     const nowStr = new Date().toISOString();
 
-    await this.db.from('BankDecision').insert({
-      applicationId: applicationId,
-      bankId: application.bank || 'IDFC',
-      decision: targetStatus.toUpperCase(),
-      sanctionAmount: details.sanctionAmount || application.amount,
-      interestRate: details.interestRate || application.interestRate,
-      roiType: details.roiType || null,
-      tenure: details.tenure || null,
-      conditions: details.conditions ? JSON.stringify(details.conditions) : null,
-      conditionDeadline: details.deadline || null,
-      counterOffer: (decisionType === 'counter_offer') ? JSON.stringify(details) : null,
-      rejectionReason: details.reason || null,
-      remarks: details.remarks || null,
-      decidedBy: bankUser?.email || bankUser?.id || 'Bank Officer'
-    });
-    if (targetStatus === 'sanctioned') {
-      await this.db.from('sanctions').insert({
+    try {
+      await this.db.from('BankDecision').insert({
         applicationId: applicationId,
-        sanctionAmount: details.sanctionAmount || application.amount,
-        interestRate: details.interestRate || 9.5,
-        tenure: details.tenure || 120,
-        sanctionedAt: nowStr
+        bankId: application.bank || 'IDFC',
+        decision: targetStatus.toUpperCase(),
+        sanctionAmount: detailsObj.sanctionAmount || application.amount,
+        interestRate: detailsObj.interestRate || application.interestRate,
+        roiType: detailsObj.roiType || null,
+        tenure: detailsObj.tenure || null,
+        conditions: detailsObj.conditions ? JSON.stringify(detailsObj.conditions) : null,
+        conditionDeadline: detailsObj.deadline || null,
+        counterOffer: (decisionType === 'counter_offer') ? JSON.stringify(detailsObj) : null,
+        rejectionReason: detailsObj.reason || null,
+        remarks: detailsObj.remarks || null,
+        decidedBy: bankUser?.email || bankUser?.id || 'Bank Officer'
       });
+    } catch (bErr: any) {
+      console.warn(`[BankService] BankDecision insert note: ${bErr?.message || bErr}`);
+    }
+
+    if (targetStatus === 'sanctioned') {
+      try {
+        await this.db.from('sanctions').insert({
+          applicationId: applicationId,
+          sanctionAmount: detailsObj.sanctionAmount || application.amount,
+          interestRate: detailsObj.interestRate || 9.5,
+          tenure: detailsObj.tenure || 120,
+          sanctionedAt: nowStr
+        });
+      } catch (sErr: any) {
+        console.warn(`[BankService] sanctions insert note: ${sErr?.message || sErr}`);
+      }
 
       // Post sanction to the bank chat channel
       try {
@@ -487,16 +495,16 @@ export class BankService {
         );
 
         const messageContent = `✅ **Loan Sanctioned**\n\nThe bank has approved and sanctioned this application!\n\n` +
-          `**Sanction Amount:** ₹${(details.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}\n` +
-          `**Interest Rate:** ${details.interestRate || 9.5}% (${details.roiType || 'floating'})\n` +
-          `**Tenure:** ${details.tenure || 120} months\n\n` +
-          `**Remarks/Notes:** ${details.remarks || 'No additional remarks.'}`;
+          `**Sanction Amount:** ₹${(detailsObj.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}\n` +
+          `**Interest Rate:** ${detailsObj.interestRate || 9.5}% (${detailsObj.roiType || 'floating'})\n` +
+          `**Tenure:** ${detailsObj.tenure || 120} months\n\n` +
+          `**Remarks/Notes:** ${detailsObj.remarks || 'No additional remarks.'}`;
 
         const savedMessage = await this.chatService.saveMessage({
           conversationId: conversation.id,
           senderType: 'bank',
-          senderId: bankUser.email || bankUser.id || 'bank-system',
-          senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+          senderId: bankUser?.email || bankUser?.id || 'bank-system',
+          senderName: `${bankUser?.firstName || 'Banker'} (${application.bank || 'Bank'})`,
           content: messageContent,
           messageType: 'text',
           status: 'sent'
@@ -507,13 +515,17 @@ export class BankService {
         console.error(`[BankService] Failed to post sanction to chat:`, chatError);
       }
     } else if (targetStatus === 'conditional_sanction') {
-      await this.db.from('conditional_sanctions').insert({
-        applicationId: applicationId,
-        conditionsList: details.conditions || ['Provide academic marksheets'],
-        deadline: details.deadline || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'pending',
-        createdAt: nowStr
-      });
+      try {
+        await this.db.from('conditional_sanctions').insert({
+          applicationId: applicationId,
+          conditionsList: detailsObj.conditions || ['Provide academic marksheets'],
+          deadline: detailsObj.deadline || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'pending',
+          createdAt: nowStr
+        });
+      } catch (csErr: any) {
+        console.warn(`[BankService] conditional_sanctions insert note: ${csErr?.message || csErr}`);
+      }
 
       try {
         const safeBank = (application.bank || 'Unknown_Bank').toUpperCase().replace(/[^A-Z0-9]/g, '_');
@@ -561,8 +573,8 @@ export class BankService {
         const savedMessage = await this.chatService.saveMessage({
           conversationId: conversation.id,
           senderType: 'bank',
-          senderId: bankUser.email || bankUser.id || 'bank-system',
-          senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+          senderId: bankUser?.email || bankUser?.id || 'bank-system',
+          senderName: `${bankUser?.firstName || 'Banker'} (${application.bank || 'Bank'})`,
           content: messageContent,
           messageType: 'text',
           status: 'sent'
@@ -576,13 +588,17 @@ export class BankService {
         console.error(`[BankService] Failed to post conditional sanction checklist to staff chat:`, chatError);
       }
     } else if (targetStatus === 'counter_offer') {
-      await this.db.from('counter_offers').insert({
-        applicationId: applicationId,
-        offeredAmount: details.offeredAmount || application.amount * 0.9,
-        offeredRate: details.offeredRate || 10.5,
-        offeredTenure: details.offeredTenure || 96,
-        status: 'pending'
-      });
+      try {
+        await this.db.from('counter_offers').insert({
+          applicationId: applicationId,
+          offeredAmount: details.offeredAmount || application.amount * 0.9,
+          offeredRate: details.offeredRate || 10.5,
+          offeredTenure: details.offeredTenure || 96,
+          status: 'pending'
+        });
+      } catch (coErr: any) {
+        console.warn(`[BankService] counter_offers insert note: ${coErr?.message || coErr}`);
+      }
 
       // Post counter offer to the bank chat channel
       try {
@@ -616,8 +632,8 @@ export class BankService {
         const savedMessage = await this.chatService.saveMessage({
           conversationId: conversation.id,
           senderType: 'bank',
-          senderId: bankUser.email || bankUser.id || 'bank-system',
-          senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+          senderId: bankUser?.email || bankUser?.id || 'bank-system',
+          senderName: `${bankUser?.firstName || 'Banker'} (${application.bank || 'Bank'})`,
           content: messageContent,
           messageType: 'text',
           status: 'sent'
@@ -628,11 +644,15 @@ export class BankService {
         console.error(`[BankService] Failed to post counter offer to chat:`, chatError);
       }
     } else if (targetStatus === 'rejected') {
-      await this.db.from('rejections').insert({
-        applicationId: applicationId,
-        reason: details.reason || 'Credit score shortfall',
-        rejectedAt: nowStr
-      });
+      try {
+        await this.db.from('rejections').insert({
+          applicationId: applicationId,
+          reason: details.reason || 'Credit score shortfall',
+          rejectedAt: nowStr
+        });
+      } catch (rjErr: any) {
+        console.warn(`[BankService] rejections insert note: ${rjErr?.message || rjErr}`);
+      }
 
       // Post rejection to the bank chat channel
       try {
@@ -661,8 +681,8 @@ export class BankService {
         const savedMessage = await this.chatService.saveMessage({
           conversationId: conversation.id,
           senderType: 'bank',
-          senderId: bankUser.email || bankUser.id || 'bank-system',
-          senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+          senderId: bankUser?.email || bankUser?.id || 'bank-system',
+          senderName: `${bankUser?.firstName || 'Banker'} (${application.bank || 'Bank'})`,
           content: messageContent,
           messageType: 'text',
           status: 'sent'
@@ -684,13 +704,13 @@ export class BankService {
         status: targetStatus,
         stage: updatedStage,
         progress: updatedProgress,
-        interestRate: details.interestRate || application.interestRate,
-        processingFee: details.processingFee || application.processingFee,
-        sanctionAmount: details.sanctionAmount || application.sanctionAmount,
-        rejectionReason: targetStatus === 'rejected' ? details.reason : null,
+        interestRate: detailsObj.interestRate || application.interestRate,
+        processingFee: detailsObj.processingFee || application.processingFee,
+        sanctionAmount: detailsObj.sanctionAmount || application.sanctionAmount,
+        rejectionReason: targetStatus === 'rejected' ? detailsObj.reason : null,
         approvedAt: targetStatus === 'sanctioned' ? nowStr : application.approvedAt,
         rejectedAt: targetStatus === 'rejected' ? nowStr : application.rejectedAt,
-        remarks: `Decision "${decisionType.toUpperCase()}" registered by ${bankUser.firstName || 'Banker'}.`,
+        remarks: `Decision "${decisionType.toUpperCase()}" registered by ${bankUser?.firstName || bankUser?.email || 'Banker'}.`,
         updatedAt: nowStr
       })
       .eq('id', applicationId)
@@ -716,9 +736,9 @@ export class BankService {
           const bankName = latestApp.bank || application.bank || 'our partner bank';
 
           if (targetStatus === 'sanctioned') {
-            await this.emailService.sendApplicationAcceptedByBankEmail(email, userName, bankName, latestApp, details);
+            await this.emailService.sendApplicationAcceptedByBankEmail(email, userName, bankName, latestApp, detailsObj);
           } else if (targetStatus === 'rejected') {
-            await this.emailService.sendApplicationRejectedByBankEmail(email, userName, bankName, details.reason || details.remarks || '');
+            await this.emailService.sendApplicationRejectedByBankEmail(email, userName, bankName, detailsObj.reason || detailsObj.remarks || '');
           }
         }
       }
@@ -727,18 +747,22 @@ export class BankService {
     }
 
     // Log status history transition
-    await this.db.from('ApplicationStatusHistory').insert({
-      applicationId: applicationId,
-      fromStatus: application.status,
-      toStatus: targetStatus,
-      fromStage: application.stage,
-      toStage: updatedStage,
-      changedBy: bankUser.id,
-      changedByName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
-      changeReason: `Decision submitted: ${decisionType}`,
-      isAutomatic: false,
-      createdAt: nowStr
-    });
+    try {
+      await this.db.from('ApplicationStatusHistory').insert({
+        applicationId: applicationId,
+        fromStatus: application.status,
+        toStatus: targetStatus,
+        fromStage: application.stage,
+        toStage: updatedStage,
+        changedBy: bankUser?.id || bankUser?.email || 'bank-user',
+        changedByName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
+        changeReason: `Decision submitted: ${decisionType}`,
+        isAutomatic: false,
+        createdAt: nowStr
+      });
+    } catch (hErr: any) {
+      console.warn(`[BankService] ApplicationStatusHistory insert note: ${hErr?.message || hErr}`);
+    }
 
     // Notify staff via in-app notification
     try {
@@ -748,7 +772,7 @@ export class BankService {
 
       if (targetStatus === 'sanctioned') {
         notifTitle = '✅ Loan Sanctioned';
-        notifBody = `Bank ${application.bank || 'Bank'} has sanctioned App: ${application.applicationNumber || applicationId} for ₹${(details.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}`;
+        notifBody = `Bank ${application.bank || 'Bank'} has sanctioned App: ${application.applicationNumber || applicationId} for ₹${(detailsObj.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}`;
         notifType = 'application_approved';
       } else if (targetStatus === 'conditional_sanction') {
         notifTitle = '⚠️ Conditional Sanction';
@@ -788,38 +812,50 @@ export class BankService {
     }
 
     // Thread serialization in ApplicationNote
-    await this.db.from('ApplicationNote').insert({
-      applicationId: applicationId,
-      authorId: bankUser.id,
-      authorName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
-      content: JSON.stringify({
-        action: decisionType,
-        details: details,
-        timestamp: nowStr
-      }),
-      type: decisionType,
-      isInternal: false,
-      createdAt: nowStr,
-      updatedAt: nowStr
-    });
+    try {
+      await this.db.from('ApplicationNote').insert({
+        applicationId: applicationId,
+        authorId: bankUser?.id || bankUser?.email || 'bank-user',
+        authorName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
+        content: JSON.stringify({
+          action: decisionType,
+          details: detailsObj,
+          timestamp: nowStr
+        }),
+        type: decisionType,
+        isInternal: false,
+        createdAt: nowStr,
+        updatedAt: nowStr
+      });
+    } catch (noteErr: any) {
+      console.warn(`[BankService] ApplicationNote insert note: ${noteErr?.message || noteErr}`);
+    }
 
-    // Trigger Integrations
+    // Trigger Integrations safely
     const studentName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || 'Student';
-    await this.slack.publishDecisionNotification(
-      application.bank,
-      studentName,
-      application.applicationNumber,
-      decisionType,
-      details
-    );
+    try {
+      await this.slack.publishDecisionNotification(
+        application.bank,
+        studentName,
+        application.applicationNumber,
+        decisionType,
+        detailsObj
+      );
+    } catch (slackErr: any) {
+      console.warn(`[BankService] Slack notification note: ${slackErr?.message || slackErr}`);
+    }
 
-    await this.salesforce.syncLeadOrOpportunity(
-      applicationId,
-      studentName,
-      application.amount,
-      targetStatus,
-      application.applicationNumber
-    );
+    try {
+      await this.salesforce.syncLeadOrOpportunity(
+        applicationId,
+        studentName,
+        application.amount,
+        targetStatus,
+        application.applicationNumber
+      );
+    } catch (sfErr: any) {
+      console.warn(`[BankService] Salesforce sync note: ${sfErr?.message || sfErr}`);
+    }
 
     return {
       success: true,

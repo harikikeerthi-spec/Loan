@@ -56,9 +56,15 @@ export class SupportService {
   // ─── Format Attachments with Presigned S3 URLs ──────────────────────────────
   private async formatAttachments(attachments: any[]) {
     if (!attachments || attachments.length === 0) return [];
+    const backendUrl = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
     return Promise.all(
       attachments.map(async (att) => {
-        const path = att.filePath || att.fileUrl || '';
+        // If fileUrl is already stored (absolute URL), use it directly
+        if (att.fileUrl && (att.fileUrl.startsWith('http://') || att.fileUrl.startsWith('https://'))) {
+          return att;
+        }
+        const path = att.filePath || '';
+        // S3 key — generate fresh presigned URL
         if (path && (path.startsWith('documents/') || path.startsWith('support-tickets/'))) {
           try {
             const presignedUrl = await this.s3Service.getPresignedUrl(path, 3600);
@@ -66,6 +72,10 @@ export class SupportService {
           } catch (e) {
             return att;
           }
+        }
+        // Local disk path — return as full URL
+        if (path && path.startsWith('/uploads/')) {
+          return { ...att, fileUrl: `${backendUrl}${path}` };
         }
         return att;
       })
@@ -102,6 +112,11 @@ export class SupportService {
     const autoTeamName = CATEGORY_TEAM_MAP[dto.category] || null;
     const id = randomUUID();
 
+    const createdById = user?.id || user?.sub || user?.uid || user?.email || 'guest';
+    const createdByName = (`${user?.firstName || ''} ${user?.lastName || ''}`.trim()) || user?.name || dto.studentName || user?.email || 'User';
+    const createdByEmail = user?.email || (dto as any).userEmail || 'user@vidyaloans.in';
+    const createdByRole = user?.role || (dto as any).userRole || 'student';
+
     const ticketData = {
       id,
       ticketNumber,
@@ -111,10 +126,10 @@ export class SupportService {
       priority: dto.priority || 'medium',
       status: 'open',
       source: 'web',
-      createdById: user.id,
-      createdByName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
-      createdByEmail: user.email,
-      createdByRole: user.role,
+      createdById,
+      createdByName,
+      createdByEmail,
+      createdByRole,
       teamName: autoTeamName,
       loanApplicationId: dto.loanApplicationId || null,
       loanApplicationNum: dto.loanApplicationNum || null,
@@ -136,27 +151,38 @@ export class SupportService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) {
+      console.error('[SupportService.createTicket] DB Insert Error:', error);
+      throw new BadRequestException(error.message);
+    }
 
-    // Log creation
-    await this.db.from('SupportActivityLog').insert({
-      id: randomUUID(),
-      ticketId: id,
-      actorId: user.id,
-      actorName: ticketData.createdByName,
-      action: 'created',
-      newValue: 'open',
-      createdAt: now.toISOString(),
-    });
+    // Log creation in SupportActivityLog
+    try {
+      await this.db.from('SupportActivityLog').insert({
+        id: randomUUID(),
+        ticketId: id,
+        actorId: createdById,
+        actorName: createdByName,
+        action: 'created',
+        newValue: 'open',
+        createdAt: now.toISOString(),
+      });
+    } catch (logErr) {
+      console.warn('[SupportService.createTicket] Activity log warning:', logErr);
+    }
 
-    // Create notification for admins
-    await this.createNotification({
-      ticketId: id,
-      userId: user.id,
-      title: `New Ticket: ${ticketNumber}`,
-      message: `${ticketData.createdByName} created a ${dto.priority || 'medium'} priority ticket: "${dto.subject}"`,
-      type: 'new_ticket',
-    });
+    // Create notification for admins & staff
+    try {
+      await this.createNotification({
+        ticketId: id,
+        userId: createdById,
+        title: `New Support Ticket: ${ticketNumber}`,
+        message: `${createdByName} created a ${dto.priority || 'medium'} priority ticket: "${dto.subject}"`,
+        type: 'new_ticket',
+      });
+    } catch (notifErr) {
+      console.warn('[SupportService.createTicket] Notification warning:', notifErr);
+    }
 
     return ticket;
   }
@@ -542,8 +568,8 @@ export class SupportService {
       this.db.from('SupportTicket').select('id', { count: 'exact', head: true }).in('status', ['open', 'assigned']),
       this.db.from('SupportTicket').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),
       this.db.from('SupportTicket').select('id', { count: 'exact', head: true }).gte('resolvedAt', todayStart),
-      this.db.from('SupportTicket').select('id', { count: 'exact', head: true }).eq('priority', 'critical').not('status', 'in', '("resolved","closed")'),
-      this.db.from('SupportTicket').select('id', { count: 'exact', head: true }).lt('slaResolveAt', now.toISOString()).not('status', 'in', '("resolved","closed")'),
+      this.db.from('SupportTicket').select('id', { count: 'exact', head: true }).eq('priority', 'critical').not('status', 'in', '(resolved,closed)'),
+      this.db.from('SupportTicket').select('id', { count: 'exact', head: true }).lt('slaResolveAt', now.toISOString()).not('status', 'in', '(resolved,closed)'),
       this.db.from('SupportTicket').select('id,ticketNumber,subject,status,priority,createdByName,createdByRole,createdAt,category').order('created_at', { ascending: false }).limit(10),
     ]);
 
@@ -762,6 +788,7 @@ export class SupportService {
     const { data: ticket } = await this.db.from('SupportTicket').select('id').eq('id', ticketId).single();
     if (!ticket) throw new NotFoundException(`Ticket ${ticketId} not found`);
 
+    const backendUrl = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
     let filePath = '';
     let fileUrl: string | undefined = undefined;
 
@@ -771,32 +798,29 @@ export class SupportService {
       try {
         await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
         filePath = s3Key;
-        console.log(`[SupportAttachment] Successfully uploaded image to AWS S3: ${s3Key}`);
+        console.log(`[SupportAttachment] Successfully uploaded to S3: ${s3Key}`);
         try {
           fileUrl = await this.s3Service.getPresignedUrl(s3Key, 3600);
         } catch (pErr) {
           console.warn(`[SupportAttachment] S3 Presigned URL error:`, pErr);
         }
       } catch (s3Error: any) {
-        console.error(`[SupportAttachment] S3 Upload error: ${s3Error.message || s3Error}. Falling back to disk storage.`);
+        console.error(`[SupportAttachment] S3 Upload failed: ${s3Error.message || s3Error}. Falling back to disk.`);
       }
     }
 
-    // 2. Fallback to disk if S3 is unconfigured or failed
+    // 2. Fallback to disk if S3 failed
     if (!filePath) {
-      if (file.filename) {
-        filePath = `/uploads/support/${file.filename}`;
-      } else if (file.buffer) {
-        const uploadsDir = join(__dirname, '..', '..', '..', 'uploads', 'support');
-        if (!existsSync(uploadsDir)) {
-          mkdirSync(uploadsDir, { recursive: true });
-        }
-        const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
-        writeFileSync(join(uploadsDir, filename), file.buffer);
-        filePath = `/uploads/support/${filename}`;
-      } else {
-        filePath = `/uploads/support/${Date.now()}-${file.originalname}`;
+      const uploadsDir = join(__dirname, '..', '..', '..', 'uploads', 'support');
+      if (!existsSync(uploadsDir)) {
+        mkdirSync(uploadsDir, { recursive: true });
       }
+      const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+      writeFileSync(join(uploadsDir, filename), file.buffer);
+      filePath = `/uploads/support/${filename}`;
+      // Build full URL so it's always resolvable from the frontend
+      fileUrl = `${backendUrl}${filePath}`;
+      console.log(`[SupportAttachment] Saved to disk fallback: ${fileUrl}`);
     }
 
     const { data, error } = await this.db.from('SupportAttachment').insert({
@@ -812,11 +836,7 @@ export class SupportService {
     }).select().single();
 
     if (error) throw new BadRequestException(error.message);
-
-    if (fileUrl) {
-      return { ...data, fileUrl };
-    }
-    return data;
+    return { ...data, fileUrl };
   }
 
   // ─── Knowledge Base ───────────────────────────────────────────────────────────
