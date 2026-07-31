@@ -1181,8 +1181,8 @@ export class StaffProfileService {
       if (!application) {
         const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
         const isBankRecipient = body.recipientType?.toLowerCase() === 'bank';
-        // Only generate VTU-APP- application number when routing to bank
-        const appNumber = isBankRecipient ? await this.generateApplicationNumber('bank') : undefined;
+        // Only generate VL-APP- application number when routing to bank
+        const appNumber = isBankRecipient ? await this.generateApplicationNumber('default') : undefined;
         const insertApp: any = {
           id: 'la-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
           userId: studentId,
@@ -1236,8 +1236,8 @@ export class StaffProfileService {
         // If application already exists, update it with onboarding details!
         const isBankRecipient = body.recipientType?.toLowerCase() === 'bank';
         let updatedAppNumber = application.applicationNumber;
-        if (isBankRecipient && (!updatedAppNumber || !updatedAppNumber.startsWith('VTU-APP-'))) {
-          updatedAppNumber = await this.generateApplicationNumber('bank');
+        if (isBankRecipient && !updatedAppNumber) {
+          updatedAppNumber = await this.generateApplicationNumber('default');
         }
 
         const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);

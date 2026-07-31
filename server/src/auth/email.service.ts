@@ -19,13 +19,37 @@ export class EmailService {
     });
   }
 
+  private getFromAddress(): string {
+    if (process.env.EMAIL_FROM) {
+      return process.env.EMAIL_FROM;
+    }
+    if (process.env.EMAIL_USER) {
+      return `"VidyaLoan" <${process.env.EMAIL_USER}>`;
+    }
+    return '"VidyaLoan" <noreply@vidyaloan.com>';
+  }
+
+  private stripHtml(html: string): string {
+    if (!html) return '';
+    return html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   async sendOtp(email: string, otp: string) {
     const timestamp = new Date().toLocaleTimeString();
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"VidyaLoan" <[EMAIL_ADDRESS]>',
+      from: this.getFromAddress(),
       to: email,
       subject: `Your VidyaLoan OTP Verification Code`,
       text: `Your OTP is: ${otp}. This code expires in 1 minutes.`,
+      headers: {
+        'X-Mailer': 'VidyaLoan Platform',
+        'X-Priority': '3',
+      },
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center;">
@@ -68,11 +92,7 @@ export class EmailService {
     const timestamp = new Date().toLocaleTimeString();
     const docListHtml = documentTypes.map(doc => `<li>${doc.replace(/_/g, ' ').toUpperCase()}</li>`).join('');
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || '"Vidya Loan" <noreply@vidyaloan.com>',
-      to: email,
-      subject: `Action Required: DigiLocker Document Consent Request `,
-      html: `
+    const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
           <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
             <h1 style="color: white; margin: 0; font-size: 24px;">Vidya Loan</h1>
@@ -102,7 +122,17 @@ export class EmailService {
             </div>
           </div>
         </div>
-      `,
+      `;
+
+    const mailOptions = {
+      from: this.getFromAddress(),
+      to: email,
+      subject: `Action Required: DigiLocker Document Consent Request`,
+      html: htmlContent,
+      text: this.stripHtml(htmlContent),
+      headers: {
+        'X-Mailer': 'VidyaLoan Platform',
+      },
     };
 
     try {
@@ -120,12 +150,18 @@ export class EmailService {
 
   async sendMail(to: string, subject: string, html: string, text?: string, replyTo?: string, attachments?: any[]) {
     const mailOptions: any = {
-      from: process.env.EMAIL_FROM || '"Vidya Loan" <noreply@vidyaloan.com>',
+      from: this.getFromAddress(),
       to: to,
       replyTo: replyTo,
       subject: subject,
       html: html,
-      text: text,
+      text: text || this.stripHtml(html),
+      headers: {
+        'X-Mailer': 'VidyaLoan Platform',
+        'X-Priority': '3',
+        'X-MSMail-Priority': 'Normal',
+        'X-Auto-Response-Suppress': 'OOF',
+      },
     };
 
     if (attachments) {

@@ -52,6 +52,8 @@ interface DashboardData {
         link?: string;
     }>;
     profile?: any;
+    parents?: any[];
+    family?: any;
 }
 
 interface Stage {
@@ -141,7 +143,12 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
     const formatToIST = (dateVal: any): { date: string; time: string } | null => {
         if (!dateVal) return null;
         try {
-            const d = new Date(dateVal);
+            let str = String(dateVal).trim();
+            if (!str) return null;
+            if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}/.test(str) && !/[Zz+\-]\d{0,2}:?\d{0,2}$/.test(str)) {
+                str = str.replace(' ', 'T') + 'Z';
+            }
+            const d = new Date(str);
             if (isNaN(d.getTime())) return null;
 
             const parts = new Intl.DateTimeFormat("en-US", {
@@ -201,16 +208,6 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                     Application Progress
                 </h3>
                 <div className="flex items-center gap-3">
-                    {/* <Link
-                        href={`/staff/applications/${app.id}`}
-                        target="_blank"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-extrabold uppercase tracking-wider rounded border border-indigo-100 hover:border-indigo-200 transition-all shadow-sm"
-                        title="Open this application directly in the staff dashboard"
-                    >
-                        <span className="material-symbols-outlined text-[12px] font-bold">admin_panel_settings</span>
-                        Staff Portal View
-                        <span className="material-symbols-outlined text-[10px]">open_in_new</span>
-                    </Link> */}
                     <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                         {currentProgress}% Complete
                     </div>
@@ -218,7 +215,7 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
             </div>
 
             {/* Timeline */}
-            <div className="relative px-2 mb-20 select-none">
+            <div className="relative px-2 mb-8 select-none">
                 {/* Background Line */}
                 <div className="absolute top-5 left-0 right-0 h-[2px] bg-gray-100 rounded-full mx-6" />
 
@@ -266,33 +263,6 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                     })}
                 </div>
             </div>
-
-            {/* Current Status Info */}
-            <div className="mt-8 p-5 bg-[#6605c7]/[0.02] border border-[#6605c7]/5 rounded-xl flex items-start gap-4">
-                <div className="w-9 h-9 bg-[#6605c7] text-white rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-[#6605c7]/20">
-                    <span className="material-symbols-outlined text-lg">{currentStage?.icon || 'hourglass_empty'}</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-[#6605c7]/60 mb-1">Current Status</div>
-                    <h4 className="font-bold text-gray-900 text-[14px]">{currentStage?.label.replace('<br>', ' ')}</h4>
-                    <p className="text-gray-500 text-[13px] mt-1 leading-relaxed">
-                        Your {getBankDisplayName(app.bank) ? `${getBankDisplayName(app.bank)} ` : ""}application {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-'))) ? `(#${app.applicationNumber})` : ""} is currently in the <strong>{currentStage?.label.replace('<br>', ' ')}</strong> stage.
-                        Estimated completion: <span className="text-gray-900 font-bold">
-                            {(() => {
-                                const appDate = app.date ? new Date(app.date) : new Date();
-                                const est = new Date(appDate);
-                                est.setDate(appDate.getDate() + 14);
-                                return est.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-                            })()}
-                        </span>
-                        {app.id && (
-                            <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Application ID: ${app.id}`}>
-                                App #: {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-'))) ? app.applicationNumber : 'Pending'}
-                            </span>
-                        )}
-                    </p>
-                </div>
-            </div>
         </div>
     );
 }
@@ -311,7 +281,9 @@ const getDynamicProgress = (app: any) => {
 };
 
 const getBankDisplayName = (bank?: string) => {
-    if (!bank || bank === "Any Bank" || bank === "ANY BANK" || bank === "Pending Partner" || bank === "—") {
+    if (!bank) return "";
+    const b = bank.trim().toLowerCase();
+    if (["anybank", "any_bank", "any bank", "any", "not_selected", "pending", "pending partner", "none", "not specified", "—"].includes(b)) {
         return "";
     }
     return bank;
@@ -384,18 +356,25 @@ export default function DashboardPage() {
         setExpandedApps(prev => ({ ...prev, [appId]: !prev[appId] }));
     };
 
-    const loadData = useCallback(async () => {
-        if (!user?.email) return;
-        setLoading(true);
+    const loadData = useCallback(async (isSilent = false) => {
+        if (!user?.email && !user?.id) return;
+        if (!isSilent && (!data.applications || data.applications.length === 0)) {
+            setLoading(true);
+        }
         try {
-            const dash = await authApi.getDashboard(user.email) as {
-                success: boolean;
-                user?: { id: string };
-                applicationCount?: number;
-                applications?: DashboardData["applications"];
-            };
-            if (dash?.success && dash.user?.id) {
-                const dynamic = await authApi.getDashboardData(dash.user.id) as {
+            let targetUserId = user?.id;
+            if (!targetUserId && user?.email) {
+                const dash = await authApi.getDashboard(user.email) as {
+                    success: boolean;
+                    user?: { id: string };
+                };
+                if (dash?.success && dash.user?.id) {
+                    targetUserId = dash.user.id;
+                }
+            }
+
+            if (targetUserId) {
+                const dynamic = await authApi.getDashboardData(targetUserId) as {
                     success: boolean;
                     data?: {
                         applications?: DashboardData["applications"];
@@ -406,12 +385,15 @@ export default function DashboardPage() {
                     };
                 };
                 if (dynamic?.success && dynamic.data) {
+                    const dynData: any = dynamic.data;
                     setData({
-                        applicationCount: dynamic.data.applications?.length || 0,
-                        applications: dynamic.data.applications || [],
-                        documents: dynamic.data.documents || [],
-                        activity: dynamic.data.activity || [],
-                        profile: dynamic.data.user || null,
+                        applicationCount: dynData.applications?.length || 0,
+                        applications: dynData.applications || [],
+                        documents: dynData.documents || [],
+                        activity: dynData.activity || [],
+                        profile: dynData.user || null,
+                        parents: dynData.parents || dynData.user?.parents || [],
+                        family: dynData.family || dynData.user?.family || {},
                     });
                 }
             }
@@ -420,7 +402,7 @@ export default function DashboardPage() {
         } finally {
             setLoading(false);
         }
-    }, [user?.email]);
+    }, [user?.email, user?.id, data.applications]);
 
     const handleSavePersonal = async () => {
         if (!user?.email) return;
@@ -526,12 +508,12 @@ export default function DashboardPage() {
     // Listen for dashboard updates from other pages/tabs
     useEffect(() => {
         const onExternalUpdate = () => {
-            loadData();
+            loadData(true);
             if (refreshUser) refreshUser();
         };
         const onStorage = (e: StorageEvent) => {
             if (e.key && (e.key.startsWith('dashboardDataUpdated_') || e.key === 'staff_profile_updated')) {
-                loadData();
+                loadData(true);
                 if (refreshUser) refreshUser();
             }
         };
@@ -545,8 +527,19 @@ export default function DashboardPage() {
         };
     }, [loadData, refreshUser]);
 
-    const hasApplied = !!(data.applications && data.applications.length > 0);
-    const firstApp = hasApplied ? data.applications![0] : null;
+    const hasRecentLocalSubmission = typeof window !== 'undefined' && (() => {
+        try {
+            const raw = localStorage.getItem('recent_application_submitted');
+            if (!raw) return false;
+            const parsed = JSON.parse(raw);
+            return (parsed.userId === user?.id || (user?.email && parsed.email === user.email)) && (Date.now() - (parsed.timestamp || 0)) < 600000;
+        } catch {
+            return false;
+        }
+    })();
+
+    const hasApplied = !!(data.applications && data.applications.length > 0) || hasRecentLocalSubmission;
+    const firstApp = (data.applications && data.applications.length > 0) ? data.applications[0] : null;
     const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
 
     const getStaffDetails = (app: any) => {
@@ -627,12 +620,12 @@ export default function DashboardPage() {
     })();
 
     const quickLinks = [
-        ...(hasApplied ? [] : [{ href: "/apply-loan", icon: "add_circle", label: "Apply for Loan", desc: "Start a new application", color: "from-purple-500 to-indigo-600" }]),
-        { href: "/document-vault", icon: "folder_shared", label: "Document Vault", desc: "Securely upload docs", color: "from-blue-600 to-indigo-700" },
+        ...(hasApplied ? [] : [{ href: "/apply-loan", icon: "add_circle", label: "Apply for Loan", desc: "Start a new application", color: "from-purple-500 to-indigo-600", comingSoon: false }]),
+        { href: "/document-vault", icon: "folder_shared", label: "Document Vault", desc: "Securely upload docs", color: "from-blue-600 to-indigo-700", comingSoon: false },
         // { href: "/emi", icon: "calculate", label: "EMI Calculator", desc: "Plan your repayments", color: "from-blue-500 to-cyan-600" },
         // { href: "/sop-writer", icon: "auto_fix_high", label: "AI SOP Writer", desc: "Draft your statement", color: "from-pink-500 to-rose-600" },
         // { href: "/compare-loans", icon: "compare", label: "Compare Loans", desc: "Find the best rates", color: "from-amber-500 to-orange-600" },
-        { href: "/community/discussions", icon: "forum", label: "Community", desc: "Ask & share advice", color: "from-emerald-500 to-teal-600" },
+        { href: "/community/discussions", icon: "forum", label: "Community", desc: "Ask & share advice", color: "from-emerald-500 to-teal-600", comingSoon: false },
     ];
 
     if (loading) {
@@ -680,43 +673,15 @@ export default function DashboardPage() {
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
-                            <button
+                            <div
                                 id="btn-connect-support"
-                                disabled={connectingSupport}
-                                onClick={async () => {
-                                    setConnectingSupport(true);
-                                    try {
-                                        const res = await chatApi.connect() as any;
-                                        const whatsappUrl = res?.whatsappUrl;
-                                        if (whatsappUrl) {
-                                            window.open(whatsappUrl, '_blank');
-                                            return;
-                                        }
-                                        const rawNumber = process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886';
-                                        const cleanNumber = rawNumber.replace('whatsapp:', '').replace(/\D/g, '');
-                                        window.open(`https://wa.me/${cleanNumber}`, '_blank');
-                                    } catch (e) {
-                                        const rawNumber = process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886';
-                                        const cleanNumber = rawNumber.replace('whatsapp:', '').replace(/\D/g, '');
-                                        window.open(`https://wa.me/${cleanNumber}`, '_blank');
-                                    } finally {
-                                        setConnectingSupport(false);
-                                    }
-                                }}
-                                className="px-5 py-2.5 bg-emerald-600 disabled:bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 disabled:hover:bg-emerald-500 transition-all shadow-sm flex items-center gap-2 select-none"
+                                className="px-5 py-2.5 bg-emerald-600/50 text-white/80 text-xs font-bold rounded-lg cursor-not-allowed shadow-sm flex items-center gap-2 select-none opacity-75"
+                                title="Coming soon!"
                             >
-                                {connectingSupport ? (
-                                    <>
-                                        <span className="material-symbols-outlined text-sm animate-spin">sync</span>
-                                        Connecting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="material-symbols-outlined text-sm">chat</span>
-                                        Connect with Support
-                                    </>
-                                )}
-                            </button>
+                                <span className="material-symbols-outlined text-sm">chat</span>
+                                Connect with Support
+                                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-400 text-amber-950 rounded ml-1">Coming Soon</span>
+                            </div>
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
                                 Speak with Counsellor
                             </Link>
@@ -749,15 +714,17 @@ export default function DashboardPage() {
                                     <span className="material-symbols-outlined text-2xl">check_circle</span>
                                 </div>
                                 <h3 className="text-base font-black text-emerald-800 mb-2">Loan Applied</h3>
-                                <p className="text-emerald-700 text-xs font-bold leading-relaxed mb-1">
-                                    Bank: {firstApp?.bank || 'Not specified'}
-                                </p>
+                                {getBankDisplayName(firstApp?.bank) ? (
+                                    <p className="text-emerald-700 text-xs font-bold leading-relaxed mb-1">
+                                        Bank: {getBankDisplayName(firstApp?.bank)}
+                                    </p>
+                                ) : null}
                                 <p className="text-emerald-600/80 text-[11px] font-semibold">
                                     Amount: ₹{firstApp?.amount?.toLocaleString("en-IN") || '0'}
                                 </p>
                             </div>
                             <div className="w-full py-3 bg-emerald-100/50 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-emerald-200/50 flex items-center justify-center gap-1.5">
-                                <span className="material-symbols-outlined text-sm">verified</span> Submission Logged
+                                <span className="material-symbols-outlined text-sm">verified</span> Submission Locked
                             </div>
                         </div>
                     )}
@@ -836,7 +803,7 @@ export default function DashboardPage() {
                                 </div>
                                 <h3 className="text-base font-black text-emerald-800 mb-2">Bank Approved</h3>
                                 <p className="text-emerald-600 text-xs font-semibold leading-relaxed mb-6">
-                                    Congratulations! Your application has been officially approved by {firstApp?.bank}.
+                                    Congratulations! Your application has been officially approved by {getBankDisplayName(firstApp?.bank) || 'our partner bank'}.
                                 </p>
                             </div>
                             <div className="w-full py-3 bg-emerald-100/50 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-emerald-200/50 flex items-center justify-center gap-1.5">
@@ -851,7 +818,7 @@ export default function DashboardPage() {
                                 </div>
                                 <h3 className="text-base font-black text-gray-900 mb-2">Bank Review</h3>
                                 <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-6">
-                                    Your loan application is under underwriting evaluation at {firstApp?.bank || 'partner banks'}.
+                                    Your loan application is under underwriting evaluation at {getBankDisplayName(firstApp?.bank) || 'partner banks'}.
                                 </p>
                             </div>
                             <div className="w-full py-3 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-xl text-center select-none border border-amber-100 flex items-center justify-center gap-1.5">
@@ -937,14 +904,27 @@ export default function DashboardPage() {
                         <div className="lg:col-span-2">
                             <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">Quick Actions</h2>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
-                                {quickLinks.map((l) => (
-                                    <Link key={l.href} href={l.href} className="group p-5 bg-white rounded-xl border border-gray-100 hover:border-[#6605c7]/20 transition-all">
-                                        <div className={`w-9 h-9 bg-gradient-to-r ${l.color} rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
-                                            <span className="material-symbols-outlined text-lg">{l.icon}</span>
+                                {quickLinks.map((l, idx) => (
+                                    l.comingSoon ? (
+                                        <div key={l.label + idx} className="group p-5 bg-white rounded-xl border border-gray-100 border-amber-200/40 transition-all cursor-not-allowed relative overflow-hidden opacity-80 select-none">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className={`w-9 h-9 bg-gradient-to-r ${l.color} rounded-lg flex items-center justify-center text-white opacity-60`}>
+                                                    <span className="material-symbols-outlined text-lg">{l.icon}</span>
+                                                </div>
+                                                <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200/60 rounded-full">Coming Soon</span>
+                                            </div>
+                                            <div className="font-bold text-[13px] text-gray-500">{l.label}</div>
+                                            <div className="text-[11px] text-gray-400 mt-1 line-clamp-1">{l.desc}</div>
                                         </div>
-                                        <div className="font-bold text-[13px] text-gray-900">{l.label}</div>
-                                        <div className="text-[11px] text-gray-500 mt-1 line-clamp-1">{l.desc}</div>
-                                    </Link>
+                                    ) : (
+                                        <Link key={l.href + idx} href={l.href} className="group p-5 bg-white rounded-xl border border-gray-100 hover:border-[#6605c7]/20 transition-all">
+                                            <div className={`w-9 h-9 bg-gradient-to-r ${l.color} rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
+                                                <span className="material-symbols-outlined text-lg">{l.icon}</span>
+                                            </div>
+                                            <div className="font-bold text-[13px] text-gray-900">{l.label}</div>
+                                            <div className="text-[11px] text-gray-500 mt-1 line-clamp-1">{l.desc}</div>
+                                        </Link>
+                                    )
                                 ))}
                             </div>
 
@@ -993,9 +973,9 @@ export default function DashboardPage() {
                                                                     <span className="font-bold text-[15px] text-gray-900 truncate">
                                                                         {getBankDisplayName(app.bank) || "Loan Application"}
                                                                     </span>
-                                                                    {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-'))) && (
-                                                                        <span className="text-[17px] text-black-900 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
-                                                                            #{app.applicationNumber}
+                                                                    {app.applicationNumber && (
+                                                                        <span className="text-[12px] text-gray-500 font-mono font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
+                                                                            {app.applicationNumber}
                                                                         </span>
                                                                     )}
                                                                     <span className={`px-2 py-0.5 rounded-full text-[12px] font-bold uppercase tracking-wider ${sc}`}>
@@ -1144,9 +1124,9 @@ export default function DashboardPage() {
                                                             <h3 className="font-bold text-[15px] text-gray-900 truncate">
                                                                 {getBankDisplayName(app.bank) || "Loan Application"}
                                                             </h3>
-                                                            {(app.applicationNumber && (app.applicationNumber.startsWith('VTU-APP-') || app.applicationNumber.startsWith('VTU-BNK-'))) && (
-                                                                <span className="text-[15px] text-gray-400 font-semibold bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
-                                                                    #{app.applicationNumber}
+                                                            {app.applicationNumber && (
+                                                                <span className="text-[12px] text-gray-400 font-mono font-semibold bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
+                                                                    {app.applicationNumber}
                                                                 </span>
                                                             )}
                                                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${sc.bg} ${sc.text}`}>
@@ -1404,10 +1384,6 @@ export default function DashboardPage() {
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100 pb-2">Loan Request</h3>
 
                                     <div>
-                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Bank</div>
-                                        <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.bank || 'Not specified'}</div>
-                                    </div>
-                                    <div>
                                         <div className="text-[11px] font-bold text-gray-400 uppercase">Amount Required</div>
                                         <div className="text-sm font-semibold text-gray-800">₹{selectedAppDetails.amount?.toLocaleString("en-IN") || 'Not specified'}</div>
                                     </div>
@@ -1415,12 +1391,7 @@ export default function DashboardPage() {
                                         <div className="text-[11px] font-bold text-gray-400 uppercase">Loan Type</div>
                                         <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.loanType || 'Not specified'}</div>
                                     </div>
-                                    <div>
-                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Collateral</div>
-                                        <div className="text-sm font-semibold text-gray-800">
-                                            {selectedAppDetails.hasCollateral ? (selectedAppDetails.collateralType || 'Yes') : (selectedAppDetails.hasCollateral === false ? 'No' : (selectedAppDetails.collateral || 'Not specified'))}
-                                        </div>
-                                    </div>
+
                                 </div>
 
                                 {/* Education Info */}
@@ -1430,18 +1401,6 @@ export default function DashboardPage() {
                                     <div>
                                         <div className="text-[11px] font-bold text-gray-400 uppercase">University & Country</div>
                                         <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.universityName || 'Not specified'}, {selectedAppDetails.country || 'Not specified'}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Course</div>
-                                        <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.courseName || selectedAppDetails.courseType || 'Not specified'}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Admission Status</div>
-                                        <div className="text-sm font-semibold text-gray-800 capitalize">{selectedAppDetails.admissionStatus || 'Not specified'}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Intake Season</div>
-                                        <div className="text-sm font-semibold text-gray-800 capitalize">{selectedAppDetails.intakeSeason || selectedAppDetails.user?.intakeSeason || 'Not Specified'}</div>
                                     </div>
                                 </div>
 
@@ -1463,6 +1422,18 @@ export default function DashboardPage() {
                                             </div>
                                         </div>
                                         <div>
+                                            <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant Phone</div>
+                                            <div className="text-sm font-semibold text-gray-800">
+                                                {selectedAppDetails.coApplicantPhone || selectedAppDetails.coApplicantMobile || selectedAppDetails.coApplicant_phone || selectedAppDetails.user?.coApplicantPhone || selectedAppDetails.user?.parents?.fatherPhone || selectedAppDetails.user?.parents?.motherPhone || 'Not specified'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant Email</div>
+                                            <div className="text-sm font-semibold text-gray-800">
+                                                {selectedAppDetails.coApplicantEmail || selectedAppDetails.coApplicant_email || selectedAppDetails.user?.coApplicantEmail || selectedAppDetails.user?.parents?.fatherEmail || selectedAppDetails.user?.parents?.motherEmail || 'Not specified'}
+                                            </div>
+                                        </div>
+                                        <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Applicant Name</div>
                                             <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.firstName} {selectedAppDetails.lastName}</div>
                                         </div>
@@ -1472,7 +1443,6 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 </div>
-
                                 {/* Notes */}
                                 {selectedAppDetails.notes && (
                                     <div className="space-y-2 sm:col-span-2 mt-2 bg-amber-50/50 p-4 rounded-xl border border-amber-100/50">

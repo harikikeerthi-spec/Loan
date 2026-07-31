@@ -166,7 +166,7 @@ const StudentContactDropdownBesideName = ({
     phone,
     email,
     name,
-    onOpenEmailModal
+    onOpenEmailModal,
 }: {
     phone?: string;
     email?: string;
@@ -174,6 +174,7 @@ const StudentContactDropdownBesideName = ({
     onOpenEmailModal?: (email: string, name: string) => void;
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [openUpward, setOpenUpward] = useState(false);
     const [copiedText, setCopiedText] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -187,6 +188,20 @@ const StudentContactDropdownBesideName = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const toggleOpen = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isOpen && menuRef.current) {
+            const rect = menuRef.current.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            if (spaceBelow < 280) {
+                setOpenUpward(true);
+            } else {
+                setOpenUpward(false);
+            }
+        }
+        setIsOpen(!isOpen);
+    };
+
     const handleCopy = (text: string, label: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!text || text === '—') return;
@@ -197,7 +212,6 @@ const StudentContactDropdownBesideName = ({
     };
 
     const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : '';
-    const whatsappPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
     const hasPhone = Boolean(phone && phone !== '—');
     const hasEmail = Boolean(email && email !== '—');
 
@@ -205,15 +219,14 @@ const StudentContactDropdownBesideName = ({
 
     return (
         <div ref={menuRef} className="relative inline-flex items-center">
-            {/* Single Dropdown Button beside student name */}
             <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                onClick={toggleOpen}
                 className="w-6 h-6 rounded-full bg-purple-50 hover:bg-purple-100 text-[#6605c7] border border-purple-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 ml-1.5"
                 title="Click for Phone & Email options"
             >
                 <span className="material-symbols-outlined text-[15px]">
-                    {isOpen ? 'expand_less' : 'expand_more'}
+                    {isOpen ? (openUpward ? 'expand_more' : 'expand_less') : (openUpward ? 'expand_less' : 'expand_more')}
                 </span>
             </button>
 
@@ -223,20 +236,17 @@ const StudentContactDropdownBesideName = ({
                 </span>
             )}
 
-            {/* Dropdown Options Popover */}
             {isOpen && (
                 <div
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute left-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-2 min-w-[220px] text-xs font-semibold text-slate-700 divide-y divide-slate-100 animate-fade-in"
+                    className={`absolute left-0 ${openUpward ? 'bottom-full mb-2' : 'top-full mt-1.5'} bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] py-2 min-w-[220px] text-xs font-semibold text-slate-700 divide-y divide-slate-100 animate-fade-in`}
                 >
-                    {/* Phone Options */}
                     {hasPhone && (
                         <div className="py-1">
                             <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                                 <span className="material-symbols-outlined text-[13px] text-[#6605c7]">call</span>
                                 <span className="font-mono text-slate-600">{phone}</span>
                             </div>
-
                             <a
                                 href={`tel:${cleanPhone}`}
                                 onClick={() => setIsOpen(false)}
@@ -245,8 +255,6 @@ const StudentContactDropdownBesideName = ({
                                 <span className="material-symbols-outlined text-[14px] text-emerald-600">phone_in_talk</span>
                                 <span>Call {cleanPhone}</span>
                             </a>
-
-
                             <button
                                 type="button"
                                 onClick={(e) => handleCopy(phone!, 'Phone', e)}
@@ -258,7 +266,6 @@ const StudentContactDropdownBesideName = ({
                         </div>
                     )}
 
-                    {/* Email Options */}
                     {hasEmail && (
                         <div className="py-1">
                             <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -276,8 +283,6 @@ const StudentContactDropdownBesideName = ({
                                     <span>Send Email</span>
                                 </button>
                             )}
-
-
 
                             <button
                                 type="button"
@@ -781,6 +786,7 @@ function IncomingQueuePageInner() {
                                     const isExpanded = !!expandedRows[rowId];
                                     const userEmail = item.email || item.student?.email || item.user?.email || "";
                                     const userPhone = item.phone || item.mobile || item.student?.phone || item.student?.mobile || item.user?.phone || item.user?.mobile || "";
+                                    const studentId = item.userId || item.user_id || item.studentId || item.student?.id || item.user?.id || item.student?._id || "";
 
                                     return (
                                         <tr key={rowId} className="hover:bg-slate-50/30 transition-colors">
@@ -841,7 +847,7 @@ function IncomingQueuePageInner() {
                                                                 />
                                                             </div>
                                                             <p className="text-xs font-mono text-slate-400">
-                                                                {item.applicationNumber || "VTU-APP-PENDING"}
+                                                                {studentId || <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/50">NO STUDENT ID</span>}
                                                             </p>
                                                         </div>
                                                     </div>

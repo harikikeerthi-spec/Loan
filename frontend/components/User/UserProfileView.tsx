@@ -21,29 +21,50 @@ export default function UserProfileView({
     loadData
 }: UserProfileViewProps) {
     const baseProfile = data?.profile || user || {};
-    let familyObj = baseProfile.family;
-    if (typeof familyObj === 'string') {
-        try { familyObj = JSON.parse(familyObj); } catch { familyObj = {}; }
-    }
-    let coappObj = baseProfile.coApplicant;
-    if (typeof coappObj === 'string') {
-        try { coappObj = JSON.parse(coappObj); } catch { coappObj = {}; }
-    }
+
+    const getParsedObject = (value: any) => {
+        if (!value) return {};
+        if (typeof value === 'string') {
+            try { return JSON.parse(value); } catch { return {}; }
+        }
+        return typeof value === 'object' ? value : {};
+    };
+
+    let familyObj = baseProfile.family || baseProfile.familyDetails;
+    familyObj = getParsedObject(familyObj);
+
+    let coappObj = baseProfile.coApplicant || baseProfile.coApplicantDetails;
+    coappObj = getParsedObject(coappObj);
+
     const activeProfile = {
         ...baseProfile,
         family: familyObj || {},
-        coApplicant: coappObj || {}
+        coApplicant: coappObj || {},
+        parents: Array.isArray(baseProfile.parents) ? baseProfile.parents : (Array.isArray(data?.parents) ? data.parents : [])
     };
 
-    const parentsList = activeProfile.parents || [];
-    const fatherData = parentsList.find((p: any) => p.relation === 'father');
-    const motherData = parentsList.find((p: any) => p.relation === 'mother');
-    const coapplicantData = parentsList.find((p: any) => p.relation === 'coapplicant');
+    const parentsList = Array.isArray(activeProfile.parents) ? activeProfile.parents : [];
+    const getParentData = (relation: string) => {
+        const target = relation.toLowerCase();
+        return parentsList.find((p: any) => {
+            const currentRelation = String(p?.relation || p?.relationship || '').trim().toLowerCase();
+            return currentRelation === target || currentRelation === `${target}s` || currentRelation === `${target}s`;
+        }) || null;
+    };
+
+    const fatherData = getParentData('father');
+    const motherData = getParentData('mother');
+    const coapplicantData = getParentData('coapplicant');
+
+    const isDocTypeMatch = (docType: string, patterns: string[]) => {
+        const dt = (docType || '').toLowerCase();
+        return patterns.some(p => dt === p || dt.includes(p));
+    };
 
     const userDocs = data?.documents || [];
-    const sscDoc = userDocs.find((d: any) => d.docType === 'marksheet_10' || d.docType === 'marksheet_10th');
-    const hscDoc = userDocs.find((d: any) => d.docType === 'marksheet_12' || d.docType === 'marksheet_12th');
-    const ugDoc = userDocs.find((d: any) => d.docType === 'marksheet_ug' || d.docType === 'ug_degree' || d.docType === 'ug_transcript' || d.docType === 'degree_certificate');
+    const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
+    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'grade_12', 'grade12']));
+    const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_']));
 
     const getExtractedField = (doc: any, fieldNames: string | string[]) => {
         if (!doc) return null;
@@ -80,17 +101,86 @@ export default function UserProfileView({
         return undefined;
     };
 
-    const getAcademicDetails = (doc: any) => {
-        const instKeys = ['institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body'];
-        const pctKeys = ['score', 'percentage', 'gpa', 'cgpa', 'marks_percentage', 'aggregate_percentage'];
-        const inst = getExtractedField(doc, instKeys);
-        const pct = getExtractedField(doc, pctKeys);
-        return { institute: inst || "—", percentage: pct ? `${pct}%` : "—" };
+    const formatPercentageValue = (rawPct?: any, doc?: any): string | undefined => {
+        if (rawPct != null && String(rawPct).trim() !== "" && String(rawPct).trim() !== "—") {
+            const str = String(rawPct).trim();
+            const num = parseFloat(str.replace(/[^\d.]/g, ''));
+            if (!isNaN(num)) {
+                if (num <= 10 && num > 0) {
+                    return `${Math.round(num * 9.5 * 10) / 10}%`;
+                }
+                return str.includes('%') ? str : `${Math.round(num * 10) / 10}%`;
+            }
+            return str;
+        }
+
+        if (doc) {
+            const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks']);
+            const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of']);
+            const cgpaVal = getExtractedField(doc, ['cgpa', 'gpa', 'overall_cgpa', 'overall_gpa', 'sgpa']);
+
+            if (secVal && maxVal) {
+                const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
+                const max = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
+                if (!isNaN(sec) && !isNaN(max) && max > 0) {
+                    return `${Math.round((sec / max) * 100 * 10) / 10}%`;
+                }
+            }
+
+            if (cgpaVal) {
+                const cgpa = parseFloat(String(cgpaVal).replace(/[^\d.]/g, ''));
+                if (!isNaN(cgpa) && cgpa <= 10 && cgpa > 0) {
+                    return `${Math.round(cgpa * 9.5 * 10) / 10}%`;
+                }
+            }
+        }
+
+        return undefined;
     };
 
-    const sscDetails = getAcademicDetails(sscDoc);
-    const hscDetails = getAcademicDetails(hscDoc);
-    const ugDetails = getAcademicDetails(ugDoc);
+    const getAcademicDetails = (doc: any, levelKey?: 'ssc' | 'hsc' | 'ug') => {
+        const instKeys = [
+            'institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body', 'name_of_institution', 'awarding_body', 'degree_college', 'college'
+        ];
+        const pctKeys = [
+            'score', 'percentage', 'gpa', 'cgpa', 'overall_percentage', 'overall_gpa', 'marks_percentage', 'aggregate_percentage', 'total_marks_secured', 'overall_score', 'cgpa_secured', 'gpa_secured'
+        ];
+        const instFromDoc = getExtractedField(doc, instKeys);
+        const pctFromDoc = getExtractedField(doc, pctKeys);
+
+        let parsedAcademic: any = data?.academic || data?.user?.academic;
+        if (typeof parsedAcademic === 'string') {
+            try { parsedAcademic = JSON.parse(parsedAcademic); } catch { parsedAcademic = {}; }
+        }
+        if (!parsedAcademic || typeof parsedAcademic !== 'object') parsedAcademic = {};
+
+        let instFallback: string | undefined = undefined;
+        let pctFallback: string | undefined = undefined;
+
+        if (levelKey === 'ssc') {
+            instFallback = parsedAcademic.ssc?.institute || parsedAcademic.grade10?.institute;
+            pctFallback = parsedAcademic.ssc?.percentage || parsedAcademic.grade10?.percentage;
+        } else if (levelKey === 'hsc') {
+            instFallback = parsedAcademic.hsc?.institute || parsedAcademic.grade12?.institute;
+            pctFallback = parsedAcademic.hsc?.percentage || parsedAcademic.grade12?.percentage;
+        } else if (levelKey === 'ug') {
+            instFallback = parsedAcademic.ug?.institute || parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || data?.bachelorsDegree || data?.user?.bachelorsDegree;
+            pctFallback = parsedAcademic.ug?.percentage || parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score;
+        }
+
+        const inst = instFromDoc || instFallback;
+        const rawPct = pctFromDoc || pctFallback;
+        const formattedPct = formatPercentageValue(rawPct, doc);
+
+        return {
+            institute: inst || "—",
+            percentage: formattedPct || "—"
+        };
+    };
+
+    const sscDetails = getAcademicDetails(sscDoc, 'ssc');
+    const hscDetails = getAcademicDetails(hscDoc, 'hsc');
+    const ugDetails = getAcademicDetails(ugDoc, 'ug');
 
     const displayUserId = user?.id || "";
 
@@ -257,6 +347,14 @@ export default function UserProfileView({
         setSavingProfile(true);
         try {
             await documentApi.updateProfile(user.id, {
+                family: {
+                    fatherName: familyForm.fatherName || null,
+                    fatherAadhar: familyForm.fatherAadhar ? familyForm.fatherAadhar.replace(/\s+/g, '') : null,
+                    fatherPan: familyForm.fatherPan ? familyForm.fatherPan.toUpperCase().replace(/\s+/g, '') : null,
+                    motherName: familyForm.motherName || null,
+                    motherAadhar: familyForm.motherAadhar ? familyForm.motherAadhar.replace(/\s+/g, '') : null,
+                    motherPan: familyForm.motherPan ? familyForm.motherPan.toUpperCase().replace(/\s+/g, '') : null,
+                },
                 parents: [
                     {
                         relation: "father",
@@ -295,62 +393,34 @@ export default function UserProfileView({
         }
     };
 
-    const formatAadhar = (val?: string, visible?: boolean) => {
+    const formatAadhar = (val?: string, _visible?: boolean) => {
         if (!val || val === "—") return null;
-        const cleaned = val.replace(/\s+/g, '');
-        if (visible) return val;
-        if (cleaned.length >= 12) {
-            return `XXXX-XXXX-${cleaned.slice(-4)}`;
-        }
-        return `XXXX-XXXX-${val.slice(-4)}`;
+        return val;
     };
 
-    const formatPan = (val?: string, visible?: boolean) => {
+    const formatPan = (val?: string, _visible?: boolean) => {
         if (!val || val === "—") return null;
-        const cleaned = val.replace(/\s+/g, '');
-        if (visible) return val;
-        if (cleaned.length >= 10) {
-            return `${cleaned.slice(0, 5)}•••${cleaned.slice(-2)}`;
-        }
-        return `••••••${val.slice(-4)}`;
+        return val;
     };
 
-    const renderTableAadhar = (val?: string, secretKey?: string) => {
+    const renderTableAadhar = (val?: string, _secretKey?: string) => {
         const isEmpty = !val || val === "—" || val === "";
         if (isEmpty) return <div className="text-black-900 italic text-[13px]">Aadhaar: Not provided</div>;
-        const isVisible = secretKey ? !!visibleSecrets[secretKey] : false;
-        const formatted = formatAadhar(val, isVisible);
         return (
             <div className="flex items-center gap-1.5 text-[14px]">
                 <span className="text-[#64748B]">Aadhaar:</span>
-                <span className="font-mono font-medium text-black-800">{formatted}</span>
-                <button
-                    type="button"
-                    onClick={() => secretKey && toggleSecretVisibility(secretKey)}
-                    className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-650 transition-colors border-0 bg-transparent flex items-center cursor-pointer"
-                >
-                    <i className={`ph ${isVisible ? 'ph-eye-slash' : 'ph-eye'} text-xs`} />
-                </button>
+                <span className="font-mono font-medium text-black-800">{val}</span>
             </div>
         );
     };
 
-    const renderTablePan = (val?: string, secretKey?: string) => {
+    const renderTablePan = (val?: string, _secretKey?: string) => {
         const isEmpty = !val || val === "—" || val === "";
         if (isEmpty) return <div className="text-black-900 italic text-[13px]">PAN: Not provided</div>;
-        const isVisible = secretKey ? !!visibleSecrets[secretKey] : false;
-        const formatted = formatPan(val, isVisible);
         return (
             <div className="flex items-center gap-1.5 text-[14px]">
                 <span className="text-[#64748B]">PAN:</span>
-                <span className="font-mono font-medium text-black-800">{formatted}</span>
-                <button
-                    type="button"
-                    onClick={() => secretKey && toggleSecretVisibility(secretKey)}
-                    className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-650 transition-colors border-0 bg-transparent flex items-center cursor-pointer"
-                >
-                    <i className={`ph ${isVisible ? 'ph-eye-slash' : 'ph-eye'} text-xs`} />
-                </button>
+                <span className="font-mono font-medium text-black-800">{val}</span>
             </div>
         );
     };
@@ -985,22 +1055,32 @@ export default function UserProfileView({
                                         <tr className="hover:bg-[#F8FAFC] transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Father</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
-                                                {fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName || getDocExtractedField(['father_aadhar', 'father_pan'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'full_name', 'name', 'holder_name']) || "—"}
+                                                {(() => {
+                                                    const rawName = fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName;
+                                                    const isPlaceholder = !rawName || rawName.trim().toLowerCase() === 'father';
+                                                    const docName = getDocExtractedField(['father_aadhar', 'father_aadhaar', 'father_pan'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
+                                                    return (!isPlaceholder ? rawName : docName) || "—";
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
-                                                {renderTableAadhar(fatherData?.aadharNumber || activeProfile?.family?.fatherAadhar || activeProfile?.fatherAadhar || getDocExtractedField(['father_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']), "father_aadhar")}
-                                                {renderTablePan(fatherData?.panNumber || activeProfile?.family?.fatherPan || activeProfile?.fatherPan || getDocExtractedField(['father_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']), "father_pan")}
+                                                {renderTableAadhar(fatherData?.aadharNumber || activeProfile?.family?.fatherAadhar || activeProfile?.fatherAadhar || getDocExtractedField(['father_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']), "father_aadhar")}
+                                                {renderTablePan(fatherData?.panNumber || activeProfile?.family?.fatherPan || activeProfile?.fatherPan || getDocExtractedField(['father_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']), "father_pan")}
                                             </td>
                                         </tr>
                                         {/* Mother Row */}
                                         <tr className="hover:bg-[#F8FAFC] transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Mother</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
-                                                {motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName || getDocExtractedField(['mother_aadhar', 'mother_pan'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'full_name', 'name', 'holder_name']) || "—"}
+                                                {(() => {
+                                                    const rawName = motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName;
+                                                    const isPlaceholder = !rawName || rawName.trim().toLowerCase() === 'mother';
+                                                    const docName = getDocExtractedField(['mother_aadhar', 'mother_aadhaar', 'mother_pan'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
+                                                    return (!isPlaceholder ? rawName : docName) || "—";
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
-                                                {renderTableAadhar(motherData?.aadharNumber || activeProfile?.family?.motherAadhar || activeProfile?.motherAadhar || getDocExtractedField(['mother_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']), "mother_aadhar")}
-                                                {renderTablePan(motherData?.panNumber || activeProfile?.family?.motherPan || activeProfile?.motherPan || getDocExtractedField(['mother_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']), "mother_pan")}
+                                                {renderTableAadhar(motherData?.aadharNumber || activeProfile?.family?.motherAadhar || activeProfile?.motherAadhar || getDocExtractedField(['mother_aadhar', 'mother_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']), "mother_aadhar")}
+                                                {renderTablePan(motherData?.panNumber || activeProfile?.family?.motherPan || activeProfile?.motherPan || getDocExtractedField(['mother_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']), "mother_pan")}
                                             </td>
                                         </tr>
                                         {/* Co-Applicant Row */}
@@ -1030,6 +1110,28 @@ export default function UserProfileView({
                                                 {renderTablePan(coapplicantData?.panNumber || activeProfile?.coApplicant?.pan || activeProfile?.coApplicantPan || getDocExtractedField(['coapplicant_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']), "coapp_pan")}
                                             </td>
                                         </tr>
+                                        {/* Dynamic Relatives Rows (Brother, Sister, Spouse, Guarantor, etc.) */}
+                                        {(activeProfile?.parents || []).filter((p: any) => {
+                                            const rel = String(p?.relation || '').toLowerCase();
+                                            return rel && rel !== 'father' && rel !== 'mother' && rel !== 'coapplicant';
+                                        }).map((rel: any) => {
+                                            const relationKey = String(rel.relation || '').toLowerCase();
+                                            const label = relationKey.charAt(0).toUpperCase() + relationKey.slice(1);
+                                            const nameVal = rel.name || getDocExtractedField([`${relationKey}_aadhar`, `${relationKey}_aadhaar`, `${relationKey}_pan`], ['full_name', 'fullName', 'name', 'holder_name', 'printed_name']) || "—";
+                                            const aadharVal = rel.aadharNumber || getDocExtractedField([`${relationKey}_aadhar`, `${relationKey}_aadhaar`], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']);
+                                            const panVal = rel.panNumber || getDocExtractedField([`${relationKey}_pan`], ['panNumber', 'document_number', 'pan_number', 'pan']);
+
+                                            return (
+                                                <tr key={relationKey} className="hover:bg-[#F8FAFC] transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">{label}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{nameVal}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
+                                                        {renderTableAadhar(aadharVal, `${relationKey}_aadhar`)}
+                                                        {renderTablePan(panVal, `${relationKey}_pan`)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

@@ -50,18 +50,16 @@ export default function DocumentVaultPage() {
         if (name.includes("12th") || name.includes("hsc") || name.includes("inter") || name.includes("marksheet_12")) return "marksheet_12";
         if (name.includes("ug") || name.includes("degree") || name.includes("univ") || name.includes("graduation")) return "ug_degree";
         if (name.includes("passport")) return "passport";
-        if (name.includes("coapplicant") || name.includes("co_applicant")) {
-            if (name.includes("aadhar") || name.includes("aadhaar")) return "coapplicant_aadhar";
-            if (name.includes("pan")) return "coapplicant_pan";
+
+        const relations = ["father", "mother", "brother", "sister", "spouse", "coapplicant", "co_applicant", "guarantor", "guardian"];
+        for (const rel of relations) {
+            if (name.includes(rel)) {
+                const normRel = rel === "co_applicant" ? "coapplicant" : rel;
+                if (name.includes("aadhar") || name.includes("aadhaar")) return `${normRel}_aadhar`;
+                if (name.includes("pan")) return `${normRel}_pan`;
+            }
         }
-        if (name.includes("father")) {
-            if (name.includes("aadhar") || name.includes("aadhaar")) return "father_aadhar";
-            if (name.includes("pan")) return "father_pan";
-        }
-        if (name.includes("mother")) {
-            if (name.includes("aadhar") || name.includes("aadhaar")) return "mother_aadhar";
-            if (name.includes("pan")) return "mother_pan";
-        }
+
         if (name.includes("pan")) return "pan";
         if (name.includes("aadhar") || name.includes("aadhaar") || name.includes("national_id")) return "national_id";
         return "";
@@ -392,6 +390,35 @@ export default function DocumentVaultPage() {
         if (!validFileTypes.includes(file.type)) {
             showAlert("Invalid File Type", "File must be JPG, PNG, or PDF format.", "warning");
             return;
+        }
+
+        const fileNameLower = file.name.toLowerCase();
+        const docTypeLower = docType.toLowerCase();
+
+        if (docTypeLower.includes('aadhar') || docTypeLower.includes('aadhaar') || docTypeLower.includes('national_id')) {
+            const nonAadhaarKeywords = ['pan', 'passport', 'marksheet', '10th', '12th', 'degree', 'graduation', 'transcript', 'certificate', 'salary', 'slip', 'bank', 'statement', 'passbook', 'cheque', 'voter', 'license', 'driving', 'bill', 'tax', 'itr'];
+            const matchedKey = nonAadhaarKeywords.find(kw => fileNameLower.includes(kw));
+            if (matchedKey) {
+                showAlert(
+                    "Wrong Document Type",
+                    `You selected a "${file.name}" file for an Aadhaar Card slot. Only official Aadhaar Cards with a 12-digit Aadhaar number can be uploaded here.`,
+                    "warning"
+                );
+                return;
+            }
+        }
+
+        if (docTypeLower.includes('pan') && !docTypeLower.includes('company')) {
+            const nonPanKeywords = ['aadhar', 'aadhaar', 'passport', 'marksheet', '10th', '12th', 'degree', 'graduation', 'transcript', 'certificate', 'salary', 'slip', 'bank', 'statement', 'passbook', 'cheque', 'voter', 'license', 'driving', 'bill'];
+            const matchedKey = nonPanKeywords.find(kw => fileNameLower.includes(kw));
+            if (matchedKey) {
+                showAlert(
+                    "Wrong Document Type",
+                    `You selected a "${file.name}" file for a PAN Card slot. Only official Indian PAN Cards with a valid 10-character PAN number can be uploaded here.`,
+                    "warning"
+                );
+                return;
+            }
         }
 
         setUploadingDocs(prev => ({ ...prev, [docType]: true }));

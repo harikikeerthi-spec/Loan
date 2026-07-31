@@ -959,19 +959,38 @@ export default function ApplicationManagement() {
                                         </motion.button>
 
                                         {selectedApp.status !== "approved" && selectedApp.status !== "disbursed" && selectedApp.status !== "rejected" && (
-                                            <motion.button
-                                                type="button"
-                                                whileHover={{ scale: 1.04, boxShadow: "0 10px 25px -5px rgba(102, 5, 199, 0.4)" }}
-                                                whileTap={{ scale: 0.96 }}
-                                                onClick={() => {
-                                                    setSanctionAmount(selectedApp.amount.toString());
-                                                    setShowDecisionModal(true);
-                                                }}
-                                                className="px-5 py-2.5 bg-[#6605c7] hover:bg-[#5203a4] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-purple-500/20 cursor-pointer"
-                                            >
-                                                <span className="material-symbols-outlined text-base">gavel</span>
-                                                RECORD DECISION
-                                            </motion.button>
+                                            selectedApp.lanNumber ? (
+                                                <motion.button
+                                                    type="button"
+                                                    whileHover={{ scale: 1.04, boxShadow: "0 10px 25px -5px rgba(102, 5, 199, 0.4)" }}
+                                                    whileTap={{ scale: 0.96 }}
+                                                    onClick={() => {
+                                                        setSanctionAmount(selectedApp.amount.toString());
+                                                        setShowDecisionModal(true);
+                                                    }}
+                                                    className="px-5 py-2.5 bg-[#6605c7] hover:bg-[#5203a4] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-purple-500/20 cursor-pointer"
+                                                >
+                                                    <span className="material-symbols-outlined text-base">gavel</span>
+                                                    RECORD DECISION
+                                                </motion.button>
+                                            ) : (
+                                                <div className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        disabled
+                                                        className="px-5 py-2.5 bg-slate-200 text-slate-400 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 cursor-not-allowed opacity-60 select-none"
+                                                    >
+                                                        <span className="material-symbols-outlined text-base">gavel</span>
+                                                        RECORD DECISION
+                                                        <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black bg-amber-100 text-amber-700 border border-amber-200 rounded uppercase tracking-wider">LAN Required</span>
+                                                    </button>
+                                                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:flex items-center gap-1.5 bg-gray-900 text-white text-[11px] font-semibold rounded-lg px-3 py-2 whitespace-nowrap shadow-xl z-50">
+                                                        <span className="material-symbols-outlined text-[14px] text-amber-400">warning</span>
+                                                        Assign a LAN number first before recording a decision
+                                                        <div className="absolute top-full right-4 border-4 border-transparent border-t-gray-900" />
+                                                    </div>
+                                                </div>
+                                            )
                                         )}
                                     </div>
                                 </div>

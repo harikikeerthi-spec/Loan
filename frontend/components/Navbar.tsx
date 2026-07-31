@@ -35,12 +35,26 @@ export default function Navbar() {
     useEffect(() => {
         if (isAuthenticated && user?.id) {
             const checkApplication = async () => {
+                let hasRecentLocal = false;
+                try {
+                    const raw = localStorage.getItem('recent_application_submitted');
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if ((parsed.userId === user.id || parsed.email === user.email) && (Date.now() - (parsed.timestamp || 0)) < 600000) {
+                            hasRecentLocal = true;
+                        }
+                    }
+                } catch { }
+
+                if (hasRecentLocal) setHasApplied(true);
+
                 try {
                     const res = await authApi.getDashboardData(user.id) as any;
                     const apps = res?.data?.applications || [];
-                    setHasApplied(apps.length > 0);
+                    setHasApplied(apps.length > 0 || hasRecentLocal);
                 } catch (err) {
                     console.error("Navbar failed to check application status:", err);
+                    if (hasRecentLocal) setHasApplied(true);
                 }
             };
             checkApplication();

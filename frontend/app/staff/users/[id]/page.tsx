@@ -192,17 +192,71 @@ export default function ProfileTab() {
         return <span className="text-[#94A3B8] font-normal">Pending</span>;
     };
 
-    const userDocs = userDocuments || [];
-    const sscDoc = userDocs.find((d: any) => d.docType === 'marksheet_10' || d.docType === 'marksheet_10th');
-    const hscDoc = userDocs.find((d: any) => d.docType === 'marksheet_12' || d.docType === 'marksheet_12th');
-    const ugDoc = userDocs.find((d: any) => d.docType === 'marksheet_ug' || d.docType === 'ug_degree' || d.docType === 'ug_transcript' || d.docType === 'degree_certificate');
+    const isDocTypeMatch = (docType: string, patterns: string[]) => {
+        const dt = (docType || '').toLowerCase();
+        return patterns.some(p => dt === p || dt.includes(p));
+    };
 
-    const getExtractedField = (doc: any, fieldName: string) => {
-        if (!doc || !doc.verificationMetadata) return null;
-        const meta = doc.verificationMetadata;
-        const details = meta.details || {};
-        const ext = details.extractedFields || meta.extractedFields || {};
-        return ext[fieldName] || null;
+    const userDocs = userDocuments || [];
+    const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
+    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'grade_12', 'grade12']));
+    const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_']));
+
+    const getExtractedField = (doc: any, fieldNames: string | string[]) => {
+        if (!doc) return null;
+        let meta = doc.verificationMetadata;
+        if (typeof meta === 'string') {
+            try { meta = JSON.parse(meta); } catch { meta = {}; }
+        }
+        if (!meta || typeof meta !== 'object') meta = {};
+        const details = meta.details || meta.ocrResult || meta.ocr_result || doc.ocrResult || doc.ocr_result || {};
+        const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || {};
+
+        const names = Array.isArray(fieldNames) ? fieldNames : [fieldNames];
+        for (const fn of names) {
+            if (ext[fn] && String(ext[fn]).trim()) return String(ext[fn]).trim();
+            if (details[fn] && String(details[fn]).trim()) return String(details[fn]).trim();
+            if (meta[fn] && String(meta[fn]).trim()) return String(meta[fn]).trim();
+            if (doc[fn] && String(doc[fn]).trim()) return String(doc[fn]).trim();
+        }
+        return null;
+    };
+
+    const formatPercentageValue = (rawPct?: any, doc?: any): string | undefined => {
+        if (rawPct != null && String(rawPct).trim() !== "" && String(rawPct).trim() !== "—") {
+            const str = String(rawPct).trim();
+            const num = parseFloat(str.replace(/[^\d.]/g, ''));
+            if (!isNaN(num)) {
+                if (num <= 10 && num > 0) {
+                    return `${Math.round(num * 9.5 * 10) / 10}%`;
+                }
+                return str.includes('%') ? str : `${Math.round(num * 10) / 10}%`;
+            }
+            return str;
+        }
+
+        if (doc) {
+            const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks']);
+            const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of']);
+            const cgpaVal = getExtractedField(doc, ['cgpa', 'gpa', 'overall_cgpa', 'overall_gpa', 'sgpa']);
+
+            if (secVal && maxVal) {
+                const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
+                const max = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
+                if (!isNaN(sec) && !isNaN(max) && max > 0) {
+                    return `${Math.round((sec / max) * 100 * 10) / 10}%`;
+                }
+            }
+
+            if (cgpaVal) {
+                const cgpa = parseFloat(String(cgpaVal).replace(/[^\d.]/g, ''));
+                if (!isNaN(cgpa) && cgpa <= 10 && cgpa > 0) {
+                    return `${Math.round(cgpa * 9.5 * 10) / 10}%`;
+                }
+            }
+        }
+
+        return undefined;
     };
 
     const getAcademicDetails = (doc: any, key: 'ssc' | 'hsc' | 'ug') => {
@@ -210,18 +264,32 @@ export default function ProfileTab() {
         if (typeof parsedAcademic === 'string') {
             try { parsedAcademic = JSON.parse(parsedAcademic); } catch { }
         }
-        const fallback = parsedAcademic?.[key] || {};
-        const extInst = getExtractedField(doc, 'institution') || getExtractedField(doc, 'university') || getExtractedField(doc, 'school_name') || getExtractedField(doc, 'college_name');
-        const extPct = getExtractedField(doc, 'score') || getExtractedField(doc, 'percentage') || getExtractedField(doc, 'gpa') || getExtractedField(doc, 'cgpa');
+        if (!parsedAcademic || typeof parsedAcademic !== 'object') parsedAcademic = {};
 
-        const inst = (fallback.institute && String(fallback.institute).trim() !== "") ? fallback.institute : extInst;
-        const pct = (fallback.percentage !== undefined && fallback.percentage !== null && String(fallback.percentage).trim() !== "") ? fallback.percentage : extPct;
+        const fallback = parsedAcademic?.[key] || {};
+
+        const instKeys = [
+            'institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body', 'name_of_institution', 'awarding_body', 'degree_college', 'college'
+        ];
+        const pctKeys = [
+            'score', 'percentage', 'gpa', 'cgpa', 'overall_percentage', 'overall_gpa', 'marks_percentage', 'aggregate_percentage', 'total_marks_secured', 'overall_score', 'cgpa_secured', 'gpa_secured'
+        ];
+
+        let extInst = getExtractedField(doc, instKeys);
+        let extPct = getExtractedField(doc, pctKeys);
+
+        let fallbackInst = fallback.institute || (key === 'ug' ? (parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || userData?.bachelorsDegree) : undefined);
+        let fallbackPct = fallback.percentage || (key === 'ug' ? (parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score) : undefined);
+
+        const inst = (fallbackInst && String(fallbackInst).trim() !== "") ? fallbackInst : extInst;
+        const rawPct = (fallbackPct !== undefined && fallbackPct !== null && String(fallbackPct).trim() !== "") ? fallbackPct : extPct;
+        const formattedPct = formatPercentageValue(rawPct, doc);
 
         return {
             rawInstitute: inst || "",
-            rawPercentage: pct || "",
+            rawPercentage: formattedPct || "",
             institute: inst ? inst : <span className="text-[#94A3B8] font-normal">Pending</span>,
-            percentage: pct ? (pct.toString().includes('%') ? pct : `${pct}%`) : <span className="text-[#94A3B8] font-normal">Pending</span>
+            percentage: formattedPct ? formattedPct : <span className="text-[#94A3B8] font-normal">Pending</span>
         };
     };
 
@@ -488,6 +556,8 @@ export default function ProfileTab() {
                     lastName: editForm.lastName,
                     phoneNumber: editForm.phoneNumber,
                     dateOfBirth: editForm.dateOfBirth,
+                    targetUniversity: editForm.targetUniversity,
+                    studyDestination: editForm.studyDestination,
                 }),
                 authApi.updateDetails(userData.email || editForm.email, {
                     firstName: editForm.firstName,
@@ -506,6 +576,9 @@ export default function ProfileTab() {
                         countryOfStudy: editForm.studyDestination,
                         studyDestination: editForm.studyDestination,
                         destinationCountry: editForm.studyDestination,
+                        fatherName: editForm.fatherName,
+                        motherName: editForm.motherName,
+                        coApplicantName: editForm.coappName,
                     })
                 )
             ]);
@@ -514,6 +587,8 @@ export default function ProfileTab() {
                 setUserData((prev: any) => ({
                     ...prev,
                     ...updates,
+                    firstName: editForm.firstName,
+                    lastName: editForm.lastName,
                     targetUniversity: editForm.targetUniversity,
                     universityName: editForm.targetUniversity,
                     university: editForm.targetUniversity,
@@ -523,6 +598,8 @@ export default function ProfileTab() {
                     phoneNumber: editForm.phoneNumber,
                     mobile: editForm.phoneNumber,
                     phone: editForm.phoneNumber,
+                    fatherName: editForm.fatherName,
+                    motherName: editForm.motherName,
                     family: updates.family,
                     coApplicant: updates.coApplicant,
                     academic: updates.academic,
@@ -541,6 +618,9 @@ export default function ProfileTab() {
                         countryOfStudy: editForm.studyDestination,
                         studyDestination: editForm.studyDestination,
                         destinationCountry: editForm.studyDestination,
+                        fatherName: editForm.fatherName,
+                        motherName: editForm.motherName,
+                        coApplicantName: editForm.coappName,
                     }))
                 );
             }

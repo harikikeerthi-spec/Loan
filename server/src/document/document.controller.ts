@@ -71,7 +71,7 @@ export class DocumentController {
     );
 
     try {
-      const isOtherDoc = docType.toLowerCase().includes('other');
+      const isOtherDoc = (docType.toLowerCase().includes('_other') || docType.toLowerCase().includes('other_') || docType.toLowerCase() === 'other') && !docType.toLowerCase().includes('mother');
       let kycResult: any;
 
       if (isOtherDoc) {
@@ -102,10 +102,10 @@ export class DocumentController {
           const integrityCheck = await this.kycService.validateDocumentKeywords(file.buffer, docType, isPdf, isImage);
 
           if (!integrityCheck.is_valid) {
-            console.warn(`[UPLOAD] Rejecting invalid ${docType} on KYC service exception. Error: ${integrityCheck.error}`);
+            console.warn(`[UPLOAD] Rejecting invalid ${docType} on KYC service exception. Error: ${integrityCheck.error || 'Identity card validation failed'}`);
             throw new BadRequestException(
               `Document verification failed: The uploaded file was not recognized as a valid ${docType.toUpperCase().replace(/_/g, ' ')}. ` +
-              `Details: ${integrityCheck.error}. Please check your document and re-upload the correct file.`
+              `Details: ${integrityCheck.error || 'The document is missing required identity details'}. Please check your document and re-upload the correct file.`
             );
           }
 
@@ -253,7 +253,7 @@ export class DocumentController {
       `[OCR-REVERIFY] userId=${userId}, docType=${docType}`,
     );
 
-    const isOtherDoc = docType.toLowerCase().includes('other');
+    const isOtherDoc = (docType.toLowerCase().includes('_other') || docType.toLowerCase().includes('other_') || docType.toLowerCase() === 'other') && !docType.toLowerCase().includes('mother');
     if (isOtherDoc) {
       return {
         success: true,

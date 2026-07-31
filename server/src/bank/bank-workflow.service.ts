@@ -155,10 +155,10 @@ export class BankWorkflowService {
       throw submitError;
     }
 
-    // Update LoanApplication with bank submission reference — preserve the existing VTU-APP applicationNumber, or generate new VTU-APP sequential one if it's missing/not bank format.
+    // Update LoanApplication with bank submission reference — generate VL-APP sequential number if not already assigned.
     let appNumber = application.applicationNumber;
-    if (!appNumber || (!appNumber.startsWith('VTU-APP-') && !appNumber.startsWith('VTU-BNK-'))) {
-      appNumber = await this.generateBankApplicationNumber();
+    if (!appNumber) {
+      appNumber = await this.generateApplicationNumber();
     }
 
     await this.db.client

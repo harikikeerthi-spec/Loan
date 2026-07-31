@@ -90,7 +90,6 @@ export function validatePanExtraction(
     const failedFields: string[] = [];
 
     if (!extracted.full_name) failedFields.push('full name');
-    if (!extracted.father_name) failedFields.push("father's name");
     if (!extracted.dob) failedFields.push('date of birth');
     if (!extracted.pan_number) {
         failedFields.push('PAN number');

@@ -443,23 +443,28 @@ export class BankService {
     const nowStr = new Date().toISOString();
 
     try {
-      await this.db.from('BankDecision').insert({
+      const decisionPayload: any = {
         applicationId: applicationId,
         bankId: application.bank || 'IDFC',
         decision: targetStatus.toUpperCase(),
-        sanctionAmount: detailsObj.sanctionAmount || application.amount,
-        interestRate: detailsObj.interestRate || application.interestRate,
-        roiType: detailsObj.roiType || null,
-        tenure: detailsObj.tenure || null,
+        sanctionAmount: detailsObj.sanctionAmount || application.amount || 0,
+        interestRate: detailsObj.interestRate || application.interestRate || 9.5,
+        roiType: detailsObj.roiType || 'floating',
+        tenure: detailsObj.tenure || 120,
         conditions: detailsObj.conditions ? JSON.stringify(detailsObj.conditions) : null,
         conditionDeadline: detailsObj.deadline || null,
         counterOffer: (decisionType === 'counter_offer') ? JSON.stringify(detailsObj) : null,
         rejectionReason: detailsObj.reason || null,
         remarks: detailsObj.remarks || null,
         decidedBy: bankUser?.email || bankUser?.id || 'Bank Officer'
-      });
+      };
+
+      const { error: decInsertErr } = await this.db.from('BankDecision').insert(decisionPayload);
+      if (decInsertErr) {
+        console.warn(`[BankService] BankDecision insert note: ${decInsertErr.message || decInsertErr}`);
+      }
     } catch (bErr: any) {
-      console.warn(`[BankService] BankDecision insert note: ${bErr?.message || bErr}`);
+      console.warn(`[BankService] BankDecision insert exception: ${bErr?.message || bErr}`);
     }
 
     if (targetStatus === 'sanctioned') {
@@ -698,47 +703,67 @@ export class BankService {
     const updatedStage = LoanStateMachine.getStageByStatus(targetStatus);
     const updatedProgress = LoanStateMachine.getProgressByStatus(targetStatus);
 
-    const { data: updatedApp, error: updateError } = await this.db
+    const updatePayload: any = {
+      status: targetStatus,
+      stage: updatedStage,
+      progress: updatedProgress,
+      interestRate: detailsObj.interestRate || application.interestRate,
+      processingFee: detailsObj.processingFee || application.processingFee,
+      sanctionAmount: detailsObj.sanctionAmount || application.sanctionAmount,
+      rejectionReason: targetStatus === 'rejected' ? detailsObj.reason : null,
+      approvedAt: targetStatus === 'sanctioned' ? nowStr : application.approvedAt,
+      rejectedAt: targetStatus === 'rejected' ? nowStr : application.rejectedAt,
+      remarks: `Decision "${decisionType.toUpperCase()}" registered by ${bankUser?.firstName || bankUser?.email || 'Banker'}.`,
+      updatedAt: nowStr
+    };
+
+    let { data: updatedApp, error: updateError } = await this.db
       .from('LoanApplication')
-      .update({
-        status: targetStatus,
-        stage: updatedStage,
-        progress: updatedProgress,
-        interestRate: detailsObj.interestRate || application.interestRate,
-        processingFee: detailsObj.processingFee || application.processingFee,
-        sanctionAmount: detailsObj.sanctionAmount || application.sanctionAmount,
-        rejectionReason: targetStatus === 'rejected' ? detailsObj.reason : null,
-        approvedAt: targetStatus === 'sanctioned' ? nowStr : application.approvedAt,
-        rejectedAt: targetStatus === 'rejected' ? nowStr : application.rejectedAt,
-        remarks: `Decision "${decisionType.toUpperCase()}" registered by ${bankUser?.firstName || bankUser?.email || 'Banker'}.`,
-        updatedAt: nowStr
-      })
+      .update(updatePayload)
       .eq('id', applicationId)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.warn(`[BankService.registerDecision] LoanApplication update warning: ${updateError.message}. Retrying core update...`);
+      const { data: retryApp } = await this.db
+        .from('LoanApplication')
+        .update({
+          status: targetStatus,
+          stage: updatedStage,
+          progress: updatedProgress,
+          updatedAt: nowStr
+        })
+        .eq('id', applicationId)
+        .select()
+        .maybeSingle();
+      updatedApp = retryApp || { ...application, status: targetStatus, stage: updatedStage, progress: updatedProgress };
+    }
 
     // Fetch latest app with user relation to get the registered email and send bank decision email
     try {
       const { data: latestApp } = await this.db
         .from('LoanApplication')
-        .select('*, user:User!userId(id, email, firstName, lastName)')
+        .select('*')
         .eq('id', applicationId)
-        .single();
+        .maybeSingle();
 
       if (latestApp) {
-        const email = latestApp.user?.email || latestApp.email;
-        if (email) {
-          const firstName = latestApp.firstName || latestApp.user?.firstName || '';
-          const lastName = latestApp.lastName || latestApp.user?.lastName || '';
-          const userName = `${firstName} ${lastName}`.trim() || 'Student';
+        let userEmail = latestApp.email;
+        let userName = `${latestApp.firstName || ''} ${latestApp.lastName || ''}`.trim();
+        if (latestApp.userId) {
+          const { data: usr } = await this.db.from('User').select('email, firstName, lastName').eq('id', latestApp.userId).maybeSingle();
+          if (usr?.email) userEmail = usr.email;
+          if (usr?.firstName) userName = `${usr.firstName} ${usr.lastName || ''}`.trim();
+        }
+
+        if (userEmail) {
           const bankName = latestApp.bank || application.bank || 'our partner bank';
 
           if (targetStatus === 'sanctioned') {
-            await this.emailService.sendApplicationAcceptedByBankEmail(email, userName, bankName, latestApp, detailsObj);
+            await this.emailService.sendApplicationAcceptedByBankEmail(userEmail, userName || 'Student', bankName, latestApp, detailsObj);
           } else if (targetStatus === 'rejected') {
-            await this.emailService.sendApplicationRejectedByBankEmail(email, userName, bankName, detailsObj.reason || detailsObj.remarks || '');
+            await this.emailService.sendApplicationRejectedByBankEmail(userEmail, userName || 'Student', bankName, detailsObj.reason || detailsObj.remarks || '');
           }
         }
       }

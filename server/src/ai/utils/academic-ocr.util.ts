@@ -305,17 +305,19 @@ export function canonicalizeAcademicFields(
         raw.passing_year;
     if (examPeriod) out.exam_period = String(examPeriod).trim();
 
-    const marksSecured = raw.total_marks_secured ?? raw.total_marks;
-    const marksMaximum = raw.total_marks_maximum;
-    const hasGpa = raw.overall_gpa != null || raw.gpa != null || raw.cgpa != null;
+    const marksSecured = raw.total_marks_secured ?? raw.total_marks ?? raw.marks_secured ?? raw.marks_obtained ?? raw.obtained_marks ?? raw.secured_marks;
+    const marksMaximum = raw.total_marks_maximum ?? raw.maximum_marks ?? raw.max_marks ?? raw.total_max ?? raw.out_of;
+    const hasGpa = raw.overall_gpa != null || raw.gpa != null || raw.cgpa != null || raw.sgpa != null || raw.overall_cgpa != null;
 
     let score: string | number | undefined =
         raw.percentage ||
         raw.overall_percentage ||
+        raw.marks_percentage ||
+        raw.aggregate_percentage ||
         percentageFromTotalMarks(marksSecured, marksMaximum, level);
 
     if (!score && hasGpa) {
-        score = raw.overall_gpa ?? raw.gpa ?? raw.cgpa;
+        score = raw.overall_gpa ?? raw.gpa ?? raw.cgpa ?? raw.sgpa ?? raw.overall_cgpa;
     }
     if (!score) {
         score = raw.score;

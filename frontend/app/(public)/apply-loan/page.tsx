@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
 import { getAllCountries } from "@/lib/countriesData";
 import { applicationApi, authApi, aiApi, referenceApi } from "@/lib/api";
+import { isPhoneValid } from "@/lib/validation";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -123,6 +124,9 @@ export default function ApplyLoanPage() {
     const [countryOptions, setCountryOptions] = useState<string[]>(popularCountries);
     const [countryAiLoaded, setCountryAiLoaded] = useState<string>(""); // tracks which country AI has been fetched for
 
+    const [existingApp, setExistingApp] = useState<any>(null);
+    const [checkingExisting, setCheckingExisting] = useState<boolean>(true);
+
     // Load dynamic study destination countries from backend (configured by Admin)
     useEffect(() => {
         referenceApi.getCountries()
@@ -139,6 +143,29 @@ export default function ApplyLoanPage() {
             })
             .catch((err) => console.error("Failed to fetch reference countries:", err));
     }, []);
+
+    // Check if the authenticated user already has an active loan application
+    useEffect(() => {
+        if (isAuthenticated && user?.id) {
+            setCheckingExisting(true);
+            authApi.getDashboardData(user.id)
+                .then((res: any) => {
+                    if (res?.success && Array.isArray(res?.data?.applications)) {
+                        const active = res.data.applications.find((app: any) => {
+                            const status = (app.status || '').toLowerCase();
+                            return status !== 'rejected' && status !== 'cancelled';
+                        });
+                        if (active) {
+                            setExistingApp(active);
+                        }
+                    }
+                })
+                .catch((err) => console.error("Error checking existing application:", err))
+                .finally(() => setCheckingExisting(false));
+        } else {
+            setCheckingExisting(false);
+        }
+    }, [isAuthenticated, user?.id]);
 
     // Pre-fill personal info from user profile and URL params
     useEffect(() => {
@@ -373,6 +400,7 @@ export default function ApplyLoanPage() {
     };
 
     const [resolvingPincode, setResolvingPincode] = useState(false);
+    const [lastAutoAddress, setLastAutoAddress] = useState("");
 
     const resolvePincode = async (pin: string) => {
         if (!pin || pin.length !== 6) return;
@@ -381,11 +409,11 @@ export default function ApplyLoanPage() {
             // Race fast Indian Postal API with timeout fallback
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 3000);
-            
+
             const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`, { signal: controller.signal });
             clearTimeout(timeoutId);
             const data = await res.json();
-            
+
             if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
                 const poList = data[0].PostOffice;
                 // Pick primary Post Office / area name
@@ -399,17 +427,8 @@ export default function ApplyLoanPage() {
                 const locationStr = Array.from(new Set(locationComponents)).join(", ");
 
                 if (locationStr) {
-                    setFormData(prev => {
-                        const currentAddr = prev.address.trim();
-                        if (!currentAddr) {
-                            return { ...prev, address: locationStr };
-                        }
-                        // Avoid duplication if area/district/state already written
-                        if (locationComponents.some(comp => currentAddr.toLowerCase().includes(comp.toLowerCase()))) {
-                            return prev;
-                        }
-                        return { ...prev, address: `${currentAddr}, ${locationStr}` };
-                    });
+                    setFormData(prev => ({ ...prev, address: locationStr }));
+                    setLastAutoAddress(locationStr);
                 }
             }
         } catch (e: any) {
@@ -427,8 +446,16 @@ export default function ApplyLoanPage() {
         if (!formData.lastName.trim()) errors.lastName = "Last name is required";
         if (!formData.email.trim()) errors.email = "Email is required";
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = "Please enter a valid email";
-        if (!formData.phone.trim()) errors.phone = "Phone number is required";
-        else if (!/^[\d+\-\s()]{7,15}$/.test(formData.phone.trim())) errors.phone = "Please enter a valid phone number";
+        const appPhone = formData.phone.trim();
+        if (!appPhone) {
+            errors.phone = "Phone number is required";
+        } else if (appPhone.length !== 10) {
+            errors.phone = "Phone number must be 10 digits";
+        } else if (appPhone[0] < '6') {
+            errors.phone = "Phone number must start with 6, 7, 8, or 9";
+        } else if (!isPhoneValid(appPhone)) {
+            errors.phone = "This phone number is not realistic";
+        }
 
         // Age validation: applicant must be 18–40 years old
         if (!formData.dateOfBirth) {
@@ -458,10 +485,15 @@ export default function ApplyLoanPage() {
             errors.otherRelation = "Please select other relation type";
         }
         if (formData.coApplicant && formData.coApplicant !== "none") {
-            if (!formData.coApplicantPhone.trim()) {
+            const coPhone = formData.coApplicantPhone.trim();
+            if (!coPhone) {
                 errors.coApplicantPhone = "Co-applicant phone number is required";
-            } else if (!/^[\d+\-\s()]{7,15}$/.test(formData.coApplicantPhone.trim())) {
-                errors.coApplicantPhone = "Please enter a valid 10-digit phone number";
+            } else if (coPhone.length !== 10) {
+                errors.coApplicantPhone = "Phone number must be 10 digits";
+            } else if (coPhone[0] < '6') {
+                errors.coApplicantPhone = "Phone number must start with 6, 7, 8, or 9";
+            } else if (!isPhoneValid(coPhone)) {
+                errors.coApplicantPhone = "This phone number is not realistic";
             }
 
             const coEmail = formData.coApplicantEmail.trim();
@@ -502,6 +534,10 @@ export default function ApplyLoanPage() {
             // Save form data and current step to session storage before redirecting
             sessionStorage.setItem("pending_loan_application", JSON.stringify({ formData, step }));
             router.push(`/login?redirect=/apply-loan`);
+            return;
+        }
+        if (existingApp) {
+            setError("Only 1 active loan application is allowed per student. You already have an active loan application.");
             return;
         }
         setSubmitting(true);
@@ -565,6 +601,7 @@ export default function ApplyLoanPage() {
             try {
                 const key = `dashboardDataUpdated_${userId}`;
                 localStorage.setItem(key, String(Date.now()));
+                localStorage.setItem('recent_application_submitted', JSON.stringify({ userId, email: user?.email, timestamp: Date.now() }));
                 // Dispatch an in-page event so same-tab listeners react immediately
                 window.dispatchEvent(new Event('dashboard-data-changed'));
             } catch (err) {
@@ -580,6 +617,52 @@ export default function ApplyLoanPage() {
             setSubmitting(false);
         }
     };
+
+    if (existingApp && !submitted) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' }}>
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-50 z-0" style={{ background: 'radial-gradient(circle, #d8b4fe, transparent)' }} />
+                    <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-40 z-0" style={{ background: 'radial-gradient(circle, #fed7aa, transparent)' }} />
+                </div>
+
+                <div className="relative z-10 max-w-xl w-full text-center animate-fade-in-up bg-white/90 backdrop-blur-xl p-8 md:p-10 rounded-3xl border border-purple-100 shadow-2xl">
+                    <div className="w-20 h-20 bg-amber-500 text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-amber-500/30 border border-amber-400">
+                        <span className="material-symbols-outlined text-4xl">block</span>
+                    </div>
+
+                    <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-4 tracking-tight">Application Limit Reached</h2>
+
+                    <p className="text-gray-600 font-medium text-sm md:text-base mb-6 leading-relaxed">
+                        Only <span className="font-bold text-[#6605c7]">1 active loan application</span> is permitted per student. You already have an active application in progress.
+                    </p>
+
+                    <div className="bg-purple-50/60 rounded-2xl p-5 border border-purple-100 mb-8 text-left space-y-2">
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Active Application</div>
+                        <div className="text-base font-black text-gray-900 flex items-center justify-between">
+                            <span>{existingApp.bank && existingApp.bank !== 'Any Bank' ? existingApp.bank : 'Loan Application'}</span>
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 capitalize">
+                                {existingApp.status}
+                            </span>
+                        </div>
+                        <div className="text-xs text-gray-500 font-semibold">
+                            Amount: ₹{existingApp.amount?.toLocaleString("en-IN") || '0'} {existingApp.universityName ? `• ${existingApp.universityName}` : ''}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <Link href="/dashboard#applications" className="px-8 py-4 bg-gradient-to-r from-[#9B51E0] to-[#E040FB] text-white text-xs uppercase tracking-[0.15em] font-black rounded-xl hover:brightness-110 shadow-lg shadow-purple-500/25 transition-all flex items-center justify-center gap-2">
+                            <span className="material-symbols-outlined text-lg">dashboard</span>
+                            View Active Application
+                        </Link>
+                        <Link href="/" className="px-6 py-4 bg-gray-100 text-gray-700 text-xs uppercase tracking-[0.15em] font-black rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-2">
+                            Return Home
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (submitted) {
         return (
@@ -984,6 +1067,14 @@ export default function ApplyLoanPage() {
                                                 onChange={(v) => {
                                                     const numericVal = v.replace(/\D/g, "").slice(0, 6);
                                                     update("pincode", numericVal);
+                                                    if (numericVal.length < 6) {
+                                                        setFormData(prev => {
+                                                            if (lastAutoAddress && (prev.address === lastAutoAddress || prev.address.includes(lastAutoAddress))) {
+                                                                return { ...prev, address: "" };
+                                                            }
+                                                            return prev;
+                                                        });
+                                                    }
                                                     if (numericVal.length === 6) {
                                                         resolvePincode(numericVal);
                                                     }
@@ -1116,7 +1207,7 @@ export default function ApplyLoanPage() {
                                         </h3>
                                         <div className="bg-white/70 rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-4">
                                             {[
-                                                { label: "Loan Structure", value: formData.loanType },
+                                                { label: "Field of Study", value: formData.loanType },
                                                 { label: "Required Amount", value: formData.amount ? `₹${Number(formData.amount.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Destination", value: formData.country === "Other" ? formData.otherCountry : formData.country },
                                                 { label: "University", value: formData.university },
@@ -1139,9 +1230,9 @@ export default function ApplyLoanPage() {
                                         </h3>
                                         <div className="bg-white/70 rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-4">
                                             {[
-                                                { label: "Legal Name", value: `${formData.firstName} ${formData.lastName}`.trim() },
+                                                { label: "Name", value: `${formData.firstName} ${formData.lastName}`.trim() },
                                                 { label: "Email ID", value: formData.email },
-                                                { label: "Mobile Line", value: formData.phone },
+                                                { label: "Mobile No", value: formData.phone },
                                                 {
                                                     label: "Birth Record", value: (() => {
                                                         if (!formData.dateOfBirth) return "";
@@ -1159,7 +1250,7 @@ export default function ApplyLoanPage() {
                                                 { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant === "other" ? (formData.otherRelation ? formData.otherRelation.charAt(0).toUpperCase() + formData.otherRelation.slice(1) : "Other") : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
                                                 { label: "Co-Applicant Mobile", value: formData.coApplicantPhone },
                                                 { label: "Co-Applicant Email", value: formData.coApplicantEmail },
-                                                { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
+                                                { label: "Co-App Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 // { label: "Collateral", value: formData.collateral.split(':')[0] },
                                                 { label: "Residential Pincode", value: formData.pincode },
                                             ].filter((f) => f.value).map((f) => (

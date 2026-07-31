@@ -52,7 +52,7 @@ const StudentContactDropdownBesideName = ({
     phone,
     email,
     name,
-    onOpenEmailModal
+    onOpenEmailModal,
 }: {
     phone?: string;
     email?: string;
@@ -60,6 +60,7 @@ const StudentContactDropdownBesideName = ({
     onOpenEmailModal?: (email: string, name: string) => void;
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [openUpward, setOpenUpward] = useState(false);
     const [copiedText, setCopiedText] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +74,20 @@ const StudentContactDropdownBesideName = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const toggleOpen = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isOpen && menuRef.current) {
+            const rect = menuRef.current.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            if (spaceBelow < 280) {
+                setOpenUpward(true);
+            } else {
+                setOpenUpward(false);
+            }
+        }
+        setIsOpen(!isOpen);
+    };
+
     const handleCopy = (text: string, label: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!text || text === '—') return;
@@ -83,7 +98,6 @@ const StudentContactDropdownBesideName = ({
     };
 
     const cleanPhone = phone ? phone.replace(/[^0-9+]/g, '') : '';
-    const whatsappPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
     const hasPhone = Boolean(phone && phone !== '—');
     const hasEmail = Boolean(email && email !== '—');
 
@@ -94,12 +108,12 @@ const StudentContactDropdownBesideName = ({
             {/* Single Dropdown Button beside student name */}
             <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                onClick={toggleOpen}
                 className="w-6 h-6 rounded-full bg-purple-50 hover:bg-purple-100 text-[#6605c7] border border-purple-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
                 title="Click for Phone & Email options"
             >
                 <span className="material-symbols-outlined text-[15px]">
-                    {isOpen ? 'expand_less' : 'expand_more'}
+                    {isOpen ? (openUpward ? 'expand_more' : 'expand_less') : (openUpward ? 'expand_less' : 'expand_more')}
                 </span>
             </button>
 
@@ -113,7 +127,7 @@ const StudentContactDropdownBesideName = ({
             {isOpen && (
                 <div
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute left-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-2 min-w-[220px] text-xs font-semibold text-slate-700 divide-y divide-slate-100 animate-fade-in"
+                    className={`absolute left-0 ${openUpward ? 'bottom-full mb-2' : 'top-full mt-1.5'} bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] py-2 min-w-[220px] text-xs font-semibold text-slate-700 divide-y divide-slate-100 animate-fade-in`}
                 >
                     {/* Phone Options */}
                     {hasPhone && (

@@ -210,6 +210,21 @@ export class KycService {
         }
     }
 
+    private extractTextFromPdfBuffer(buffer: Buffer): string {
+        try {
+            const raw = buffer.toString('binary');
+            const textParts: string[] = [];
+            const tjMatches = raw.matchAll(/\(([^)]+)\)\s*T[jJ]/g);
+            for (const match of tjMatches) {
+                if (match[1]) textParts.push(match[1]);
+            }
+            textParts.push(raw);
+            return textParts.join(' ');
+        } catch {
+            return buffer.toString('utf-8');
+        }
+    }
+
     /**
      * Check document text content for expected keywords based on document type.
      */
@@ -232,7 +247,7 @@ export class KycService {
             if (isImage) {
                 text = await this.fallbackOcr(buffer);
             } else if (isPdf) {
-                text = buffer.toString('utf-8');
+                text = this.extractTextFromPdfBuffer(buffer);
             }
         } catch (e: any) {
             console.warn('[KycService] Local keyword extraction failed:', e.message);
@@ -291,53 +306,58 @@ export class KycService {
         }
 
         if (!matches) {
-            // For PDFs, if the raw binary is a valid PDF structure, let it pass to allow manual review
-            // BUT ONLY IF it does not clearly contain keywords of a DIFFERENT document type!
-            if (isPdf && (clean.includes('%pdf') || clean.includes('pdf-'))) {
-                if (normalizedType.includes('aadhar') || normalizedType.includes('aadhaar') || normalizedType.includes('national_id')) {
-                    const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
-                    const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
-                    if (isPassport || isPan) {
-                        return {
-                            is_valid: false,
-                            error: `Document type rejection: The uploaded PDF contains keywords indicating it is a ${isPassport ? 'Passport' : 'PAN Card'}, not an Aadhaar Card. Only Aadhaar cards should be uploaded for Aadhaar verification. Please upload the correct Aadhaar document.`
-                        };
-                    }
-                    // Even if other PDF is uploaded without clear keywords of other doc types
+            if (normalizedType.includes('aadhar') || normalizedType.includes('aadhaar') || normalizedType.includes('national_id')) {
+                const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
+                const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+                if (isPassport || isPan) {
                     return {
                         is_valid: false,
-                        error: `Document verification failed: The uploaded PDF does not contain necessary Aadhaar document keywords. Only official Aadhaar cards should be uploaded for this field.`
+                        error: `Document mismatch: You uploaded a ${isPassport ? 'Passport' : 'PAN Card'} into an Aadhaar Card slot. Only official Aadhaar cards issued by UIDAI must be uploaded for Aadhaar verification.`
                     };
                 }
-                if (normalizedType.includes('passport')) {
-                    const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
-                    const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
-                    if (isAadhaar || isPan) {
-                        return {
-                            is_valid: false,
-                            error: `Document mismatch in PDF. The uploaded PDF contains keywords indicating it is an ${isAadhaar ? 'Aadhaar Card' : 'PAN Card'} instead of a Passport.`
-                        };
-                    }
-                }
-                if (normalizedType.includes('pan')) {
-                    const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
-                    const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
-                    if (isAadhaar || isPassport) {
-                        return {
-                            is_valid: false,
-                            error: `Document mismatch in PDF. The uploaded PDF contains keywords indicating it is a ${isAadhaar ? 'Aadhaar Card' : 'Passport'} instead of a PAN Card.`
-                        };
-                    }
-                }
-                return { is_valid: true };
+                return {
+                    is_valid: false,
+                    error: `Document verification failed: The uploaded file does not contain valid Aadhaar Card keywords or pattern. Only official Aadhaar cards issued by UIDAI must be uploaded for Aadhaar verification.`
+                };
             }
+
+            if (normalizedType.includes('pan')) {
+                const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
+                const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
+                if (isAadhaar || isPassport) {
+                    return {
+                        is_valid: false,
+                        error: `Document mismatch: You uploaded an ${isAadhaar ? 'Aadhaar Card' : 'Passport'} into a PAN Card slot. Only official PAN cards issued by the Income Tax Department must be uploaded for PAN verification.`
+                    };
+                }
+                return {
+                    is_valid: false,
+                    error: `Document verification failed: The uploaded file does not contain valid PAN Card keywords or 10-character PAN pattern. Only official Indian PAN cards issued by Income Tax Department must be uploaded for PAN verification.`
+                };
+            }
+
+            if (normalizedType.includes('passport')) {
+                const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
+                const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+                if (isAadhaar || isPan) {
+                    return {
+                        is_valid: false,
+                        error: `Document mismatch: You uploaded an ${isAadhaar ? 'Aadhaar Card' : 'PAN Card'} into a Passport slot. Only official Passports must be uploaded for Passport verification.`
+                    };
+                }
+                return {
+                    is_valid: false,
+                    error: `Document verification failed: The uploaded file does not contain valid Passport keywords. Only official Passports must be uploaded for Passport verification.`
+                };
+            }
+
             return {
                 is_valid: false,
-                error: expectedLabel === 'Aadhaar Card' 
-                    ? `Document verification failed: The uploaded file does not appear to be a valid Aadhaar card. Only official Aadhaar documents issued by UIDAI should be uploaded for this field.`
-                    : `Document integrity check failed. The uploaded file does not contain necessary security keywords or patterns for a valid Indian ${expectedLabel}.`
+                error: `Document integrity check failed. The uploaded file does not contain necessary security keywords or patterns for a valid Indian ${expectedLabel}.`
             };
         }
+
+        return { is_valid: true };
 
         return { is_valid: true };
     }
@@ -356,6 +376,7 @@ export class KycService {
     }
 
     private getPromptForType(docType: string): string {
+        const normalizedCategory = this.normalizeDocTypeForComparison(docType);
         const baseInstructions = `
             You are an advanced AI-powered OCR engine specialized in Indian identity documents.
             Read the document image and extract ONLY text that is visibly printed on the document.
@@ -368,7 +389,7 @@ export class KycService {
             - If a field is missing or unreadable, omit it or use null. Never use placeholder names like "Resident Name".
             
             ⚠️  DOCUMENT TYPE VERIFICATION (CRITICAL):
-            - You MUST verify if the uploaded document matches the expected type: ${docType.toUpperCase()}
+            - You MUST verify if the uploaded document matches the expected document category: ${normalizedCategory.toUpperCase()}
             - BEFORE extracting any data, FIRST check for markers of DIFFERENT document types
             - If you detect markers of a DIFFERENT document type, you MUST:
               1. Set is_valid to FALSE
@@ -467,8 +488,8 @@ export class KycService {
                   "pan_number_format_valid", "photo_present", "signature_present",
                   "qr_code_present", "dob_field_present" }
 
-                is_valid: true when this is a PAN card AND full_name, father_name, dob, and pan_number are readable
-                AND all document_validation checks that apply are true.
+                is_valid: true when this is a PAN card AND full_name, dob, and pan_number are readable
+                AND all document_validation checks that apply are true. (father_name is optional if card belongs to mother or spouse).
             `,
             passport: `
                 EXPECTED DOCUMENT TYPE: PASSPORT (Travel document issued by Passport Office)
@@ -732,30 +753,32 @@ export class KycService {
             } else {
                 // Strict document type validation check
                 const expectedNorm = this.normalizeDocTypeForComparison(docType);
-                const detectedNorm = this.normalizeDocTypeForComparison(parsed.document_type || docType);
-                const isCustomDoc = docType.toLowerCase().includes('other');
+                const rawDetectedType = parsed.document_type;
+                const detectedNorm = rawDetectedType ? this.normalizeDocTypeForComparison(rawDetectedType) : 'unknown';
+                const isCustomDoc = (docType.toLowerCase().includes('_other') || docType.toLowerCase().includes('other_') || docType.toLowerCase() === 'other') && !docType.toLowerCase().includes('mother');
 
                 if (!isCustomDoc && expectedNorm !== detectedNorm) {
                     isValid = false;
-                    validationError = `Document type mismatch: Expected a valid ${docType.toUpperCase().replace(/_/g, ' ')}, but detected a ${String(parsed.document_type || 'different document type').toUpperCase()}. Please upload the correct document.`;
-                } else {
-                    if (isAadhaar) {
-                        const aadhaarValidation = this.validateAadhaarDocument(parsed, extracted);
-                        if (!aadhaarValidation.is_valid) {
-                            isValid = false;
-                            validationError = aadhaarValidation.error;
-                        }
-                    } else if (isPan) {
-                        const panValidation = validatePanExtraction(extracted, parsed);
-                        documentValidation = panValidation.document_validation;
-                        if (!panValidation.is_valid) {
-                            isValid = false;
-                            validationError = panValidation.error;
-                        }
-                    } else if (!extracted.full_name && Object.keys(extracted).length === 0) {
+                    validationError = `Document type mismatch: Expected a valid ${docType.toUpperCase().replace(/_/g, ' ')}, but AI detected ${String(rawDetectedType || 'an invalid/unrecognized document').toUpperCase()}. Please upload the correct ${expectedNorm.toUpperCase()} document.`;
+                }
+
+                // ALWAYS run Aadhaar and PAN specific validation rules!
+                if (isAadhaar) {
+                    const aadhaarValidation = this.validateAadhaarDocument(parsed, extracted);
+                    if (!aadhaarValidation.is_valid) {
                         isValid = false;
-                        validationError = 'No readable fields extracted from document';
+                        validationError = aadhaarValidation.error;
                     }
+                } else if (isPan) {
+                    const panValidation = validatePanExtraction(extracted, parsed);
+                    documentValidation = panValidation.document_validation;
+                    if (!panValidation.is_valid) {
+                        isValid = false;
+                        validationError = panValidation.error;
+                    }
+                } else if (!isCustomDoc && !extracted.full_name && Object.keys(extracted).length === 0) {
+                    isValid = false;
+                    validationError = 'No readable fields extracted from document';
                 }
             }
 
@@ -801,7 +824,7 @@ export class KycService {
         if (t.includes('marksheet_12') || t.includes('12th') || t.includes('hsc') || t.includes('intermediate') || t.includes('grade12') || t.includes('grade_12')) {
             return 'marksheet_12';
         }
-        if (t.includes('marksheet_ug') || t.includes('ug_degree') || t.includes('ug_transcript') || t.includes('undergrad') || t.includes('undergraduate')) {
+        if (t.includes('marksheet_ug') || t.includes('ug_degree') || t.includes('ug_transcript') || t.includes('undergrad') || t.includes('undergraduate') || t.includes('degree') || t.includes('graduation') || t.includes('bachelor')) {
             return 'marksheet_ug';
         }
         if (t.includes('marksheet_pg') || t.includes('pg_degree') || t.includes('pg_transcript') || t.includes('postgrad') || t.includes('postgraduate')) {
@@ -816,26 +839,23 @@ export class KycService {
     ): { is_valid: boolean; error?: string } {
         const failedLabels: string[] = [];
 
-        if (!extracted.full_name) {
+        const hasName = !!(extracted.full_name || extracted.mother_name || extracted.father_name || extracted.name);
+        const hasAadhaarNum = !!(extracted.aadhaar_number || extracted.aadhar_number);
+
+        if (!hasName) {
             failedLabels.push('full name');
         }
-        if (!extracted.dob) {
-            failedLabels.push('date of birth');
-        }
-        if (!extracted.gender) {
-            failedLabels.push('gender');
-        }
 
-        const aadhaarRaw = String(extracted.aadhaar_number || '');
+        const aadhaarRaw = String(extracted.aadhaar_number || extracted.aadhar_number || '');
         const digitsOnly = aadhaarRaw.replace(/\D/g, '');
-        if (digitsOnly.length > 0 && digitsOnly.length < 4) {
-            failedLabels.push('aadhaar number (unreadable)');
+        if (!hasAadhaarNum || digitsOnly.length !== 12) {
+            failedLabels.push('valid 12-digit Aadhaar number');
         }
 
         if (failedLabels.length > 0) {
             return {
                 is_valid: false,
-                error: `Could not read required Aadhaar fields: ${failedLabels.join(', ')}`,
+                error: `Document verification failed: Uploaded file is not a valid Aadhaar Card. Missing: ${failedLabels.join(', ')}. Please upload an official Aadhaar Card containing a valid 12-digit Aadhaar number.`,
             };
         }
 

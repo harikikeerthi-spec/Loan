@@ -548,16 +548,6 @@ export default function IncomingQueuePage() {
                         <span className="material-symbols-outlined text-[16px]">refresh</span>
                         Refresh
                     </button>
-                    {/* <div className="relative">
-                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search student name, ID..."
-                                className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm"
-                            />
-                        </div> */}
                 </div>
             </div>
 
@@ -613,8 +603,8 @@ export default function IncomingQueuePage() {
                                     key={chip.key}
                                     onClick={() => setActiveFilterChip(chip.key as any)}
                                     className={`px-4 py-2.5 rounded-xl text-[11.5px] font-black uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer ${isActive
-                                            ? "bg-[#6605c7] text-white shadow-md shadow-purple-500/20"
-                                            : "bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200/60"
+                                        ? "bg-[#6605c7] text-white shadow-md shadow-purple-500/20"
+                                        : "bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200/60"
                                         }`}
                                 >
                                     <span>{chip.label}</span>

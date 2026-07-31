@@ -340,7 +340,12 @@ export class UsersController {
             firstName: string;
             lastName: string;
             phoneNumber: string;
-            dateOfBirth: string
+            dateOfBirth: string;
+            targetUniversity?: string;
+            studyDestination?: string;
+            intakeSeason?: string;
+            profileImage?: string;
+            pincode?: string;
         }
     ) {
         if (!body || !body.email) {
@@ -351,7 +356,12 @@ export class UsersController {
             body.firstName,
             body.lastName,
             body.phoneNumber,
-            body.dateOfBirth
+            body.dateOfBirth,
+            body.intakeSeason,
+            body.profileImage,
+            body.pincode,
+            body.targetUniversity,
+            body.studyDestination
         );
         return { success: true, message: 'User updated successfully', user: updated };
     }

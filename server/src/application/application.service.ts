@@ -108,13 +108,14 @@ export class ApplicationService {
       .from('LoanApplication')
       .select('id, bank, country, universityName, status')
       .eq('userId', userId)
-      .neq('status', 'cancelled');
+      .neq('status', 'cancelled')
+      .neq('status', 'rejected');
 
     if (error) throw error;
 
-    // 1. Limit to 5 applications
-    if (!currentAppId && existingApps && existingApps.length >= 5) {
-      throw new BadRequestException('You cannot have more than 5 active/pending loan applications.');
+    // Limit to 1 active application per student for new applications
+    if (!currentAppId && existingApps && existingApps.length >= 1) {
+      throw new BadRequestException('Only 1 active loan application is permitted per student. You already have an application in progress.');
     }
 
     // 2. Check duplicate details for the same bank
@@ -151,14 +152,12 @@ export class ApplicationService {
 
     await this.validateApplicationConstraints(userId, null, targetBank, targetCountry, targetUniversity);
 
-    // Generate sequential local application number on creation.
-    const applicationNumber = await this.generateApplicationNumber();
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
     const insertPayload: any = {
         userId,
-        applicationNumber,
+        applicationNumber: null,
         bank: data.bank,
         loanType: data.loanType,
         amount: parseFloat(data.amount),
@@ -569,6 +568,14 @@ export class ApplicationService {
     await this.validateApplicationConstraints(application.userId, applicationId, targetBank, targetCountry, targetUniversity);
 
     const updatePayload: any = { ...data };
+
+    // Generate application number ONLY when application is officially submitted to a bank.
+    // Do NOT generate for 'approved' or stage changes — the bank workflow service handles number
+    // generation in submitApplicationToBank() to ensure the number is tied to an actual bank submission.
+    const isSubmittedToBank = (data.status === 'submitted_to_bank');
+    if (isSubmittedToBank && !application.applicationNumber) {
+      updatePayload.applicationNumber = await this.generateApplicationNumber();
+    }
 
     // Standardize aliases to exact DB column names on LoanApplication table
     if (data.universityName || data.university || data.targetUniversity) {
