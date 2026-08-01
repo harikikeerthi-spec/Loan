@@ -1132,8 +1132,8 @@ export default function UserProfileView({
                                                         (isMotherCoApp ? (motherData?.panNumber || activeProfile?.family?.motherPan || activeProfile?.motherPan) : '') ||
                                                         getDocExtractedField(['coapplicant_pan', ...(isFatherCoApp ? ['father_pan'] : []), ...(isMotherCoApp ? ['mother_pan'] : [])], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
 
-                                                    const aadharDocType = (isFatherCoApp && !docs.some(d => d.docType === 'coapplicant_aadhar' && d.uploaded)) ? 'father_aadhar' : (isMotherCoApp && !docs.some(d => d.docType === 'coapplicant_aadhar' && d.uploaded)) ? 'mother_aadhar' : 'coapp_aadhar';
-                                                    const panDocType = (isFatherCoApp && !docs.some(d => d.docType === 'coapplicant_pan' && d.uploaded)) ? 'father_pan' : (isMotherCoApp && !docs.some(d => d.docType === 'coapplicant_pan' && d.uploaded)) ? 'mother_pan' : 'coapp_pan';
+                                                    const aadharDocType = (isFatherCoApp && !userDocs.some((d: any) => d.docType === 'coapplicant_aadhar' && d.uploaded)) ? 'father_aadhar' : (isMotherCoApp && !userDocs.some((d: any) => d.docType === 'coapplicant_aadhar' && d.uploaded)) ? 'mother_aadhar' : 'coapp_aadhar';
+                                                    const panDocType = (isFatherCoApp && !userDocs.some((d: any) => d.docType === 'coapplicant_pan' && d.uploaded)) ? 'father_pan' : (isMotherCoApp && !userDocs.some((d: any) => d.docType === 'coapplicant_pan' && d.uploaded)) ? 'mother_pan' : 'coapp_pan';
 
                                                     return (
                                                         <>
