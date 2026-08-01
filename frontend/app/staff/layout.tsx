@@ -470,7 +470,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                         <div className="flex items-center gap-3.5">
                             {/* Real-time IST Clock */}
                             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-                                <span className="text-[14px] font-bold text-[#0A2540] font-mono">
+                                <span className="text-[16px] text-black font-mono">
                                     {format(nowTime, 'MMM dd, HH:mm:ss')}
                                 </span>
                             </div>

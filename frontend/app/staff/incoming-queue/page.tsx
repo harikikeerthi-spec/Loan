@@ -889,25 +889,22 @@ function IncomingQueuePageInner() {
                                                         const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
                                                         const monthLabel = months[dateObj.getMonth()] || 'JUN';
                                                         return (
-                                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 border border-rose-200 rounded-full text-[11px] font-black uppercase tracking-wider">
-                                                                <span>
-                                                                    {`${day} ${monthLabel} ${activeFU.time || ''}`}
-                                                                </span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => openFollowUpModal(rowId, item)}
-                                                                    className="material-symbols-outlined text-[14px] text-rose-500 hover:text-rose-700 cursor-pointer border-0 bg-transparent p-0 flex items-center justify-center active:scale-95"
-                                                                >
-                                                                    edit
-                                                                </button>
-                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openFollowUpModal(rowId, item)}
+                                                                className="px-3.5 py-1.5 border border-rose-200 hover:border-rose-300 hover:bg-rose-100/60 rounded-xl text-xs font-extrabold text-rose-600 transition-colors bg-rose-50 active:scale-95 cursor-pointer inline-flex items-center gap-1.5"
+                                                                title="Click to edit follow-up"
+                                                            >
+                                                                <span>{`${day} ${monthLabel}${activeFU.time ? ` ${activeFU.time}` : ''}`}</span>
+                                                                <span className="material-symbols-outlined text-[14px] text-rose-500">edit</span>
+                                                            </button>
                                                         );
                                                     } else {
                                                         return (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => openFollowUpModal(rowId, item)}
-                                                                className="px-3.5 py-1.5 border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-xl text-xs font-extrabold text-slate-500 hover:text-indigo-600 transition-colors bg-white active:scale-95 cursor-pointer"
+                                                                className="px-3.5 py-1.5 border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-xl text-xs font-extrabold text-slate-500 hover:text-indigo-600 transition-colors bg-white active:scale-95 cursor-pointer inline-flex items-center gap-1"
                                                             >
                                                                 Add +
                                                             </button>

@@ -373,24 +373,75 @@ const NotificationsPanel = ({
         return;
       }
 
-      // 2. Bank Notifications (Loan Sanctioned, Bank Note, Counter Offer, Bank Query, Disbursed, Bank Approvals, etc.)
+      // 2. Loan Sanctioned Notifications -> Active Pipeline (/staff/applications)
+      const isSanctionNotif =
+        notifType.includes('sanction') ||
+        notifType === 'application_approved' ||
+        notifType === 'application_conditional' ||
+        notifType === 'loan_sanctioned' ||
+        notifTitle.includes('loan sanctioned') ||
+        notifTitle.includes('sanction') ||
+        notifBody.includes('sanctioned') ||
+        notifBody.includes('loan sanctioned');
+
+      if (isSanctionNotif) {
+        let appId = metadata?.applicationId || metadata?.id;
+        const appNumRegex = /(?:VL-)?APP-[\w-]+/i;
+        const appNumMatch = notification.body?.match(appNumRegex) || notification.title?.match(appNumRegex);
+        const appSearchTerm = appId || (appNumMatch ? appNumMatch[0] : null);
+
+        if (!appId && appSearchTerm) {
+          try {
+            console.log(`[NotificationsPanel] Sanction notification clicked. Resolving application ID for search term: ${appSearchTerm}`);
+            const appsRes = await adminApi.getApplications({ search: appSearchTerm }) as any;
+            if (appsRes && Array.isArray(appsRes.data) && appsRes.data.length > 0) {
+              const foundApp = appsRes.data.find((a: any) =>
+                a.id === appId || (appNumMatch && a.applicationNumber?.toLowerCase() === appNumMatch[0].toLowerCase())
+              ) || appsRes.data[0];
+
+              appId = foundApp.id || foundApp._id;
+            }
+          } catch (e) {
+            console.error('[NotificationsPanel] Failed to resolve application for sanction notification:', e);
+          }
+        }
+
+        if (!appId) {
+          const email = metadata?.candidateEmail || metadata?.email || notification.body?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0];
+          if (email) {
+            try {
+              const appsRes = await adminApi.getApplications({ search: email }) as any;
+              if (appsRes && Array.isArray(appsRes.data) && appsRes.data.length > 0) {
+                const sorted = [...appsRes.data].sort((a: any, b: any) =>
+                  new Date(b.updatedAt || b.submittedAt || 0).getTime() - new Date(a.updatedAt || a.submittedAt || 0).getTime()
+                );
+                appId = sorted[0].id || sorted[0]._id;
+              }
+            } catch (e) {
+              console.error('[NotificationsPanel] Failed to resolve application by email for sanction notification:', e);
+            }
+          }
+        }
+
+        if (appId) {
+          router.push(`/staff/applications?id=${appId}`);
+        } else {
+          router.push('/staff/applications');
+        }
+        return;
+      }
+
+      // 3. Bank Notifications (Bank Note, Counter Offer, Bank Query, Disbursed, Bank Approvals, etc.)
       // -> Bank Applications tab in User Profile view (/staff/users/[id]/applications)
       const isBankNotif =
         notifType.includes('bank') ||
-        notifType.includes('sanction') ||
         notifType.includes('counter') ||
         notifType.includes('disburs') ||
-        notifType === 'application_approved' ||
-        notifType === 'application_conditional' ||
         notifType === 'application_counter' ||
         notifType === 'query_raised' ||
         notifType === 'bank_note_added' ||
-        notifTitle.includes('loan sanctioned') ||
-        notifTitle.includes('sanction') ||
         notifTitle.includes('bank') ||
         notifTitle.includes('counter offer') ||
-        notifBody.includes('sanctioned') ||
-        notifBody.includes('loan sanctioned') ||
         notifBody.includes('bank');
 
       if (isBankNotif) {
