@@ -334,36 +334,34 @@ export class UsersController {
 
     @UseGuards(AdminGuard)
     @Post('admin/update-details')
-    async adminUpdateUser(
-        @Body() body: {
-            email: string;
-            firstName: string;
-            lastName: string;
-            phoneNumber: string;
-            dateOfBirth: string;
-            targetUniversity?: string;
-            studyDestination?: string;
-            intakeSeason?: string;
-            profileImage?: string;
-            pincode?: string;
+    async adminUpdateUser(@Body() body: any) {
+        try {
+            if (!body || (!body.email && !body.userId)) {
+                return { success: false, message: 'Email or userId is required' };
+            }
+            const updated = await this.usersService.updateUserDetails(
+                body.email,
+                body.firstName,
+                body.lastName,
+                body.phoneNumber,
+                body.dateOfBirth,
+                body.intakeSeason,
+                body.profileImage,
+                body.pincode,
+                body.targetUniversity,
+                body.studyDestination,
+                body.fatherName,
+                body.motherName,
+                body.family,
+                body.coApplicant,
+                body.academic,
+                body.userId
+            );
+            return { success: true, message: 'User updated successfully', user: updated };
+        } catch (error: any) {
+            console.error('[adminUpdateUser] Error updating user details:', error);
+            return { success: false, message: error?.message || 'Failed to update user details' };
         }
-    ) {
-        if (!body || !body.email) {
-            return { success: false, message: 'Email is required' };
-        }
-        const updated = await this.usersService.updateUserDetails(
-            body.email,
-            body.firstName,
-            body.lastName,
-            body.phoneNumber,
-            body.dateOfBirth,
-            body.intakeSeason,
-            body.profileImage,
-            body.pincode,
-            body.targetUniversity,
-            body.studyDestination
-        );
-        return { success: true, message: 'User updated successfully', user: updated };
     }
 
     @UseGuards(AdminGuard)
@@ -452,6 +450,8 @@ export class UsersController {
                     panNumber: user.panNumber || '',
                     aadhaarNumber: user.aadhaarNumber || '',
                     fatherName: user.fatherName || '',
+                    motherName: user.motherName || '',
+                    coApplicantName: user.coApplicantName || '',
                     permanentAddress: user.permanentAddress || '',
                     gender: user.gender || '',
                     documentVerified: user.documentVerified || false,

@@ -143,7 +143,7 @@ function getStorageKeys(portal: Portal) {
             email: "itUserEmail",
             userId: "itUserId",
             user: "itAuthUser",
-            loginPath: "/it/login",
+            loginPath: "/it",
         };
     }
     return {

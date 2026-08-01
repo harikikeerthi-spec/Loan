@@ -1127,6 +1127,18 @@ export class ApplicationService {
             }
           } else if (data.status === 'submitted_to_bank') {
             await this.emailService.sendApplicationSentToBankEmail(email, userName, bankName, latestApp);
+          } else if (data.status === 'disbursed' || data.status === 'disbursement_confirmed') {
+            const extraData = data as any;
+            await this.emailService.sendLoanDisbursedEmail(email, userName, bankName, latestApp, extraData);
+            this.eventEmitter.emit('bank.application.disbursed', {
+              applicationId: latestApp.id,
+              userId: latestApp.userId,
+              amount: Number(extraData.disbursedAmount || latestApp.disbursedAmount || latestApp.amount || 0),
+              bankId: bankName,
+              utrNumber: extraData.utrNumber || latestApp.utrNumber || 'N/A',
+              trancheNumber: extraData.trancheNumber || 1,
+              transferMode: extraData.transferMode || 'IMPS/NEFT/RTGS'
+            });
           }
         }
       }

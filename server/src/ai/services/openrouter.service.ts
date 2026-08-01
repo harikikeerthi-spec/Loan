@@ -225,11 +225,11 @@ export class OpenRouterService {
             MUST respond ONLY with JSON.`;
         } else if (type === 'ug_university') {
             prompt = `Search for REAL undergraduate degree or engineering colleges/universities matching or relevant to "${query || ''}". 
-            IMPORTANT: Return ONLY colleges and universities located in INDIA. Do not include institutions from any other country.
+            STRICT CRITICAL REQUIREMENT: Return ONLY colleges and universities located INSIDE THE COUNTRY OF INDIA. Do not include any university, college, or institution from any country other than India.
             Return a JSON object with a "universities" key.
             The "universities" key should be an array of up to 5 objects.
             For each university, provide:
-            - name, loc (City, State), pincode
+            - name, loc (City, State, India), country: "India", pincode
             
             MUST respond ONLY with JSON.`;
         } else {

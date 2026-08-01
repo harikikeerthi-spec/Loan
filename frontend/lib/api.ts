@@ -82,7 +82,7 @@ function getStorageKeys(portal: Portal) {
             email: "itUserEmail",
             userId: "itUserId",
             user: "itAuthUser",
-            loginPath: "/it/login",
+            loginPath: "/it",
         };
     }
     return {
@@ -257,20 +257,30 @@ export function getToken(): string | null {
     const portalToken = localStorage.getItem(keys.token);
     if (portalToken) return portalToken;
 
-    // 2. Try Admin token (highest privilege) - useful for super_admins accessing staff/bank portals
+    // 2. Try generic student / user tokens
+    const studentToken = localStorage.getItem("accessToken") || localStorage.getItem("token") || localStorage.getItem("userToken") || localStorage.getItem("jwt");
+    if (studentToken) return studentToken;
+
+    // 3. Try Admin token
     const adminToken = localStorage.getItem("adminAccessToken");
     if (adminToken) return adminToken;
 
-    // 3. Try IT token
+    // 4. Try IT token
     const itToken = localStorage.getItem("itAccessToken");
     if (itToken) return itToken;
 
-    // 4. Try Staff token - useful if staff navigates to other common areas
+    // 5. Try Staff token
     const staffToken = localStorage.getItem("staffAccessToken");
     if (staffToken) return staffToken;
 
-    // 5. Fallback to generic student token
-    return localStorage.getItem("accessToken");
+    // 6. Try Agent / Bank tokens
+    const agentToken = localStorage.getItem("agentAccessToken");
+    if (agentToken) return agentToken;
+
+    const bankToken = localStorage.getItem("bankAccessToken");
+    if (bankToken) return bankToken;
+
+    return null;
 }
 
 function isPublicAuthUrl(url?: string): boolean {
@@ -1108,7 +1118,7 @@ export const adminApi = {
             method: "POST",
             body: JSON.stringify(data),
         }),
-    updateUserDetails: (data: { email: string; firstName: string; lastName: string; phoneNumber: string; dateOfBirth: string; targetUniversity?: string; studyDestination?: string }) =>
+    updateUserDetails: (data: { userId?: string; email: string; firstName: string; lastName: string; phoneNumber: string; dateOfBirth: string; targetUniversity?: string; studyDestination?: string; fatherName?: string; motherName?: string; family?: any; coApplicant?: any; academic?: any }) =>
         apiFetch(HttpApiPaths.admin.usersUpdateDetails(), {
             method: "POST",
             body: JSON.stringify(data),

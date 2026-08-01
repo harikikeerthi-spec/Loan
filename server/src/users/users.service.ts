@@ -6,6 +6,51 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { EmailService } from '../auth/email.service';
 
+export const USER_VALID_COLUMNS = new Set([
+  'id',
+  'email',
+  'firstName',
+  'lastName',
+  'phoneNumber',
+  'dateOfBirth',
+  'mobile',
+  'password',
+  'refreshToken',
+  'referralCode',
+  'referredById',
+  'role',
+  'createdAt',
+  'updatedAt',
+  'goal',
+  'studyDestination',
+  'courseName',
+  'targetUniversity',
+  'intakeSeason',
+  'bachelorsDegree',
+  'workExp',
+  'gpa',
+  'entranceTest',
+  'entranceScore',
+  'englishTest',
+  'englishScore',
+  'budget',
+  'pincode',
+  'loanAmount',
+  'admitStatus',
+  'tests'
+]);
+
+export function sanitizeUserPayload(payload: any): Record<string, any> {
+  if (!payload || typeof payload !== 'object') return {};
+  const sanitized: Record<string, any> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (USER_VALID_COLUMNS.has(key) && value !== undefined) {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
 @Injectable()
 export class UsersService {
   private get db() {
@@ -20,24 +65,31 @@ export class UsersService {
 
   private parseDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
-
-    // Try native parsing first (e.g., ISO, YYYY-MM-DD)
-    let d = new Date(dateStr);
-    if (!isNaN(d.getTime())) return d.toISOString();
+    const trimmed = String(dateStr).trim();
+    if (!trimmed) return null;
 
     // Try DD-MM-YYYY or DD/MM/YYYY
-    const parts = dateStr.split(/[-/]/);
+    const parts = trimmed.split(/[-/]/);
     if (parts.length === 3) {
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const year = parseInt(parts[2], 10);
+      const p1 = parseInt(parts[0], 10);
+      const p2 = parseInt(parts[1], 10);
+      const p3 = parseInt(parts[2], 10);
 
-      // Simple validation for numbers
-      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-        d = new Date(year, month, day);
-        if (!isNaN(d.getTime())) return d.toISOString();
+      if (!isNaN(p1) && !isNaN(p2) && !isNaN(p3)) {
+        if (p3 > 1000) {
+          // DD-MM-YYYY
+          const d = new Date(Date.UTC(p3, p2 - 1, p1));
+          if (!isNaN(d.getTime())) return d.toISOString();
+        } else if (p1 > 1000) {
+          // YYYY-MM-DD
+          const d = new Date(Date.UTC(p1, p2 - 1, p3));
+          if (!isNaN(d.getTime())) return d.toISOString();
+        }
       }
     }
+
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) return d.toISOString();
 
     return null;
   }
@@ -88,24 +140,27 @@ export class UsersService {
   }
 
   async findOne(email: string) {
+    if (!email || !email.trim()) return null;
+    const cleanEmail = email.trim().toLowerCase();
+
     const now = Date.now();
-    const cached = this.userCache.get(email);
+    const cached = this.userCache.get(cleanEmail) || this.userCache.get(email);
     if (cached && cached.expiresAt > now) {
       return cached.user;
     }
 
     try {
-      const { data, error } = await this.db.from('User').select('*').eq('email', email).single();
+      const { data, error } = await this.db.from('User').select('*').ilike('email', cleanEmail).maybeSingle();
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-        console.error(`[UsersService.findOne] Supabase error for ${email}:`, error);
+        console.error(`[UsersService.findOne] Supabase error for ${cleanEmail}:`, error);
       }
       if (data) {
-        this.userCache.set(email, { user: data, expiresAt: now + 15000 }); // Cache for 15 seconds
+        this.userCache.set(cleanEmail, { user: data, expiresAt: now + 15000 }); // Cache for 15 seconds
       }
       return data;
     } catch (e) {
       console.error(`[UsersService.findOne] Fatal error for ${email}:`, e);
-      throw e;
+      return null;
     }
   }
 
@@ -461,38 +516,234 @@ export class UsersService {
     pincode?: string,
     targetUniversity?: string,
     studyDestination?: string,
+    fatherName?: string,
+    motherName?: string,
+    family?: any,
+    coApplicant?: any,
+    academic?: any,
+    userId?: string
   ) {
-    const dobDate = this.parseDate(dateOfBirth);
+    const dobDate = dateOfBirth ? this.parseDate(dateOfBirth) : null;
 
-    const updatePayload: any = { firstName, lastName, phoneNumber, dateOfBirth: dobDate };
-    if (intakeSeason !== undefined) {
-      updatePayload.intakeSeason = intakeSeason;
+    // Lookup user by userId if provided, or case-insensitive email fallback
+    let targetUser: any = null;
+    if (userId) {
+      const { data: u } = await this.db.from('User').select('*').eq('id', userId).maybeSingle();
+      targetUser = u;
     }
-    if (profileImage !== undefined) {
-      updatePayload.profileImage = profileImage;
-    }
-    if (pincode !== undefined) {
-      updatePayload.pincode = pincode;
-    }
-    if (targetUniversity !== undefined) {
-      updatePayload.targetUniversity = targetUniversity;
-    }
-    if (studyDestination !== undefined) {
-      updatePayload.studyDestination = studyDestination;
+    if (!targetUser && email) {
+      const { data: u } = await this.db.from('User').select('*').ilike('email', email.trim()).maybeSingle();
+      targetUser = u;
     }
 
-    const { data, error } = await this.db
-      .from('User')
-      .update(updatePayload)
-      .eq('email', email)
-      .select()
-      .single();
+    if (!targetUser && email && email.trim()) {
+      const newId = randomUUID();
+      const { data: created, error: createErr } = await this.db
+        .from('User')
+        .insert({
+          id: newId,
+          email: email.trim().toLowerCase(),
+          firstName: firstName || 'User',
+          lastName: lastName || '',
+          phoneNumber: phoneNumber || '',
+          mobile: phoneNumber || '',
+          password: '',
+          role: 'user',
+        })
+        .select()
+        .maybeSingle();
 
-    if (error) throw error;
+      if (!createErr && created) {
+        targetUser = created;
+      }
+    }
+
+    if (!targetUser) {
+      console.warn(`[UsersService.updateUserDetails] User not found for email=${email}, userId=${userId}`);
+      return { success: false, message: 'User not found' };
+    }
+
+    // Prepare update payload for User table
+    const updatePayload: any = {};
+    if (firstName !== undefined) updatePayload.firstName = firstName;
+    if (lastName !== undefined) updatePayload.lastName = lastName;
+    if (phoneNumber !== undefined) {
+      updatePayload.phoneNumber = phoneNumber;
+      updatePayload.mobile = phoneNumber;
+    }
+    if (dobDate !== null) updatePayload.dateOfBirth = dobDate;
+    if (intakeSeason !== undefined) updatePayload.intakeSeason = intakeSeason;
+    if (pincode !== undefined) updatePayload.pincode = pincode;
+    if (targetUniversity !== undefined) updatePayload.targetUniversity = targetUniversity;
+    if (studyDestination !== undefined) updatePayload.studyDestination = studyDestination;
+    if (email) updatePayload.email = email;
+
+    // Parse and handle academic object
+    let parsedAcademic: any = {};
+    if (academic) {
+      try {
+        parsedAcademic = typeof academic === 'string' ? JSON.parse(academic) : academic;
+      } catch {}
+    }
+    if (parsedAcademic.gpa !== undefined && !isNaN(parseFloat(parsedAcademic.gpa))) {
+      updatePayload.gpa = parseFloat(parsedAcademic.gpa);
+    }
+    if (parsedAcademic.workExp !== undefined && !isNaN(parseInt(parsedAcademic.workExp, 10))) {
+      updatePayload.workExp = parseInt(parsedAcademic.workExp, 10);
+    }
+    if (parsedAcademic.bachelorsDegree) {
+      updatePayload.bachelorsDegree = parsedAcademic.bachelorsDegree;
+    }
+    if (parsedAcademic.targetUniversity && !updatePayload.targetUniversity) {
+      updatePayload.targetUniversity = parsedAcademic.targetUniversity;
+    }
+    if (parsedAcademic.countryOfEducation && !updatePayload.studyDestination) {
+      updatePayload.studyDestination = parsedAcademic.countryOfEducation;
+    }
+
+    // Build merged family & co-applicant objects for relational sync
+    let familyObj: any = {};
+    if (targetUser.family) {
+      try {
+        familyObj = typeof targetUser.family === 'string' ? JSON.parse(targetUser.family) : targetUser.family;
+      } catch {}
+    }
+    if (family) {
+      const parsedFam = typeof family === 'string' ? (JSON.parse(family) || {}) : family;
+      familyObj = { ...familyObj, ...parsedFam };
+    }
+    if (fatherName) familyObj.fatherName = fatherName;
+    if (motherName) familyObj.motherName = motherName;
+
+    let coAppObj: any = {};
+    if (targetUser.coApplicant) {
+      try {
+        coAppObj = typeof targetUser.coApplicant === 'string' ? JSON.parse(targetUser.coApplicant) : targetUser.coApplicant;
+      } catch {}
+    }
+    if (coApplicant) {
+      const parsedCoApp = typeof coApplicant === 'string' ? (JSON.parse(coApplicant) || {}) : coApplicant;
+      coAppObj = { ...coAppObj, ...parsedCoApp };
+    }
+
+    // Sanitize payload to ONLY include valid columns on User table (avoids PGRST204)
+    const safeUserPayload = sanitizeUserPayload(updatePayload);
+
+    let updatedUser = targetUser;
+    if (Object.keys(safeUserPayload).length > 0) {
+      const { data, error } = await this.db
+        .from('User')
+        .update(safeUserPayload)
+        .eq('id', targetUser.id)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) updatedUser = data;
+    }
+
+    // Upsert specialized profiles (UserAcademicProfile, UserStudyPreference, UserFinancialProfile)
+    try {
+      if (updatedUser && updatedUser.id) {
+        const uId = updatedUser.id;
+
+        // 1. UserAcademicProfile
+        const academicProf = {
+          userId: uId,
+          bachelorsDegree: parsedAcademic.bachelorsDegree || updatedUser.bachelorsDegree || null,
+          gpa: parsedAcademic.gpa ? parseFloat(parsedAcademic.gpa) : (updatedUser.gpa || null),
+          workExp: parsedAcademic.workExp ? parseInt(parsedAcademic.workExp, 10) : (updatedUser.workExp || null),
+          entranceTest: parsedAcademic.entranceTest || updatedUser.entranceTest || null,
+          entranceScore: parsedAcademic.entranceScore || updatedUser.entranceScore || null,
+          englishTest: parsedAcademic.englishTest || updatedUser.englishTest || null,
+          englishScore: parsedAcademic.englishScore || updatedUser.englishScore || null,
+        };
+        const { data: existingAcad } = await this.db.from('UserAcademicProfile').select('id').eq('userId', uId).maybeSingle();
+        if (existingAcad) {
+          await this.db.from('UserAcademicProfile').update(academicProf).eq('userId', uId);
+        } else {
+          await this.db.from('UserAcademicProfile').insert(academicProf);
+        }
+
+        // 2. UserStudyPreference
+        const studyPref = {
+          userId: uId,
+          goal: updatedUser.goal || null,
+          studyDestination: studyDestination || updatedUser.studyDestination || null,
+          courseName: updatedUser.courseName || null,
+          targetUniversity: targetUniversity || updatedUser.targetUniversity || null,
+          intakeSeason: intakeSeason || updatedUser.intakeSeason || null,
+          admitStatus: updatedUser.admitStatus || null,
+        };
+        const { data: existingStudy } = await this.db.from('UserStudyPreference').select('id').eq('userId', uId).maybeSingle();
+        if (existingStudy) {
+          await this.db.from('UserStudyPreference').update(studyPref).eq('userId', uId);
+        } else {
+          await this.db.from('UserStudyPreference').insert(studyPref);
+        }
+
+        // 3. UserFinancialProfile
+        const finProf = {
+          userId: uId,
+          budget: updatedUser.budget || null,
+          pincode: pincode || updatedUser.pincode || null,
+          loanAmount: updatedUser.loanAmount || null,
+        };
+        const { data: existingFin } = await this.db.from('UserFinancialProfile').select('id').eq('userId', uId).maybeSingle();
+        if (existingFin) {
+          await this.db.from('UserFinancialProfile').update(finProf).eq('userId', uId);
+        } else {
+          await this.db.from('UserFinancialProfile').insert(finProf);
+        }
+      }
+    } catch (profErr: any) {
+      console.warn(`[UsersService.updateUserDetails] Profile sync warning: ${profErr.message}`);
+    }
+
+    // Upsert parents table rows for father, mother, coapplicant
+    if (updatedUser && updatedUser.id) {
+      // 1. Father
+      const fName = fatherName || familyObj.fatherName || familyObj.father_name;
+      const fAadhar = familyObj.fatherAadhar || familyObj.father_aadhar;
+      const fPan = familyObj.fatherPan || familyObj.father_pan;
+      if (fName || fAadhar || fPan) {
+        await this.upsertParentRecord(updatedUser.id, 'father', {
+          name: fName || undefined,
+          aadharNumber: fAadhar || undefined,
+          panNumber: fPan || undefined
+        }).catch(() => {});
+      }
+
+      // 2. Mother
+      const mName = motherName || familyObj.motherName || familyObj.mother_name;
+      const mAadhar = familyObj.motherAadhar || familyObj.mother_aadhar;
+      const mPan = familyObj.motherPan || familyObj.mother_pan;
+      if (mName || mAadhar || mPan) {
+        await this.upsertParentRecord(updatedUser.id, 'mother', {
+          name: mName || undefined,
+          aadharNumber: mAadhar || undefined,
+          panNumber: mPan || undefined
+        }).catch(() => {});
+      }
+
+      // 3. Co-applicant
+      const cName = coAppObj.name || familyObj.coappName || familyObj.coApplicantName || familyObj.coapp_name;
+      const cRelation = coAppObj.relation || familyObj.coappRelation || familyObj.coApplicantRelation;
+      const cAadhar = coAppObj.aadharNumber || familyObj.coappAadhar || familyObj.coApplicantAadhar;
+      const cPan = coAppObj.panNumber || familyObj.coappPan || familyObj.coApplicantPan;
+      if (cName || cAadhar || cPan || cRelation) {
+        await this.upsertParentRecord(updatedUser.id, 'coapplicant', {
+          name: cName || undefined,
+          relation: cRelation || undefined,
+          aadharNumber: cAadhar || undefined,
+          panNumber: cPan || undefined
+        }).catch(() => {});
+      }
+    }
 
     // Sync to active LoanApplications for this user to keep their application profile details in sync
     try {
-      if (data && data.id) {
+      if (updatedUser && updatedUser.id) {
         const appPayload: any = {};
         if (firstName !== undefined) appPayload.firstName = firstName;
         if (lastName !== undefined) appPayload.lastName = lastName;
@@ -500,26 +751,29 @@ export class UsersService {
         if (dobDate !== null && dobDate !== undefined) appPayload.dateOfBirth = dobDate;
         if (targetUniversity !== undefined) appPayload.universityName = targetUniversity;
         if (studyDestination !== undefined) appPayload.country = studyDestination;
+        if (fatherName || familyObj.fatherName) appPayload.fatherName = fatherName || familyObj.fatherName;
+        if (motherName || familyObj.motherName) appPayload.motherName = motherName || familyObj.motherName;
+        if (coAppObj.name || familyObj.coappName) appPayload.coApplicantName = coAppObj.name || familyObj.coappName;
+        if (coAppObj.relation || familyObj.coappRelation) appPayload.coApplicantRelation = coAppObj.relation || familyObj.coappRelation;
 
         if (Object.keys(appPayload).length > 0) {
-          const { error: appErr } = await this.db
+          await this.db
             .from('LoanApplication')
             .update(appPayload)
-            .eq('userId', data.id);
-
-          if (appErr) {
-            console.warn(`[UsersService.updateUserDetails] Failed to sync details to LoanApplication: ${appErr.message}`);
-          } else {
-            console.log(`[UsersService.updateUserDetails] Successfully synced details to LoanApplications for user: ${data.id}`);
-          }
+            .eq('userId', updatedUser.id);
         }
       }
     } catch (syncErr: any) {
       console.error(`[UsersService.updateUserDetails] Error syncing details to LoanApplication: ${syncErr.message}`);
     }
 
-    this.clearCache(email);
-    return data;
+    if (email) this.clearCache(email);
+    return {
+      ...updatedUser,
+      family: familyObj,
+      coApplicant: coAppObj,
+      academic: parsedAcademic,
+    };
   }
 
   async updateExtractedDetails(userId: string, details: any, docType?: string) {
@@ -796,41 +1050,22 @@ export class UsersService {
         return { success: true };
       }
 
-      const { data, error } = await this.db
-        .from('User')
-        .update(payload)
-        .eq('id', userId)
-        .select()
-        .single();
+      const safePayload = sanitizeUserPayload(payload);
 
-      if (error) {
-        // If it's a "column does not exist" error (PGRST204), log it but don't fail
-        if (error.code === 'PGRST204' || error.message.includes('column')) {
-          console.warn(`[UsersService.updateExtractedDetails] Could not update some fields because columns are missing in DB: ${error.message}`);
+      let data: any = null;
+      if (Object.keys(safePayload).length > 0) {
+        const { data: updatedData, error } = await this.db
+          .from('User')
+          .update(safePayload)
+          .eq('id', userId)
+          .select()
+          .single();
 
-          // Try updating ONLY the verified columns we know exist
-          const safePayload: any = {};
-          if (payload.family) safePayload.family = payload.family;
-          if (payload.coApplicant) safePayload.coApplicant = payload.coApplicant;
-          if (payload.motherName) safePayload.motherName = payload.motherName;
-          if (payload.motherAadhar) safePayload.motherAadhar = payload.motherAadhar;
-          if (payload.motherPan) safePayload.motherPan = payload.motherPan;
-          if (payload.fatherName) safePayload.fatherName = payload.fatherName;
-          if (payload.fatherAadhar) safePayload.fatherAadhar = payload.fatherAadhar;
-          if (payload.fatherPan) safePayload.fatherPan = payload.fatherPan;
-          if (payload.documentVerified !== undefined) safePayload.documentVerified = payload.documentVerified;
-          if (payload.firstName) safePayload.firstName = payload.firstName;
-          if (payload.lastName) safePayload.lastName = payload.lastName;
-          if (payload.dateOfBirth) safePayload.dateOfBirth = payload.dateOfBirth;
-          if (payload.gender) safePayload.gender = payload.gender;
-
-          if (Object.keys(safePayload).length > 0) {
-            await this.db.from('User').update(safePayload).eq('id', userId);
-          }
-
-          return { success: true, warning: 'Some fields skipped due to missing columns' };
+        if (error) {
+          console.warn(`[UsersService.updateExtractedDetails] Warning updating User table: ${error.message}`);
+        } else {
+          data = updatedData;
         }
-        throw error;
       }
 
       return { success: true, data };
@@ -1632,13 +1867,13 @@ export class UsersService {
         return undefined;
       };
 
-      const docMotherName = getDocFieldServer(['mother_aadhar', 'mother_aadhaar', 'mother_pan'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
-      const docMotherAadhar = getDocFieldServer(['mother_aadhar', 'mother_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
-      const docMotherPan = getDocFieldServer(['mother_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
+      const docMotherName = getDocFieldServer(['mother_aadhar', 'mother_aadhaar', 'mother_pan', 'coapplicant_aadhar', 'coapplicant_pan'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
+      const docMotherAadhar = getDocFieldServer(['mother_aadhar', 'mother_aadhaar', 'coapplicant_aadhar', 'coapplicant_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
+      const docMotherPan = getDocFieldServer(['mother_pan', 'coapplicant_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
 
-      const docFatherName = getDocFieldServer(['father_aadhar', 'father_aadhaar', 'father_pan'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
-      const docFatherAadhar = getDocFieldServer(['father_aadhar', 'father_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
-      const docFatherPan = getDocFieldServer(['father_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
+      const docFatherName = getDocFieldServer(['father_aadhar', 'father_aadhaar', 'father_pan', 'coapplicant_aadhar', 'coapplicant_pan'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
+      const docFatherAadhar = getDocFieldServer(['father_aadhar', 'father_aadhaar', 'coapplicant_aadhar', 'coapplicant_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
+      const docFatherPan = getDocFieldServer(['father_pan', 'coapplicant_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
 
       const isPlaceholderName = (nameVal?: string) => !nameVal || nameVal.trim().toLowerCase() === 'mother' || nameVal.trim().toLowerCase() === 'father';
 
@@ -1671,6 +1906,34 @@ export class UsersService {
           aadharNumber: finalFatherAadhar,
           panNumber: finalFatherPan,
         }).catch(() => {});
+      }
+
+      // Sync coapplicant details if coapplicant is Father or Mother
+      const coappRelation = String(coappObj.relation || userWithActivity?.coApplicantRelation || '').toLowerCase().trim();
+      if (coappRelation === 'father') {
+        if (!coappObj.name && finalFatherName) coappObj.name = finalFatherName;
+        if (!coappObj.aadhar && finalFatherAadhar) coappObj.aadhar = finalFatherAadhar;
+        if (!coappObj.pan && finalFatherPan) coappObj.pan = finalFatherPan;
+        if (finalFatherName || finalFatherAadhar || finalFatherPan) {
+          this.upsertParentRecord(userId, 'coapplicant', {
+            name: finalFatherName,
+            aadharNumber: finalFatherAadhar,
+            panNumber: finalFatherPan,
+            relation: 'father',
+          }).catch(() => {});
+        }
+      } else if (coappRelation === 'mother') {
+        if (!coappObj.name && finalMotherName) coappObj.name = finalMotherName;
+        if (!coappObj.aadhar && finalMotherAadhar) coappObj.aadhar = finalMotherAadhar;
+        if (!coappObj.pan && finalMotherPan) coappObj.pan = finalMotherPan;
+        if (finalMotherName || finalMotherAadhar || finalMotherPan) {
+          this.upsertParentRecord(userId, 'coapplicant', {
+            name: finalMotherName,
+            aadharNumber: finalMotherAadhar,
+            panNumber: finalMotherPan,
+            relation: 'mother',
+          }).catch(() => {});
+        }
       }
 
       // Build dynamic parents & relatives map for all document types (father, mother, brother, sister, spouse, coapplicant, guarantor, etc.)
@@ -1806,7 +2069,7 @@ export class UsersService {
     return data;
   }
 
-  async upsertParentRecord(userId: string, relation: string, data: { name?: string; aadharNumber?: string; panNumber?: string }) {
+  async upsertParentRecord(userId: string, relation: string, data: { name?: string; aadharNumber?: string; panNumber?: string; relation?: string }) {
     // First try to find an existing record
     const { data: existing } = await this.db
       .from('parents')

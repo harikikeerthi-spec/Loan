@@ -668,6 +668,38 @@ export default function DocumentVaultPage() {
 
     const uploadedCount = docs.filter(d => d.uploaded).length;
 
+    const findDocForRequirement = (reqType: string) => {
+        const direct = docs.find(d => d.docType === reqType);
+        if (direct && direct.uploaded) return direct;
+
+        const rel = String(activeProfile?.coApplicant?.relation || coappRelation || '').toLowerCase().trim();
+        const fatherName = String(activeProfile?.family?.fatherName || '').toLowerCase().trim();
+        const motherName = String(activeProfile?.family?.motherName || '').toLowerCase().trim();
+        const coappName = String(activeProfile?.coApplicant?.name || '').toLowerCase().trim();
+
+        const isFatherCoapp = rel === 'father' || (fatherName && coappName && fatherName === coappName);
+        const isMotherCoapp = rel === 'mother' || (motherName && coappName && motherName === coappName);
+
+        if (isFatherCoapp) {
+            if (reqType === 'father_aadhar' || reqType === 'coapplicant_aadhar') {
+                return docs.find(d => d.docType === 'father_aadhar' || d.docType === 'father_aadhaar' || d.docType === 'coapplicant_aadhar' || d.docType === 'coapplicant_aadhaar') || direct;
+            }
+            if (reqType === 'father_pan' || reqType === 'coapplicant_pan') {
+                return docs.find(d => d.docType === 'father_pan' || d.docType === 'coapplicant_pan') || direct;
+            }
+        }
+        if (isMotherCoapp) {
+            if (reqType === 'mother_aadhar' || reqType === 'coapplicant_aadhar') {
+                return docs.find(d => d.docType === 'mother_aadhar' || d.docType === 'mother_aadhaar' || d.docType === 'coapplicant_aadhar' || d.docType === 'coapplicant_aadhaar') || direct;
+            }
+            if (reqType === 'mother_pan' || reqType === 'coapplicant_pan') {
+                return docs.find(d => d.docType === 'mother_pan' || d.docType === 'coapplicant_pan') || direct;
+            }
+        }
+
+        return direct;
+    };
+
     const renderDocGroup = (title: string, icon: string, docList: any[], onAddOther?: () => void) => (
         <div className="mb-10">
             <div className="flex justify-between items-center mb-5">
@@ -689,7 +721,7 @@ export default function DocumentVaultPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {docList.map((req) => {
-                    const existing = docs.find(d => d.docType === req.type);
+                    const existing = findDocForRequirement(req.type);
                     const isVerified = existing?.status === 'verified';
                     const isRejected = existing?.status === 'rejected';
                     const isPending = existing?.status === 'uploaded';

@@ -335,15 +335,118 @@ const NotificationsPanel = ({
         }
       }
 
+      const notifType = notification.type?.toLowerCase() || '';
+      const notifTitle = notification.title?.toLowerCase() || '';
+      const notifBody = notification.body?.toLowerCase() || '';
+
+      // 1. Candidate Registration Notifications -> Student Profile (/staff/users/[id])
+      const isCandidateRegisteredNotif =
+        notifType === 'candidate_registered' ||
+        notifType.includes('candidate_registered') ||
+        notifTitle.includes('candidate registered') ||
+        notifTitle.includes('new candidate');
+
+      if (isCandidateRegisteredNotif) {
+        let userId = metadata?.userId || metadata?.studentId || metadata?.id;
+        const email = metadata?.candidateEmail || metadata?.email || notification.body?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0];
+
+        if (!userId && email) {
+          try {
+            console.log(`[NotificationsPanel] Candidate registered notification clicked. Resolving user ID for email: ${email}`);
+            const usersRes = await adminApi.getUsers(20, 0, email) as any;
+            const foundUser = usersRes.items?.find((u: any) =>
+              u.email?.toLowerCase() === email.toLowerCase()
+            ) || usersRes.items?.[0];
+            if (foundUser) {
+              userId = foundUser.id || foundUser._id;
+            }
+          } catch (e) {
+            console.error('[NotificationsPanel] Failed to resolve candidate user by email:', e);
+          }
+        }
+
+        if (userId) {
+          router.push(`/staff/users/${userId}`);
+        } else {
+          router.push('/staff/users');
+        }
+        return;
+      }
+
+      // 2. Bank Notifications (Loan Sanctioned, Bank Note, Counter Offer, Bank Query, Disbursed, Bank Approvals, etc.)
+      // -> Bank Applications tab in User Profile view (/staff/users/[id]/applications)
+      const isBankNotif =
+        notifType.includes('bank') ||
+        notifType.includes('sanction') ||
+        notifType.includes('counter') ||
+        notifType.includes('disburs') ||
+        notifType === 'application_approved' ||
+        notifType === 'application_conditional' ||
+        notifType === 'application_counter' ||
+        notifType === 'query_raised' ||
+        notifType === 'bank_note_added' ||
+        notifTitle.includes('loan sanctioned') ||
+        notifTitle.includes('sanction') ||
+        notifTitle.includes('bank') ||
+        notifTitle.includes('counter offer') ||
+        notifBody.includes('sanctioned') ||
+        notifBody.includes('loan sanctioned') ||
+        notifBody.includes('bank');
+
+      if (isBankNotif) {
+        let targetId = metadata?.studentId || metadata?.userId || metadata?.id;
+        let appId = metadata?.applicationId || metadata?.id;
+
+        const appNumRegex = /(?:VL-)?APP-[\w-]+/i;
+        const appNumMatch = notification.body?.match(appNumRegex) || notification.title?.match(appNumRegex);
+        const appSearchTerm = appId || (appNumMatch ? appNumMatch[0] : null);
+
+        if (!targetId && appSearchTerm) {
+          try {
+            console.log(`[NotificationsPanel] Bank notification clicked. Resolving user ID for search term: ${appSearchTerm}`);
+            const appsRes = await adminApi.getApplications({ search: appSearchTerm }) as any;
+            if (appsRes && Array.isArray(appsRes.data) && appsRes.data.length > 0) {
+              const foundApp = appsRes.data.find((a: any) =>
+                a.id === appId || (appNumMatch && a.applicationNumber?.toLowerCase() === appNumMatch[0].toLowerCase())
+              ) || appsRes.data[0];
+
+              targetId = foundApp.studentId || foundApp.userId || foundApp.user?.id || foundApp.id;
+            }
+          } catch (e) {
+            console.error('[NotificationsPanel] Failed to resolve application for bank notification:', e);
+          }
+        }
+
+        if (!targetId) {
+          const email = metadata?.candidateEmail || metadata?.email || notification.body?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0];
+          if (email) {
+            try {
+              const usersRes = await adminApi.getUsers(20, 0, email) as any;
+              const foundUser = usersRes.items?.find((u: any) =>
+                u.email?.toLowerCase() === email.toLowerCase()
+              ) || usersRes.items?.[0];
+              if (foundUser) {
+                targetId = foundUser.id || foundUser._id;
+              }
+            } catch (e) {
+              console.error('[NotificationsPanel] Failed to resolve user by email for bank notification:', e);
+            }
+          }
+        }
+
+        if (targetId) {
+          router.push(`/staff/users/${targetId}/applications`);
+          return;
+        }
+      }
+
+      // 3. Customer Chat Notifications -> Live Chat (/staff/chat-customer)
       if (notification.type === 'staff_chat_received' || notification.type?.includes('chat')) {
         const convId = metadata?.conversationId;
         router.push(convId ? `/staff/chat-customer?conversationId=${convId}` : '/staff/chat-customer');
         return;
       }
 
-      // Applied loan notifications (new application created or submitted) should redirect directly to the incoming queue page
-      const notifType = notification.type?.toLowerCase() || '';
-      const notifTitle = notification.title?.toLowerCase() || '';
       const isAppliedLoanNotif =
         notifType === 'application_created' ||
         notifType === 'application_submitted' ||
@@ -375,6 +478,7 @@ const NotificationsPanel = ({
           );
           if (foundApp) {
             appId = foundApp.id || foundApp._id;
+            userId = foundApp.userId || foundApp.studentId;
           }
         } else if (email) {
           console.log(`[NotificationsPanel] Parsed email ${email} from notification, fetching user ID...`);
@@ -400,10 +504,10 @@ const NotificationsPanel = ({
         }
       }
 
-      if (appId) {
-        router.push(`/staff/applications/${appId}`);
-      } else if (userId) {
-        router.push(`/staff/users/${userId}`);
+      if (userId) {
+        router.push(`/staff/users/${userId}/applications`);
+      } else if (appId) {
+        router.push(`/staff/applications?id=${appId}`);
       } else {
         router.push('/staff/incoming-queue');
       }

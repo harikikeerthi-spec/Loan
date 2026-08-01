@@ -221,6 +221,47 @@ const ALL_BACHELORS = [
     'B.Sc', 'B.Tech', 'B.E.', 'B.A.', 'B.Com', 'BBA', 'BCA', 'MBBS', 'B.Arch', 'B.Des', 'B.Ed', 'B.Pharm'
 ];
 
+const POPULAR_INDIAN_UNIVERSITIES = [
+    { name: "Indian Institute of Technology (IIT) Bombay", loc: "Mumbai, Maharashtra", pincode: 400076 },
+    { name: "Indian Institute of Technology (IIT) Delhi", loc: "New Delhi, Delhi", pincode: 110016 },
+    { name: "Indian Institute of Technology (IIT) Madras", loc: "Chennai, Tamil Nadu", pincode: 600036 },
+    { name: "Indian Institute of Technology (IIT) Kharagpur", loc: "Kharagpur, West Bengal", pincode: 721302 },
+    { name: "Indian Institute of Technology (IIT) Kanpur", loc: "Kanpur, Uttar Pradesh", pincode: 208016 },
+    { name: "Indian Institute of Technology (IIT) Roorkee", loc: "Roorkee, Uttarakhand", pincode: 247667 },
+    { name: "Indian Institute of Technology (IIT) Guwahati", loc: "Guwahati, Assam", pincode: 781039 },
+    { name: "Indian Institute of Science (IISc) Bangalore", loc: "Bengaluru, Karnataka", pincode: 560012 },
+    { name: "BITS Pilani (Birla Institute of Technology and Science)", loc: "Pilani, Rajasthan", pincode: 333031 },
+    { name: "University of Delhi (DU)", loc: "New Delhi, Delhi", pincode: 110007 },
+    { name: "University of Mumbai", loc: "Mumbai, Maharashtra", pincode: 400098 },
+    { name: "Anna University", loc: "Chennai, Tamil Nadu", pincode: 600025 },
+    { name: "JNTU (Jawaharlal Nehru Technological University) Hyderabad", loc: "Hyderabad, Telangana", pincode: 500085 },
+    { name: "Osmania University", loc: "Hyderabad, Telangana", pincode: 500007 },
+    { name: "VTU (Visvesvaraya Technological University)", loc: "Belagavi, Karnataka", pincode: 590018 },
+    { name: "Savitribai Phule Pune University (SPPU)", loc: "Pune, Maharashtra", pincode: 411007 },
+    { name: "VIT (Vellore Institute of Technology)", loc: "Vellore, Tamil Nadu", pincode: 632014 },
+    { name: "SRM Institute of Science and Technology", loc: "Chennai, Tamil Nadu", pincode: 603203 },
+    { name: "Manipal Academy of Higher Education (MAHE)", loc: "Manipal, Karnataka", pincode: 576104 },
+    { name: "Amity University", loc: "Noida, Uttar Pradesh", pincode: 201313 },
+    { name: "Thapar Institute of Engineering and Technology", loc: "Patiala, Punjab", pincode: 147004 },
+    { name: "PSG College of Technology", loc: "Coimbatore, Tamil Nadu", pincode: 641004 },
+    { name: "College of Engineering Pune (COEP)", loc: "Pune, Maharashtra", pincode: 411005 },
+    { name: "RV College of Engineering (RVCE)", loc: "Bengaluru, Karnataka", pincode: 560059 },
+    { name: "PES University", loc: "Bengaluru, Karnataka", pincode: 560085 },
+    { name: "Chitkara University", loc: "Rajpura, Punjab", pincode: 140401 },
+    { name: "Chandigarh University", loc: "Mohali, Punjab", pincode: 140413 },
+    { name: "Lovely Professional University (LPU)", loc: "Phagwara, Punjab", pincode: 144411 },
+    { name: "University of Calcutta", loc: "Kolkata, West Bengal", pincode: 700073 },
+    { name: "Jadavpur University", loc: "Kolkata, West Bengal", pincode: 700032 },
+    { name: "Banaras Hindu University (BHU)", loc: "Varanasi, Uttar Pradesh", pincode: 221005 },
+    { name: "Aligarh Muslim University (AMU)", loc: "Aligarh, Uttar Pradesh", pincode: 202002 },
+    { name: "Andhra University", loc: "Visakhapatnam, Andhra Pradesh", pincode: 530003 },
+    { name: "Sri Venkateswara University", loc: "Tirupati, Andhra Pradesh", pincode: 517502 },
+    { name: "Gujarat Technological University (GTU)", loc: "Ahmedabad, Gujarat", pincode: 382424 },
+    { name: "Nirma University", loc: "Ahmedabad, Gujarat", pincode: 382481 },
+    { name: "Kalinga Institute of Industrial Technology (KIIT)", loc: "Bhubaneswar, Odisha", pincode: 751024 },
+    { name: "Siksha 'O' Anusandhan (SOA)", loc: "Bhubaneswar, Odisha", pincode: 751030 },
+];
+
 // ══════════════════════════════════════════════════════════════
 // Answer-key aliases: map flow-specific step IDs → generic keys
 // so every AI function / renderer can read answers.country etc.
@@ -1237,6 +1278,23 @@ export default function OnboardingPage() {
 
         return () => { if (aiSearchDebounceRef.current) window.clearTimeout(aiSearchDebounceRef.current); };
     }, [inputValue, currentIdx, countryUniversities]);
+
+    // Debounce AI search while typing in ug_university_search step
+    const ugSearchDebounceRef = useRef<number | null>(null);
+    useEffect(() => {
+        const step = steps[currentIdx];
+        if (!step || step.type !== 'ug_university_search') return;
+        if (ugSearchDebounceRef.current) window.clearTimeout(ugSearchDebounceRef.current);
+        if (ugSearch.trim().length < 2) {
+            setAiSearchResults([]);
+            return;
+        }
+        ugSearchDebounceRef.current = window.setTimeout(() => {
+            handleAiSearch('ug_university', ugSearch.trim());
+        }, 350);
+
+        return () => { if (ugSearchDebounceRef.current) window.clearTimeout(ugSearchDebounceRef.current); };
+    }, [ugSearch, currentIdx]);
 
     // Auto-lookup when a 6-digit Indian pincode is entered
     useEffect(() => {
@@ -2966,39 +3024,114 @@ export default function OnboardingPage() {
         }
 
         if (step.type === 'ug_university_search') {
+            const query = ugSearch.toLowerCase().trim();
+            const localMatches = POPULAR_INDIAN_UNIVERSITIES.filter(u =>
+                !query || u.name.toLowerCase().includes(query) || u.loc.toLowerCase().includes(query)
+            ).slice(0, 6);
+
+            // Merge AI search results with local matches avoiding duplicates by name
+            const combinedResults: any[] = [...localMatches];
+            if (aiSearchResults.length > 0) {
+                const indianStates = ['maharashtra', 'delhi', 'karnataka', 'tamil nadu', 'telangana', 'west bengal', 'uttar pradesh', 'gujarat', 'rajasthan', 'punjab', 'kerala', 'andhra pradesh', 'odisha', 'haryana', 'assam', 'bihar', 'jharkhand', 'chhattisgarh', 'uttarakhand', 'himachal pradesh', 'goa', 'jammu', 'kashmir', 'tripura', 'meghalaya', 'manipur', 'nagaland', 'mizoram', 'sikkim', 'puducherry', 'chandigarh'];
+                
+                aiSearchResults.forEach((aiRes: any) => {
+                    const aiName = (aiRes.name || aiRes.title || '').trim();
+                    const aiCountry = (aiRes.country || '').toLowerCase();
+                    const aiLoc = (aiRes.loc || aiRes.location || '').toLowerCase();
+
+                    // Check that the institution is strictly in India
+                    const isInsideIndia = aiCountry.includes('india') || aiLoc.includes('india') ||
+                        indianStates.some(state => aiLoc.includes(state) || aiName.toLowerCase().includes(state));
+
+                    if (aiName && (isInsideIndia || (!aiCountry && !aiLoc.includes('usa') && !aiLoc.includes('uk') && !aiLoc.includes('canada') && !aiLoc.includes('australia'))) && !combinedResults.some(cr => cr.name.toLowerCase() === aiName.toLowerCase())) {
+                        combinedResults.push({
+                            name: aiName,
+                            loc: aiRes.loc || aiRes.location || 'India',
+                            pincode: aiRes.pincode,
+                            isAi: true
+                        });
+                    }
+                });
+            }
+
             return (
                 <div>
-                    <div className="input-group">
-                        <input className="chat-input" placeholder={step.placeholder} value={ugSearch} onChange={e => { setUgSearch(e.target.value); setShowUgSearch(true); setAiSearchResults([]); }} onFocus={() => setShowUgSearch(true)} />
+                    <div className="input-group" style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18 }}>🇮🇳</span>
+                        <input
+                            className="chat-input"
+                            style={{ paddingLeft: 44 }}
+                            placeholder={step.placeholder || "Type your college/university name in India..."}
+                            value={ugSearch}
+                            onChange={e => {
+                                setUgSearch(e.target.value);
+                                setShowUgSearch(true);
+                            }}
+                            onFocus={() => setShowUgSearch(true)}
+                        />
                     </div>
-                    {showUgSearch && ugSearch && (
-                        <div className="country-search-box" style={{ display: 'block', marginTop: 4 }}>
-                            <div className="country-search-results">
-                                <div className="csr-item" style={{ background: '#f5f3ff', borderTop: '1px dashed #d8b4fe' }} onClick={() => handleAiSearch('ug_university', ugSearch)}>
-                                    <span style={{ marginRight: 8 }}>✨</span> AI Search for "{ugSearch}"...
-                                </div>
-                                {isSearchingAI && <div className="p-3 text-center text-xs text-gray-400">Searching universities...</div>}
-                                {aiSearchResults.length > 0 && aiSearchResults[0]?.name && aiSearchResults.map((u: any, i: number) => (
-                                    <div key={i} className="csr-item" onClick={() => {
-                                        setUgSearch(u.name);
-                                        setShowUgSearch(false);
-                                        // If loan flow, pre-populate the pincode
-                                        if (u.pincode && step.flows?.includes('loan')) {
-                                            setPincodeValue(String(u.pincode));
-                                        }
-                                        submitAnswer(step.id, u.name, u.name);
-                                    }}>
-                                        <div style={{ fontWeight: 600 }}>🎓 {u.name}</div>
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
-                                            {u.loc || 'India'} {u.pincode ? `• Pincode: ${u.pincode}` : ''}
-                                        </div>
+
+                    {showUgSearch && (
+                        <div className="country-search-box" style={{ display: 'block', marginTop: 6, borderRadius: 16, overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' }}>
+                            <div className="country-search-results" style={{ maxHeight: 320, overflowY: 'auto' }}>
+                                {isSearchingAI && (
+                                    <div style={{ padding: '10px 14px', background: '#f5f3ff', color: '#7c3aed', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ width: 14, height: 14, border: '2px solid #c4b5fd', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                        <span>Searching AI database for Indian colleges matching "{ugSearch}"...</span>
                                     </div>
-                                ))}
+                                )}
+
+                                {combinedResults.length > 0 ? (
+                                    combinedResults.map((u: any, i: number) => (
+                                        <div
+                                            key={i}
+                                            className="csr-item"
+                                            style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', borderBottom: '1px solid #f3f4f6' }}
+                                            onClick={() => {
+                                                setUgSearch(u.name);
+                                                setShowUgSearch(false);
+                                                if (u.pincode && step.flows?.includes('loan')) {
+                                                    setPincodeValue(String(u.pincode));
+                                                }
+                                                submitAnswer(step.id, u.name, u.name);
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{ fontWeight: 700, color: '#1f2937', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <span>🏛️ {u.name}</span>
+                                                    {u.isAi && (
+                                                        <span style={{ fontSize: 9, background: '#f0fdf4', color: '#16a34a', padding: '1px 6px', borderRadius: 4, fontWeight: 800, border: '1px solid #bbf7d0' }}>AI</span>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                                                    📍 {u.loc || 'India'} {u.pincode ? ` • PIN: ${u.pincode}` : ''}
+                                                </div>
+                                            </div>
+                                            <span style={{ color: '#7c3aed', fontSize: 14, fontWeight: 700 }}>Select →</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    !isSearchingAI && ugSearch.trim() && (
+                                        <div style={{ padding: 16, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+                                            No Indian university found for "{ugSearch}". You can click "Continue" below to add it directly.
+                                        </div>
+                                    )
+                                )}
                             </div>
                         </div>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="chat-submit" style={{ marginTop: 12 }} onClick={() => submitAnswer(step.id, ugSearch, ugSearch)} disabled={!ugSearch}>Continue</button>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                        <span style={{ fontSize: 11, color: '#6b7280' }}>
+                            {ugSearch ? `Or click Continue to use "${ugSearch}"` : 'Type to search Indian universities'}
+                        </span>
+                        <button
+                            className="chat-submit"
+                            onClick={() => submitAnswer(step.id, ugSearch, ugSearch)}
+                            disabled={!ugSearch.trim()}
+                        >
+                            Continue →
+                        </button>
                     </div>
                 </div>
             );

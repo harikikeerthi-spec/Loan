@@ -347,6 +347,7 @@ export default function UserProfileView({
         setSavingProfile(true);
         try {
             await documentApi.updateProfile(user.id, {
+                email: user.email,
                 family: {
                     fatherName: familyForm.fatherName || null,
                     fatherAadhar: familyForm.fatherAadhar ? familyForm.fatherAadhar.replace(/\s+/g, '') : null,
@@ -1087,17 +1088,27 @@ export default function UserProfileView({
                                         <tr className="hover:bg-[#F8FAFC] transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap font-bold text-[#6605c7]">Primary Co-Applicant</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
-                                                <div>
-                                                    <div className="font-bold text-[#0F172A]">{coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || getDocExtractedField(['coapplicant_aadhar', 'coapplicant_pan'], ['full_name', 'name', 'holder_name']) || "—"}</div>
-                                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                                                        Relation: {firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation || "—"}
-                                                    </div>
-                                                    {coappIncomeVal && (
-                                                        <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mt-0.5">
-                                                            Income: {coappIncomeVal}
+                                                {(() => {
+                                                    const relVal = String(firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation || "—");
+                                                    const isFatherCoApp = relVal.toLowerCase().trim() === 'father';
+                                                    const isMotherCoApp = relVal.toLowerCase().trim() === 'mother';
+                                                    const defaultCoAppName = isFatherCoApp ? (fatherData?.name || activeProfile?.family?.fatherName) : isMotherCoApp ? (motherData?.name || activeProfile?.family?.motherName) : undefined;
+                                                    const coappName = coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || defaultCoAppName || getDocExtractedField(['coapplicant_aadhar', 'coapplicant_pan', ...(isFatherCoApp ? ['father_aadhar', 'father_pan'] : []), ...(isMotherCoApp ? ['mother_aadhar', 'mother_pan'] : [])], ['full_name', 'name', 'holder_name']) || "—";
+
+                                                    return (
+                                                        <div>
+                                                            <div className="font-bold text-[#0F172A]">{coappName}</div>
+                                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                                                                Relation: {relVal}
+                                                            </div>
+                                                            {coappIncomeVal && (
+                                                                <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mt-0.5">
+                                                                    Income: {coappIncomeVal}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
                                                 {firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone ? (
@@ -1106,8 +1117,31 @@ export default function UserProfileView({
                                                         <span className="font-medium text-slate-800">{firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone}</span>
                                                     </div>
                                                 ) : null}
-                                                {renderTableAadhar(coapplicantData?.aadharNumber || activeProfile?.coApplicant?.aadhar || activeProfile?.coApplicantAadhar || getDocExtractedField(['coapplicant_aadhar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number']), "coapp_aadhar")}
-                                                {renderTablePan(coapplicantData?.panNumber || activeProfile?.coApplicant?.pan || activeProfile?.coApplicantPan || getDocExtractedField(['coapplicant_pan'], ['panNumber', 'document_number', 'pan_number', 'pan']), "coapp_pan")}
+                                                {(() => {
+                                                    const relVal = String(firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicantRelation || '').toLowerCase().trim();
+                                                    const isFatherCoApp = relVal === 'father';
+                                                    const isMotherCoApp = relVal === 'mother';
+
+                                                    const coappAadharVal = coapplicantData?.aadharNumber || activeProfile?.coApplicant?.aadhar || activeProfile?.coApplicantAadhar ||
+                                                        (isFatherCoApp ? (fatherData?.aadharNumber || activeProfile?.family?.fatherAadhar || activeProfile?.fatherAadhar) : '') ||
+                                                        (isMotherCoApp ? (motherData?.aadharNumber || activeProfile?.family?.motherAadhar || activeProfile?.motherAadhar) : '') ||
+                                                        getDocExtractedField(['coapplicant_aadhar', ...(isFatherCoApp ? ['father_aadhar', 'father_aadhaar'] : []), ...(isMotherCoApp ? ['mother_aadhar', 'mother_aadhaar'] : [])], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
+
+                                                    const coappPanVal = coapplicantData?.panNumber || activeProfile?.coApplicant?.pan || activeProfile?.coApplicantPan ||
+                                                        (isFatherCoApp ? (fatherData?.panNumber || activeProfile?.family?.fatherPan || activeProfile?.fatherPan) : '') ||
+                                                        (isMotherCoApp ? (motherData?.panNumber || activeProfile?.family?.motherPan || activeProfile?.motherPan) : '') ||
+                                                        getDocExtractedField(['coapplicant_pan', ...(isFatherCoApp ? ['father_pan'] : []), ...(isMotherCoApp ? ['mother_pan'] : [])], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
+
+                                                    const aadharDocType = (isFatherCoApp && !docs.some(d => d.docType === 'coapplicant_aadhar' && d.uploaded)) ? 'father_aadhar' : (isMotherCoApp && !docs.some(d => d.docType === 'coapplicant_aadhar' && d.uploaded)) ? 'mother_aadhar' : 'coapp_aadhar';
+                                                    const panDocType = (isFatherCoApp && !docs.some(d => d.docType === 'coapplicant_pan' && d.uploaded)) ? 'father_pan' : (isMotherCoApp && !docs.some(d => d.docType === 'coapplicant_pan' && d.uploaded)) ? 'mother_pan' : 'coapp_pan';
+
+                                                    return (
+                                                        <>
+                                                            {renderTableAadhar(coappAadharVal, aadharDocType)}
+                                                            {renderTablePan(coappPanVal, panDocType)}
+                                                        </>
+                                                    );
+                                                })()}
                                             </td>
                                         </tr>
                                         {/* Dynamic Relatives Rows (Brother, Sister, Spouse, Guarantor, etc.) */}

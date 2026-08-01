@@ -394,13 +394,12 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main Content */}
             <main
-                className="flex-1 min-h-screen relative transition-all duration-300 flex flex-col pt-[72px]"
+                className="flex-1 min-h-screen relative transition-all duration-300 flex flex-col"
                 style={{ paddingLeft: contentShiftWidth }}
             >
                 {/* Persistent Top Header (F16 Notification Center & F30 Global Search) */}
                 <header
-                    className="fixed top-0 right-0 z-40 h-[72px] flex items-center justify-between px-8 border-b bg-white/80 backdrop-blur-md border-gray-200/50 shadow-sm"
-                    style={{ left: contentShiftWidth }}
+                    className="h-[72px] bg-white border-b border-slate-200/80 px-8 flex items-center justify-between sticky top-0 z-30 flex-shrink-0 shadow-sm"
                 >
                     {/* F30 Global Search Bar */}
                     <div className="relative w-full max-w-md">

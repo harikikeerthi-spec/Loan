@@ -456,6 +456,7 @@ export default function DashboardPage() {
         setSavingProfile(true);
         try {
             await documentApi.updateProfile(user.id, {
+                email: user.email,
                 parents: [
                     {
                         relation: "father",

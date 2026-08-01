@@ -230,9 +230,20 @@ function ApplicationsPageInner() {
     useEffect(() => { loadData(); }, [loadData]);
 
     useEffect(() => {
-        if (appIdParam && data.length > 0) {
+        if (appIdParam) {
             const found = data.find(app => (app.id || app._id) === appIdParam);
-            if (found) setSelectedApp(found);
+            if (found) {
+                setSelectedApp(found);
+            } else if (data.length > 0) {
+                adminApi.getApplication(appIdParam)
+                    .then((res: any) => {
+                        const app = res?.data || res;
+                        if (app && (app.id || app._id)) {
+                            setSelectedApp(app);
+                        }
+                    })
+                    .catch(() => {});
+            }
         }
     }, [appIdParam, data]);
 

@@ -160,8 +160,9 @@ export default function DisbursementTracker() {
                     const bAcc = `501008291040${Math.floor(10 + Math.random() * 90)}`;
                     const bIfsc = "HDFC0000240";
                     if (app.status === "disbursed" || app.status === "disbursement_confirmed") {
-                        const t1 = Math.round(sa * 0.6);
-                        const t2 = app.disbursedAmount || (sa - t1);
+                        const totalDisb = app.disbursedAmount || sa;
+                        const t1 = Math.round(totalDisb * 0.4);
+                        const t2 = totalDisb - t1;
                         init[app.id] = {
                             beneficiary: { name: bName, bank: bBank, account: bAcc, ifsc: bIfsc },
                             history: [
@@ -414,7 +415,7 @@ export default function DisbursementTracker() {
                                                             </td>
                                                             <td className="py-5">
                                                                 <span className="text-xs font-black text-gray-900 block">&#8377;{paid.toLocaleString()}</span>
-                                                                <span className="text-[9px] font-semibold text-gray-400 block mt-1">Remaining: &#8377;{(sa - paid).toLocaleString()}</span>
+                                                                <span className="text-[9px] font-semibold text-gray-400 block mt-1">Remaining: &#8377;{Math.max(0, sa - paid).toLocaleString()}</span>
                                                             </td>
                                                             <td className="py-5">{statusBadge(app, paid)}</td>
                                                             <td className="py-5 text-right">
@@ -483,8 +484,8 @@ export default function DisbursementTracker() {
                                         const sa   = selectedApp.sanctionAmount || selectedApp.amount || 600000;
                                         const rec  = trancheRecords[selectedApp.id] || { history: [] };
                                         const paid = rec.history.reduce((s, t) => s + t.amount, 0);
-                                        const rem  = sa - paid;
-                                        const pct  = Math.round((paid / sa) * 100);
+                                        const rem  = Math.max(0, sa - paid);
+                                        const pct  = Math.min(100, Math.max(0, Math.round((paid / sa) * 100)));
                                         return (
                                             <div className="p-6 bg-white rounded-2xl border border-violet-50 shadow-sm space-y-4">
                                                 <div className="flex justify-between items-center">

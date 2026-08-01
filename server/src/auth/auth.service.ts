@@ -789,14 +789,14 @@ export class AuthService {
     profileImage?: string,
     pincode?: string
   ) {
-    // First, check if user exists with the provided email
-    const existingUser = await this.usersService.findOne(email);
-    if (!existingUser) {
-      return {
-        success: false,
-        message: 'User does not exist. Please check your email address or sign up first.'
-      };
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      return { success: false, message: 'Email address is required' };
     }
+
+    // Check if user exists with the provided email
+    let existingUser = await this.usersService.findOne(cleanEmail);
+    const isFirstProfileCompletion = !existingUser || !existingUser.firstName || !existingUser.phoneNumber || !existingUser.dateOfBirth;
 
     // Validate firstName
     if (!firstName || firstName.trim() === '') {
@@ -825,12 +825,12 @@ export class AuthService {
       return { success: false, message: 'Please enter your date of birth' };
     }
     const dobPattern = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
-    if (!dobPattern.test(dateOfBirth)) {
+    if (!dobPattern.test(dateOfBirth.trim())) {
       return { success: false, message: 'Date of birth must be in DD-MM-YYYY format (e.g., 15-01-1990)' };
     }
 
     // Parse and validate the date
-    const dobParts = dateOfBirth.split('-');
+    const dobParts = dateOfBirth.trim().split('-');
     const day = parseInt(dobParts[0], 10);
     const month = parseInt(dobParts[1], 10);
     const year = parseInt(dobParts[2], 10);
@@ -854,14 +854,10 @@ export class AuthService {
       return { success: false, message: 'Please enter a valid date of birth' };
     }
 
-    // Detect if this is the user's first time completing their profile
-    // (existingUser had no firstName, phoneNumber, or dateOfBirth before this update)
-    const isFirstProfileCompletion = !existingUser.firstName || !existingUser.phoneNumber || !existingUser.dateOfBirth;
-
     // Update user details
     try {
       const user = await this.usersService.updateUserDetails(
-        email,
+        cleanEmail,
         firstName,
         lastName,
         phoneNumber,
@@ -871,8 +867,8 @@ export class AuthService {
         pincode
       );
 
-      if (!user) {
-        return { success: false, message: 'User not found' };
+      if (!user || (user as any).success === false) {
+        return { success: false, message: (user as any)?.message || 'User not found' };
       }
 
       // Fire-and-forget: send personalised dashboard welcome email on first profile completion

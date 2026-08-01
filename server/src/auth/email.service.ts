@@ -357,8 +357,8 @@ export class EmailService {
 
                     <tr>
                         <td style="background-color: #f1f5f9; padding: 24px 40px; text-align: center; font-size: 12px; color: #64748b; line-height: 18px;">
-                            <p style="margin: 0 0 8px 0; font-weight: 600; color: #475569;">© ${year} VIDYALOAN TECHNOLOGIES PVT. LTD.</p>
-                            <p style="margin: 0 0 16px 0;">Empowering Indian students to achieve global education goals.<br>Registered in India | CIN: U65929KA2024PTC000001</p>
+                            <p style="margin: 0 0 8px 0; font-weight: 600; color: #475569;">© ${year} VIDYALOANS PVT. LTD.</p>
+                            <p style="margin: 0 0 16px 0;">Empowering Indian students to achieve global education goals.<br>Registered in India</p>
                             <p style="margin: 0;"> You received this automated notification because your email was registered on VidyaLoan. <br> <a href="${frontendUrl}/privacy" style="color: #64748b; text-decoration: underline;">Privacy Policy</a> &middot; <a href="${frontendUrl}/terms" style="color: #64748b; text-decoration: underline;">Terms of Service</a></p>
                         </td>
                     </tr>
@@ -633,12 +633,12 @@ export class EmailService {
               <p style="color:#a78bfa;font-size:12px;margin:0 0 8px;font-weight:600;letter-spacing:1px;">VIDYALOAN</p>
               <p style="color:#6b7280;font-size:11px;margin:0 0 12px;line-height:1.6;">
                 Empowering Indian students to achieve global education goals.<br/>
-                Registered in India | CIN: U65929KA2024PTC000001
+                Registered in India
               </p>
               <p style="color:#4b5563;font-size:10px;margin:0;line-height:1.6;">
-                © ${year} VidyaLoan Technologies Pvt. Ltd. All rights reserved.<br/>
-                <a href="${frontendUrl}/privacy" style="color:#6366f1;text-decoration:none;">Privacy Policy</a> &nbsp;·&nbsp;
-                <a href="${frontendUrl}/terms" style="color:#6366f1;text-decoration:none;">Terms of Service</a>
+                © ${year} VidyaLoana Pvt. Ltd. All rights reserved.<br/>
+                <a href="${frontendUrl}/privacy-policy" style="color:#6366f1;text-decoration:none;">Privacy Policy</a> &nbsp;·&nbsp;
+                <a href="${frontendUrl}/terms-conditions" style="color:#6366f1;text-decoration:none;">Terms of Service</a>
               </p>
             </td>
           </tr>
@@ -828,14 +828,14 @@ export class EmailService {
 
           <tr>
             <td style="background-color: #0f172a; padding: 30px 40px; text-align: center; font-size: 12px; color: #94a3b8; line-height: 20px;">
-              <strong style="color: #ffffff; letter-spacing: 0.5px;">VIDYALOAN TECHNOLOGIES</strong><br>
+              <strong style="color: #ffffff; letter-spacing: 0.5px;">VIDYALOANS</strong><br>
               Empowering Indian students to achieve global education goals seamlessly.<br>
-              <span style="color: #64748b; font-size: 11px;">Registered in India · CIN: U65929KA2024PTC000001</span>
+              <span style="color: #64748b; font-size: 11px;">Registered in India</span>
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 16px; border-top: 1px solid #1e293b; padding-top: 16px;">
                 <tr>
                   <td align="center" style="font-size: 11px; color: #64748b;">
-                    You received this mail response because you registered at VidyaLoan. <br>
-                    <a href="${frontendUrl}/privacy" style="color: #94a3b8; text-decoration: underline;">Privacy Policy</a> · <a href="${frontendUrl}/terms" style="color: #94a3b8; text-decoration: underline;">Terms of Service</a>
+                    You received this mail response because you registered at VidyaLoans. <br>
+                    <a href="${frontendUrl}/privacy-policy" style="color: #94a3b8; text-decoration: underline;">Privacy Policy</a> · <a href="${frontendUrl}/terms-conditions" style="color: #94a3b8; text-decoration: underline;">Terms of Service</a>
                   </td>
                 </tr>
               </table>
@@ -1051,15 +1051,15 @@ export class EmailService {
 
                     <tr>
                         <td style="background-color: #0f172a; padding: 32px 40px; text-align: center; font-size: 12px; color: #94a3b8; line-height: 20px;">
-                            <strong style="color: #ffffff; letter-spacing: 0.5px;">VIDYALOAN PLATFORMS</strong><br>
-                            Empowering enterprise academic financing with transparent operational transparency global frameworks.<br>
-                            <span style="color: #64748b; font-size: 11px;">Registered · CIN: U65929KA2024PTC000001</span>
+                            <strong style="color: #ffffff; letter-spacing: 0.5px;">VIDYALOANS PLATFORMS</strong><br>
+                            Empowering academic financing with transparent operational transparency global frameworks.<br>
+                            <span style="color: #64748b; font-size: 11px;">Registered</span>
                             
                             <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 16px; border-top: 1px solid #1e293b; padding-top: 16px;">
                                 <tr>
                                     <td align="center" style="font-size: 11px; color: #475569;">
-                                        © ${year} VidyaLoan Technologies Pvt. Ltd. All rights reserved.<br>
-                                        <a href="${frontendUrl}/privacy" style="color: #94a3b8; text-decoration: underline;">Privacy Policy</a> &nbsp;·&nbsp; <a href="${frontendUrl}/terms" style="color: #94a3b8; text-decoration: underline;">Terms of Service</a>
+                                        © ${year} VidyaLoans Pvt. Ltd. All rights reserved.<br>
+                                        <a href="${frontendUrl}/privacy-policy" style="color: #94a3b8; text-decoration: underline;">Privacy Policy</a> &nbsp;·&nbsp; <a href="${frontendUrl}/terms-conditions" style="color: #94a3b8; text-decoration: underline;">Terms of Service</a>
                                     </td>
                                 </tr>
                             </table>
@@ -1103,213 +1103,154 @@ export class EmailService {
       text: `Dear ${userName},\n\nYour loan application has been reviewed and processed by the VidyaLoan staff and has been successfully sent to ${bankName} for review.\n\nApplication Number: #${appNum}\nBank Partner: ${bankName}\nLoan Type: ${loanType}\nCurrent Stage: Bank Review\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Application Submitted to Bank - VidyaLoan</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Shared with Bank</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      margin: 0;
+      padding: 20px;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #0d47a1;
+      color: #ffffff;
+      padding: 24px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .content {
+      padding: 24px;
+      color: #333333;
+      line-height: 1.6;
+    }
+    .badge {
+      display: inline-block;
+      background-color: #e3f2fd;
+      color: #1565c0;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .details-card {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 20px 0;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .details-row td {
+      padding: 8px 0;
+      border-bottom: 1px dashed #dee2e6;
+    }
+    .details-table tr:last-child td {
+      border-bottom: none;
+    }
+    .label {
+      color: #6c757d;
+      font-size: 14px;
+      text-align: left;
+    }
+    .value {
+      font-weight: 600;
+      color: #212529;
+      font-size: 14px;
+      text-align: right;
+    }
+    .btn-container {
+      text-align: center;
+      margin-top: 28px;
+    }
+    .btn {
+      background-color: #2563eb;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 12px 28px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .footer {
+      background-color: #f8f9fa;
+      padding: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: #6c757d;
+      border-top: 1px solid #e9ecef;
+    }
   </style>
 </head>
-<body style="margin:0;padding:0;background-color:#0f0f1a;font-family:'Inter','Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0f1a;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;">
-          
-          <!-- HEADER -->
-         <tr>
-            <td style="
-              background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
-              border-radius: 20px 20px 0 0;
-              padding: 36px 40px 28px;
-              border-bottom: 1px solid rgba(139,92,246,0.3);
-            ">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <!-- Left side Logo -->
-                  <td width="60" align="left" style="vertical-align: middle;">
-                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
-                  </td>
-                  <!-- Middle Text -->
-                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
-                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
-                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px;">
+
+  <div class="email-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);">
+    <!-- Header -->
+    <div class="header" style="background-color: #0d47a1; color: #ffffff; padding: 24px; text-align: center;">
+      <h1 style="margin: 0; font-size: 20px; font-weight: 600;">🎓 VidyaLoan</h1>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content" style="padding: 24px; color: #333333; line-height: 1.6;">
+      <span class="badge" style="display: inline-block; background-color: #e3f2fd; color: #1565c0; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 16px;">📤 Application Forwarded</span>
+      
+      <h2 style="margin-top: 0; color: #111827; font-size: 20px;">Great news, ${userName || 'Applicant'}!</h2>
+      <p>Your education loan application has been successfully verified and shared with our banking partner for official evaluation.</p>
+
+      <!-- Details Card -->
+      <div class="details-card" style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <table class="details-table" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Application ID:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">#${appNum}</td>
           </tr>
-
-          <!-- HERO -->
-          <tr>
-            <td style="
-              background: linear-gradient(160deg, #4f46e5 0%, #7c3aed 100%);
-              padding: 40px 40px 36px;
-              text-align: center;
-            ">
-              <p style="margin:0 0 8px;font-size:42px;">📤</p>
-              <h2 style="color:#ffffff;margin:0 0 10px;font-size:26px;font-weight:800;line-height:1.2;">
-                Sent to Bank for Review
-              </h2>
-              <p style="color:#e0e7ff;margin:0;font-size:15px;line-height:1.65;max-width:420px;display:inline-block;">
-                Your application has been processed by our team and forwarded to <strong>${bankName}</strong>.
-              </p>
-            </td>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Partner Bank:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${bankName}</td>
           </tr>
-
-          <!-- MAIN CARD -->
-          <tr>
-            <td style="background:#ffffff;padding:36px 40px 24px;">
-              <p style="color:#374151;font-size:15px;line-height:1.75;margin:0 0 24px;">
-                Dear <strong>${userName}</strong>, <br><br>
-                We are pleased to inform you that your education loan application under number <strong>#${appNum}</strong> has been thoroughly reviewed and verified by the VidyaLoan staff. 
-                All document checks have passed, and the verified application bundle has now been sent directly to <strong>${bankName}</strong> for final approval.
-              </p>
-
-              <!-- Progress bar container -->
-              <div style="background:#f3f4f6; border-radius:10px; height:8px; width:100%; margin:24px 0 12px; overflow:hidden;">
-                <div style="background:linear-gradient(to right, #059669, #10b981); height:100%; width:${progress}%; border-radius:10px;"></div>
-              </div>
-              <p style="color:#4b5563; font-size:12px; font-weight:600; margin:0 0 28px; text-align:right;">
-                Overall Progress: ${progress}% completed
-              </p>
-
-              <!-- Timeline -->
-              <h3 style="color:#1e1b4b;font-size:16px;font-weight:700;margin:28px 0 20px;border-bottom:2px solid #f3f4f6;padding-bottom:8px;">
-                📍 Tracking Pipeline
-              </h3>
-              
-              <table cellpadding="0" cellspacing="0" width="100%">
-                <!-- Step 1 -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #059669; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">✓</div>
-                    <div style="width: 2px; height: 35px; background-color: #059669; margin: 4px auto;"></div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
-                    <span style="color: #111827; font-weight: 700; font-size: 14px; display: block;">Application Submitted</span>
-                    <span style="color: #059669; font-size: 11px; font-weight: 600; text-transform: uppercase;">Completed</span>
-                  </td>
-                </tr>
-                <!-- Step 2 -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #059669; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">✓</div>
-                    <div style="width: 2px; height: 35px; background-color: #059669; margin: 4px auto;"></div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
-                    <span style="color: #111827; font-weight: 700; font-size: 14px; display: block;">Document Verification</span>
-                    <span style="color: #059669; font-size: 11px; font-weight: 600; text-transform: uppercase;">Completed</span>
-                  </td>
-                </tr>
-                <!-- Step 3 -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #059669; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">✓</div>
-                    <div style="width: 2px; height: 35px; background-color: #059669; margin: 4px auto;"></div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
-                    <span style="color: #111827; font-weight: 700; font-size: 14px; display: block;">Credit Check</span>
-                    <span style="color: #059669; font-size: 11px; font-weight: 600; text-transform: uppercase;">Completed</span>
-                  </td>
-                </tr>
-                <!-- Step 4 -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #7c3aed; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">4</div>
-                    <div style="width: 2px; height: 35px; background-color: #e5e7eb; margin: 4px auto;"></div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
-                    <span style="color: #111827; font-weight: 700; font-size: 14px; display: block;">Bank Review</span>
-                    <span style="color: #7c3aed; font-size: 11px; font-weight: 600; text-transform: uppercase;">Under Bank Review</span>
-                    <p style="color: #6b7280; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">${bankName} is currently evaluating the application and risk profiles.</p>
-                  </td>
-                </tr>
-                <!-- Step 5 -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #f3f4f6; color: #9ca3af; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">5</div>
-                    <div style="width: 2px; height: 35px; background-color: #e5e7eb; margin: 4px auto;"></div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
-                    <span style="color: #9ca3af; font-weight: 600; font-size: 14px; display: block;">Sanction Offer</span>
-                    <span style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase;">Pending</span>
-                  </td>
-                </tr>
-                <!-- Step 6 -->
-                <tr>
-                  <td valign="top" style="width: 32px; text-align: center;">
-                    <div style="background-color: #f3f4f6; color: #9ca3af; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">6</div>
-                  </td>
-                  <td valign="top" style="padding-left: 12px;">
-                    <span style="color: #9ca3af; font-weight: 600; font-size: 14px; display: block;">Disbursement</span>
-                    <span style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase;">Pending</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; text-align: left;">Status:</td>
+            <td class="value" style="font-weight: 600; color: #2e7d32; font-size: 14px; padding: 8px 0; text-align: right;">Under Bank Review</td>
           </tr>
-
-          <!-- CTA -->
-          <tr>
-            <td style="background:#ffffff;padding:0 40px 40px;text-align:center;">
-              <a href="${frontendUrl}/dashboard" style="
-                display:inline-block;
-                background:linear-gradient(135deg,#7c3aed,#4f46e5);
-                color:#ffffff;
-                text-decoration:none;
-                padding:16px 44px;
-                border-radius:50px;
-                font-size:16px;
-                font-weight:700;
-                letter-spacing:0.3px;
-                box-shadow:0 6px 20px rgba(124,58,237,0.4);
-              ">🚀 View Application Status</a>
-            </td>
-          </tr>
-
-          <!-- SUPPORT -->
-          <tr>
-            <td style="background:#fafafa;border-top:1px solid #f3f4f6;padding:20px 40px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="vertical-align:middle;">
-                    <p style="margin:0;font-weight:700;color:#374151;font-size:13px;">Registered Email Address</p>
-                    <p style="margin:4px 0 0;color:#6b7280;font-size:12px;">This message was sent to ${email} registered with your account.</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- FOOTER -->
-          <tr>
-            <td style="
-              background:linear-gradient(135deg,#1a0533,#1e1b6e);
-              border-radius:0 0 20px 20px;
-              padding:28px 40px;
-              text-align:center;
-            ">
-              <p style="color:#a78bfa;font-size:12px;margin:0 0 8px;font-weight:600;letter-spacing:1px;">VIDYALOAN</p>
-              <p style="color:#6b7280;font-size:11px;margin:0 0 12px;line-height:1.6;">
-                Empowering Indian students to achieve global education goals.<br/>
-                Registered in India | CIN: U65929KA2024PTC000001
-              </p>
-              <p style="color:#4b5563;font-size:10px;margin:0;line-height:1.6;">
-                You received this email because you registered at VidyaLoan.<br/>
-                © ${year} VidyaLoan Technologies Pvt. Ltd. All rights reserved.<br/>
-                <a href="${frontendUrl}/privacy" style="color:#6366f1;text-decoration:none;">Privacy Policy</a> &nbsp;·&nbsp;
-                <a href="${frontendUrl}/terms" style="color:#6366f1;text-decoration:none;">Terms of Service</a>
-              </p>
-            </td>
-          </tr>
-
         </table>
-      </td>
-    </tr>
-  </table>
+      </div>
+
+      <p>The bank's credit team will review your application and financial documents. You will receive updates directly as soon as there is progress.</p>
+
+      <!-- Action Button -->
+      <div class="btn-container" style="text-align: center; margin-top: 28px;">
+        <a href="${frontendUrl}/dashboard" class="btn" style="background-color: #2563eb; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; display: inline-block;">Track Application Progress</a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer" style="background-color: #f8f9fa; padding: 16px; text-align: center; font-size: 12px; color: #6c757d; border-top: 1px solid #e9ecef;">
+      <p style="margin: 0 0 8px;">Need help? Contact support at support@vidyaloan.com</p>
+      <p style="margin: 0;">&copy; ${year} VidyaLoans Pvt. Ltd. All rights reserved.<br>
+      <a href="${frontendUrl}/privacy-policy" style="color: #6c757d; text-decoration: underline;">Privacy Policy</a> &nbsp;·&nbsp;
+      <a href="${frontendUrl}/terms-conditions" style="color: #6c757d; text-decoration: underline;">Terms of Service</a></p>
+    </div>
+  </div>
+
 </body>
 </html>
       `,
@@ -1709,10 +1650,10 @@ export class EmailService {
                         <td align="center" style="background-color: #F1F5F9; padding: 24px 40px; border-top: 1px solid #E2E8F0;">
                             <p style="margin: 0 0 8px 0; font-size: 12px; color: #94A3B8; line-height: 1.4;">
                                 Empowering Indian students to achieve global education goals.<br/>
-                                Registered in India | CIN: U65929KA2024PTC000001
+                                Registered in India 
                             </p>
                             <p style="margin: 0; font-size: 12px; color: #94A3B8;">
-                                &copy; ${year} VidyaLoan Technologies Pvt. Ltd. All rights reserved.
+                                &copy; ${year} VidyaLoans Pvt. Ltd. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -1753,6 +1694,231 @@ export class EmailService {
       }
     } catch (error) {
       console.error(`[EmailService] Failed to send application accepted email to ${email}:`, error);
+    }
+  }
+
+  async sendLoanDisbursedEmail(email: string, userName: string, bankName: string, application: any, transactionDetails?: any) {
+    const frontendUrl = 'https://developer.vidyaloans.in';
+    const year = new Date().getFullYear();
+    const appNum = application?.applicationNumber || 'N/A';
+    const amount = transactionDetails?.amount ? `₹${Number(transactionDetails.amount).toLocaleString('en-IN')}` : (application?.disbursedAmount || application?.amount ? `₹${Number(application.disbursedAmount || application.amount).toLocaleString('en-IN')}` : 'N/A');
+    const utrNumber = transactionDetails?.utrNumber || application?.utrNumber || 'N/A';
+    const trancheNumber = transactionDetails?.trancheNumber || application?.trancheNumber || 1;
+    const transferMode = transactionDetails?.transferMode || 'IMPS / NEFT / RTGS';
+    const dateStr = transactionDetails?.date || new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || '"VidyaLoan" <noreply@vidyaloan.com>',
+      to: email,
+      subject: `💸 Loan Disbursed Successfully - #${appNum}`,
+      text: `Dear ${userName},\n\nGreat news! Your education loan amount of ${amount} has been successfully disbursed by ${bankName}.\n\nApplication Number: #${appNum}\nTransaction Ref (UTR): ${utrNumber}\nDisbursed Amount: ${amount}\nBank Partner: ${bankName}\nTranche: Tranche ${trancheNumber}\nDisbursement Date: ${dateStr}\n\nYou can view full transaction details on your VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loan Disbursement Confirmed</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      margin: 0;
+      padding: 20px;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #0d47a1;
+      color: #ffffff;
+      padding: 24px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .content {
+      padding: 24px;
+      color: #333333;
+      line-height: 1.6;
+    }
+    .badge {
+      display: inline-block;
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .amount-box {
+      background: #f5f3ff;
+      border-left: 4px solid #6605c7;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .amount-label {
+      color: #7c3aed;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .amount-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #6605c7;
+      margin-top: 4px;
+    }
+    .details-card {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 20px 0;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .details-row td {
+      padding: 8px 0;
+      border-bottom: 1px dashed #dee2e6;
+    }
+    .details-table tr:last-child td {
+      border-bottom: none;
+    }
+    .label {
+      color: #6c757d;
+      font-size: 14px;
+      text-align: left;
+    }
+    .value {
+      font-weight: 600;
+      color: #212529;
+      font-size: 14px;
+      text-align: right;
+    }
+    .btn-container {
+      text-align: center;
+      margin-top: 28px;
+    }
+    .btn {
+      background-color: #2563eb;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 12px 28px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .footer {
+      background-color: #f8f9fa;
+      padding: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: #6c757d;
+      border-top: 1px solid #e9ecef;
+    }
+  </style>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px;">
+
+  <div class="email-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);">
+    <!-- Header -->
+    <div class="header" style="background-color: #0d47a1; color: #ffffff; padding: 24px; text-align: center;">
+      <h1 style="margin: 0; font-size: 20px; font-weight: 600;">🎓 VidyaLoan</h1>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content" style="padding: 24px; color: #333333; line-height: 1.6;">
+      <span class="badge" style="display: inline-block; background-color: #e8f5e9; color: #2e7d32; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 16px;">💸 Loan Disbursed</span>
+      
+      <h2 style="margin-top: 0; color: #111827; font-size: 20px;">Great news, ${userName || 'Applicant'}!</h2>
+      <p>Your education loan disbursement transaction has been completed successfully by <strong>${bankName}</strong>.</p>
+
+      <!-- Disbursed Amount Box -->
+      <div class="amount-box" style="background: #f5f3ff; border-left: 4px solid #6605c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <div class="amount-label" style="color: #7c3aed; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Disbursed Amount</div>
+        <div class="amount-value" style="font-size: 28px; font-weight: bold; color: #6605c7; margin-top: 4px;">${amount}</div>
+      </div>
+
+      <!-- Transaction Details Card -->
+      <div class="details-card" style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <table class="details-table" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Application ID:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">#${appNum}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Transaction Ref (UTR):</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${utrNumber}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Partner Bank:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${bankName}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Tranche:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">Tranche ${trancheNumber}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Payment Mode:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${transferMode}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Disbursement Date:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${dateStr}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; text-align: left;">Status:</td>
+            <td class="value" style="font-weight: 600; color: #2e7d32; font-size: 14px; padding: 8px 0; text-align: right;">Disbursed / Completed</td>
+          </tr>
+        </table>
+      </div>
+
+      <p>The disbursed funds have been credited according to your sanction terms. You can review full transaction details on your student dashboard.</p>
+
+      <!-- Action Button -->
+      <div class="btn-container" style="text-align: center; margin-top: 28px;">
+        <a href="${frontendUrl}/dashboard" class="btn" style="background-color: #2563eb; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; display: inline-block;">View Disbursement Details</a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer" style="background-color: #f8f9fa; padding: 16px; text-align: center; font-size: 12px; color: #6c757d; border-top: 1px solid #e9ecef;">
+      <p style="margin: 0 0 8px;">Need help? Contact support at support@vidyaloan.com</p>
+      <p style="margin: 0;">&copy; ${year} VidyaLoans Pvt. Ltd. All rights reserved.<br>
+      <a href="${frontendUrl}/privacy-policy" style="color: #6c757d; text-decoration: underline;">Privacy Policy</a> &nbsp;·&nbsp;
+      <a href="${frontendUrl}/terms-conditions" style="color: #6c757d; text-decoration: underline;">Terms of Service</a></p>
+    </div>
+  </div>
+
+</body>
+</html>
+      `,
+    };
+
+    try {
+      console.log(`[EmailService] Sending loan disbursement email to: ${email}`);
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        await this.transporter.sendMail(mailOptions);
+        console.log(`[EmailService] Loan disbursement email sent successfully to ${email}`);
+      } else {
+        console.log(`[EmailService] Email credentials not configured – disbursement email logged to console`);
+      }
+    } catch (error) {
+      console.error(`[EmailService] Failed to send loan disbursement email to ${email}:`, error);
     }
   }
 
@@ -2004,13 +2170,13 @@ export class EmailService {
               <p style="color:#a78bfa;font-size:12px;margin:0 0 8px;font-weight:600;letter-spacing:1px;">VIDYALOAN</p>
               <p style="color:#6b7280;font-size:11px;margin:0 0 12px;line-height:1.6;">
                 Empowering Indian students to achieve global education goals.<br/>
-                Registered in India | CIN: U65929KA2024PTC000001
+                Registered in India
               </p>
               <p style="color:#4b5563;font-size:10px;margin:0;line-height:1.6;">
                 You received this email because you registered at VidyaLoan.<br/>
-                © ${year} VidyaLoan Technologies Pvt. Ltd. All rights reserved.<br/>
-                <a href="${frontendUrl}/privacy" style="color:#6366f1;text-decoration:none;">Privacy Policy</a> &nbsp;·&nbsp;
-                <a href="${frontendUrl}/terms" style="color:#6366f1;text-decoration:none;">Terms of Service</a>
+                © ${year} VidyaLoans Pvt. Ltd. All rights reserved.<br/>
+                <a href="${frontendUrl}/privacy-policy" style="color:#6366f1;text-decoration:none;">Privacy Policy</a> &nbsp;·&nbsp;
+                <a href="${frontendUrl}/terms-conditions" style="color:#6366f1;text-decoration:none;">Terms of Service</a>
               </p>
             </td>
           </tr>

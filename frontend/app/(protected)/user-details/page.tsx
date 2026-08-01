@@ -104,18 +104,24 @@ export default function UserDetailsPage() {
         setError(null);
 
         try {
-            await authApi.updateDetails(user.email, {
+            const res = await authApi.updateDetails(user.email, {
                 firstName: form.firstName,
                 lastName: form.lastName,
                 phoneNumber: form.phoneNumber,
                 dateOfBirth: form.dateOfBirth,
-            });
+            }) as any;
+
+            if (res && res.success === false) {
+                setError(res.message || "Failed to update profile. Please check your information.");
+                return;
+            }
+
             await refreshUser();
             setSuccess(true);
             // brief delay so user sees the success message
             setTimeout(() => {
                 router.replace("/");
-            }, 1500);
+            }, 1200);
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../auth/email.service';
+import { sanitizeUserPayload } from '../users/users.service';
 
 @Injectable()
 export class OnboardingService {
@@ -96,9 +97,37 @@ export class OnboardingService {
         if (resDob) parsedDob = resDob;
       }
 
-      const updateData: any = {
-        firstName: personal.firstName || data.firstName || user?.firstName,
-        lastName: personal.lastName || data.lastName || user?.lastName,
+      // Helper: merge incoming family data with existing family JSON so we don't overwrite unrelated fields
+      const buildFamilyJson = () => {
+        let familyObj: any = {};
+        const rawFamily = user?.family;
+        if (rawFamily) {
+          try { familyObj = typeof rawFamily === 'string' ? JSON.parse(rawFamily) : rawFamily; } catch {}
+        }
+        // Merge incoming family object
+        const incomingFamily = data.family || data.familyDetails;
+        if (incomingFamily) {
+          const parsed = typeof incomingFamily === 'string' ? (JSON.parse(incomingFamily) || {}) : incomingFamily;
+          familyObj = { ...familyObj, ...parsed };
+        }
+        // Merge fatherName/motherName from parents array or personal data
+        const fatherFromParents = data.parents?.find((p: any) => p.relation === 'father')?.name;
+        const motherFromParents = data.parents?.find((p: any) => p.relation === 'mother')?.name;
+
+        return JSON.stringify({
+          ...familyObj,
+          fatherName: fatherFromParents || personal.fatherName || data.fatherName || familyObj.fatherName || null,
+          motherName: motherFromParents || personal.motherName || data.motherName || familyObj.motherName || null,
+          fatherAadhar: data.parents?.find((p: any) => p.relation === 'father')?.aadharNumber || familyObj.fatherAadhar || null,
+          fatherPan: data.parents?.find((p: any) => p.relation === 'father')?.panNumber || familyObj.fatherPan || null,
+          motherAadhar: data.parents?.find((p: any) => p.relation === 'mother')?.aadharNumber || familyObj.motherAadhar || null,
+          motherPan: data.parents?.find((p: any) => p.relation === 'mother')?.panNumber || familyObj.motherPan || null,
+        });
+      };
+
+      const rawUpdateData: any = {
+        firstName: nonEmpty(personal.firstName) ?? nonEmpty(data.firstName) ?? user?.firstName,
+        lastName: nonEmpty(personal.lastName) ?? nonEmpty(data.lastName) ?? user?.lastName,
         phoneNumber: data.phoneNumber || data.phone || data.mobile || personal.phoneNumber || personal.mobile || personal.phone || user?.phoneNumber,
         mobile: data.phoneNumber || data.phone || data.mobile || personal.phoneNumber || personal.mobile || personal.phone || user?.mobile,
         goal: goalValue,
@@ -117,10 +146,6 @@ export class OnboardingService {
         pincode: pincodeValue,
         loanAmount: loanAmountValue,
         admitStatus: admitStatusValue,
-        aadhaarNumber: nonEmpty(personal.aadhaarNumber) ?? nonEmpty(data.aadhaarNumber) ?? user?.aadhaarNumber ?? null,
-        panNumber: nonEmpty(personal.pan) ?? nonEmpty(personal.panNumber) ?? nonEmpty(data.pan) ?? nonEmpty(data.panNumber) ?? user?.panNumber ?? null,
-        fatherName: (data.parents?.find((p: any) => p.relation === 'father')?.name) ?? nonEmpty(personal.fatherName) ?? nonEmpty(data.fatherName) ?? user?.fatherName ?? null,
-        motherName: (data.parents?.find((p: any) => p.relation === 'mother')?.name) ?? nonEmpty(personal.motherName) ?? nonEmpty(data.motherName) ?? user?.motherName ?? null,
         dateOfBirth: parsedDob,
         permanentAddress: permAddrStr,
         gender: nonEmpty(personal.gender) ?? nonEmpty(data.gender) ?? user?.gender ?? null,
@@ -131,15 +156,20 @@ export class OnboardingService {
         academic: data.academic ? (typeof data.academic === 'string' ? data.academic : JSON.stringify(data.academic)) : (user?.academic || null),
         workExperience: data.workExperience ? (typeof data.workExperience === 'string' ? data.workExperience : JSON.stringify(data.workExperience)) : (user?.workExperience || null),
         tests: (data.testScores || data.tests) ? (typeof (data.testScores || data.tests) === 'string' ? (data.testScores || data.tests) : JSON.stringify(data.testScores || data.tests)) : (user?.tests || null),
-        family: data.family ? (typeof data.family === 'string' ? data.family : JSON.stringify(data.family)) : (data.familyDetails ? (typeof data.familyDetails === 'string' ? data.familyDetails : JSON.stringify(data.familyDetails)) : (user?.family || null)),
+        family: buildFamilyJson(),
         coApplicant: data.coApplicant ? (typeof data.coApplicant === 'string' ? data.coApplicant : JSON.stringify(data.coApplicant)) : (user?.coApplicant || null),
       };
+
+      const updateData = rawUpdateData;
+
+      // Sanitize payload so ONLY valid User table columns are updated (prevents PGRST204)
+      const userUpdateData = sanitizeUserPayload(rawUpdateData);
 
       if (!user) {
         if (!data.email) return { success: false, message: 'Email required for new user' };
         const { data: created, error } = await this.db
           .from('User')
-          .insert({ email: data.email, firstName: updateData.firstName || 'User', mobile: updateData.mobile || '', password: '', role: 'user', ...updateData })
+          .insert({ email: data.email, firstName: userUpdateData.firstName || 'User', mobile: userUpdateData.mobile || '', password: '', role: 'user', ...userUpdateData })
           .select()
           .single();
         if (error) throw error;
@@ -147,7 +177,7 @@ export class OnboardingService {
       } else {
         const { data: updated, error } = await this.db
           .from('User')
-          .update(updateData)
+          .update(userUpdateData)
           .eq('id', user.id)
           .select()
           .single();

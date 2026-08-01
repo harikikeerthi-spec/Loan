@@ -854,72 +854,202 @@ export class NotificationService {
    */
   private buildDisbursementEmailHtml(details: any): string {
     const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const year = new Date().getFullYear();
+
     return `
-      <div style="
-        background-image: url('${frontendUrl}/images/vidyaloans-logo-transparent.png'); 
-        background-repeat: no-repeat; 
-        background-position: center center; 
-        background-size: 50% auto;
-        width: 100%; 
-        margin: 0; 
-        padding: 20px 0;
-      ">
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; color: #1f2937; background: rgba(255,255,255,0.95);">
-          <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
-            <h1 style="color: white; margin: 0; font-size: 26px; letter-spacing: 1px;">Vidya Loan</h1>
-            <p style="color: #e9d5ff; margin: 5px 0 0 0; font-size: 14px;">Your Education Journey, Funded</p>
-          </div>
-        
-        <div style="padding: 0 10px;">
-          <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Loan Disbursement Confirmed!</h2>
-          <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">Dear <strong>${details.borrowerName}</strong>,</p>
-          <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">We are pleased to inform you that a tranche disbursement for your education loan has been successfully processed by <strong>${details.bankName}</strong>.</p>
-          
-          <div style="background-color: #f5f3ff; border-left: 4px solid #6605c7; padding: 20px; border-radius: 8px; margin: 24px 0;">
-            <span style="color: #7c3aed; font-weight: 600; font-size: 13px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Amount Disbursed</span>
-            <span style="font-size: 28px; font-weight: bold; color: #6605c7; display: block; margin-top: 5px;">₹${Number(details.amount).toLocaleString('en-IN')}.00</span>
-          </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loan Disbursement Confirmed</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      margin: 0;
+      padding: 20px;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #0d47a1;
+      color: #ffffff;
+      padding: 24px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .content {
+      padding: 24px;
+      color: #333333;
+      line-height: 1.6;
+    }
+    .badge {
+      display: inline-block;
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .amount-box {
+      background: #f5f3ff;
+      border-left: 4px solid #6605c7;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .amount-label {
+      color: #7c3aed;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .amount-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #6605c7;
+      margin-top: 4px;
+    }
+    .details-card {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 20px 0;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .details-row td {
+      padding: 8px 0;
+      border-bottom: 1px dashed #dee2e6;
+    }
+    .details-table tr:last-child td {
+      border-bottom: none;
+    }
+    .label {
+      color: #6c757d;
+      font-size: 14px;
+      text-align: left;
+    }
+    .value {
+      font-weight: 600;
+      color: #212529;
+      font-size: 14px;
+      text-align: right;
+    }
+    .btn-container {
+      text-align: center;
+      margin-top: 28px;
+    }
+    .btn {
+      background-color: #2563eb;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 12px 28px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .footer {
+      background-color: #f8f9fa;
+      padding: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: #6c757d;
+      border-top: 1px solid #e9ecef;
+    }
+  </style>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px;">
 
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
-            <tr>
-              <td style="padding: 8px 0; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Application Number</td>
-              <td style="padding: 8px 0; font-weight: bold; text-align: right; border-bottom: 1px solid #f3f4f6; color: #111827;">${details.applicationNumber}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Transaction Ref (UTR)</td>
-              <td style="padding: 8px 0; font-weight: bold; text-align: right; border-bottom: 1px solid #f3f4f6; color: #111827;">${details.utrNumber}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Disbursement Date</td>
-              <td style="padding: 8px 0; font-weight: bold; text-align: right; border-bottom: 1px solid #f3f4f6; color: #111827;">${details.date}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Payment Mode</td>
-              <td style="padding: 8px 0; font-weight: bold; text-align: right; border-bottom: 1px solid #f3f4f6; color: #111827;">${details.transferMode}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #6b7280;">Tranche</td>
-              <td style="padding: 8px 0; font-weight: bold; text-align: right; color: #111827;">Tranche ${details.trancheNumber}</td>
-            </tr>
-          </table>
+  <div class="email-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);">
+    <!-- Header -->
+    <div class="header" style="background-color: #0d47a1; color: #ffffff; padding: 24px; text-align: center;">
+      <h1 style="margin: 0; font-size: 20px; font-weight: 600;">🎓 VidyaLoan</h1>
+    </div>
 
-          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">We have attached the official <strong>Disbursement Receipt PDF</strong> to this email for your reference and records.</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.FRONTEND_URL || 'https://vidyaloan.com'}/student/dashboard" style="background-color: #6605c7; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(102, 5, 199, 0.2);">
-              Go to Student Dashboard
-            </a>
-          </div>
+    <!-- Content Body -->
+    <div class="content" style="padding: 24px; color: #333333; line-height: 1.6;">
+      <span class="badge" style="display: inline-block; background-color: #e8f5e9; color: #2e7d32; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 16px;">💸 Loan Disbursed</span>
+      
+      <h2 style="margin-top: 0; color: #111827; font-size: 20px;">Great news, ${details.borrowerName || 'Applicant'}!</h2>
+      <p>Your education loan disbursement transaction has been completed successfully by <strong>${details.bankName}</strong>.</p>
 
-          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
-            <p style="color: #9ca3af; font-size: 12px; text-align: center; line-height: 1.5;">
-              If you have any questions or did not authorize this, please contact our support team immediately at <a href="mailto:support@vidyaloan.com" style="color: #6605c7; text-decoration: none;">support@vidyaloan.com</a>.<br>
-              © ${new Date().getFullYear()} Vidya Loan. All rights reserved.
-            </p>
-          </div>
-        </div>
+      <!-- Disbursed Amount Box -->
+      <div class="amount-box" style="background: #f5f3ff; border-left: 4px solid #6605c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <div class="amount-label" style="color: #7c3aed; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Amount Disbursed</div>
+        <div class="amount-value" style="font-size: 28px; font-weight: bold; color: #6605c7; margin-top: 4px;">₹${Number(details.amount || 0).toLocaleString('en-IN')}.00</div>
+      </div>
+
+      <!-- Transaction Details Card -->
+      <div class="details-card" style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px; margin: 20px 0;">
+        <table class="details-table" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Application ID:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">#${details.applicationNumber}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Transaction Ref (UTR):</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${details.utrNumber}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Partner Bank:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${details.bankName}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Tranche:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">Tranche ${details.trancheNumber}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Payment Mode:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${details.transferMode}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Disbursement Date:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${details.date}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; text-align: left;">Status:</td>
+            <td class="value" style="font-weight: 600; color: #2e7d32; font-size: 14px; padding: 8px 0; text-align: right;">Disbursed / Completed</td>
+          </tr>
+        </table>
+      </div>
+
+      <p>We have attached the official <strong>Disbursement Receipt PDF</strong> and application document package to this email for your records.</p>
+
+      <!-- Action Button -->
+      <div class="btn-container" style="text-align: center; margin-top: 28px;">
+        <a href="${frontendUrl}/dashboard" class="btn" style="background-color: #2563eb; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; display: inline-block;">View Disbursement Details</a>
       </div>
     </div>
+
+    <!-- Footer -->
+    <div class="footer" style="background-color: #f8f9fa; padding: 16px; text-align: center; font-size: 12px; color: #6c757d; border-top: 1px solid #e9ecef;">
+      <p style="margin: 0 0 8px;">Need help? Contact support at support@vidyaloan.com</p>
+      <p style="margin: 0;">&copy; ${year} VidyaLoans Pvt. Ltd. All rights reserved.<br>
+      <a href="${frontendUrl}/privacy-policy" style="color: #6c757d; text-decoration: underline;">Privacy Policy</a> &nbsp;·&nbsp;
+      <a href="${frontendUrl}/terms-conditions" style="color: #6c757d; text-decoration: underline;">Terms of Service</a></p>
+    </div>
+  </div>
+
+</body>
+</html>
     `;
   }
 }
