@@ -1395,6 +1395,7 @@ export class EmailService {
     bankName: string,
     application: any,
     studentName: string,
+    attachments?: any[],
   ) {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const appNum = application.applicationNumber || 'N/A';
@@ -1409,13 +1410,21 @@ export class EmailService {
 
     const documents: any[] = application.documents || [];
     const docRows = documents.length > 0
-      ? documents.map((doc: any) => `
+      ? documents.map((doc: any) => {
+        const viewUrl = (doc.id && application.id)
+          ? `${frontendUrl}/api/applications/admin/${application.id}/documents/${doc.id}/view`
+          : null;
+        return `
         <tr>
-          <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155;">${(doc.name || doc.type || 'Document').replace(/_/g, ' ')}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155;">
+            <strong>${(doc.name || doc.type || 'Document').replace(/_/g, ' ')}</strong>
+            ${viewUrl ? `<br/><a href="${viewUrl}" style="font-size:11px;color:#4f46e5;text-decoration:none;font-weight:600;" target="_blank">View / Download Document ↗</a>` : ''}
+          </td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
             <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:${doc.status === 'verified' ? '#dcfce7' : doc.status === 'rejected' ? '#fee2e2' : '#fef3c7'};color:${doc.status === 'verified' ? '#166534' : doc.status === 'rejected' ? '#991b1b' : '#92400e'};">${(doc.status || 'pending').toUpperCase()}</span>
           </td>
-        </tr>`).join('')
+        </tr>`;
+      }).join('')
       : `<tr><td colspan="2" style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">No documents attached</td></tr>`;
 
     const html = `
@@ -1555,6 +1564,7 @@ export class EmailService {
           subject: `📋 Application Package – ${studentName} | ${appNum} | ${bankName}`,
           html,
           text: `Dear Partner at ${bankName},\n\nPlease find the full application package for ${studentName} (Ref: #${appNum}).\n\nAmount: ${amount}\nUniversity: ${university}\nCourse: ${course}\n\nLogin to the Partner Portal: ${frontendUrl}/bank/login\n\nRegards,\nVidyaLoan Team`,
+          attachments: attachments && attachments.length > 0 ? attachments : undefined
         });
         console.log(`[EmailService] Application package sent to ${bankEmail}`);
       } else {

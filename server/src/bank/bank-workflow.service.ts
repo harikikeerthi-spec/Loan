@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { resolve } from 'path';
+import { existsSync } from 'fs';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EmailService } from '../auth/email.service';
@@ -266,14 +268,64 @@ export class BankWorkflowService {
       throw new NotFoundException('Application not found');
     }
 
-    // Fetch documents list
+    // Fetch documents list from ApplicationDocument & UserDocument
     let documents: any[] = [];
+    const attachments: any[] = [];
+
     try {
-      const { data: docs } = await this.db.client
-        .from('Document')
-        .select('name, type, status, url')
+      const { data: appDocs } = await this.db.client
+        .from('ApplicationDocument')
+        .select('*')
         .eq('applicationId', applicationId);
-      if (docs) documents = docs;
+
+      const { data: vaultDocs } = await this.db.client
+        .from('UserDocument')
+        .select('*')
+        .eq('userId', application.userId);
+
+      const vaultDocsMap = new Map((vaultDocs || []).map((v: any) => [v.docType, v]));
+      const appDocTypes = new Set((appDocs || []).map((d: any) => d.docType));
+
+      const mergedAppDocs = (appDocs || []).map((d: any) => {
+        const vMatch = vaultDocsMap.get(d.docType);
+        const finalPath = d.filePath || vMatch?.filePath || null;
+        return {
+          id: d.id,
+          name: d.docName || d.fileName || d.docType,
+          type: d.docType,
+          status: d.status === 'not_uploaded' && vMatch ? (vMatch.status || 'uploaded') : d.status,
+          url: finalPath,
+          filePath: finalPath,
+          fileName: d.fileName || vMatch?.fileName || d.docName,
+        };
+      });
+
+      const extraVaultDocs = (vaultDocs || [])
+        .filter((v: any) => !appDocTypes.has(v.docType) && v.filePath)
+        .map((v: any) => ({
+          id: `vault_${v.id}`,
+          name: (v.docType || 'Document').replace(/_/g, ' ').toUpperCase(),
+          type: v.docType,
+          status: v.status || 'uploaded',
+          url: v.filePath,
+          filePath: v.filePath,
+          fileName: v.fileName || v.docType,
+        }));
+
+      documents = [...mergedAppDocs, ...extraVaultDocs];
+
+      // Prepare email file attachments for valid local files
+      for (const doc of documents) {
+        if (doc.filePath) {
+          const absPath = resolve(doc.filePath);
+          if (existsSync(absPath)) {
+            attachments.push({
+              filename: doc.fileName || `${doc.name}.pdf`,
+              path: absPath,
+            });
+          }
+        }
+      }
     } catch (e: any) {
       console.warn('[sendApplicationEmailToBank] Could not load documents:', e.message);
     }
@@ -327,6 +379,7 @@ export class BankWorkflowService {
       bankName,
       enrichedApplication,
       studentName,
+      attachments,
     );
 
     return {
