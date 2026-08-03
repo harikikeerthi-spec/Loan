@@ -293,11 +293,10 @@ export class ApplicationController {
         @Query('download') download: string,
         @Res() res: Response,
     ) {
-        const docsResult = await this.applicationService.getApplicationDocuments(applicationId);
-        const doc = docsResult.data?.find((d: any) => String(d.id) === String(documentId));
+        const doc = await this.applicationService.getSingleDocument(applicationId, documentId);
 
         if (!doc || !doc.filePath) {
-            throw new NotFoundException('Document not found');
+            throw new NotFoundException('Document file not found');
         }
 
         

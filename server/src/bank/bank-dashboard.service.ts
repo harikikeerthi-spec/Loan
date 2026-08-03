@@ -527,27 +527,53 @@ export class BankDashboardService {
 
   // ==================== ANALYTICS ====================
 
+  private applyBankFilter(query: any, bankId: string | null) {
+    if (!bankId) return query;
+    const lower = bankId.toLowerCase();
+    const BANK_MAPPING: Record<string, string[]> = {
+      'credila': ['HDFC Credila', 'Credila', 'hdfc'],
+      'hdfc credila': ['HDFC Credila', 'Credila', 'hdfc'],
+      'poonawalla': ['Poonawalla Fincorp', 'Poonawalla'],
+      'poonawalla fincorp': ['Poonawalla Fincorp', 'Poonawalla'],
+      'idfc': ['IDFC First Bank', 'IDFC FIRST Bank', 'IDFC'],
+      'idfc first bank': ['IDFC First Bank', 'IDFC FIRST Bank', 'IDFC'],
+      'avanse': ['Avanse Financial Services', 'Avanse Financial', 'Avanse'],
+      'avanse financial services': ['Avanse Financial Services', 'Avanse Financial', 'Avanse'],
+      'avanse financial': ['Avanse Financial Services', 'Avanse Financial', 'Avanse'],
+      'auxilo': ['Auxilo Finserve', 'Auxilo'],
+      'auxilo finserve': ['Auxilo Finserve', 'Auxilo']
+    };
+
+    const searchTerms = BANK_MAPPING[lower] || [bankId];
+    if (searchTerms.length === 1) {
+      return query.ilike('bank', `%${searchTerms[0]}%`);
+    } else {
+      const orConditions = searchTerms.map(term => `bank.ilike.%${term}%`).join(',');
+      return query.or(orConditions);
+    }
+  }
+
   async getChannelAnalytics(bankId: string): Promise<any> {
-    const { data: applications, error } = await this.db
+    let q = this.db
       .from('LoanApplication')
-      .select('id, status, amount, createdAt')
-      .eq('bank', bankId)
-      .not('status', 'in', '(submitted,pending,draft,docs_received,staff_verified,application_submitted)');
+      .select('id, status, amount, createdAt');
+    q = this.applyBankFilter(q, bankId);
+    const { data: applications, error } = await q;
 
     if (error) throw error;
 
-    const statusCounts = applications.reduce((acc: any, app: any) => {
+    const statusCounts = (applications || []).reduce((acc: any, app: any) => {
       acc[app.status] = (acc[app.status] || 0) + 1;
       return acc;
     }, {});
 
-    const totalAmount = applications.reduce((sum: number, app: any) => sum + (app.amount || 0), 0);
+    const totalAmount = (applications || []).reduce((sum: number, app: any) => sum + (app.amount || 0), 0);
 
     return {
-      totalApplications: applications.length,
+      totalApplications: (applications || []).length,
       statusBreakdown: statusCounts,
       totalAmount,
-      averageAmount: applications.length > 0 ? totalAmount / applications.length : 0
+      averageAmount: (applications || []).length > 0 ? totalAmount / (applications || []).length : 0
     };
   }
 
@@ -576,19 +602,20 @@ export class BankDashboardService {
   async getPipelineAnalytics(bankId: string): Promise<any> {
     // Kanban columns: grouped by pipeline stage with counts and totals
     const KANBAN_COLUMNS: { id: string; label: string; statuses: string[] }[] = [
-      { id: 'pre_login',    label: 'Pre-Login',    statuses: ['pending', 'docs_received'] },
-      { id: 'submitted',   label: 'Submitted',    statuses: ['staff_verified', 'submitted_to_bank'] },
-      { id: 'verification',label: 'Verification', statuses: ['file_logged', 'under_bank_review', 'query_raised'] },
+      { id: 'pre_login',    label: 'Pre-Login',    statuses: ['pending', 'docs_received', 'draft'] },
+      { id: 'submitted',   label: 'Submitted',    statuses: ['staff_verified', 'submitted_to_bank', 'submitted', 'application_submitted'] },
+      { id: 'verification',label: 'Verification', statuses: ['file_logged', 'under_bank_review', 'query_raised', 'processing', 'under_review', 'docs_uploaded'] },
       { id: 'sanctioned',  label: 'Sanctioned',   statuses: ['approved', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'sanctioned'] },
-      { id: 'disbursed',   label: 'Disbursed',    statuses: ['disbursement_confirmed', 'closed'] },
-      { id: 'rejected',    label: 'Rejected',     statuses: ['rejected', 'expired'] },
+      { id: 'disbursed',   label: 'Disbursed',    statuses: ['disbursement_confirmed', 'closed', 'disbursed'] },
+      { id: 'rejected',    label: 'Rejected',     statuses: ['rejected', 'expired', 'cancelled'] },
     ];
 
-    const { data, error } = await this.db
+    let q = this.db
       .from('LoanApplication')
-      .select('id, status, amount, firstName, lastName, lanNumber, bank, createdAt, updatedAt')
-      .eq('bank', bankId)
-      .not('status', 'in', '(submitted,pending,draft,docs_received,staff_verified,application_submitted)');
+      .select('id, status, amount, firstName, lastName, lanNumber, bank, createdAt, updatedAt');
+    q = this.applyBankFilter(q, bankId);
+
+    const { data, error } = await q;
 
     if (error) throw error;
     const apps = data || [];
@@ -620,11 +647,13 @@ export class BankDashboardService {
   }
 
   async getAgingReport(bankId: string): Promise<any> {
-    const { data: applications, error } = await this.db
+    let q = this.db
       .from('LoanApplication')
       .select('id, createdAt, status, firstName, lastName, amount, lanNumber')
-      .eq('bank', bankId)
-      .not('status', 'in', '(closed,rejected,expired,disbursement_confirmed,submitted,pending,draft,docs_received,staff_verified,application_submitted)');
+      .not('status', 'in', '(closed,rejected,expired,disbursement_confirmed)');
+    q = this.applyBankFilter(q, bankId);
+
+    const { data: applications, error } = await q;
 
     if (error) throw error;
 
@@ -755,8 +784,7 @@ export class BankDashboardService {
       };
 
       let appQuery = this.db.from('LoanApplication')
-        .select('*')
-        .not('status', 'in', '(submitted,pending,draft,docs_received,staff_verified,application_submitted)');
+        .select('*');
 
       if (bankId) {
         // Filter by specific bank
@@ -808,8 +836,7 @@ export class BankDashboardService {
 
     let query = this.db
       .from('FileEntry')
-      .select('*, LoanApplication!inner(id, firstName, lastName, amount, status, lanNumber, priority, assignedOfficer, bank)')
-      .not('LoanApplication.status', 'in', '(submitted,pending,draft,docs_received,staff_verified,application_submitted)');
+      .select('*, LoanApplication!inner(id, firstName, lastName, amount, status, lanNumber, priority, assignedOfficer, bank)');
 
     // Only filter by bankId if a specific bank is requested
     if (bankId) {

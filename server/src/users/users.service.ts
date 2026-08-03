@@ -984,9 +984,11 @@ export class UsersService {
         normalizedDocType.includes('ssc') ||
         normalizedDocType.includes('hsc') ||
         normalizedDocType.includes('10th') ||
-        normalizedDocType.includes('12th')
+        normalizedDocType.includes('12th') ||
+        normalizedDocType.includes('inter') ||
+        normalizedDocType.includes('grade')
       ) {
-        const inst = details.institution || details.university || details.college_name || details.institution_name || details.university_name || details.board || details.board_name;
+        const inst = details.institution || details.university || details.college_name || details.institution_name || details.university_name || details.board || details.board_name || details.school_name || details.school || details.college || details.awarding_body;
         const rawScore = details.percentage || details.score || details.gpa || details.cgpa || details.overall_percentage || details.marks_percentage || details.aggregate_percentage || details.overall_gpa || details.overall_cgpa;
         const secured = details.total_marks_secured || details.marks_secured || details.marks_obtained || details.obtained_marks || details.secured_marks || details.total_marks;
         const max = details.total_marks_maximum || details.maximum_marks || details.max_marks || details.total_max || details.out_of;
@@ -1030,11 +1032,11 @@ export class UsersService {
           if (!academic.ug) academic.ug = {};
           if (inst) { academic.ug.institute = inst; academicUpdated = true; payload.bachelorsDegree = inst; }
           if (score) { academic.ug.percentage = String(score); academicUpdated = true; }
-        } else if (normalizedDocType.includes('10th') || normalizedDocType.includes('ssc') || normalizedDocType.includes('marksheet_10')) {
+        } else if (normalizedDocType.includes('10th') || normalizedDocType.includes('ssc') || normalizedDocType.includes('marksheet_10') || normalizedDocType.includes('grade_10') || normalizedDocType.includes('grade10')) {
           if (!academic.ssc) academic.ssc = {};
           if (inst) { academic.ssc.institute = inst; academicUpdated = true; }
           if (score) { academic.ssc.percentage = String(score); academicUpdated = true; }
-        } else if (normalizedDocType.includes('12th') || normalizedDocType.includes('hsc') || normalizedDocType.includes('marksheet_12')) {
+        } else if (normalizedDocType.includes('12th') || normalizedDocType.includes('hsc') || normalizedDocType.includes('marksheet_12') || normalizedDocType.includes('intermediate') || normalizedDocType.includes('inter') || normalizedDocType.includes('grade_12') || normalizedDocType.includes('grade12')) {
           if (!academic.hsc) academic.hsc = {};
           if (inst) { academic.hsc.institute = inst; academicUpdated = true; }
           if (score) { academic.hsc.percentage = String(score); academicUpdated = true; }

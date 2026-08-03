@@ -303,7 +303,7 @@ export default function BankDashboard() {
     }, []);
 
     // --- F13 Count + ₹ KPI Memos ---
-    const excludeStatuses = ["submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"];
+    const excludeStatuses = ["draft"];
 
     const incomingApps = useMemo(() => {
         return applications.filter(app => !app.lanNumber && !["rejected", "approved", "sanctioned", "disbursed", "disbursement_confirmed", ...excludeStatuses].includes(app.status));

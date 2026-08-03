@@ -64,7 +64,7 @@ export class BankService {
     let query = this.db
       .from('LoanApplication')
       .select('*')
-      .in('status', ['submitted_to_bank', 'processing']);
+      .not('status', 'in', '(rejected,cancelled,closed,expired)');
 
     query = this.matchBankFilter(query, bankName);
 
@@ -210,10 +210,26 @@ export class BankService {
 
     if (vaultError) throw vaultError;
 
-    // Merge or tag vault documents that aren't already in the application
-    const applicationDocTypes = new Set(docs.map(d => d.docType));
+    // Merge matching vault documents into ApplicationDocuments that lack a filePath
+    const vaultDocsMap = new Map((vaultDocs || []).map(vd => [vd.docType, vd]));
+    const mergedDocs = docs.map((doc: any) => {
+      const vMatch = vaultDocsMap.get(doc.docType);
+      if ((!doc.filePath || doc.filePath === '') && vMatch && vMatch.filePath) {
+        return {
+          ...doc,
+          filePath: vMatch.filePath,
+          fileName: doc.fileName || vMatch.fileName || doc.docName,
+          fileSize: doc.fileSize || vMatch.fileSize,
+          mimeType: doc.mimeType || vMatch.mimeType,
+          status: doc.status === 'not_uploaded' ? (vMatch.status || 'uploaded') : doc.status
+        };
+      }
+      return doc;
+    });
+
+    const applicationDocTypes = new Set(mergedDocs.map(d => d.docType));
     const extraVaultDocs = (vaultDocs || [])
-      .filter(vd => !applicationDocTypes.has(vd.docType) && vd.uploaded)
+      .filter(vd => !applicationDocTypes.has(vd.docType) && (vd.uploaded || vd.filePath || (vd.status && vd.status !== 'not_uploaded')))
       .map(vd => ({
         ...vd,
         id: `vault_${vd.id}`,
@@ -222,7 +238,7 @@ export class BankService {
         status: vd.status || 'uploaded'
       }));
 
-    return [...docs, ...extraVaultDocs];
+    return [...mergedDocs, ...extraVaultDocs];
   }
 
   private getS3Client() {

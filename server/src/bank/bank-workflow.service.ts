@@ -119,40 +119,54 @@ export class BankWorkflowService {
     // Check if already submitted to this bank
     const { data: existing } = await this.db.client
       .from('BankSubmission')
-      .select('id')
+      .select('*')
       .eq('applicationId', applicationId)
       .eq('bankId', bankId)
-      .single();
+      .maybeSingle();
+
+    let submission = existing;
 
     if (existing) {
-      throw new BadRequestException('Application already submitted to this bank');
-    }
+      const { data: updatedSub } = await this.db.client
+        .from('BankSubmission')
+        .update({
+          workflowStatus: 'SUBMITTED_TO_BANK',
+          currentStage: 'SUBMITTED_TO_BANK',
+          submittedBy,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (updatedSub) submission = updatedSub;
+    } else {
+      // Create bank submission record
+      const { data: newSub, error: submitError } = await this.db.client
+        .from('BankSubmission')
+        .insert({
+          applicationId,
+          bankId,
+          bankName,
+          submittedBy,
+          workflowStatus: 'SUBMITTED_TO_BANK',
+          currentStage: 'SUBMITTED_TO_BANK',
+          statusHistory: [
+            {
+              fromStatus: null,
+              toStatus: 'SUBMITTED_TO_BANK',
+              changedAt: new Date().toISOString(),
+              changedBy: submittedBy,
+              reason: 'Application shared with bank',
+            },
+          ],
+        })
+        .select()
+        .single();
 
-    // Create bank submission record
-    const { data: submission, error: submitError } = await this.db.client
-      .from('BankSubmission')
-      .insert({
-        applicationId,
-        bankId,
-        bankName,
-        submittedBy,
-        workflowStatus: 'SUBMITTED_TO_BANK',
-        currentStage: 'SUBMITTED_TO_BANK',
-        statusHistory: [
-          {
-            fromStatus: null,
-            toStatus: 'SUBMITTED_TO_BANK',
-            changedAt: new Date().toISOString(),
-            changedBy: submittedBy,
-            reason: 'Application shared with bank',
-          },
-        ],
-      })
-      .select()
-      .single();
-
-    if (submitError) {
-      throw submitError;
+      if (submitError) {
+        throw submitError;
+      }
+      submission = newSub;
     }
 
     // Update LoanApplication with bank submission reference — generate VL-APP sequential number if not already assigned.

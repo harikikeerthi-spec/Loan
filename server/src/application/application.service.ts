@@ -848,11 +848,27 @@ export class ApplicationService {
     
     // Also fetch the User's general Vault documents to show in a "Vault" section
     const { data: vaultDocs } = await this.db.from('UserDocument').select('*').eq('userId', application.userId);
-    
+
+    const vaultDocsMap = new Map((vaultDocs || []).map(vd => [vd.docType, vd]));
+    const mergedDocs = docs.map((doc: any) => {
+      const vMatch = vaultDocsMap.get(doc.docType);
+      if ((!doc.filePath || doc.filePath === '') && vMatch && vMatch.filePath) {
+        return {
+          ...doc,
+          filePath: vMatch.filePath,
+          fileName: doc.fileName || vMatch.fileName || doc.docName,
+          fileSize: doc.fileSize || vMatch.fileSize,
+          mimeType: doc.mimeType || vMatch.mimeType,
+          status: doc.status === 'not_uploaded' ? (vMatch.status || 'uploaded') : doc.status
+        };
+      }
+      return doc;
+    });
+
     // Merge or tag vault documents that aren't already in the application
-    const applicationDocTypes = new Set(docs.map(d => d.docType));
+    const applicationDocTypes = new Set(mergedDocs.map(d => d.docType));
     const extraVaultDocs = (vaultDocs || [])
-      .filter(vd => !applicationDocTypes.has(vd.docType) && vd.uploaded)
+      .filter(vd => !applicationDocTypes.has(vd.docType) && (vd.uploaded || vd.filePath || (vd.status && vd.status !== 'not_uploaded')))
       .map(vd => ({
         ...vd,
         id: `vault_${vd.id}`,
@@ -861,7 +877,7 @@ export class ApplicationService {
         status: vd.status || 'uploaded'
       }));
 
-    const allDocs = [...docs, ...extraVaultDocs];
+    const allDocs = [...mergedDocs, ...extraVaultDocs];
 
     const grouped = {
       pending: allDocs.filter((d: any) => d.status === 'pending' && d.filePath),
@@ -885,6 +901,29 @@ export class ApplicationService {
         notUploaded: grouped.notUploaded.length 
       } 
     };
+  }
+
+  async getSingleDocument(applicationId: string, documentId: string) {
+    const docsResult = await this.getApplicationDocuments(applicationId);
+    let doc = docsResult.data?.find((d: any) =>
+      String(d.id) === String(documentId) ||
+      String(d.id) === `vault_${documentId}` ||
+      String(d.id).replace('vault_', '') === String(documentId).replace('vault_', '')
+    );
+
+    if (!doc || !doc.filePath) {
+      const realId = documentId.replace('vault_', '');
+      const { data: uDoc } = await this.db.from('UserDocument').select('*').eq('id', realId).maybeSingle();
+      if (uDoc && uDoc.filePath) {
+        doc = {
+          ...uDoc,
+          docName: uDoc.docType ? uDoc.docType.replace(/_/g, ' ').toUpperCase() : 'Document',
+          filePath: uDoc.filePath,
+          fileName: uDoc.fileName || uDoc.docType
+        };
+      }
+    }
+    return doc;
   }
 
   async syncApplicationDocuments(applicationId: string, adminId?: string) {
@@ -977,8 +1016,15 @@ export class ApplicationService {
       if (filters?.stage) query = query.eq('stage', filters.stage);
       if (filters?.loanType) query = query.eq('loanType', filters.loanType);
       if (filters?.bank) {
-        query = query.ilike('bank', `%${filters.bank}%`);
-        query = query.not('status', 'in', '(submitted,pending,draft,docs_received,staff_verified,application_submitted)');
+        const b = filters.bank.toLowerCase();
+        let searchPattern = `%${filters.bank}%`;
+        if (b.includes('avanse')) searchPattern = '%avanse%';
+        else if (b.includes('auxilo')) searchPattern = '%auxilo%';
+        else if (b.includes('idfc')) searchPattern = '%idfc%';
+        else if (b.includes('credila') || b.includes('hdfc')) searchPattern = '%credila%';
+        else if (b.includes('poonawalla')) searchPattern = '%poonawalla%';
+
+        query = query.ilike('bank', searchPattern);
       }
       
       if (filters?.search) {

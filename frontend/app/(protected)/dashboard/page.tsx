@@ -1389,7 +1389,7 @@ export default function DashboardPage() {
                                         <div className="text-sm font-semibold text-gray-800">₹{selectedAppDetails.amount?.toLocaleString("en-IN") || 'Not specified'}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Loan Type</div>
+                                        <div className="text-[11px] font-bold text-gray-400 uppercase">Field of Study</div>
                                         <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.loanType || 'Not specified'}</div>
                                     </div>
 
@@ -1413,7 +1413,21 @@ export default function DashboardPage() {
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant</div>
                                             <div className="text-sm font-semibold text-gray-800">
-                                                {selectedAppDetails.hasCoApplicant ? (selectedAppDetails.coApplicantRelation || selectedAppDetails.coApplicantName || 'Yes') : (selectedAppDetails.hasCoApplicant === false ? 'No' : (selectedAppDetails.coApplicant || 'Not specified'))}
+                                                {(() => {
+                                                    const rawName = selectedAppDetails.coApplicantName || selectedAppDetails.user?.coApplicantName || selectedAppDetails.user?.coApplicant?.name || "";
+                                                    const rawRel = selectedAppDetails.coApplicantRelation || selectedAppDetails.coApplicant || "";
+                                                    const relationLabel = rawRel && rawRel.toLowerCase() !== 'coapplicant' ? (rawRel.charAt(0).toUpperCase() + rawRel.slice(1)) : '';
+
+                                                    const isValidName = rawName && !['coapplicant', 'father', 'mother', 'spouse', 'brother', 'sister'].includes(rawName.toLowerCase());
+
+                                                    if (isValidName) {
+                                                        return relationLabel ? `${rawName} (${relationLabel})` : rawName;
+                                                    }
+                                                    if (relationLabel) return relationLabel;
+                                                    if (rawName) return rawName;
+                                                    if (selectedAppDetails.hasCoApplicant) return 'Yes';
+                                                    return 'Not specified';
+                                                })()}
                                             </div>
                                         </div>
                                         <div>
@@ -1425,13 +1439,13 @@ export default function DashboardPage() {
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant Phone</div>
                                             <div className="text-sm font-semibold text-gray-800">
-                                                {selectedAppDetails.coApplicantPhone || selectedAppDetails.coApplicantMobile || selectedAppDetails.coApplicant_phone || selectedAppDetails.user?.coApplicantPhone || selectedAppDetails.user?.parents?.fatherPhone || selectedAppDetails.user?.parents?.motherPhone || 'Not specified'}
+                                                {selectedAppDetails.coApplicantPhone || selectedAppDetails.coApplicantMobile || selectedAppDetails.coApplicant_phone || selectedAppDetails.user?.coApplicantPhone || selectedAppDetails.user?.coApplicant?.mobile || selectedAppDetails.user?.coApplicant?.phone || selectedAppDetails.user?.parents?.fatherPhone || selectedAppDetails.user?.parents?.motherPhone || 'Not specified'}
                                             </div>
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant Email</div>
                                             <div className="text-sm font-semibold text-gray-800">
-                                                {selectedAppDetails.coApplicantEmail || selectedAppDetails.coApplicant_email || selectedAppDetails.user?.coApplicantEmail || selectedAppDetails.user?.parents?.fatherEmail || selectedAppDetails.user?.parents?.motherEmail || 'Not specified'}
+                                                {selectedAppDetails.coApplicantEmail || selectedAppDetails.coApplicant_email || selectedAppDetails.user?.coApplicantEmail || selectedAppDetails.user?.coApplicant?.email || selectedAppDetails.user?.parents?.fatherEmail || selectedAppDetails.user?.parents?.motherEmail || 'Not specified'}
                                             </div>
                                         </div>
                                         <div>

@@ -207,7 +207,7 @@ export default function ApplicationManagement() {
 
             const hasLan = !!app.lanNumber;
             const status = app.status;
-            const isPreForwarded = ["submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"].includes(status);
+            const isPreForwarded = status === "draft";
 
             if (isPreForwarded) return false;
 
@@ -233,7 +233,7 @@ export default function ApplicationManagement() {
         applications.forEach(app => {
             const hasLan = !!app.lanNumber;
             const status = app.status;
-            const isPreForwarded = ["submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"].includes(status);
+            const isPreForwarded = status === "draft";
 
             if (isPreForwarded) return;
 

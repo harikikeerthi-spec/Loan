@@ -97,6 +97,7 @@ export default function ApplyLoanPage() {
         livingCost: "",
         coApplicant: "",
         otherRelation: "",
+        coApplicantName: "",
         coApplicantPhone: "",
         coApplicantEmail: "",
         income: "",
@@ -227,6 +228,10 @@ export default function ApplyLoanPage() {
                         dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
                         intakeSeason: prev.intakeSeason || user?.intakeSeason || "",
                         pincode: prev.pincode || user?.pincode || "",
+                        coApplicantName: prev.coApplicantName || user?.coApplicantName || user?.coApplicant?.name || user?.family?.fatherName || user?.family?.motherName || "",
+                        coApplicantPhone: prev.coApplicantPhone || user?.coApplicantPhone || user?.coApplicant?.mobile || user?.coApplicant?.phone || user?.family?.fatherPhone || user?.family?.motherPhone || "",
+                        coApplicantEmail: prev.coApplicantEmail || user?.coApplicantEmail || user?.coApplicant?.email || user?.family?.fatherEmail || user?.family?.motherEmail || "",
+                        coApplicant: prev.coApplicant || user?.coApplicantRelation || user?.coApplicant?.relation || "",
                     };
                 });
                 // Only mark profile as loaded once we have the DOB from the user object.
@@ -485,6 +490,11 @@ export default function ApplyLoanPage() {
             errors.otherRelation = "Please select other relation type";
         }
         if (formData.coApplicant && formData.coApplicant !== "none") {
+            const coName = formData.coApplicantName.trim();
+            if (!coName) {
+                errors.coApplicantName = "Co-applicant full name is required";
+            }
+
             const coPhone = formData.coApplicantPhone.trim();
             if (!coPhone) {
                 errors.coApplicantPhone = "Co-applicant phone number is required";
@@ -556,11 +566,12 @@ export default function ApplyLoanPage() {
 
             const rel = formData.coApplicant === "other" ? formData.otherRelation : formData.coApplicant;
             const capitalizedRelation = rel ? rel.charAt(0).toUpperCase() + rel.slice(1) : "";
+            const finalCoAppName = formData.coApplicantName.trim() || capitalizedRelation || null;
 
             await applicationApi.create({
                 ...formData,
                 hasCoApplicant: !!formData.coApplicant && formData.coApplicant !== "none",
-                coApplicantName: capitalizedRelation || null,
+                coApplicantName: finalCoAppName,
                 coApplicantRelation: rel || null,
                 coApplicantPhone: formData.coApplicantPhone.trim() || null,
                 coApplicantEmail: formData.coApplicantEmail.trim() || null,
@@ -587,6 +598,7 @@ export default function ApplyLoanPage() {
                         pincode: formData.pincode,
                         targetUniversity: formData.university,
                         studyDestination: formData.country === "Other" ? formData.otherCountry : formData.country,
+                        coApplicantName: finalCoAppName || undefined,
                         coApplicantPhone: formData.coApplicantPhone,
                         coApplicantEmail: formData.coApplicantEmail,
                         coApplicantRelation: rel,
@@ -1105,6 +1117,15 @@ export default function ApplyLoanPage() {
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <InputField
+                                            label="Co-Applicant Full Name"
+                                            icon="person"
+                                            value={formData.coApplicantName}
+                                            onChange={(v) => update("coApplicantName", v.replace(/[^A-Za-z\s]/g, "").slice(0, 50))}
+                                            placeholder="e.g. Ramesh Sharma"
+                                            error={stepErrors.coApplicantName}
+                                            required
+                                        />
                                         <SelectField label="Relationship" icon="family_history" value={formData.coApplicant} onChange={(v) => {
                                             update("coApplicant", v);
                                             if (v !== "other") {

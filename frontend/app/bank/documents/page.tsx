@@ -70,9 +70,8 @@ export default function DocumentReviewCenter() {
         setDocsLoading(prev => ({ ...prev, [appId]: true }));
         try {
             const res: any = await adminApi.getApplicationDocuments(appId);
-            if (res && res.success) {
-                setAppDocs(prev => ({ ...prev, [appId]: res.data || [] }));
-            }
+            const docs = Array.isArray(res) ? res : (res?.data || []);
+            setAppDocs(prev => ({ ...prev, [appId]: docs }));
         } catch (err) {
             console.error("Failed to fetch documents for application:", appId, err);
         } finally {
@@ -92,7 +91,7 @@ export default function DocumentReviewCenter() {
     };
 
     // Status groups that indicate staff has NOT yet forwarded to bank
-    const STAFF_PENDING_STATUSES = new Set(["draft", "submitted", "pending", "application_submitted", "docs_received", "staff_verified"]);
+    const STAFF_PENDING_STATUSES = new Set(["draft"]);
 
     const filteredApps = useMemo(() => {
         return applications.filter(app => {

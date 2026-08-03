@@ -698,9 +698,9 @@ export class KycService {
             targetType = 'passport';
         } else if (normalizedType.includes('marksheet_10') || normalizedType.includes('10th') || normalizedType.includes('ssc') || normalizedType.includes('grade10') || normalizedType.includes('grade_10')) {
             targetType = 'marksheet_10';
-        } else if (normalizedType.includes('marksheet_12') || normalizedType.includes('12th') || normalizedType.includes('hsc') || normalizedType.includes('intermediate') || normalizedType.includes('grade12') || normalizedType.includes('grade_12')) {
+        } else if (normalizedType.includes('marksheet_12') || normalizedType.includes('12th') || normalizedType.includes('hsc') || normalizedType.includes('intermediate') || normalizedType.includes('inter') || normalizedType.includes('grade12') || normalizedType.includes('grade_12')) {
             targetType = 'marksheet_12';
-        } else if (normalizedType.includes('marksheet_ug') || normalizedType.includes('ug_degree') || normalizedType.includes('ug_transcript') || normalizedType.includes('undergrad') || normalizedType.includes('undergraduate')) {
+        } else if (normalizedType.includes('marksheet_ug') || normalizedType.includes('ug_degree') || normalizedType.includes('ug_transcript') || normalizedType.includes('degree_certificate') || normalizedType.includes('degree') || normalizedType.includes('graduation') || normalizedType.includes('bachelor') || normalizedType.includes('undergrad') || normalizedType.includes('undergraduate')) {
             targetType = 'marksheet_ug';
         } else if (normalizedType.includes('marksheet_pg') || normalizedType.includes('pg_degree') || normalizedType.includes('pg_transcript') || normalizedType.includes('postgrad') || normalizedType.includes('postgraduate')) {
             targetType = 'marksheet_pg';
