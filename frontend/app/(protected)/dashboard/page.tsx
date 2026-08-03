@@ -358,7 +358,7 @@ export default function DashboardPage() {
 
     const loadData = useCallback(async (isSilent = false) => {
         if (!user?.email && !user?.id) return;
-        if (!isSilent && (!data.applications || data.applications.length === 0)) {
+        if (!isSilent) {
             setLoading(true);
         }
         try {
@@ -402,7 +402,7 @@ export default function DashboardPage() {
         } finally {
             setLoading(false);
         }
-    }, [user?.email, user?.id, data.applications]);
+    }, [user?.email, user?.id]);
 
     const handleSavePersonal = async () => {
         if (!user?.email) return;
