@@ -101,9 +101,9 @@ export default function AuthGate({ children, contentLabel = "this content" }: Au
 
                             <p className="text-gray-400 text-xs mt-5">
                                 By signing up, you agree to VidyaLoan&apos;s{" "}
-                                <Link href="/terms" className="text-[#6605c7] hover:underline">Terms</Link>
+                                <Link href="/terms-conditions" className="text-[#6605c7] hover:underline">Terms</Link>
                                 {" "}&amp;{" "}
-                                <Link href="/privacy" className="text-[#6605c7] hover:underline">Privacy Policy</Link>.
+                                <Link href="/privacy-policy" className="text-[#6605c7] hover:underline">Privacy Policy</Link>.
                             </p>
                         </div>
                     </div>

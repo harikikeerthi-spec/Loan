@@ -33,6 +33,25 @@ const nextConfig = {
       { protocol: "https", hostname: "logo.clearbit.com" },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/privacy",
+        destination: "/privacy-policy",
+        permanent: true,
+      },
+      {
+        source: "/terms",
+        destination: "/terms-conditions",
+        permanent: true,
+      },
+      {
+        source: "/terms-of-service",
+        destination: "/terms-conditions",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

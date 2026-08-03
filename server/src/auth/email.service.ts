@@ -372,7 +372,7 @@ export class EmailService {
                         <td style="background-color: #f1f5f9; padding: 24px 40px; text-align: center; font-size: 12px; color: #64748b; line-height: 18px;">
                             <p style="margin: 0 0 8px 0; font-weight: 600; color: #475569;">© ${year} VIDYALOANS PVT. LTD.</p>
                             <p style="margin: 0 0 16px 0;">Empowering Indian students to achieve global education goals.<br>Registered in India</p>
-                            <p style="margin: 0;"> You received this automated notification because your email was registered on VidyaLoan. <br> <a href="${frontendUrl}/privacy" style="color: #64748b; text-decoration: underline;">Privacy Policy</a> &middot; <a href="${frontendUrl}/terms" style="color: #64748b; text-decoration: underline;">Terms of Service</a></p>
+                            <p style="margin: 0;"> You received this automated notification because your email was registered on VidyaLoan. <br> <a href="${frontendUrl}/privacy-policy" style="color: #64748b; text-decoration: underline;">Privacy Policy</a> &middot; <a href="${frontendUrl}/terms-conditions" style="color: #64748b; text-decoration: underline;">Terms of Service</a></p>
                         </td>
                     </tr>
 
