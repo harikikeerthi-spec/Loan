@@ -226,13 +226,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         pincode: "",
         address: "",
         loanType: "Abroad",
-        courseName: "",
+        country: "USA",
+        otherCountry: "",
         collegeName: "",
         courseStartDate: "",
         amount: "",
         coApplicantName: "",
         coApplicantRelationship: "Parent",
         coApplicantMobile: "",
+        coApplicantEmail: "",
         source: "Referral",
         notes: ""
     });
@@ -555,6 +557,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
         setLoading(true);
         try {
+            const effectiveCountry = leadForm.country === "Other" ? (leadForm.otherCountry.trim() || "Other") : (leadForm.country || "USA");
             const res = await agentApi.createLead({
                 firstName: leadForm.firstName,
                 lastName: leadForm.lastName,
@@ -564,13 +567,14 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                 pincode: leadForm.pincode,
                 address: leadForm.address,
                 loanType: leadForm.loanType,
-                courseName: leadForm.courseName,
+                country: effectiveCountry,
                 collegeName: leadForm.collegeName,
                 courseStartDate: leadForm.courseStartDate,
                 amount: parseFloat(leadForm.amount) || 0,
                 coApplicantName: leadForm.coApplicantName,
                 coApplicantRelationship: leadForm.coApplicantRelationship,
                 coApplicantMobile: leadForm.coApplicantMobile,
+                coApplicantEmail: leadForm.coApplicantEmail,
                 source: leadForm.source,
                 notes: leadForm.notes,
             });
@@ -586,14 +590,16 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                     pincode: "",
                     address: "",
                     loanType: "Abroad",
-                    courseName: "",
+                    country: "USA",
+                    otherCountry: "",
                     collegeName: "",
                     courseStartDate: "",
                     amount: "",
                     coApplicantName: "",
                     coApplicantRelationship: "Parent",
                     coApplicantMobile: "",
-                    source: "Walk-In",
+                    coApplicantEmail: "",
+                    source: "Referral",
                     notes: ""
                 });
                 await loadData();
