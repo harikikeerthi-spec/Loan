@@ -163,22 +163,13 @@ export default function ProfilePage() {
                         <div className="p-8">
                             {!editing ? (
                                 <div className="space-y-4">
-                                     {[
+                                    {[
                                         { label: "First Name", value: user?.firstName || "—" },
                                         { label: "Last Name", value: user?.lastName || "—" },
                                         { label: "Email", value: user?.email || "—" },
                                         { label: "Phone Number", value: user?.phoneNumber || "—" },
-                                        { label: "Date of Birth", value: user?.dateOfBirth || "—" },
-                                        { label: "Father's Full Name", value: user?.family?.fatherName || user?.fatherName || "—" },
-                                        { label: "Father's Aadhaar Number", value: user?.family?.fatherAadhar || user?.fatherAadhar ? `XXXX XXXX ${(user?.family?.fatherAadhar || user?.fatherAadhar).slice(-4)}` : "—" },
-                                        { label: "Father's PAN Number", value: user?.family?.fatherPan || user?.fatherPan || "—" },
-                                        { label: "Mother's Full Name", value: user?.family?.motherName || user?.motherName || "—" },
-                                        { label: "Mother's Aadhaar Number", value: user?.family?.motherAadhar || user?.motherAadhar ? `XXXX XXXX ${(user?.family?.motherAadhar || user?.motherAadhar).slice(-4)}` : "—" },
-                                        { label: "Mother's PAN Number", value: user?.family?.motherPan || user?.motherPan || "—" },
-                                        { label: "Co-Applicant Name", value: user?.coApplicant?.name || user?.coApplicantName || "—" },
-                                        { label: "Co-Applicant Relation", value: user?.coApplicant?.relation || user?.coApplicant?.relationship || user?.coApplicantRelation || "—" },
-                                        { label: "Co-Applicant Phone", value: user?.coApplicant?.mobile || user?.coApplicant?.phone || user?.coApplicantPhone || "—" },
-                                        { label: "Co-Applicant Income", value: user?.coApplicant?.monthlyIncome ? `₹${Number(user.coApplicant.monthlyIncome).toLocaleString('en-IN')}/mo` : user?.coApplicantIncome ? `₹${Number(user.coApplicantIncome).toLocaleString('en-IN')}/yr` : "—" },
+                                        { label: "Date of Birth", value: user?.dateOfBirth || "—" }
+
                                     ].map((f) => (
                                         <div key={f.label} className="flex justify-between items-center py-4 border-b border-gray-50 last:border-0">
                                             <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{f.label}</span>
@@ -384,19 +375,8 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Support Tickets Section */}
-                    <div className="mt-8">
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <UserSupportTicketsView
-                                userRole={user?.role || "student"}
-                                userInfo={{
-                                    id: user?.id,
-                                    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
-                                    email: user?.email,
-                                }}
-                            />
-                        </div>
-                    </div>
+
+
                 </div>
             </div>
         </div>

@@ -20,6 +20,7 @@ import { diskStorage } from 'multer';
 import { extname, resolve } from 'path';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import type { Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
 import { ApplicationService } from './application.service';
 import { S3Service } from '../document/s3.service';
 import { UserGuard } from '../auth/user.guard';
@@ -50,9 +51,85 @@ export class ApplicationController {
         private applicationService: ApplicationService,
         private s3Service: S3Service,
         private notificationService: NotificationService,
+        private jwtService: JwtService,
     ) { }
 
     // ==================== PUBLIC ENDPOINTS ====================
+
+    /**
+     * Public document view via signed email token (no auth session needed)
+     * GET /applications/documents/public-view?token=...
+     */
+    @Get('documents/public-view')
+    async viewDocumentPublic(
+        @Query('token') token: string,
+        @Query('download') download: string,
+        @Res() res: Response,
+    ) {
+        if (!token) {
+            res.status(401).json({ error: 'Missing document access token' });
+            return;
+        }
+        let payload: any;
+        try {
+            payload = this.jwtService.verify(token, {
+                secret: process.env.JWT_SECRET || 'secretKey',
+            });
+        } catch {
+            res.status(401).json({ error: 'Invalid or expired document token' });
+            return;
+        }
+
+        const { applicationId, documentId } = payload;
+        if (!applicationId || !documentId) {
+            res.status(400).json({ error: 'Invalid token payload' });
+            return;
+        }
+
+        const doc = await this.applicationService.getSingleDocument(applicationId, documentId);
+        if (!doc || !doc.filePath) {
+            throw new NotFoundException('Document file not found');
+        }
+
+        // DigiLocker URI – render info page
+        if (doc.filePath.startsWith('in.gov.')) {
+            const html = `<!DOCTYPE html><html><head><title>${doc.docName || doc.docType}</title>
+<style>body{font-family:system-ui,sans-serif;background:#f0f2f5;display:flex;justify-content:center;padding:40px;}
+.card{background:white;padding:40px;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,.1);max-width:600px;width:100%;border-top:6px solid #82c91e;}
+.badge{background:#e6fced;color:#12b842;padding:6px 12px;border-radius:20px;font-weight:600;font-size:14px;}
+.label{font-size:13px;color:#666;text-transform:uppercase;font-weight:600;letter-spacing:.5px;}
+.value{font-size:18px;color:#333;margin-top:4px;word-break:break-all;}</style></head>
+<body><div class="card"><div style="display:flex;align-items:center;gap:15px;margin-bottom:30px;border-bottom:1px solid #eee;padding-bottom:20px;">
+<h2 style="margin:0;color:#1a3a6b;">Digital Verification Record</h2><span class="badge">✓ DigiLocker</span></div>
+<div class="label">Document</div><div class="value">${doc.docName || doc.docType}</div>
+<div style="margin-top:20px;" class="label">DigiLocker URI</div><div class="value">${doc.filePath}</div>
+</div></body></html>`;
+            res.setHeader('Content-Type', 'text/html');
+            return res.send(html);
+        }
+
+        const absolutePath = resolve(doc.filePath);
+        if (existsSync(absolutePath)) {
+            if (download === 'true') {
+                const filename = doc.fileName || doc.docName || 'document.pdf';
+                return res.download(absolutePath, filename);
+            }
+            return res.sendFile(absolutePath);
+        }
+
+        // Try S3
+        try {
+            const filename = doc.fileName || doc.docName || 'document.pdf';
+            const presignedUrl = await this.s3Service.getPresignedUrl(
+                doc.filePath,
+                3600,
+                download === 'true' ? filename : undefined,
+            );
+            return res.redirect(302, presignedUrl);
+        } catch {
+            throw new NotFoundException('Document not found on disk or S3');
+        }
+    }
 
     /**
      * Track application by application number (public)
