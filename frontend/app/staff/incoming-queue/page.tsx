@@ -601,10 +601,6 @@ function IncomingQueuePageInner() {
                 // Incoming queue ONLY includes applications that have NOT been sent to a bank yet
                 if (isSentToBank) return false;
 
-                if (!isAdmin) {
-                    const assigned = (app.assignedStaffId || '').toLowerCase();
-                    return assigned === staffId || assigned === staffEmail;
-                }
                 return true;
             });
 
@@ -767,9 +763,9 @@ function IncomingQueuePageInner() {
 
         try {
             await adminApi.updateApplicationStatus(appId, {
-                status: 'approved',
-                stage: 'approved',
-                progress: 100,
+                status: 'submitted_to_bank',
+                stage: 'bank_review',
+                progress: 70,
                 remarks: 'Moved to active pipeline by staff',
             });
 
@@ -778,7 +774,7 @@ function IncomingQueuePageInner() {
             await loadData();
             await fetchBadgeStats();
         } catch (e: any) {
-            alert(e?.message || 'Failed to approve application');
+            alert(e?.message || 'Failed to move application to active pipeline');
         }
     };
     const handleApproveApplication = handleMoveToActivePipeline;
@@ -858,6 +854,16 @@ function IncomingQueuePageInner() {
                     <p className="text-xs text-slate-500 font-semibold mt-0.5">Newly submitted applications awaiting initial review & verification</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                            placeholder="Search incoming queue..."
+                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-60 shadow-sm"
+                        />
+                    </div>
                     <button
                         onClick={loadData}
                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
@@ -1077,27 +1083,61 @@ function IncomingQueuePageInner() {
                     </table>
                 </div>
 
-                {totalItems > applicationsPerPage && (
-                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                {totalItems > 0 && (
+                    <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
                         <p className="text-[11px] font-bold text-slate-700">
-                            Showing <span className="text-indigo-600">{showingStart}-{showingEnd}</span> of {totalItems} entries
+                            Showing <span className="text-indigo-600 font-extrabold">{showingStart}–{Math.min(showingEnd, totalItems)}</span> of <span className="font-extrabold">{totalItems}</span> applications &nbsp;·&nbsp; Page <span className="text-indigo-600 font-extrabold">{currentPage}</span> of <span className="font-extrabold">{totalPages}</span>
                         </p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                disabled={currentPage === 1 || loading}
+                                onClick={() => setCurrentPage(1)}
+                                className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center justify-center shadow-2xs"
+                                title="First page"
+                            >
+                                <span className="material-symbols-outlined text-[15px]">first_page</span>
+                            </button>
                             <button
                                 disabled={currentPage === 1 || loading}
                                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm"
+                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center gap-1 shadow-2xs"
                             >
-                                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
-                                Previous
+                                <span className="material-symbols-outlined text-[15px]">chevron_left</span>
+                                Prev
                             </button>
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                                const page = startPage + i;
+                                if (page > totalPages) return null;
+                                return (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`w-8 h-8 rounded-lg text-[11px] font-black transition-all shadow-2xs ${
+                                            page === currentPage
+                                                ? 'bg-indigo-600 text-white border border-indigo-600'
+                                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                );
+                            })}
                             <button
                                 disabled={currentPage >= totalPages || loading}
                                 onClick={() => setCurrentPage(prev => prev + 1)}
-                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm"
+                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center gap-1 shadow-2xs"
                             >
                                 Next
-                                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                                <span className="material-symbols-outlined text-[15px]">chevron_right</span>
+                            </button>
+                            <button
+                                disabled={currentPage >= totalPages || loading}
+                                onClick={() => setCurrentPage(totalPages)}
+                                className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center justify-center shadow-2xs"
+                                title="Last page"
+                            >
+                                <span className="material-symbols-outlined text-[15px]">last_page</span>
                             </button>
                         </div>
                     </div>

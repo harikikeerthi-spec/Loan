@@ -228,6 +228,9 @@ export default function AdminDashboardPage() {
     const [filterStaff, setFilterStaff] = useState("all");
     const [staffMembers, setStaffMembers] = useState<any[]>([]);
     const [reassigningAppId, setReassigningAppId] = useState<string | null>(null);
+    const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+    const [bulkTargetStaffId, setBulkTargetStaffId] = useState<string>("");
+    const [bulkReassigning, setBulkReassigning] = useState<boolean>(false);
     const [filterFromDate, setFilterFromDate] = useState("");
     const [filterToDate, setFilterToDate] = useState("");
     const [filterBlogTime, setFilterBlogTime] = useState("all");
@@ -625,6 +628,51 @@ export default function AdminDashboardPage() {
             setLoading(false);
         }
     };
+
+    const toggleSelectAll = (itemsToSelect: any[]) => {
+        const allIds = itemsToSelect.map((item) => item.id).filter(Boolean);
+        const isAllSelected = allIds.every((id) => selectedAppIds.includes(id));
+        if (isAllSelected) {
+            setSelectedAppIds((prev) => prev.filter((id) => !allIds.includes(id)));
+        } else {
+            setSelectedAppIds((prev) => Array.from(new Set([...prev, ...allIds])));
+        }
+    };
+
+    const toggleSelectApp = (id: string) => {
+        setSelectedAppIds((prev) =>
+            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkReassign = async () => {
+        if (selectedAppIds.length === 0) return;
+        if (!bulkTargetStaffId) {
+            alert("Please select a target staff member or Auto Round-Robin from the dropdown.");
+            return;
+        }
+
+        const targetStaffObj = staffMembers.find((s: any) => s.id === bulkTargetStaffId || s.email === bulkTargetStaffId);
+        const staffLabel = bulkTargetStaffId === 'auto'
+            ? 'Auto Round-Robin Distribution'
+            : (targetStaffObj ? `${targetStaffObj.firstName || ''} ${targetStaffObj.lastName || ''}`.trim() || targetStaffObj.email : bulkTargetStaffId);
+
+        if (!window.confirm(`Reassign ${selectedAppIds.length} selected application(s) to ${staffLabel}?`)) return;
+
+        try {
+            setBulkReassigning(true);
+            const res: any = await assignmentApi.bulkReassign(selectedAppIds, bulkTargetStaffId, 'Admin bulk reassignment');
+            alert(res?.message || res?.data?.message || `Successfully reassigned ${selectedAppIds.length} application(s).`);
+            setSelectedAppIds([]);
+            setBulkTargetStaffId("");
+            loadData();
+        } catch (e: any) {
+            alert("Bulk reassignment failed: " + (e.message || e));
+        } finally {
+            setBulkReassigning(false);
+        }
+    };
+
 
     const handleAIReview = async (appId: string) => {
         setAiReviewLoading(true); setAiReview(null); setDrawerTab('ai_review');
@@ -2203,13 +2251,73 @@ export default function AdminDashboardPage() {
                                 </div>
                             </div>
 
+                            {/* Bulk Action Toolbar */}
+                            {selectedAppIds.length > 0 && (
+                                <div className="mb-3 p-3 bg-slate-900 text-white rounded-lg shadow-lg flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-indigo-600 text-white px-2.5 py-1 rounded-full text-xs font-bold font-mono">
+                                            {selectedAppIds.length} Selected
+                                        </span>
+                                        <span className="text-xs font-medium text-slate-200">
+                                            Bulk reassign selected applications
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={bulkTargetStaffId}
+                                            onChange={(e) => setBulkTargetStaffId(e.target.value)}
+                                            className="px-3 py-1.5 text-xs font-semibold bg-white text-slate-800 border border-indigo-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer shadow-sm"
+                                        >
+                                            <option value="" disabled>-- Select Target Staff --</option>
+                                            <option value="auto">⚡ Auto Round-Robin (Distribute Evenly)</option>
+                                            {staffMembers.map((s: any) => (
+                                                <option key={s.id} value={s.id}>
+                                                    👤 {s.firstName || s.email} {s.lastName || ''} ({s.email})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            onClick={handleBulkReassign}
+                                            disabled={bulkReassigning || !bulkTargetStaffId}
+                                            className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-md shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                            {bulkReassigning ? (
+                                                <>
+                                                    <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                                    Reassigning...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
+                                                    Bulk Reassign
+                                                </>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedAppIds([])}
+                                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-md transition-colors cursor-pointer"
+                                        >
+                                            Deselect All
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Comprehensive Applications Table */}
                             <div className="rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden">
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-xs">
                                         <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                                             <tr>
-                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider"><input type="checkbox" className="rounded" /></th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded cursor-pointer accent-indigo-600 w-3.5 h-3.5"
+                                                        checked={filteredData.length > 0 && filteredData.every((item: any) => selectedAppIds.includes(item.id))}
+                                                        onChange={() => toggleSelectAll(filteredData)}
+                                                        title="Select / Deselect All"
+                                                    />
+                                                </th>
                                                 <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Application Ref</th>
                                                 <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Applicant & Target</th>
                                                 <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Assigned Staff</th>
@@ -2246,8 +2354,15 @@ export default function AdminDashboardPage() {
                                                 const isUnassigned = !assignedStaffId || assignedStaffId === 'unassigned' || assignedStaffId === 'null';
 
                                                 return (
-                                                <tr key={idx} className={`hover:bg-slate-50/70 transition-colors group ${isUnassigned ? 'bg-amber-50/20' : ''}`}>
-                                                    <td className="px-4 py-3"><input type="checkbox" className="rounded" /></td>
+                                                <tr key={idx} className={`hover:bg-slate-50/70 transition-colors group ${selectedAppIds.includes(item.id) ? 'bg-indigo-50/60' : (isUnassigned ? 'bg-amber-50/20' : '')}`}>
+                                                    <td className="px-4 py-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded cursor-pointer accent-indigo-600 w-3.5 h-3.5"
+                                                            checked={selectedAppIds.includes(item.id)}
+                                                            onChange={() => toggleSelectApp(item.id)}
+                                                        />
+                                                    </td>
                                                     
                                                     {/* App ID & Ref */}
                                                     <td className="px-4 py-3">

@@ -522,7 +522,75 @@ export class ApplicationService {
     if (filters?.limit) query = query.limit(filters.limit);
 
     const { data: applications, count } = await query;
-    return { success: true, data: applications || [], pagination: { total: count || 0, limit: filters?.limit || 20, offset: filters?.offset || 0 } };
+    let resultList = applications || [];
+
+    if (resultList.length > 0) {
+      try {
+        const rawStaffIds = resultList.map((app: any) => app.assignedStaffId).filter(Boolean);
+        const uniqueStaffIds = Array.from(new Set(rawStaffIds));
+
+        if (uniqueStaffIds.length > 0) {
+          const staffMap: Record<string, any> = {};
+
+          const orConds = uniqueStaffIds.map((id: string) => id.includes('@') ? `email.eq.${id}` : `id.eq.${id}`).join(',');
+          const { data: staffUsers } = await this.db
+            .from('User')
+            .select('id, firstName, lastName, email, phone, mobile, role, designation')
+            .or(orConds);
+
+          (staffUsers || []).forEach((u: any) => {
+            const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || 'Support Staff';
+            const staffObj = {
+              id: u.id,
+              name: fullName,
+              email: u.email || '',
+              phone: u.phone || u.mobile || '+91 98450 12345',
+              role: u.designation || (u.role === 'admin' || u.role === 'super_admin' ? 'Senior Loan Officer & Admin' : 'Senior Education Loan Advisor'),
+            };
+            if (u.id) staffMap[u.id.toLowerCase()] = staffObj;
+            if (u.email) staffMap[u.email.toLowerCase()] = staffObj;
+          });
+
+          const { data: staffProfiles } = await this.db.from('StaffProfile').select('*');
+          (staffProfiles || []).forEach((sp: any) => {
+            const fullName = sp.fullName || sp.name || 'Support Officer';
+            const staffObj = {
+              id: sp.linkedUserId || sp.staffId || sp.id,
+              name: fullName,
+              email: sp.email || '',
+              phone: sp.phoneNumber || sp.phone || '+91 98450 12345',
+              role: sp.role || sp.designation || sp.department || 'Education Loan Processing Specialist',
+            };
+            if (sp.id) staffMap[sp.id.toLowerCase()] = staffObj;
+            if (sp.staffId) staffMap[sp.staffId.toLowerCase()] = staffObj;
+            if (sp.linkedUserId) staffMap[sp.linkedUserId.toLowerCase()] = staffObj;
+            if (sp.email) staffMap[sp.email.toLowerCase()] = staffObj;
+          });
+
+          resultList = resultList.map((app: any) => {
+            if (app.assignedStaffId) {
+              const key = String(app.assignedStaffId).toLowerCase();
+              const staff = staffMap[key];
+              if (staff) {
+                return {
+                  ...app,
+                  assignedStaffName: staff.name,
+                  assignedStaffEmail: staff.email,
+                  assignedStaffPhone: staff.phone,
+                  assignedStaffRole: staff.role,
+                  assignedStaff: staff,
+                };
+              }
+            }
+            return app;
+          });
+        }
+      } catch (err: any) {
+        console.warn('[ApplicationService.getUserApplications] Staff details enrichment warning:', err?.message);
+      }
+    }
+
+    return { success: true, data: resultList, pagination: { total: count || 0, limit: filters?.limit || 20, offset: filters?.offset || 0 } };
   }
 
   async updateApplication(applicationId: string, userId: string, data: any) {
@@ -1088,6 +1156,28 @@ export class ApplicationService {
           candidateIds.push(filters.staffEmail.toLowerCase());
         }
 
+        // 1. Resolve the User record by email or by the raw staffId — get their real UUID
+        try {
+          const orFilter = [
+            filters.assignedStaffId ? `id.eq.${filters.assignedStaffId}` : null,
+            filters.staffEmail ? `email.eq.${filters.staffEmail}` : null,
+          ].filter(Boolean).join(',');
+
+          if (orFilter) {
+            const { data: userRecord } = await this.db
+              .from('User')
+              .select('id, email')
+              .or(orFilter)
+              .maybeSingle();
+
+            if (userRecord) {
+              if (userRecord.id) candidateIds.push(userRecord.id);
+              if (userRecord.email) candidateIds.push(userRecord.email);
+            }
+          }
+        } catch (_) {}
+
+        // 2. Resolve via StaffProfile — get all IDs associated with this staff member's profile
         try {
           const { data: profiles } = await this.db
             .from('StaffProfile')
@@ -1095,7 +1185,7 @@ export class ApplicationService {
 
           if (profiles && profiles.length > 0) {
             profiles.forEach((p: any) => {
-              const pEmail = (p.email || p.linkedUser?.email || '').toLowerCase();
+              const pEmail = (p.email || '').toLowerCase();
               const reqEmail = (filters.staffEmail || '').toLowerCase();
               const pLink = (p.linkedUserId || '').toLowerCase();
               const reqStaffId = (filters.assignedStaffId || '').toLowerCase();
@@ -1111,8 +1201,8 @@ export class ApplicationService {
         } catch (_) {}
 
         const uniqueIds = Array.from(new Set(candidateIds.filter(Boolean)));
+        console.log(`[ApplicationService] Staff filter — candidateIds: ${uniqueIds.join(', ')}`);
         const orConditions = uniqueIds.map(id => `assignedStaffId.eq.${id}`);
-
         query = query.or(orConditions.join(','));
       }
 
@@ -1227,6 +1317,12 @@ export class ApplicationService {
         historyData.toStatus = data.status;
         if (data.status === 'rejected' && data.rejectionReason) updateData.remarks = data.rejectionReason;
         if (data.status === 'approved') { updateData.stage = 'sanction'; updateData.progress = 90; }
+        else if (data.status === 'submitted_to_bank' || data.status === 'routed_multiparty') {
+          updateData.stage = 'bank_review';
+          updateData.progress = Math.max(application.progress || 0, 70);
+          updateData.submittedToBankAt = application.submittedToBankAt || new Date().toISOString();
+          updateData.bankWorkflowStatus = 'SUBMITTED_TO_BANK';
+        }
         else if (data.status === 'rejected') { updateData.progress = 0; }
         else if (data.status === 'processing') { updateData.stage = 'document_verification'; updateData.progress = 40; }
         else if (data.status === 'disbursed' || data.status === 'disbursement_confirmed') { updateData.stage = 'disbursement'; updateData.progress = 100; }

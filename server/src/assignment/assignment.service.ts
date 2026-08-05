@@ -184,14 +184,18 @@ export class AssignmentService {
   async getEligibleStaff(loanType?: string): Promise<any[]> {
     const staffMap = new Map<string, any>();
 
-    // 1. Fetch from StaffProfile table
+    // 1. Fetch from StaffProfile table — only profiles linked to staff role users
     try {
       const { data: profiles } = await this.db
         .from('StaffProfile')
-        .select('*, linkedUser:User!linkedUserId(id, firstName, lastName, email)');
+        .select('*, linkedUser:User!linkedUserId(id, firstName, lastName, email, role)');
 
       if (profiles && profiles.length > 0) {
         for (const p of profiles) {
+          const linkedRole = (p.linkedUser?.role || '').toLowerCase();
+          // Skip admin/super_admin linked profiles — only pure 'staff' role
+          if (linkedRole && linkedRole !== 'staff') continue;
+
           const uid = p.linkedUserId || p.id;
           const email = p.linkedUser?.email || p.email;
           if (uid) {
@@ -199,6 +203,7 @@ export class AssignmentService {
               id: p.id,
               linkedUserId: uid,
               email: email,
+              role: p.linkedUser?.role || 'staff',
               linkedUser: p.linkedUser || { id: uid, email },
               isAvailable: p.isAvailable !== false,
               isOnLeave: p.isOnLeave === true,
@@ -210,7 +215,7 @@ export class AssignmentService {
       this.logger.warn(`[AssignmentEngine] Could not query StaffProfile table: ${err}`);
     }
 
-    // 2. Fetch all Users with staff/admin roles (case-insensitive) from User table
+    // 2. Fetch all Users with STAFF role only from User table (admins must not receive loan assignments)
     try {
       const { data: users } = await this.db
         .from('User')
@@ -219,8 +224,9 @@ export class AssignmentService {
       if (users && users.length > 0) {
         for (const u of users) {
           const roleLower = (u.role || '').toLowerCase();
-          const isStaffRole = roleLower.includes('staff') || roleLower.includes('admin');
-          if (!isStaffRole) continue;
+          // Only include pure 'staff' role — NOT admin or super_admin
+          const isStaffOnly = roleLower === 'staff';
+          if (!isStaffOnly) continue;
 
           const uidKey = u.id?.toLowerCase();
           const emailKey = u.email?.toLowerCase();
@@ -233,6 +239,7 @@ export class AssignmentService {
               id: u.id,
               linkedUserId: u.id,
               email: u.email,
+              role: u.role,
               linkedUser: u,
               isAvailable: true,
               isOnLeave: false,
@@ -320,6 +327,56 @@ export class AssignmentService {
 
     return { success: true, message: 'Loan application reassigned successfully' };
   }
+
+  async bulkReassignLoans(
+    loanIds: string[],
+    toStaffId: string,
+    reason: string = 'bulk_reassign_admin',
+    assignedBy: string = 'admin'
+  ): Promise<{ success: boolean; count: number; message: string }> {
+    if (!loanIds || !Array.isArray(loanIds) || loanIds.length === 0) {
+      return { success: false, count: 0, message: 'No applications specified for bulk reassign' };
+    }
+
+    let successCount = 0;
+
+    if (toStaffId === 'auto' || toStaffId === 'round_robin') {
+      const eligibleStaff = await this.getEligibleStaff();
+      if (!eligibleStaff || eligibleStaff.length === 0) {
+        return { success: false, count: 0, message: 'No eligible staff members available for round-robin assignment' };
+      }
+
+      let staffIdx = 0;
+      for (const loanId of loanIds) {
+        const selectedStaff = eligibleStaff[staffIdx % eligibleStaff.length];
+        const staffUserId = selectedStaff.linkedUserId || selectedStaff.assignedStaffId || selectedStaff.id;
+        staffIdx++;
+
+        try {
+          const res = await this.reassignLoan(loanId, staffUserId, reason, assignedBy);
+          if (res.success) successCount++;
+        } catch (err) {
+          this.logger.error(`[BulkReassign] Failed to round-robin assign loan ${loanId}:`, err);
+        }
+      }
+    } else {
+      for (const loanId of loanIds) {
+        try {
+          const res = await this.reassignLoan(loanId, toStaffId, reason, assignedBy);
+          if (res.success) successCount++;
+        } catch (err) {
+          this.logger.error(`[BulkReassign] Failed to reassign loan ${loanId} to ${toStaffId}:`, err);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      count: successCount,
+      message: `Successfully reassigned ${successCount} application(s).`,
+    };
+  }
+
 
   async lockApplication(loanId: string, staffId: string): Promise<{ success: boolean; message: string; lockedBy?: string }> {
     const { data: loan } = await this.db

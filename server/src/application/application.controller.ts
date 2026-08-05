@@ -245,9 +245,12 @@ export class ApplicationController {
         }
 
         const user = req?.user;
+        // Per-staff isolation: staff role users see ONLY applications assigned to them.
+        // Admins and super_admins see all applications (no filter applied).
         let assignedStaffId: string | undefined = undefined;
         let staffEmail: string | undefined = undefined;
         if (user && user.role === 'staff') {
+            // Pass both the user ID and email — service resolves all matching candidate IDs
             assignedStaffId = user.id || user.uid;
             staffEmail = user.email;
         }
@@ -356,7 +359,7 @@ export class ApplicationController {
             throw error;
         }
     }
-    
+
     /**
      * Share application details via email (Admin)
      * POST /applications/admin/:id/share
@@ -389,7 +392,7 @@ export class ApplicationController {
             throw new NotFoundException('Document file not found');
         }
 
-        
+
         if (doc.filePath && doc.filePath.startsWith('in.gov.')) {
             const html = `
 <!DOCTYPE html>
@@ -449,8 +452,8 @@ export class ApplicationController {
             console.log(`[viewDocumentAdmin] Document not found locally at ${absolutePath}. Generating presigned URL (download=${download}) for S3 key: ${doc.filePath}`);
             const filename = doc.fileName || doc.docName || 'document.pdf';
             const presignedUrl = await this.s3Service.getPresignedUrl(
-                doc.filePath, 
-                3600, 
+                doc.filePath,
+                3600,
                 download === 'true' ? filename : undefined
             );
             return res.redirect(302, presignedUrl);
@@ -604,12 +607,12 @@ export class ApplicationController {
                     day: '2-digit',
                     month: 'short',
                     year: 'numeric',
-                  })
+                })
                 : new Date().toLocaleDateString('en-IN', {
                     day: '2-digit',
                     month: 'short',
                     year: 'numeric',
-                  }),
+                }),
         };
 
         const pdfBuffer = await this.notificationService.generateDisbursementPdf(details);

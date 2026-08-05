@@ -1546,6 +1546,14 @@ export const assignmentApi = {
             body: JSON.stringify({ toStaffId, reason: reason || 'manual' }),
         }),
 
+    // Bulk reassign multiple applications to a staff member (or 'auto' / 'round_robin')
+    bulkReassign: (loanIds: string[], toStaffId: string, reason?: string) =>
+        apiFetch(`${API_URL}/assignment/bulk-reassign`, {
+            method: 'POST',
+            body: JSON.stringify({ loanIds, toStaffId, reason: reason || 'bulk_reassign_admin' }),
+        }),
+
+
     // Get all applications assigned to the current (or specified) staff member (optionally including unassigned)
     getMyApplications: (staffId?: string, status?: string, includeUnassigned?: boolean) => {
         const params = new URLSearchParams();

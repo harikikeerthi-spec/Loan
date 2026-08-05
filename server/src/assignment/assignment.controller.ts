@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { AssignmentService } from './assignment.service';
 import { StaffGuard } from '../auth/staff.guard';
-import { ReassignLoanDto, LockApplicationDto, UpdateStaffAvailabilityDto } from './dto/assign.dto';
+import { ReassignLoanDto, BulkReassignDto, LockApplicationDto, UpdateStaffAvailabilityDto } from './dto/assign.dto';
 
 @Controller('assignment')
 @UseGuards(StaffGuard)
@@ -58,6 +58,20 @@ export class AssignmentController {
       assignedBy
     );
     return result;
+  }
+
+  @Post('bulk-reassign')
+  async bulkReassignLoans(
+    @Body() dto: BulkReassignDto,
+    @Req() req: any,
+  ) {
+    const assignedBy = req.user?.id || req.user?.uid || 'admin';
+    return await this.assignmentService.bulkReassignLoans(
+      dto.loanIds,
+      dto.toStaffId,
+      dto.reason || 'bulk_reassign_admin',
+      assignedBy
+    );
   }
 
   @Post('lock/:loanId')

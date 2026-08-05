@@ -544,22 +544,42 @@ export default function DashboardPage() {
     const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
 
     const getStaffDetails = (app: any) => {
-        if (app?.assignedStaffName) {
+        if (app?.assignedStaffName || app?.assignedStaff?.name) {
+            const name = app.assignedStaffName || app.assignedStaff?.name;
             return {
-                name: app.assignedStaffName,
-                email: app.assignedStaffEmail || `${app.assignedStaffName.toLowerCase().replace(/\s+/g, '.')}@vtu.edu.in`,
-                phone: app.assignedStaffPhone || "+91 98450 12345",
-                role: app.assignedStaffRole || "Senior Loan Officer"
+                isAssigned: true,
+                name,
+                email: app.assignedStaffEmail || app.assignedStaff?.email || `${name.toLowerCase().replace(/\s+/g, '.')}@vtu.edu.in`,
+                phone: app.assignedStaffPhone || app.assignedStaff?.phone || "+91 98450 12345",
+                role: app.assignedStaffRole || app.assignedStaff?.role || "Assigned Loan Processing Officer",
+                initials: name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
             };
         }
         if (app?.assignedTo?.name) {
+            const name = app.assignedTo.name;
             return {
-                name: app.assignedTo.name,
+                isAssigned: true,
+                name,
                 email: app.assignedTo.email || "support@vtu.edu.in",
                 phone: app.assignedTo.phone || "+91 98450 12345",
-                role: app.assignedTo.role || "Loan Processing Manager"
+                role: app.assignedTo.role || "Senior Loan Officer",
+                initials: name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
             };
         }
+        if (app?.assignedStaffId) {
+            const staffIdStr = String(app.assignedStaffId);
+            const isEmail = staffIdStr.includes('@');
+            const cleanName = isEmail ? staffIdStr.split('@')[0].replace(/[\._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : "Dedicated Staff Officer";
+            return {
+                isAssigned: true,
+                name: cleanName,
+                email: isEmail ? staffIdStr : "staffloans@gmail.com",
+                phone: "+91 98450 12345",
+                role: "Senior Education Loan Advisor",
+                initials: cleanName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+            };
+        }
+
         const staffPool: Record<string, { name: string; email: string; phone: string; role: string }> = {
             sbi: { name: "Ananya Sharma", email: "ananya.sharma@vtu.edu.in", phone: "+91 98112 34567", role: "SBI Nodal Desk Specialist" },
             hdfc: { name: "Rajesh Kumar", email: "rajesh.kumar@vtu.edu.in", phone: "+91 98223 45678", role: "HDFC Education Loan Manager" },
@@ -568,7 +588,12 @@ export default function DashboardPage() {
             bankofbaroda: { name: "Suresh Patil", email: "suresh.patil@vtu.edu.in", phone: "+91 98556 78901", role: "BOB Senior Underwriter" }
         };
         const key = (app?.bank || "sbi").toLowerCase().replace(/[^a-z]/g, "");
-        return staffPool[key] || { name: "Staff Vidya", email: "staffvidyaloans@gmail.com", phone: "+91 98450 12345", role: "Senior Education Loan Advisor" };
+        const fallback = staffPool[key] || { name: "Staff Vidya", email: "staffloans@gmail.com", phone: "+91 98450 12345", role: "Senior Education Loan Advisor" };
+        return {
+            isAssigned: false,
+            ...fallback,
+            initials: fallback.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+        };
     };
 
     const allDocsUploaded = (() => {
@@ -1007,16 +1032,46 @@ export default function DashboardPage() {
                                                     {app.status !== 'draft' && (() => {
                                                         const staff = getStaffDetails(app);
                                                         return (
-                                                            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                                                                <div className="flex items-center gap-1.5 text-[13px] text-slate-500">
-                                                                    <span className="material-symbols-outlined text-[15px] text-indigo-500">support_agent</span>
-                                                                    <span className="font-bold text-slate-700">Assigned Support Staff:</span>
-                                                                    <span className="font-semibold text-slate-800">{staff.name}</span>
+                                                            <div className="mt-4 pt-3 border-t border-slate-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-purple-50/40 via-indigo-50/20 to-transparent p-3 rounded-xl border border-purple-100/50">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="relative">
+                                                                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#6605c7] to-indigo-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                                                                            {staff.initials || "SO"}
+                                                                        </div>
+                                                                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" title="Active Staff Assigned" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[9px] font-black uppercase tracking-wider text-[#6605c7] bg-purple-100/60 px-1.5 py-0.5 rounded">
+                                                                                {staff.isAssigned ? "Assigned Support Officer" : "Dedicated Advisor"}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="text-xs font-extrabold text-slate-900 mt-0.5">{staff.name}</p>
+                                                                        <p className="text-[10px] text-slate-500 font-semibold">{staff.role}</p>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-2.5 text-[13px] text-slate-400">
-                                                                    <a href={`mailto:${staff.email}`} className="hover:text-indigo-600 transition-colors font-medium">{staff.email}</a>
-                                                                    <span>•</span>
-                                                                    <span className="font-semibold text-slate-500">{staff.phone}</span>
+
+                                                                <div className="flex items-center gap-3 text-xs shrink-0 pl-12 sm:pl-0">
+                                                                    {staff.email && (
+                                                                        <a
+                                                                            href={`mailto:${staff.email}`}
+                                                                            className="px-2.5 py-1 bg-white hover:bg-purple-50 text-indigo-700 font-bold rounded-lg border border-purple-100 transition-all text-[11px] flex items-center gap-1.5 shadow-2xs"
+                                                                            title="Send email to assigned officer"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[13px]">mail</span>
+                                                                            <span className="max-w-[140px] truncate">{staff.email}</span>
+                                                                        </a>
+                                                                    )}
+                                                                    {staff.phone && (
+                                                                        <a
+                                                                            href={`tel:${staff.phone.replace(/[^0-9+]/g, '')}`}
+                                                                            className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-100 transition-all text-[11px] flex items-center gap-1.5 shadow-2xs"
+                                                                            title="Call assigned officer"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[13px]">call</span>
+                                                                            <span>{staff.phone}</span>
+                                                                        </a>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         );
@@ -1175,20 +1230,33 @@ export default function DashboardPage() {
                                                 {app.status !== 'draft' && (() => {
                                                     const staff = getStaffDetails(app);
                                                     return (
-                                                        <div className="flex flex-col justify-center gap-1 min-w-[210px] border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 pl-0 md:pl-6">
-                                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block mb-1">Assigned Support Staff</span>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                                                                    <span className="material-symbols-outlined text-[16px]">support_agent</span>
+                                                        <div className="flex flex-col justify-center gap-1.5 min-w-[230px] border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 pl-0 md:pl-6 bg-slate-50/40 p-3 rounded-xl">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Assigned Support Staff</span>
+                                                                <span className="w-2 h-2 rounded-full bg-emerald-500" title="Active Staff Assigned" />
+                                                            </div>
+                                                            <div className="flex items-center gap-2.5 mt-0.5">
+                                                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6605c7] to-indigo-600 text-white font-extrabold text-[11px] flex items-center justify-center shrink-0 shadow-2xs">
+                                                                    {staff.initials || "SO"}
                                                                 </div>
-                                                                <div>
-                                                                    <p className="text-xs font-bold text-slate-800">{staff.name}</p>
-                                                                    <p className="text-[9px] text-slate-400 font-semibold uppercase">{staff.role}</p>
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-xs font-extrabold text-slate-900 truncate" title={staff.name}>{staff.name}</p>
+                                                                    <p className="text-[9px] text-[#6605c7] font-semibold uppercase truncate">{staff.role}</p>
                                                                 </div>
                                                             </div>
-                                                            <div className="space-y-0.5 pl-9 mt-1">
-                                                                <a href={`mailto:${staff.email}`} className="text-[10px] text-slate-500 hover:text-indigo-600 block transition-colors font-medium">{staff.email}</a>
-                                                                <span className="text-[10px] text-slate-400 font-semibold block">{staff.phone}</span>
+                                                            <div className="space-y-1 mt-1">
+                                                                {staff.email && (
+                                                                    <a href={`mailto:${staff.email}`} className="text-[10px] text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 transition-colors font-medium truncate" title={staff.email}>
+                                                                        <span className="material-symbols-outlined text-[12px] text-indigo-500">mail</span>
+                                                                        <span className="truncate">{staff.email}</span>
+                                                                    </a>
+                                                                )}
+                                                                {staff.phone && (
+                                                                    <a href={`tel:${staff.phone.replace(/[^0-9+]/g, '')}`} className="text-[10px] text-slate-600 hover:text-emerald-600 flex items-center gap-1.5 transition-colors font-semibold">
+                                                                        <span className="material-symbols-outlined text-[12px] text-emerald-500">call</span>
+                                                                        <span>{staff.phone}</span>
+                                                                    </a>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );
@@ -1458,6 +1526,60 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Assigned Support Staff Card in Details Modal */}
+                                {(() => {
+                                    const staff = getStaffDetails(selectedAppDetails);
+                                    return (
+                                        <div className="sm:col-span-2 mt-2 bg-gradient-to-r from-purple-50/70 via-indigo-50/50 to-purple-50/30 p-4 rounded-xl border border-purple-100 shadow-2xs">
+                                            <div className="flex items-center justify-between mb-3 border-b border-purple-100/80 pb-2">
+                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-sm text-[#6605c7]">support_agent</span>
+                                                    Assigned Support Staff Details
+                                                </h3>
+                                                <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                    Active Advisor
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#6605c7] to-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                                        {staff.initials || "SO"}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[10px] font-extrabold text-slate-400 uppercase">Officer Name</div>
+                                                        <div className="font-extrabold text-slate-900 text-xs mt-0.5">{staff.name}</div>
+                                                        <div className="text-[10px] text-[#6605c7] font-semibold">{staff.role}</div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] font-extrabold text-slate-400 uppercase">Official Email</div>
+                                                    {staff.email ? (
+                                                        <a href={`mailto:${staff.email}`} className="font-bold text-indigo-600 hover:underline text-xs flex items-center gap-1 mt-1 truncate">
+                                                            <span className="material-symbols-outlined text-[13px]">mail</span>
+                                                            <span className="truncate">{staff.email}</span>
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-xs font-semibold text-slate-500 mt-1 block">—</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] font-extrabold text-slate-400 uppercase">Direct Phone</div>
+                                                    {staff.phone ? (
+                                                        <a href={`tel:${staff.phone.replace(/[^0-9+]/g, '')}`} className="font-bold text-emerald-700 hover:text-emerald-800 text-xs flex items-center gap-1 mt-1">
+                                                            <span className="material-symbols-outlined text-[13px]">call</span>
+                                                            <span>{staff.phone}</span>
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-xs font-semibold text-slate-500 mt-1 block">—</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 {/* Notes */}
                                 {selectedAppDetails.notes && (
                                     <div className="space-y-2 sm:col-span-2 mt-2 bg-amber-50/50 p-4 rounded-xl border border-amber-100/50">

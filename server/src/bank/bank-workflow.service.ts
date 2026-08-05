@@ -2691,6 +2691,8 @@ export class BankWorkflowService {
       submittedToBankAt: new Date().toISOString(),
       bank: bankNamesStr,
       applicationNumber: appNumber,
+      stage: 'bank_review',
+      progress: 70,
     };
 
     if (createdSubmissions.length > 0) {

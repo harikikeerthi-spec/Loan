@@ -185,15 +185,7 @@ export default function InactivePipelinePage() {
 
     const filteredData = useMemo(() => {
         return data.filter(item => {
-            if (user && user.role !== 'admin' && user.role !== 'super_admin') {
-                const staffId = (user.id || '').toLowerCase();
-                const staffEmail = (user.email || '').toLowerCase();
-                const assigned = (item.assignedStaffId || '').toLowerCase();
-
-                if (!assigned || (assigned !== staffId && assigned !== staffEmail)) {
-                    return false;
-                }
-            }
+            // Applications are already securely filtered by backend role & staff assignment query
 
             const fullName = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.toLowerCase();
             const college = (item.universityName || item.college || '').toLowerCase();
@@ -355,27 +347,55 @@ export default function InactivePipelinePage() {
                     </table>
                 </div>
 
-                {filteredData.length > applicationsPerPage && (
-                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                {filteredData.length > 0 && (
+                    <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
                         <p className="text-[11px] font-bold text-slate-700">
-                            Showing <span className="text-indigo-600">{showingStart}-{showingEnd}</span> of {filteredData.length} entries
+                            Showing <span className="text-indigo-600 font-extrabold">{showingStart}–{showingEnd}</span> of <span className="font-extrabold">{filteredData.length}</span> applications &nbsp;·&nbsp; Page <span className="text-indigo-600 font-extrabold">{currentPage}</span> of <span className="font-extrabold">{totalPages}</span>
                         </p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                disabled={currentPage === 1 || loading}
+                                onClick={() => setCurrentPage(1)}
+                                className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center justify-center shadow-2xs"
+                                title="First page"
+                            >
+                                <span className="material-symbols-outlined text-[15px]">first_page</span>
+                            </button>
                             <button
                                 disabled={currentPage === 1 || loading}
                                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center gap-1 shadow-2xs"
                             >
-                                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
-                                Previous
+                                <span className="material-symbols-outlined text-[15px]">chevron_left</span>Prev
                             </button>
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                                const page = startPage + i;
+                                if (page > totalPages) return null;
+                                return (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`w-8 h-8 rounded-lg text-[11px] font-black transition-all shadow-2xs ${page === currentPage ? 'bg-indigo-600 text-white border border-indigo-600' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                    >
+                                        {page}
+                                    </button>
+                                );
+                            })}
                             <button
                                 disabled={currentPage >= totalPages || loading}
                                 onClick={() => setCurrentPage(prev => prev + 1)}
-                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center gap-1 shadow-2xs"
                             >
-                                Next
-                                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                                Next<span className="material-symbols-outlined text-[15px]">chevron_right</span>
+                            </button>
+                            <button
+                                disabled={currentPage >= totalPages || loading}
+                                onClick={() => setCurrentPage(totalPages)}
+                                className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center justify-center shadow-2xs"
+                                title="Last page"
+                            >
+                                <span className="material-symbols-outlined text-[15px]">last_page</span>
                             </button>
                         </div>
                     </div>
