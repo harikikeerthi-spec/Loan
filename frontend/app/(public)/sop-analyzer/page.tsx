@@ -187,11 +187,18 @@ export default function SOPAnalyzerPage() {
                                                 Areas to Strengthen
                                             </h4>
                                             <ul className="space-y-3">
-                                                {(result.weakAreas || ["Detailed research goals could be more specific.", "Financial planning section needs better justification."]).map((w: any, i: number) => (
-                                                    <li key={i} className="text-xs text-gray-600 flex gap-2">
-                                                        <span className="text-[#6605c7]">•</span> {typeof w === 'string' ? w : (w?.recommendation || w?.issue || 'Needs improvement')}
-                                                    </li>
-                                                ))}
+                                                 {(result.weakAreas || ["Detailed research goals could be more specific.", "Financial planning section needs better justification."]).map((w: any, i: number) => {
+                                                     const text = typeof w === 'string'
+                                                         ? w
+                                                         : w?.recommendation
+                                                         ? `${w.issue ? `${w.issue}: ` : ''}${w.recommendation}`
+                                                         : (w?.issue || w?.suggestion || w?.point || 'Needs improvement');
+                                                     return (
+                                                         <li key={i} className="text-xs text-gray-600 flex gap-2">
+                                                             <span className="text-[#6605c7]">•</span> {text}
+                                                         </li>
+                                                     );
+                                                 })}
                                             </ul>
                                         </div>
                                     </div>

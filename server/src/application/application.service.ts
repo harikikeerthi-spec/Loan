@@ -10,6 +10,7 @@ import { BankWorkflowService } from '../bank/bank-workflow.service';
 import { S3Service } from '../document/s3.service';
 import * as path from 'path';
 import * as fs from 'fs';
+import { AssignmentService } from '../assignment/assignment.service';
 
 const APPLICATION_STAGES = {
   application_submitted: { order: 1, label: 'Application Submitted', progress: 10 },
@@ -78,6 +79,7 @@ export class ApplicationService {
     private s3Service: S3Service,
     private evvEngine: EvvEngineService,
     private workflowService: BankWorkflowService,
+    private assignmentService: AssignmentService,
   ) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
@@ -301,6 +303,15 @@ export class ApplicationService {
       } catch (e) {
         console.error('Failed to send loan tracking email on application creation:', e);
       }
+
+      // -------------------------------------------------------------
+      // NEW: Auto-assign loan to eligible staff via AssignmentEngine
+      // -------------------------------------------------------------
+      try {
+        await this.assignmentService.assignLoan(application.id, 'system');
+      } catch (e) {
+        console.error('Failed to auto-assign loan application:', e);
+      }
     }
 
     return { success: true, data: application, message: 'Application created successfully' };
@@ -374,9 +385,18 @@ export class ApplicationService {
         const bankName = application.bank || 'our partner bank';
         await this.emailService.sendLoanTrackingEmail(registeredEmail, userName, bankName, application);
       }
-    } catch (e) {
-      console.error('Failed to send loan tracking email on application submission:', e);
-    }
+      } catch (e) {
+        console.error('Failed to send loan tracking email on application submission:', e);
+      }
+
+      // -------------------------------------------------------------
+      // NEW: Auto-assign loan to eligible staff via AssignmentEngine
+      // -------------------------------------------------------------
+      try {
+        await this.assignmentService.assignLoan(applicationId, 'system');
+      } catch (e) {
+        console.error('Failed to auto-assign loan application on submission:', e);
+      }
 
     return { success: true, data: updated, message: 'Application submitted successfully' };
   }
@@ -998,13 +1018,103 @@ export class ApplicationService {
     return { success: true, message: 'Document deleted successfully' };
   }
 
-  async getAllApplications(filters?: { status?: string; stage?: string; loanType?: string; bank?: string; search?: string; fromDate?: string; toDate?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc'; userId?: string; excludeStatus?: string }) {
+  async autoAssignUnassignedLoans() {
+    try {
+      const { data: allLoans } = await this.db
+        .from('LoanApplication')
+        .select('id, assignedStaffId');
+
+      if (allLoans && allLoans.length > 0) {
+        const eligibleStaff = await this.assignmentService.getEligibleStaff();
+        if (!eligibleStaff || eligibleStaff.length === 0) return;
+
+        // Build valid staff ID set
+        const validStaffIds = new Set<string>();
+        eligibleStaff.forEach(s => {
+          if (s.id) validStaffIds.add(s.id.toLowerCase());
+          if (s.linkedUserId) validStaffIds.add(s.linkedUserId.toLowerCase());
+          if (s.email) validStaffIds.add(s.email.toLowerCase());
+        });
+
+        // Filter unassigned loans or loans assigned to stale/deleted IDs
+        const unassignedLoans = allLoans.filter(l => {
+          const s = (l.assignedStaffId || '').trim().toLowerCase();
+          return !s || s === 'unassigned' || s === 'null' || s === 'undefined' || !validStaffIds.has(s);
+        });
+
+        // If unassigned loans exist OR staff distribution is uneven, rebalance all active applications via Round-Robin
+        if (unassignedLoans.length > 0) {
+          console.log(`[AutoAssign] Distributing ${allLoans.length} active loan applications via Round-Robin across ${eligibleStaff.length} active staff members...`);
+
+          for (let i = 0; i < allLoans.length; i++) {
+            const loan = allLoans[i];
+            const targetStaff = eligibleStaff[i % eligibleStaff.length];
+            const targetStaffId = targetStaff.linkedUserId || targetStaff.id || targetStaff.email;
+
+            try {
+              await this.db
+                .from('LoanApplication')
+                .update({ assignedStaffId: targetStaffId })
+                .eq('id', loan.id);
+            } catch (e) {
+              console.error(`[AutoAssign] Failed to update loan ${loan.id}:`, e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[AutoAssign] Error in autoAssignUnassignedLoans:', e);
+    }
+  }
+
+  async getAllApplications(filters?: { status?: string; stage?: string; loanType?: string; bank?: string; search?: string; fromDate?: string; toDate?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc'; userId?: string; excludeStatus?: string; assignedStaffId?: string; staffEmail?: string; includeUnassigned?: boolean }) {
     try {
       console.log('[ApplicationService.getAllApplications] Filters:', JSON.stringify(filters));
-      
+
+      // Auto-assign any existing unassigned applications so every active loan belongs strictly to 1 staff member
+      await this.autoAssignUnassignedLoans();
+
       let query = this.db
         .from('LoanApplication')
         .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason, tests), documents:ApplicationDocument(id, status), ProcessingFee(*)', { count: 'exact' });
+
+      // ── Strict per-staff isolation ──────────────────────────────────────
+      // When a non-admin staff member makes the request, return ONLY applications
+      // assigned strictly to them (by user ID, email, or staff profile ID).
+      if (filters?.assignedStaffId) {
+        let candidateIds: string[] = [filters.assignedStaffId];
+        if (filters.staffEmail) {
+          candidateIds.push(filters.staffEmail);
+          candidateIds.push(filters.staffEmail.toLowerCase());
+        }
+
+        try {
+          const { data: profiles } = await this.db
+            .from('StaffProfile')
+            .select('id, linkedUserId, email');
+
+          if (profiles && profiles.length > 0) {
+            profiles.forEach((p: any) => {
+              const pEmail = (p.email || p.linkedUser?.email || '').toLowerCase();
+              const reqEmail = (filters.staffEmail || '').toLowerCase();
+              const pLink = (p.linkedUserId || '').toLowerCase();
+              const reqStaffId = (filters.assignedStaffId || '').toLowerCase();
+              const pId = (p.id || '').toLowerCase();
+
+              if (pLink === reqStaffId || pId === reqStaffId || (reqEmail && pEmail === reqEmail)) {
+                if (p.id) candidateIds.push(p.id);
+                if (p.linkedUserId) candidateIds.push(p.linkedUserId);
+                if (p.email) candidateIds.push(p.email);
+              }
+            });
+          }
+        } catch (_) {}
+
+        const uniqueIds = Array.from(new Set(candidateIds.filter(Boolean)));
+        const orConditions = uniqueIds.map(id => `assignedStaffId.eq.${id}`);
+
+        query = query.or(orConditions.join(','));
+      }
 
       // Apply sorting
       const sortCol = filters?.sortBy || 'updatedAt';
@@ -1454,11 +1564,19 @@ export class ApplicationService {
         }
       }
 
-      let allAppsQuery = this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, submittedAt, firstName, lastName');
+      let allAppsQuery = this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, submittedAt, firstName, lastName, assignedStaffId');
 
       if (isBank && bankName) {
         const excludeStr = '(submitted,pending,draft,docs_received,staff_verified,application_submitted)';
         allAppsQuery = allAppsQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
+      } else if (user && user.role !== 'admin' && user.role !== 'super_admin' && !isBank) {
+        const staffId = user.id || user.uid;
+        const staffEmail = user.email;
+        if (staffId && staffEmail) {
+          allAppsQuery = allAppsQuery.or(`assignedStaffId.eq.${staffId},assignedStaffId.eq.${staffEmail}`);
+        } else if (staffId) {
+          allAppsQuery = allAppsQuery.eq('assignedStaffId', staffId);
+        }
       }
 
       console.log(`[Stats] Executing single query for ${bankName || 'all banks'}...`);
@@ -2041,5 +2159,44 @@ export class ApplicationService {
     });
 
     console.log(`[EVV Background] Completed for application ${applicationId}: status=${evvStatus}, overall=₹${evvOverall}`);
+  }
+
+  async updateFollowUp(applicationId: string, staffId: string, data: { date: string; time?: string; notes?: string; status?: string }) {
+    try {
+      const payload: any = {
+        followUpDate: data.date || null,
+        followUpTime: data.time || null,
+        followUpNotes: data.notes || null,
+        followUpStatus: data.status || 'pending',
+        followUpSetBy: staffId,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const { data: updatedApp, error } = await this.db
+        .from('LoanApplication')
+        .update(payload)
+        .eq('id', applicationId)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        if (error.code === 'PGRST204') {
+          console.warn(`[ApplicationService.updateFollowUp] followUp columns missing in schema cache — fallback note creation`);
+          await this.addApplicationNote(applicationId, staffId, 'Staff Officer', {
+            content: `[REMINDER] Date: ${data.date} ${data.time ? `Time: ${data.time}` : ''} Notes: ${data.notes || ''}`,
+            type: 'reminder',
+            isInternal: true,
+          });
+          return { success: true, fallback: true };
+        }
+        console.error(`[ApplicationService.updateFollowUp] Error updating loan application:`, error);
+        throw error;
+      }
+
+      return { success: true, data: updatedApp };
+    } catch (e: any) {
+      console.error(`[ApplicationService.updateFollowUp] Error:`, e);
+      return { success: false, message: e.message || 'Failed to update follow-up' };
+    }
   }
 }

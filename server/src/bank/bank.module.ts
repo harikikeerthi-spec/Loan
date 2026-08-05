@@ -14,6 +14,7 @@ import { BankCronService } from './bank-cron.service';
 import { BankRbacInterceptor } from './bank-rbac.middleware';
 import { ChatModule } from '../chat/chat.module';
 import { AuthModule } from '../auth/auth.module';
+import { AssignmentModule } from '../assignment/assignment.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AuthModule } from '../auth/auth.module';
     UsersModule,
     ChatModule,
     AuthModule,
+    AssignmentModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'secretKey',
       signOptions: { expiresIn: '7d' },

@@ -43,8 +43,13 @@ function StaffLoginContent() {
         setLoading(true);
         setError("");
         try {
-            const res = await authApi.sendOtp(email.trim()) as { success: boolean; otp?: string; userExists: boolean };
-            if (res.otp) {
+            const res = await authApi.sendOtp(email.trim()) as { success: boolean; message?: string; otp?: string; userExists: boolean };
+            if (res && res.success === false) {
+                setError(res.message || "Invalid email address");
+                setLoading(false);
+                return;
+            }
+            if (res && res.otp) {
                 setDevOtp(res.otp);
             } else {
                 setDevOtp(null);

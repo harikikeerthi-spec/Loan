@@ -84,7 +84,12 @@ function LoginContent() {
         setLoading(true);
         setError("");
         try {
-            await authApi.sendOtp(emailVal);
+            const res: any = await authApi.sendOtp(emailVal);
+            if (res && res.success === false) {
+                setError(res.message || "Invalid email address");
+                setLoading(false);
+                return;
+            }
             setStep("otp");
             setResendDisabled(true);
             setCountdown(60);

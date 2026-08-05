@@ -199,6 +199,7 @@ function ApplicationsPageInner() {
     const searchParams = useSearchParams();
     const appIdParam = searchParams.get("id");
     const { onlineEmails } = useStaffLayout();
+    const { user } = useAuth();
 
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -214,7 +215,7 @@ function ApplicationsPageInner() {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const res: any = await adminApi.getApplications({ limit: "1000", excludeStatus: "submitted" });
+            const res: any = await adminApi.getApplications({ limit: "1000" });
             if (res && res.data) {
                 setData(res.data);
             } else {
@@ -257,6 +258,18 @@ function ApplicationsPageInner() {
                 return false;
             }
 
+            // STRICT INDIVIDUAL STAFF ASSIGNMENT FILTER:
+            // Standard staff officers ONLY see applications assigned specifically to them
+            if (user && user.role !== 'admin' && user.role !== 'super_admin') {
+                const staffId = (user.id || '').toLowerCase();
+                const staffEmail = (user.email || '').toLowerCase();
+                const assigned = (item.assignedStaffId || '').toLowerCase();
+
+                if (!assigned || (assigned !== staffId && assigned !== staffEmail)) {
+                    return false;
+                }
+            }
+
             const fullName = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.toLowerCase();
             const college = (item.universityName || item.college || '').toLowerCase();
             const email = (item.email || item.student?.email || item.user?.email || '').toLowerCase();
@@ -270,7 +283,7 @@ function ApplicationsPageInner() {
             if (filterStatus === "approved") return ["approved", "verified", "disbursed", "disbursement_confirmed"].includes(status);
             return status === filterStatus;
         });
-    }, [data, searchQuery, filterStatus]);
+    }, [data, searchQuery, filterStatus, user]);
 
     const totalPages = Math.max(1, Math.ceil(filteredData.length / applicationsPerPage));
     const pagedData = useMemo(() => {

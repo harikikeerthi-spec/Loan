@@ -229,6 +229,8 @@ export class ApplicationController {
         @Query('sortOrder') sortOrder?: string,
         @Query('userId') userId?: string,
         @Query('excludeStatus') excludeStatus?: string,
+        @Query('includeUnassigned') includeUnassigned?: string,
+        @Request() req?: any,
     ) {
         let dbBankName: string | undefined = bank;
         if (bank) {
@@ -240,6 +242,14 @@ export class ApplicationController {
                 auxilo: 'Auxilo'
             };
             dbBankName = mappings[bank.toLowerCase()] || bank;
+        }
+
+        const user = req?.user;
+        let assignedStaffId: string | undefined = undefined;
+        let staffEmail: string | undefined = undefined;
+        if (user && user.role !== 'admin' && user.role !== 'super_admin') {
+            assignedStaffId = user.id || user.uid;
+            staffEmail = user.email;
         }
 
         return this.applicationService.getAllApplications({
@@ -256,6 +266,9 @@ export class ApplicationController {
             sortOrder: sortOrder as 'asc' | 'desc',
             userId,
             excludeStatus,
+            assignedStaffId,
+            staffEmail,
+            includeUnassigned: includeUnassigned === 'true',
         });
     }
 
@@ -505,6 +518,20 @@ export class ApplicationController {
     ) {
         const authorName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
         return this.applicationService.addApplicationNote(id, req.user.id, authorName, body);
+    }
+
+    /**
+     * Update follow-up / reminder for application (Staff)
+     * PUT /applications/:id/follow-up
+     */
+    @Put(':id/follow-up')
+    @UseGuards(StaffGuard)
+    async updateFollowUp(
+        @Request() req,
+        @Param('id') id: string,
+        @Body() body: { date: string; time?: string; notes?: string; status?: string }
+    ) {
+        return this.applicationService.updateFollowUp(id, req.user.id, body);
     }
 
     // ==================== AGENT ENDPOINTS ====================

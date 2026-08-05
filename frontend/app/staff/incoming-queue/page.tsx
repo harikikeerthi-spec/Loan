@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, Suspense } from "react
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStaffLayout } from "@/app/staff/layout";
-import { adminApi, staffProfileApi, apiFetch } from "@/lib/api";
+import { adminApi, staffProfileApi, apiFetch, assignmentApi } from "@/lib/api";
 import Link from "next/link";
 import SendEmailModal from "@/components/staff/SendEmailModal";
 import ShareWithBankModal from "@/components/staff/ShareWithBankModal";
@@ -351,6 +351,10 @@ function IncomingQueuePageInner() {
     const [tempFollowUpNotes, setTempFollowUpNotes] = useState("");
     const [followUpItem, setFollowUpItem] = useState<any | null>(null);
 
+    // ── Assignment State ──────────────────────────────────────────────────
+    const [assigningIds, setAssigningIds] = useState<Set<string>>(new Set());
+    const [assignedStaffMap, setAssignedStaffMap] = useState<Record<string, { staffId: string; staffName?: string }>>({});
+
     const followUpKey = user?.id
         ? `staff_follow_up_dates_${user.id}`
         : user?.email
@@ -465,6 +469,14 @@ function IncomingQueuePageInner() {
             localStorage.setItem(studentKey, JSON.stringify(currentList));
         }
 
+        // 3. Persist reminder in Database via API
+        adminApi.updateFollowUp(appId, {
+            date: tempFollowUpDate,
+            time: selectedTime,
+            notes: tempFollowUpNotes,
+            status: "pending"
+        }).catch((err) => console.error("Failed to sync follow-up to DB:", err));
+
         setEditingFollowUpId(null);
         setFollowUpItem(null);
     };
@@ -494,6 +506,14 @@ function IncomingQueuePageInner() {
                 }
             }
         }
+
+        // 3. Clear reminder in Database via API
+        adminApi.updateFollowUp(appId, {
+            date: "",
+            time: "",
+            notes: "",
+            status: "completed"
+        }).catch((err) => console.error("Failed to clear follow-up in DB:", err));
 
         setEditingFollowUpId(null);
         setFollowUpItem(null);
@@ -552,20 +572,63 @@ function IncomingQueuePageInner() {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
+            // Fetch incoming student applications assigned to the logged-in staff member
+            const res: any = await adminApi.getApplications({ limit: "1000" });
+            const rawItems: any[] = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+            
+            // Filter to include active applications assigned strictly to logged-in staff member
+            const staffId = (user?.id || '').toLowerCase();
+            const staffEmail = (user?.email || '').toLowerCase();
+            const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
+            const items: any[] = rawItems.filter((app: any) => {
+                const s = (app.status || "").toLowerCase();
+                const bw = (app.bankWorkflowStatus || "").toUpperCase();
+                const isActive = s !== "draft" && s !== "rejected" && s !== "cancelled" && s !== "disbursed" && bw !== "REJECTED";
+                if (!isActive) return false;
+
+                if (!isAdmin) {
+                    const assigned = (app.assignedStaffId || '').toLowerCase();
+                    return assigned === staffId || assigned === staffEmail;
+                }
+                return true;
+            });
+
+            // Client-side pagination (getMyApplications returns all at once)
             const offset = (currentPage - 1) * applicationsPerPage;
-            const params: any = {
-                limit: String(applicationsPerPage),
-                offset: String(offset),
-                status: "submitted",
-            };
-            if (searchQuery) params.search = searchQuery;
-            const res: any = await adminApi.getApplications(params);
-            if (res && res.data) {
-                setData(res.data);
-                setTotalItems(res.pagination?.total ?? res.total ?? res.data.length);
-            } else {
-                setData(Array.isArray(res) ? res : []);
-                setTotalItems(Array.isArray(res) ? res.length : 0);
+            let filtered = items;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                filtered = items.filter(item =>
+                    `${item.firstName || ''} ${item.lastName || ''}`.toLowerCase().includes(q) ||
+                    (item.universityName || '').toLowerCase().includes(q) ||
+                    (item.email || '').toLowerCase().includes(q) ||
+                    (item.applicationNumber || '').toLowerCase().includes(q)
+                );
+            }
+            setTotalItems(filtered.length);
+            setData(filtered.slice(offset, offset + applicationsPerPage));
+
+            // Populate assignedStaffMap and DB followUpDates
+            const newMap: Record<string, { staffId: string; staffName?: string }> = {};
+            const dbFollowUps: Record<string, any> = {};
+            items.forEach((app: any) => {
+                if (app.assignedStaffId) {
+                    newMap[app.id] = { staffId: app.assignedStaffId, staffName: app.assignedStaffName };
+                }
+                if (app.followUpDate) {
+                    dbFollowUps[app.id] = {
+                        date: app.followUpDate,
+                        time: app.followUpTime || "",
+                        notes: app.followUpNotes || "",
+                        studentName: `${app.firstName || ''} ${app.lastName || ''}`.trim() || app.email,
+                        appNumber: app.applicationNumber || `VL-APP-${(app.id || '').slice(-5).toUpperCase()}`
+                    };
+                }
+            });
+            setAssignedStaffMap(prev => ({ ...prev, ...newMap }));
+            if (Object.keys(dbFollowUps).length > 0) {
+                setFollowUpDates(prev => ({ ...dbFollowUps, ...prev }));
             }
         } catch (e) {
             console.error(e);
@@ -578,8 +641,47 @@ function IncomingQueuePageInner() {
         loadData();
     }, [loadData]);
 
+    // ── Round-Robin Assignment Handler ────────────────────────────────────
+    const handleAssign = async (item: any) => {
+        const appId = item.id || item._id;
+        if (!appId) return;
+
+        // Guard: already assigned
+        if (assignedStaffMap[appId]?.staffId || item.assignedStaffId) {
+            alert('This application is already assigned to a staff member.');
+            return;
+        }
+
+        setAssigningIds(prev => new Set(prev).add(appId));
+        try {
+            const res: any = await assignmentApi.assign(appId);
+            if (res?.data?.success && res?.data?.assignedStaffId) {
+                setAssignedStaffMap(prev => ({
+                    ...prev,
+                    [appId]: { staffId: res.data.assignedStaffId },
+                }));
+                await logActivity(
+                    'assigned',
+                    `Application #${item.applicationNumber || appId.slice(-6)} assigned to staff via round-robin`,
+                    'assignment_ind',
+                    'bg-purple-50 text-purple-700 border-purple-100'
+                );
+                await fetchBadgeStats();
+            } else {
+                alert(res?.data?.message || 'Assignment failed — no eligible staff available.');
+            }
+        } catch (e: any) {
+            alert(e?.message || 'Failed to assign application');
+        } finally {
+            setAssigningIds(prev => {
+                const next = new Set(prev);
+                next.delete(appId);
+                return next;
+            });
+        }
+    };
+
     const getActiveFollowUp = (item: any) => {
-        if (typeof window === "undefined") return null;
         const appId = item.id || item._id;
         const staffId = user?.id || user?.email || "default";
 
@@ -749,7 +851,6 @@ function IncomingQueuePageInner() {
                         <span className="material-symbols-outlined text-[16px]">refresh</span>
                         Refresh
                     </button>
-
                 </div>
             </div>
 
@@ -873,13 +974,12 @@ function IncomingQueuePageInner() {
                                                                 ? 'bg-rose-50 text-rose-600 border border-rose-200'
                                                                 : 'bg-amber-50 text-amber-600 border border-amber-200'
                                                     }`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${statusKey === 'rejected' ? 'bg-rose-500' : ['approved', 'verified'].includes(statusKey) ? 'bg-emerald-500' : 'bg-blue-500'
-                                                        }`} />
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${statusKey === 'rejected' ? 'bg-rose-500' : ['approved', 'verified'].includes(statusKey) ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                                                     {item.status ? item.status.replace('_', ' ') : 'SUBMITTED'}
                                                 </span>
                                             </td>
 
-                                            {/* 4. Follow Up */}
+                                            {/* 5. Follow Up */}
                                             <td className="px-6 py-4">
                                                 {(() => {
                                                     const activeFU = getActiveFollowUp(item);
@@ -913,14 +1013,14 @@ function IncomingQueuePageInner() {
                                                 })()}
                                             </td>
 
-                                            {/* 5. Timestamp */}
+                                            {/* 6. Timestamp */}
                                             <td className="px-6 py-4">
                                                 <span className="text-xs text-slate-600 font-semibold">
                                                     {formatIST(item.submittedAt || item.createdAt || item.updatedAt, true)}
                                                 </span>
                                             </td>
 
-                                            {/* 6. Actions */}
+                                            {/* 7. Actions */}
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button

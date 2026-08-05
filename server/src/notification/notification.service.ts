@@ -66,23 +66,30 @@ export class NotificationService {
   /**
    * Fetch paginated & filterable notifications for the logged-in user.
    */
+  /**
+   * Fetch paginated & filterable notifications for the logged-in user.
+   */
   async getNotificationsForUser(
     user: any,
     type?: string,
     limit: number = 30,
     offset: number = 0,
   ) {
-    const isStaffOrAdmin = user.role === 'staff' || user.role === 'admin' || user.role === 'super_admin';
+    const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+    const isStaff = user.role === 'staff';
     const isBank = user.role === 'bank' || user.role === 'partner_bank';
     const userId = user.id || user.uid || user._id;
 
     let query = this.db.from('Notification').select('*', { count: 'exact' });
 
-    // Design: staff and admin see system-wide and staff notifications.
+    // Staff see ONLY notifications explicitly assigned to their userId.
+    // Admins & Super Admins oversee system-wide and staff notifications.
     // Bank partners see 'bank' / 'incoming_file' notifications.
     // Students see their own personal notifications.
-    if (isStaffOrAdmin) {
+    if (isAdmin) {
       query = query.or(`userId.eq.staff,userId.eq.system,userId.eq.all,userId.eq.${userId}`);
+    } else if (isStaff) {
+      query = query.or(`userId.eq.${userId},userId.eq.all`);
     } else if (isBank) {
       query = query.or(`userId.eq.bank,userId.eq.system,userId.eq.all,userId.eq.${userId}`);
     } else {
@@ -137,14 +144,17 @@ export class NotificationService {
    */
   async markAllAsRead(user: any) {
     try {
-      const isStaffOrAdmin = user.role === 'staff' || user.role === 'admin' || user.role === 'super_admin';
+      const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+      const isStaff = user.role === 'staff';
       const isBank = user.role === 'bank' || user.role === 'partner_bank';
       const userId = user.id || user.uid || user._id;
 
       let query = this.db.from('Notification').delete();
 
-      if (isStaffOrAdmin) {
+      if (isAdmin) {
         query = query.or(`userId.eq.staff,userId.eq.system,userId.eq.all,userId.eq.${userId}`);
+      } else if (isStaff) {
+        query = query.or(`userId.eq.${userId},userId.eq.all`);
       } else if (isBank) {
         query = query.or(`userId.eq.bank,userId.eq.system,userId.eq.all,userId.eq.${userId}`);
       } else {
@@ -165,29 +175,13 @@ export class NotificationService {
   }
 
   /**
-   * Event listener for candidate registration
-   * Creates a notification for staff to notify about new candidate
+   * Event listener for candidate registration (Disabled as per staff notification requirements:
+   * Staff should only receive notifications for loan applications, not user registration/logins)
    */
-  @OnEvent('candidate.registered')
+  // @OnEvent('candidate.registered')
   async handleCandidateRegistered(payload: any) {
-    try {
-      const candidateName = payload.firstName || 'New Candidate';
-      await this.createNotification(
-        'staff',
-        `🎉 New Candidate Registered: ${candidateName}`,
-        `${candidateName} has registered on Vidyaloan. Email: ${payload.email}`,
-        'candidate_registered',
-        {
-          userId: payload.userId,
-          email: payload.email,
-          phoneNumber: payload.phoneNumber,
-          dateOfBirth: payload.dateOfBirth,
-          registeredAt: payload.createdAt
-        }
-      );
-    } catch (error) {
-      this.logger.error(`Failed to handle candidate registration event: ${error.message}`);
-    }
+    // Disabled: User signups/logins do not generate staff notifications.
+    return;
   }
 
   private formatAppRef(appNumber?: string, applicationId?: string): string {
@@ -200,9 +194,55 @@ export class NotificationService {
     return 'Application';
   }
 
+  private async resolveAssignedStaffId(applicationId?: string): Promise<string | null> {
+    if (!applicationId) return null;
+    try {
+      const { data: app } = await this.db
+        .from('LoanApplication')
+        .select('assignedStaffId')
+        .eq('id', applicationId)
+        .maybeSingle();
+      if (app?.assignedStaffId && app.assignedStaffId !== 'unassigned' && app.assignedStaffId !== 'null') {
+        return app.assignedStaffId;
+      }
+    } catch (err) {
+      this.logger.error(`Error resolving assignedStaffId for app ${applicationId}: ${err.message}`);
+    }
+    return null;
+  }
+
   /**
-   * Event listener for application creation
-   * Creates a notification for staff about new application
+   * Event listener for loan.assigned — fires immediately after round-robin assignment.
+   * Creates an in-app notification ONLY for the specific assigned staff member.
+   */
+  @OnEvent('loan.assigned')
+  async handleLoanAssigned(payload: any) {
+    try {
+      const appRef = this.formatAppRef(payload.applicationNumber, payload.loanId);
+      const loanTypeStr = payload.loanType ? ` (${payload.loanType})` : '';
+
+      await this.createNotification(
+        payload.assignedStaffId,
+        `📋 New Application Assigned to You`,
+        `${payload.candidateName} has submitted a ${payload.loanType || 'loan'} application for ${payload.bank || 'a bank'}${loanTypeStr}. It has been assigned to you via round-robin.${appRef ? ' ' + appRef : ''}`,
+        'loan_assigned',
+        {
+          loanId: payload.loanId,
+          applicationNumber: payload.applicationNumber,
+          candidateName: payload.candidateName,
+          bank: payload.bank,
+          loanType: payload.loanType,
+          assignedBy: payload.assignedBy,
+        }
+      );
+    } catch (error) {
+      this.logger.error(`Failed to handle loan.assigned event: ${error.message}`);
+    }
+  }
+
+  /**
+   * Event listener for application creation.
+   * Sends notification ONLY to the staff member assigned to that application.
    */
   @OnEvent('application.created')
   async handleApplicationCreated(payload: any) {
@@ -210,23 +250,27 @@ export class NotificationService {
       const candidateName = payload.candidateName || 'Candidate';
       const appRef = this.formatAppRef(payload.applicationNumber, payload.applicationId);
       const loanTypeStr = payload.loanType ? ` (${payload.loanType})` : '';
-      await this.createNotification(
-        'staff',
-        `📋 New Application Created: ${candidateName}`,
-        `${candidateName} created a new loan application${loanTypeStr} for ${payload.bank || 'a bank'}.${appRef ? ' ' + appRef : ''}`,
-        'application_created',
-        {
-          applicationId: payload.applicationId,
-          applicationNumber: payload.applicationNumber,
-          userId: payload.userId,
-          candidateName: payload.candidateName,
-          candidateEmail: payload.candidateEmail,
-          bank: payload.bank,
-          loanAmount: payload.loanAmount,
-          loanType: payload.loanType,
-          createdAt: payload.createdAt
-        }
-      );
+
+      const targetUserId = await this.resolveAssignedStaffId(payload.applicationId);
+      if (targetUserId) {
+        await this.createNotification(
+          targetUserId,
+          `📋 New Application Assigned: ${candidateName}`,
+          `${candidateName} submitted a new loan application${loanTypeStr} for ${payload.bank || 'a bank'} and it has been assigned to you.${appRef ? ' ' + appRef : ''}`,
+          'application_created',
+          {
+            applicationId: payload.applicationId,
+            applicationNumber: payload.applicationNumber,
+            userId: payload.userId,
+            candidateName: payload.candidateName,
+            candidateEmail: payload.candidateEmail,
+            bank: payload.bank,
+            loanAmount: payload.loanAmount,
+            loanType: payload.loanType,
+            createdAt: payload.createdAt,
+          }
+        );
+      }
     } catch (error) {
       this.logger.error(`Failed to handle application created event: ${error.message}`);
     }
@@ -234,7 +278,7 @@ export class NotificationService {
 
   /**
    * Event listener for bank note/remark added
-   * Creates a notification for staff about bank internal notes
+   * Creates a notification ONLY for the assigned staff member
    */
   @OnEvent('bank.note.added')
   async handleBankNoteAdded(payload: any) {
@@ -247,52 +291,59 @@ export class NotificationService {
       }
       const appRef = this.formatAppRef(payload.applicationNumber, payload.applicationId);
 
-      await this.createNotification(
-        'staff',
-        `📝 Bank Note Added: ${candidateName}`,
-        `A new note was added by ${payload.updatedBy || 'Bank Partner'}: "${cleanRemarks.length > 60 ? cleanRemarks.substring(0, 57) + '...' : cleanRemarks}"${appRef ? ' (' + appRef + ')' : ''}`,
-        'bank_note_added',
-        {
-          applicationId: payload.applicationId,
-          applicationNumber: payload.applicationNumber,
-          userId: payload.userId,
-          candidateName: payload.candidateName,
-          remarks: payload.remarks,
-          updatedBy: payload.updatedBy,
-          userRole: payload.userRole
-        }
-      );
+      const targetUserId = await this.resolveAssignedStaffId(payload.applicationId);
+      if (targetUserId) {
+        await this.createNotification(
+          targetUserId,
+          `📝 Bank Note Added: ${candidateName}`,
+          `A new note was added by ${payload.updatedBy || 'Bank Partner'}: "${cleanRemarks.length > 60 ? cleanRemarks.substring(0, 57) + '...' : cleanRemarks}"${appRef ? ' (' + appRef + ')' : ''}`,
+          'bank_note_added',
+          {
+            applicationId: payload.applicationId,
+            applicationNumber: payload.applicationNumber,
+            userId: payload.userId,
+            candidateName: payload.candidateName,
+            remarks: payload.remarks,
+            updatedBy: payload.updatedBy,
+            userRole: payload.userRole
+          }
+        );
+      }
     } catch (error) {
       this.logger.error(`Failed to handle bank note added event: ${error.message}`);
     }
   }
 
   /**
-   * Event listener for application submission
-   * Creates a notification for staff about submitted application
+   * Event listener for application submission.
+   * Sends notification ONLY to the staff member assigned to that application.
    */
   @OnEvent('application.submitted')
   async handleApplicationSubmitted(payload: any) {
     try {
       const candidateName = payload.candidateName || 'Candidate';
       const appRef = this.formatAppRef(payload.applicationNumber, payload.applicationId);
-      await this.createNotification(
-        'staff',
-        `🚀 Application Submitted: ${candidateName}`,
-        `${candidateName} submitted a loan application for ${payload.bank || 'a bank'}.${appRef ? ' ' + appRef : ''}`,
-        'application_submitted',
-        {
-          applicationId: payload.applicationId,
-          applicationNumber: payload.applicationNumber,
-          userId: payload.userId,
-          candidateName: payload.candidateName,
-          candidateEmail: payload.candidateEmail,
-          bank: payload.bank,
-          loanAmount: payload.loanAmount,
-          loanType: payload.loanType,
-          submittedAt: payload.submittedAt
-        }
-      );
+
+      const targetUserId = await this.resolveAssignedStaffId(payload.applicationId);
+      if (targetUserId) {
+        await this.createNotification(
+          targetUserId,
+          `🚀 Application Submitted: ${candidateName}`,
+          `${candidateName} submitted a loan application for ${payload.bank || 'a bank'} and it has been assigned to you.${appRef ? ' ' + appRef : ''}`,
+          'application_submitted',
+          {
+            applicationId: payload.applicationId,
+            applicationNumber: payload.applicationNumber,
+            userId: payload.userId,
+            candidateName: payload.candidateName,
+            candidateEmail: payload.candidateEmail,
+            bank: payload.bank,
+            loanAmount: payload.loanAmount,
+            loanType: payload.loanType,
+            submittedAt: payload.submittedAt,
+          }
+        );
+      }
     } catch (error) {
       this.logger.error(`Failed to handle application submitted event: ${error.message}`);
     }
@@ -300,7 +351,7 @@ export class NotificationService {
 
   /**
    * Event listener for document upload
-   * Creates a notification for staff about document uploads
+   * Creates a notification ONLY for the assigned staff member
    */
   @OnEvent('document.uploaded')
   async handleDocumentUploaded(payload: any) {
@@ -308,23 +359,27 @@ export class NotificationService {
       const candidateName = payload.candidateName || 'Candidate';
       const docName = payload.documentName || payload.documentType;
       const appRef = this.formatAppRef(payload.applicationNumber, payload.applicationId);
-      await this.createNotification(
-        'staff',
-        `📄 Document Uploaded: ${docName}`,
-        `${candidateName} has uploaded ${docName}${appRef ? ' for ' + appRef : ''}. Status: ${payload.status}`,
-        'document_uploaded',
-        {
-          applicationId: payload.applicationId,
-          applicationNumber: payload.applicationNumber,
-          userId: payload.userId,
-          candidateName: payload.candidateName,
-          candidateEmail: payload.candidateEmail,
-          documentType: payload.documentType,
-          documentName: payload.documentName,
-          status: payload.status,
-          createdAt: payload.createdAt
-        }
-      );
+
+      const targetUserId = await this.resolveAssignedStaffId(payload.applicationId);
+      if (targetUserId) {
+        await this.createNotification(
+          targetUserId,
+          `📄 Document Uploaded: ${docName}`,
+          `${candidateName} has uploaded ${docName}${appRef ? ' for ' + appRef : ''}. Status: ${payload.status}`,
+          'document_uploaded',
+          {
+            applicationId: payload.applicationId,
+            applicationNumber: payload.applicationNumber,
+            userId: payload.userId,
+            candidateName: payload.candidateName,
+            candidateEmail: payload.candidateEmail,
+            documentType: payload.documentType,
+            documentName: payload.documentName,
+            status: payload.status,
+            createdAt: payload.createdAt
+          }
+        );
+      }
     } catch (error) {
       this.logger.error(`Failed to handle document uploaded event: ${error.message}`);
     }

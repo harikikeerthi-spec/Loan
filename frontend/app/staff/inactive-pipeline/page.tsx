@@ -181,14 +181,26 @@ export default function InactivePipelinePage() {
         }
     };
 
+    const { user } = useAuth();
+
     const filteredData = useMemo(() => {
         return data.filter(item => {
+            if (user && user.role !== 'admin' && user.role !== 'super_admin') {
+                const staffId = (user.id || '').toLowerCase();
+                const staffEmail = (user.email || '').toLowerCase();
+                const assigned = (item.assignedStaffId || '').toLowerCase();
+
+                if (!assigned || (assigned !== staffId && assigned !== staffEmail)) {
+                    return false;
+                }
+            }
+
             const fullName = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.toLowerCase();
             const college = (item.universityName || item.college || '').toLowerCase();
             const query = searchQuery.toLowerCase();
             return fullName.includes(query) || college.includes(query);
         });
-    }, [data, searchQuery]);
+    }, [data, searchQuery, user]);
 
     const totalPages = Math.max(1, Math.ceil(filteredData.length / applicationsPerPage));
     const pagedData = useMemo(() => {

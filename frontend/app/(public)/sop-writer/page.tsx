@@ -59,9 +59,11 @@ export default function SOPWriterPage() {
 
             // 2. Humanize
             const humanRes = await aiApi.sopHumanize(draft) as any;
-            const finalSop = humanRes.success && humanRes.humanizedText
-                ? wrapInStructure(humanRes.humanizedText, formData.studentName)
+            const bodyContent = humanRes?.success && humanRes?.humanizedText
+                ? humanRes.humanizedText
                 : draft;
+
+            const finalSop = wrapInStructure(bodyContent, formData.studentName);
 
             // 3. Analyze
             const analysisRes = await aiApi.sopReview({ text: finalSop.replace(/<[^>]*>/g, '') }) as any;
@@ -74,8 +76,9 @@ export default function SOPWriterPage() {
         } catch (err) {
             console.error(err);
             const draft = generateSOPDraft(formData);
+            const finalSop = wrapInStructure(draft, formData.studentName);
             setResult({
-                sop: draft,
+                sop: finalSop,
                 analysis: null
             });
             alert("AI Analysis failed. Showing generated draft.");
@@ -245,11 +248,14 @@ export default function SOPWriterPage() {
                                                         <span className="material-symbols-outlined text-[16px]">verified</span> Key Strengths
                                                     </h4>
                                                     <ul className="space-y-3">
-                                                        {(result.analysis?.strengths || []).map((s: string, i: number) => (
-                                                            <li key={i} className="text-[12px] text-emerald-700 flex items-start gap-2 leading-relaxed">
-                                                                <span className="text-[14px] mt-0.5">•</span> {s}
-                                                            </li>
-                                                        ))}
+                                                        {(result.analysis?.strengths || []).map((s: any, i: number) => {
+                                                            const text = typeof s === 'string' ? s : (s?.point || s?.strength || s?.description || (s?.recommendation ? `${s.issue ? `${s.issue}: ` : ''}${s.recommendation}` : JSON.stringify(s)));
+                                                            return (
+                                                                <li key={i} className="text-[12px] text-emerald-700 flex items-start gap-2 leading-relaxed">
+                                                                    <span className="text-[14px] mt-0.5">•</span> {text}
+                                                                </li>
+                                                            );
+                                                        })}
                                                     </ul>
                                                 </div>
                                                 <div className="bg-amber-50/50 rounded-xl p-5 border border-amber-100">
@@ -257,11 +263,18 @@ export default function SOPWriterPage() {
                                                         <span className="material-symbols-outlined text-[16px]">lightbulb</span> Room for Improvement
                                                     </h4>
                                                     <ul className="space-y-3">
-                                                        {(result.analysis?.improvements || []).map((w: string, i: number) => (
-                                                            <li key={i} className="text-[12px] text-amber-700 flex items-start gap-2 leading-relaxed">
-                                                                <span className="text-[14px] mt-0.5">•</span> {w}
-                                                            </li>
-                                                        ))}
+                                                        {(result.analysis?.improvements || []).map((w: any, i: number) => {
+                                                            const text = typeof w === 'string'
+                                                                ? w
+                                                                : w?.recommendation
+                                                                    ? `${w.issue ? `${w.issue}: ` : ''}${w.recommendation}`
+                                                                    : (w?.issue || w?.suggestion || w?.point || JSON.stringify(w));
+                                                            return (
+                                                                <li key={i} className="text-[12px] text-amber-700 flex items-start gap-2 leading-relaxed">
+                                                                    <span className="text-[14px] mt-0.5">•</span> {text}
+                                                                </li>
+                                                            );
+                                                        })}
                                                     </ul>
                                                 </div>
                                             </div>
@@ -363,16 +376,9 @@ function FeatureBox({ icon, text }: { icon: string; text: string }) {
 // Helpers
 
 function generateSOPDraft(data: any) {
-    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const univ = data.university.split(' ')[0];
+    const univ = data.university?.split(' ')[0] || 'the university';
 
     return `
-        <div class="text-center mb-10 pb-6 border-b-2 border-gray-200">
-            <h1 class="text-4xl font-bold mb-4">Statement of Purpose</h1>
-            <p class="text-gray-600"><strong>Name:</strong> ${data.studentName}</p>
-            <p class="text-gray-600"><strong>Date:</strong> ${today}</p>
-        </div>
-
         <h2>1. Professional Silhouette</h2>
         <p>Innovation originates from curiosity. As a student deeply invested in ${data.fieldOfStudy}, I have always been driven by the "why" behind complex systems. Pursuing my graduate studies at ${data.university} represents the next logical step in my journey to becoming a leader in this transformative field.</p>
 
@@ -401,6 +407,14 @@ function generateSOPDraft(data: any) {
 
 function wrapInStructure(text: string, name: string) {
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    // Strip any pre-existing header blocks or duplicated Statement of Purpose titles
+    let cleanText = text || '';
+    cleanText = cleanText.replace(/<div class="text-center mb-10 pb-6 border-b-2 border-gray-200">[\s\S]*?<\/div>/gi, '');
+    cleanText = cleanText.replace(/<h1[^>]*>\s*Statement of Purpose\s*<\/h1>/gi, '');
+    cleanText = cleanText.replace(/<p[^>]*>\s*<strong>Name:<\/strong>[\s\S]*?<\/p>/gi, '');
+    cleanText = cleanText.replace(/<p[^>]*>\s*<strong>Date:<\/strong>[\s\S]*?<\/p>/gi, '');
+
     return `
         <div class="text-center mb-10 pb-6 border-b-2 border-gray-200">
             <h1 class="text-4xl font-bold mb-4">Statement of Purpose</h1>
@@ -408,16 +422,39 @@ function wrapInStructure(text: string, name: string) {
             <p class="text-gray-600"><strong>Date:</strong> ${today}</p>
         </div>
         <div class="whitespace-pre-wrap text-justify leading-relaxed">
-            ${text}
+            ${cleanText.trim()}
         </div>
     `.trim();
 }
 
 function formatAnalysis(raw: any, sop: string) {
+    const rawWeak = raw.weakAreas || raw.improvements || raw.areasToStrengthen;
+    let formattedImprovements: string[] = ["💡 Quantify your research impact", "💡 Mention specific labs at target university", "💡 Expand on your career goals timeline"];
+    if (Array.isArray(rawWeak) && rawWeak.length > 0) {
+        formattedImprovements = rawWeak.map((w: any) => {
+            if (typeof w === 'string') return w;
+            if (w?.recommendation) return w.issue ? `${w.issue}: ${w.recommendation}` : w.recommendation;
+            if (w?.issue) return w.issue;
+            if (w?.suggestion) return w.suggestion;
+            return JSON.stringify(w);
+        });
+    }
+
+    const rawStr = raw.strengths || raw.strongPoints;
+    let formattedStrengths: string[] = ["✅ Consistent professional tone", "✅ Clear 8-section structure", "✅ Strong opening narrative hook"];
+    if (Array.isArray(rawStr) && rawStr.length > 0) {
+        formattedStrengths = rawStr.map((s: any) => {
+            if (typeof s === 'string') return s;
+            if (s?.point || s?.strength || s?.description) return s.point || s.strength || s.description;
+            if (s?.recommendation) return s.issue ? `${s.issue}: ${s.recommendation}` : s.recommendation;
+            return JSON.stringify(s);
+        });
+    }
+
     return {
         score: raw.score || raw.totalScore || 85,
-        strengths: raw.strengths || ["✅ Consistent professional tone", "✅ Clear 8-section structure", "✅ Strong opening narrative hook"],
-        improvements: raw.weakAreas || ["💡 Quantify your research impact", "💡 Mention specific labs at target university", "💡 Expand on your career goals timeline"],
+        strengths: formattedStrengths,
+        improvements: formattedImprovements,
         sections: raw.sections || {
             professionalSilhouette: { score: 90 },
             academicFoundation: { score: 85 },

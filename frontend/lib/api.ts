@@ -1053,6 +1053,11 @@ export const adminApi = {
             method: "PUT",
             body: JSON.stringify(data),
         }),
+    updateFollowUp: (id: string, data: { date: string; time?: string; notes?: string; status?: string }) =>
+        apiFetch(`${API_URL}/applications/${id}/follow-up`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
     aiReviewApplication: (id: string) =>
         apiFetch(HttpApiPaths.admin.applicationAiReview(id), {
             method: "POST",
@@ -1526,6 +1531,62 @@ export const staffProfileApi = {
 
     getDeadlineCalendar: () =>
         apiFetch(HttpApiPaths.staffProfiles.calendar()),
+};
+
+// ─── Assignment (Round-Robin Staff Assignment) ────────────────────────
+export const assignmentApi = {
+    // Trigger round-robin assignment for a single loan application
+    assign: (loanId: string) =>
+        apiFetch(`${API_URL}/assignment/assign/${loanId}`, { method: 'POST' }),
+
+    // Manually reassign to a specific staff member
+    reassign: (loanId: string, toStaffId: string, reason?: string) =>
+        apiFetch(`${API_URL}/assignment/reassign/${loanId}`, {
+            method: 'POST',
+            body: JSON.stringify({ toStaffId, reason: reason || 'manual' }),
+        }),
+
+    // Get all applications assigned to the current (or specified) staff member (optionally including unassigned)
+    getMyApplications: (staffId?: string, status?: string, includeUnassigned?: boolean) => {
+        const params = new URLSearchParams();
+        if (staffId) params.set('staffId', staffId);
+        if (status) params.set('status', status);
+        if (includeUnassigned) params.set('includeUnassigned', 'true');
+        const queryStr = params.toString();
+        return apiFetch(`${API_URL}/assignment/my-applications${queryStr ? `?${queryStr}` : ''}`);
+    },
+
+    // Get all unassigned applications queue
+    getUnassignedQueue: () =>
+        apiFetch(`${API_URL}/assignment/unassigned-queue`),
+
+    // Get team workload summary
+    getTeamDashboard: () =>
+        apiFetch(`${API_URL}/assignment/team-dashboard`),
+
+    // Get assignment history for a loan or all loans
+    getHistory: (loanId?: string) => {
+        const url = loanId
+            ? `${API_URL}/assignment/history/${loanId}`
+            : `${API_URL}/assignment/history`;
+        return apiFetch(url);
+    },
+
+    // Update staff availability / workload settings
+    updateStaffAvailability: (staffId: string, data: {
+        isAvailable?: boolean;
+        isOnLeave?: boolean;
+        maxWorkload?: number;
+        specialization?: string[];
+    }) =>
+        apiFetch(`${API_URL}/assignment/staff/${staffId}/availability`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        }),
+
+    // Bulk round-robin auto-assign all unassigned applications
+    assignAllUnassigned: () =>
+        apiFetch(`${API_URL}/assignment/assign-all-unassigned`, { method: 'POST' }),
 };
 
 export const bankApi = {

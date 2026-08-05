@@ -1129,8 +1129,36 @@ export class UsersService {
       }
       throw error;
     }
+    let updatedUser = data;
+
+    if (role === 'staff' || role === 'admin' || role === 'super_admin') {
+      try {
+        const u = updatedUser || (await this.findOne(email));
+        if (u && u.id) {
+          const { data: existingProfile } = await this.db
+            .from('StaffProfile')
+            .select('id')
+            .eq('linkedUserId', u.id)
+            .maybeSingle();
+
+          if (!existingProfile) {
+            await this.db.from('StaffProfile').insert({
+              linkedUserId: u.id,
+              email: u.email,
+              assignedStaffId: u.id,
+              bankStatus: 'NOT_SENT',
+              updatedAt: new Date().toISOString(),
+            });
+            console.log(`[UsersService.updateUserRole] Created StaffProfile for ${email}`);
+          }
+        }
+      } catch (profileErr: any) {
+        console.error(`[UsersService.updateUserRole] StaffProfile creation error: ${profileErr.message}`);
+      }
+    }
+
     this.clearCache(email);
-    return data;
+    return updatedUser;
   }
 
   private async validateApplicationConstraints(userId: string, bank: string | null | undefined, country: string | null | undefined, universityName: string | null | undefined) {

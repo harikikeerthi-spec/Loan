@@ -9,9 +9,10 @@ import { AiModule } from '../ai/ai.module';
 import { IntegrationModule } from '../integration/integration.module';
 import { DocumentModule } from '../document/document.module';
 import { BankModule } from '../bank/bank.module';
+import { AssignmentModule } from '../assignment/assignment.module';
 
 @Module({
-    imports: [AuthModule, AiModule, IntegrationModule, DocumentModule, BankModule],
+    imports: [AuthModule, AiModule, IntegrationModule, DocumentModule, BankModule, AssignmentModule],
     controllers: [ApplicationController, AdminApplicationController],
     providers: [ApplicationService, AdminApplicationService, EvvEngineService],
     exports: [ApplicationService, AdminApplicationService, EvvEngineService],

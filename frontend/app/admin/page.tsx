@@ -4,12 +4,56 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { adminApi } from "@/lib/api";
+import { adminApi, assignmentApi } from "@/lib/api";
 import { format, formatDistanceToNow } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import CampaignsDashboard from "@/components/Admin/CampaignsDashboard";
 import AdminBanksSection from "@/components/Admin/AdminBanksSection";
 import AdminCountriesSection from "@/components/Admin/AdminCountriesSection";
+
+// ─── Application Progress & Helpers ──────────────────────────────────────────────
+
+const getApplicationDisplayProgress = (app: any): number => {
+    const status = (app.status || "").toLowerCase();
+    const stage = (app.stage || "").toLowerCase();
+    const bankWorkflow = (app.bankWorkflowStatus || "").toUpperCase();
+
+    if (status === "disbursed" || status === "disbursement_confirmed" || status === "closed" || bankWorkflow === "DISBURSED") return 100;
+    if (status === "approved" || stage === "sanction" || stage === "sanctioned") return Math.max(app.progress ?? 0, 95);
+    if (stage === "bank_review" || status === "under_bank_review" || status === "processing") return Math.max(app.progress ?? 0, 85);
+    if (stage === "credit_check" || status === "query_raised") return Math.max(app.progress ?? 0, 70);
+    if (stage === "submit_to_bank" || stage === "bank_submission" || status === "submitted_to_bank" || status === "file_logged") return Math.max(app.progress ?? 0, 50);
+    if (stage === "document_verification" || stage === "documents_verification" || status === "staff_verified" || status === "docs_received" || status === "docs_uploaded" || status === "under_review") return Math.max(app.progress ?? 0, 35);
+    if (status === "submitted" || stage === "application_submitted") return Math.max(app.progress ?? 0, 20);
+    return app.progress ?? 10;
+};
+
+const getApplicationStageLabel = (app: any, progress: number): string => {
+    if (app.currentStage) return app.currentStage;
+    const status = (app.status || "").toLowerCase();
+    if (status === "disbursed" || status === "disbursement_confirmed" || status === "closed") return "Disbursed";
+    if (status === "approved") return "Sanction Approved";
+    if (status === "rejected") return "Rejected";
+    if (progress <= 15) return "Created";
+    if (progress <= 25) return "Submitted";
+    if (progress <= 40) return "Doc Verification";
+    if (progress <= 55) return "Submit to Bank";
+    if (progress <= 75) return "Credit & Eligibility";
+    if (progress <= 90) return "Bank Underwriting";
+    if (progress <= 98) return "Sanction Offer";
+    return "Disbursement";
+};
+
+const renderBankLogo = (name?: string, sizeClass: string = "h-5") => {
+    if (!name) return <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[9px] font-semibold">N/A</span>;
+    const b = name.toLowerCase();
+    if (b.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC" className={`${sizeClass} object-contain inline-block`} />;
+    if (b.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className={`${sizeClass} object-contain inline-block`} />;
+    if (b.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className={`${sizeClass} object-contain inline-block`} />;
+    if (b.includes('credila') || b.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className={`${sizeClass} object-contain inline-block`} />;
+    if (b.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className={`${sizeClass} object-contain inline-block`} />;
+    return <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[9px] font-semibold border border-slate-200">{name}</span>;
+};
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -181,6 +225,9 @@ export default function AdminDashboardPage() {
     const [filterBank, setFilterBank] = useState("all");
     const [filterLoanType, setFilterLoanType] = useState("all");
     const [filterStage, setFilterStage] = useState("all");
+    const [filterStaff, setFilterStaff] = useState("all");
+    const [staffMembers, setStaffMembers] = useState<any[]>([]);
+    const [reassigningAppId, setReassigningAppId] = useState<string | null>(null);
     const [filterFromDate, setFilterFromDate] = useState("");
     const [filterToDate, setFilterToDate] = useState("");
     const [filterBlogTime, setFilterBlogTime] = useState("all");
@@ -339,8 +386,12 @@ export default function AdminDashboardPage() {
                 if (filterToDate) params.toDate = filterToDate;
                 if (searchQuery) params.search = searchQuery;
 
-                res = await adminApi.getApplications(params);
-                setData(res.data || []);
+                const [appRes, staffRes]: [any, any] = await Promise.all([
+                    adminApi.getApplications(params).catch(() => ({ data: [] })),
+                    adminApi.getUsers(200, 0, "", "staff").catch(() => ({ data: [] }))
+                ]);
+                setData(appRes.data || []);
+                setStaffMembers(staffRes.data || []);
             } else if (activeSection === "community") {
                 res = await adminApi.getForumPosts(50);
                 setData(res.data || []);
@@ -537,6 +588,44 @@ export default function AdminDashboardPage() {
         finally { setActionLoading(false); }
     };
 
+    const handleReassignStaff = async (loanId: string, newStaffId: string) => {
+        if (!newStaffId) return;
+        try {
+            setReassigningAppId(loanId);
+            await assignmentApi.reassign(loanId, newStaffId, 'Admin manual assignment');
+            const targetStaff = staffMembers.find((s: any) => s.id === newStaffId || s.email === newStaffId);
+            const staffName = targetStaff ? `${targetStaff.firstName || ''} ${targetStaff.lastName || ''}`.trim() : newStaffId;
+            alert(`Application successfully assigned to ${staffName}.`);
+            if (selectedApp && (selectedApp.id === loanId || selectedApp.applicationNumber === loanId)) {
+                setSelectedApp((prev: any) => ({
+                    ...prev,
+                    assignedStaffId: newStaffId,
+                    staffName: staffName,
+                    staffEmail: targetStaff?.email || ''
+                }));
+            }
+            loadData();
+        } catch (e: any) {
+            alert("Failed to reassign staff: " + (e.message || e));
+        } finally {
+            setReassigningAppId(null);
+        }
+    };
+
+    const handleAutoAssignAll = async () => {
+        if (!window.confirm("Auto-assign all unassigned applications to active staff members via round-robin?")) return;
+        try {
+            setLoading(true);
+            const res: any = await assignmentApi.assignAllUnassigned();
+            alert(res?.data?.message || res?.message || "Round-robin assignment process executed.");
+            loadData();
+        } catch (e: any) {
+            alert("Auto-assignment failed: " + (e.message || e));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleAIReview = async (appId: string) => {
         setAiReviewLoading(true); setAiReview(null); setDrawerTab('ai_review');
         try {
@@ -636,7 +725,6 @@ export default function AdminDashboardPage() {
 
     const filteredData = data.filter(item => {
         const query = searchQuery.toLowerCase();
-        let passesRole = true;
 
         if (activeSection === 'users') {
             return true;
@@ -645,7 +733,28 @@ export default function AdminDashboardPage() {
             return item.title?.toLowerCase().includes(query) || item.authorName?.toLowerCase().includes(query);
         }
         if (activeSection === 'applications') {
-            return (item.applicationNumber?.toLowerCase().includes(query) || item.firstName?.toLowerCase().includes(query) || item.lastName?.toLowerCase().includes(query) || item.bank?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query));
+            const matchesQuery = (
+                item.applicationNumber?.toLowerCase().includes(query) ||
+                item.firstName?.toLowerCase().includes(query) ||
+                item.lastName?.toLowerCase().includes(query) ||
+                item.bank?.toLowerCase().includes(query) ||
+                item.email?.toLowerCase().includes(query) ||
+                item.staffName?.toLowerCase().includes(query) ||
+                item.processingStaff?.toLowerCase().includes(query)
+            );
+            if (!matchesQuery) return false;
+
+            if (filterStaff === 'unassigned') {
+                return !item.assignedStaffId || item.assignedStaffId === 'unassigned' || item.assignedStaffId === 'null';
+            } else if (filterStaff !== 'all') {
+                return (
+                    item.assignedStaffId === filterStaff ||
+                    item.staffName === filterStaff ||
+                    item.processingStaff === filterStaff ||
+                    item.staffEmail === filterStaff
+                );
+            }
+            return true;
         }
         return true;
     });
@@ -1871,319 +1980,409 @@ export default function AdminDashboardPage() {
                             {/* Header with Title and Actions */}
                             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
                                 <div>
-                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Application Pipeline</h2>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Applications & Staff Operations Control</h2>
                                     <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
                                         <span className="material-symbols-outlined text-[14px]">receipt_long</span>
-                                        Real-time processing of loan transmission packets
+                                        Unified tracking of all applications, staff assignments, progress stages & overall details
                                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                                             <span className={`w-1.5 h-1.5 rounded-full ${autoRefreshEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
                                             {autoRefreshEnabled ? 'LIVE SYNC' : 'PAUSED'}
                                         </span>
                                     </p>
                                 </div>
-                                        <div className="flex gap-2 flex-wrap">
-                                            <button 
-                                                onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
-                                                className={`px-3 py-1.5 rounded font-semibold text-[10px] transition-colors flex items-center gap-1.5 shadow-sm border ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
+                                <div className="flex gap-2 flex-wrap">
+                                    <button 
+                                        onClick={handleAutoAssignAll}
+                                        className="px-3 py-1.5 rounded font-semibold text-[10px] bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm"
+                                        title="Assign all unassigned applications to staff via round-robin"
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">autorenew</span>
+                                        Auto-Assign Unassigned
+                                    </button>
+                                    <button 
+                                        onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                                        className={`px-3 py-1.5 rounded font-semibold text-[10px] transition-colors flex items-center gap-1.5 shadow-sm border ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
+                                        {autoRefreshEnabled ? 'Live' : 'Paused'}
+                                    </button>
+                                    <button onClick={loadData} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px] hover:bg-slate-200 transition-colors flex items-center gap-1.5 shadow-sm">
+                                        <span className="material-symbols-outlined text-[14px]">refresh</span>Now
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Staff Workload Overview & Assignment Matrix */}
+                            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-indigo-600 text-[18px]">badge</span>
+                                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Staff Assignment & Workload Overview</h3>
+                                    </div>
+                                    <span className="text-[10px] text-slate-500 font-medium">
+                                        Total: <strong className="text-slate-900">{data.length}</strong> applications across <strong className="text-indigo-600">{staffMembers.length}</strong> active staff
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-1">
+                                    {/* Unassigned Card */}
+                                    {(() => {
+                                        const unassignedCount = data.filter((a: any) => !a.assignedStaffId || a.assignedStaffId === 'unassigned' || a.assignedStaffId === 'null').length;
+                                        return (
+                                            <button
+                                                onClick={() => setFilterStaff(filterStaff === 'unassigned' ? 'all' : 'unassigned')}
+                                                className={`p-2.5 rounded border text-left transition-all ${filterStaff === 'unassigned' ? 'bg-amber-100 border-amber-300 ring-2 ring-amber-400' : 'bg-amber-50/60 border-amber-200 hover:bg-amber-100/60'}`}
                                             >
-                                                <span className="material-symbols-outlined text-[14px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
-                                                {autoRefreshEnabled ? 'Live' : 'Paused'}
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700">Unassigned</span>
+                                                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                                                </div>
+                                                <div className="text-base font-extrabold text-amber-900 mt-1">{unassignedCount}</div>
+                                                <p className="text-[9px] text-amber-600 mt-0.5 truncate">Needs allocation</p>
                                             </button>
-                                            <button onClick={loadData} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px] hover:bg-slate-200 transition-colors flex items-center gap-1.5 shadow-sm">
-                                                <span className="material-symbols-outlined text-[14px]">refresh</span>Now
+                                        );
+                                    })()}
+
+                                    {/* Staff Cards */}
+                                    {staffMembers.map((staff: any) => {
+                                        const staffName = `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || staff.email;
+                                        const assignedCount = data.filter((a: any) =>
+                                            a.assignedStaffId === staff.id ||
+                                            a.staffName === staffName ||
+                                            a.processingStaff === staffName ||
+                                            a.staffEmail === staff.email
+                                        ).length;
+                                        const isActive = filterStaff === staff.id || filterStaff === staffName || filterStaff === staff.email;
+
+                                        return (
+                                            <button
+                                                key={staff.id}
+                                                onClick={() => setFilterStaff(isActive ? 'all' : staff.id)}
+                                                className={`p-2.5 rounded border text-left transition-all group ${isActive ? 'bg-indigo-100 border-indigo-300 ring-2 ring-indigo-500' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}
+                                            >
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${staff.email}`} alt="" className="w-5 h-5 rounded-full border border-slate-300 flex-shrink-0" />
+                                                    <span className="text-[10px] font-bold text-slate-800 truncate group-hover:text-indigo-600" title={staffName}>{staffName}</span>
+                                                </div>
+                                                <div className="text-base font-extrabold text-slate-900 leading-tight">{assignedCount}</div>
+                                                <p className="text-[9px] text-slate-400 truncate mt-0.5">{staff.email}</p>
                                             </button>
-                                            <button className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px] hover:bg-slate-200 transition-colors flex items-center gap-1.5 shadow-sm">
-                                                <span className="material-symbols-outlined text-[14px]">download</span>Export
-                                            </button>
-                                            <button className="px-3 py-1.5 bg-slate-900 text-white rounded font-semibold text-[10px] hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-sm">
-                                                <span className="material-symbols-outlined text-[14px]">add</span>New Application
-                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Pipeline Status Metric Overview */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div className="bg-white p-4 rounded border border-slate-200 hover:border-amber-300 transition-colors group shadow-sm">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="w-8 h-8 bg-amber-50 rounded flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                                            <span className="material-symbols-outlined text-[16px] text-amber-600">pending_actions</span>
+                                        </div>
+                                        <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">Pending Review</span>
+                                    </div>
+                                    <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'pending').length}</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">Initial submission stage</p>
+                                </div>
+
+                                <div className="bg-white p-4 rounded border border-slate-200 hover:border-blue-300 transition-colors group shadow-sm">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="w-8 h-8 bg-blue-50 rounded flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                                            <span className="material-symbols-outlined text-[16px] text-blue-600">hourglass_bottom</span>
+                                        </div>
+                                        <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Processing</span>
+                                    </div>
+                                    <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'processing').length}</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">Under active processing</p>
+                                </div>
+
+                                <div className="bg-white p-4 rounded border border-slate-200 hover:border-emerald-300 transition-colors group shadow-sm">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="w-8 h-8 bg-emerald-50 rounded flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                                            <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
+                                        </div>
+                                        <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Sanctioned / Approved</span>
+                                    </div>
+                                    <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'approved').length}</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">Ready for disbursement</p>
+                                </div>
+
+                                <div className="bg-white p-4 rounded border border-slate-200 hover:border-indigo-300 transition-colors group shadow-sm">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="w-8 h-8 bg-indigo-50 rounded flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                                            <span className="material-symbols-outlined text-[16px] text-indigo-600">account_balance_wallet</span>
+                                        </div>
+                                        <span className="text-[9px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">Disbursed</span>
+                                    </div>
+                                    <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'disbursed').length}</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">Fully completed loans</p>
+                                </div>
+                            </div>
+
+                            {/* Search and Filters Bar */}
+                            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="flex flex-col md:flex-row gap-4 items-end">
+                                    {/* Search */}
+                                    <div className="flex-1 w-full">
+                                        <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Quick Search</label>
+                                        <div className="relative">
+                                            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
+                                            <input
+                                                type="text"
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                                placeholder="Search by name, email, app ID, staff..."
+                                                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:border-slate-400 transition-colors"
+                                            />
                                         </div>
                                     </div>
 
-                                    {/* Status Overview Cards */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                        <div className="bg-white p-4 rounded border border-slate-200 hover:border-amber-300 transition-colors group shadow-sm">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="w-8 h-8 bg-amber-50 rounded flex items-center justify-center group-hover:bg-amber-100 transition-colors">
-                                                    <span className="material-symbols-outlined text-[16px] text-amber-600">pending_actions</span>
-                                                </div>
-                                                <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">Pending</span>
-                                            </div>
-                                            <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'pending').length}</p>
-                                            <p className="text-[10px] text-slate-500 mt-1">Awaiting review</p>
+                                    {/* Filters */}
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full md:w-auto">
+                                        <div>
+                                            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Assigned Staff</label>
+                                            <select value={filterStaff} onChange={e => setFilterStaff(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
+                                                <option value="all">All Staff</option>
+                                                <option value="unassigned">⚠️ Unassigned Only</option>
+                                                {staffMembers.map((s: any) => (
+                                                    <option key={s.id} value={s.id}>
+                                                        {s.firstName || s.email} {s.lastName || ''}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
-                                        <div className="bg-white p-4 rounded border border-slate-200 hover:border-blue-300 transition-colors group shadow-sm">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="w-8 h-8 bg-blue-50 rounded flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                                                    <span className="material-symbols-outlined text-[16px] text-blue-600">hourglass_bottom</span>
-                                                </div>
-                                                <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Processing</span>
-                                            </div>
-                                            <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'processing').length}</p>
-                                            <p className="text-[10px] text-slate-500 mt-1">Under review</p>
+                                        <div>
+                                            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
+                                                <option value="all">All Statuses</option>
+                                                <option value="pending">Pending</option>
+                                                <option value="processing">Processing</option>
+                                                <option value="approved">Approved</option>
+                                                <option value="disbursed">Disbursed</option>
+                                                <option value="rejected">Rejected</option>
+                                            </select>
                                         </div>
 
-                                        <div className="bg-white p-4 rounded border border-slate-200 hover:border-emerald-300 transition-colors group shadow-sm">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="w-8 h-8 bg-emerald-50 rounded flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
-                                                    <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
-                                                </div>
-                                                <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Approved</span>
-                                            </div>
-                                            <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'approved').length}</p>
-                                            <p className="text-[10px] text-slate-500 mt-1">Ready to disburse</p>
+                                        <div>
+                                            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Bank Partner</label>
+                                            <select value={filterBank} onChange={e => setFilterBank(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
+                                                <option value="all">All Banks</option>
+                                                <option value="credila">HDFC Credila</option>
+                                                <option value="idfc">IDFC First Bank</option>
+                                                <option value="avanse">Avanse</option>
+                                                <option value="auxilo">Auxilo</option>
+                                                <option value="poonawalla">Poonawalla</option>
+                                            </select>
                                         </div>
 
-                                        <div className="bg-white p-4 rounded border border-slate-200 hover:border-indigo-300 transition-colors group shadow-sm">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="w-8 h-8 bg-indigo-50 rounded flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                                                    <span className="material-symbols-outlined text-[16px] text-indigo-600">account_balance_wallet</span>
-                                                </div>
-                                                <span className="text-[9px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">Disbursed</span>
-                                            </div>
-                                            <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'disbursed').length}</p>
-                                            <p className="text-[10px] text-slate-500 mt-1">Completed</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Key Metrics */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-indigo-50 rounded flex items-center justify-center flex-shrink-0">
-                                                <span className="material-symbols-outlined text-[20px] text-indigo-600">payments</span>
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Total Requested</p>
-                                                <p className="text-lg font-bold text-slate-900 leading-none">₹{(data.reduce((sum: number, app: any) => sum + (app.amount || 0), 0) / 10000000).toFixed(1)}Cr</p>
-                                            </div>
+                                        <div>
+                                            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Loan Type</label>
+                                            <select value={filterLoanType} onChange={e => setFilterLoanType(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
+                                                <option value="all">All Types</option>
+                                                <option value="unsecured">Unsecured</option>
+                                                <option value="secured">Secured</option>
+                                            </select>
                                         </div>
 
-                                        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-emerald-50 rounded flex items-center justify-center flex-shrink-0">
-                                                <span className="material-symbols-outlined text-[20px] text-emerald-600">trending_up</span>
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Approval Rate</p>
-                                                <p className="text-lg font-bold text-slate-900 leading-none">{data.length ? Math.round(((data.filter((a: any) => a.status === 'approved' || a.status === 'disbursed').length) / data.length) * 100) : 0}%</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-blue-50 rounded flex items-center justify-center flex-shrink-0">
-                                                <span className="material-symbols-outlined text-[20px] text-blue-600">average</span>
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Avg. Loan</p>
-                                                <p className="text-lg font-bold text-slate-900 leading-none">₹{data.length ? (data.reduce((sum: number, app: any) => sum + (app.amount || 0), 0) / data.length / 100000).toFixed(1) : 0}L</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Search and Filters Bar */}
-                                    <div className="bg-white p-4 rounded border border-slate-200 shadow-sm">
-                                        <div className="flex flex-col md:flex-row gap-4 items-end">
-                                            {/* Search */}
-                                            <div className="flex-1 w-full">
-                                                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Quick Search</label>
-                                                <div className="relative">
-                                                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
-                                                    <input
-                                                        type="text"
-                                                        value={searchQuery}
-                                                        onChange={e => setSearchQuery(e.target.value)}
-                                                        placeholder="Search by name, email, app ID..."
-                                                        className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:border-slate-400 transition-colors"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Filters */}
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto">
-                                                <div>
-                                                    <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
-                                                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
-                                                        <option value="all">All</option>
-                                                        <option value="pending">Pending</option>
-                                                        <option value="processing">Processing</option>
-                                                        <option value="approved">Approved</option>
-                                                        <option value="disbursed">Disbursed</option>
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Bank</label>
-                                                    <select value={filterBank} onChange={e => setFilterBank(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
-                                                        <option value="all">All Banks</option>
-                                                        <option value="hdfc">HDFC Bank</option>
-                                                        <option value="icici">ICICI Bank</option>
-                                                        <option value="sbi">SBI</option>
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Loan Type</label>
-                                                    <select value={filterLoanType} onChange={e => setFilterLoanType(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
-                                                        <option value="all">All Types</option>
-                                                        <option value="unsecured">Unsecured</option>
-                                                        <option value="secured">Secured</option>
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block opacity-0 text-[10px] mb-1.5">Action</label>
-                                                    <button
-                                                        onClick={() => {
-                                                            setFilterStatus("all");
-                                                            setFilterBank("all");
-                                                            setFilterLoanType("all");
-                                                            setSearchQuery("");
-                                                        }}
-                                                        className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-semibold text-slate-600 hover:bg-slate-200 transition-colors uppercase tracking-wider"
-                                                    >
-                                                        Clear
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Applications Table */}
-                                    <div className="rounded border border-slate-200 shadow-sm bg-white overflow-hidden">
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-left text-xs">
-                                                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-                                                    <tr>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider"><input type="checkbox" className="rounded" /></th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Application</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Applicant</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Bank</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Amount</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Status</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Priority</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Applied</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100">
-                                                    {loading ? (
-                                                        <tr><td colSpan={9} className="px-6 py-12 text-center">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className="w-10 h-10 border-4 border-[#6605c7]/10 border-t-[#6605c7] rounded-full animate-spin mb-3" />
-                                                                <p className="text-[12px] font-bold text-slate-500">Loading applications...</p>
-                                                            </div>
-                                                        </td></tr>
-                                                    ) : filteredData.length > 0 ? filteredData.map((item: any, idx: number) => {
-                                                        const applicantApps = filteredData.filter((a: any) => a.email === item.email);
-                                                        const hasMultipleApps = applicantApps.length > 1;
-                                                        const priorityLevel = item.priority || 'normal';
-                                                        
-                                                        return (
-                                                        <tr key={idx} className={`hover:bg-slate-50/50 transition-colors group ${hasMultipleApps ? 'bg-indigo-50/30' : ''}`}>
-                                                            <td className="px-4 py-2.5"><input type="checkbox" className="rounded" /></td>
-                                                            
-                                                            {/* App ID */}
-                                                            <td className="px-4 py-2.5">
-                                                                <div className="flex flex-col">
-                                                                    <code className="text-[10px] font-semibold text-slate-800 font-mono">{item.applicationNumber || item.id?.substring(0, 8)}</code>
-                                                                    {item.referenceId && <span className="text-[9px] text-slate-500 truncate max-w-[100px]" title={item.referenceId}>Ref: {item.referenceId}</span>}
-                                                                </div>
-                                                            </td>
-                                                            
-{/* Applicant - Clickable for User Profile */}
-                                            <td className="px-4 py-2.5 max-w-[140px]">
-                                                <button
-                                                    onClick={() => handleViewUserProfile(item)}
-                                                    className="flex flex-col cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 p-2 rounded -m-2 transition-all group w-full text-left"
-                                                    title="Click to view user credentials and all applications"
-                                                >
-                                                    <p className="font-semibold text-slate-900 text-xs truncate group-hover:text-indigo-700 transition-colors flex items-center gap-1" title={`${item.firstName} ${item.lastName}`}>
-                                                        {item.firstName} {item.lastName}
-                                                        <span className="material-symbols-outlined text-[10px] inline-block opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">open_in_new</span>
-                                                    </p>
-                                                    <p className="text-[10px] text-slate-500 truncate group-hover:text-indigo-500 transition-colors" title={item.email}>{item.email}</p>
-                                                    {item.phone && <p className="text-[9px] text-slate-400 font-medium tabular-nums">{item.phone}</p>}
-                                                </button>
-                                                            </td>
-                                                            
-                                                            {/* Bank & Source */}
-                                                            <td className="px-4 py-2.5">
-                                                                <div className="flex flex-col text-[10px]">
-                                                                    <div className="font-semibold text-slate-900">{item.bank || 'N/A'}</div>
-                                                                    <div className="flex items-center gap-1 text-slate-500 whitespace-nowrap">
-                                                                        <span className="material-symbols-outlined text-[10px]">person</span>
-                                                                        <span className="truncate max-w-[80px]" title={item.staffName || item.processingStaff || 'Unassigned'}>{item.staffName || item.processingStaff || 'Unassigned'}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                            
-                                                            {/* Amount */}
-                                                            <td className="px-4 py-2.5 whitespace-nowrap">
-                                                                <p className="font-semibold text-slate-900 text-xs">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.amount || 0)}</p>
-                                                            </td>
-                                                            
-                                                            {/* Status */}
-                                                            <td className="px-4 py-2.5">
-                                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border ${
-                                                                    item.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                                    item.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                                    item.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                                    item.status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                                                    item.status === 'disbursed' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                                                                    'bg-slate-50 text-slate-700 border-slate-200'
-                                                                }`}>
-                                                                    {item.status}
-                                                                </span>
-                                                            </td>
-                                                            
-                                                            {/* Priority */}
-                                                            <td className="px-4 py-2.5">
-                                                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border ${
-                                                                    priorityLevel === 'high' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                                                    priorityLevel === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                                    'bg-slate-50 text-slate-600 border-slate-200'
-                                                                }`}>
-                                                                    <span className="material-symbols-outlined text-[10px]">
-                                                                        {priorityLevel === 'high' ? 'arrow_upward' : priorityLevel === 'medium' ? 'remove' : 'arrow_downward'}
-                                                                    </span>
-                                                                    {priorityLevel}
-                                                                </span>
-                                                            </td>
-                                                            
-                                                            {/* Applied Date */}
-                                                            <td className="px-4 py-2.5 text-[10px] text-slate-500 whitespace-nowrap">
-                                                                {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN') : '—'}
-                                                            </td>
-                                                            
-                                                            {/* Actions */}
-                                                            <td className="px-4 py-2.5">
-                                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <button
-                                                                        onClick={() => { setSelectedApp(item); }}
-                                                                        className="p-1.5 bg-slate-900 text-white rounded hover:bg-slate-800 transition-colors"
-                                                                        title="View Details"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                        );
-                                                    }) : (
-                                                        <tr>
-                                                            <td colSpan={9} className="px-6 py-16 text-center">
-                                                                <span className="material-symbols-outlined text-4xl mb-3 opacity-20 block">folder_off</span>
-                                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">No applications found</p>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
+                                        <div>
+                                            <label className="block opacity-0 text-[10px] mb-1.5">Action</label>
+                                            <button
+                                                onClick={() => {
+                                                    setFilterStatus("all");
+                                                    setFilterBank("all");
+                                                    setFilterLoanType("all");
+                                                    setFilterStaff("all");
+                                                    setSearchQuery("");
+                                                }}
+                                                className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-semibold text-slate-600 hover:bg-slate-200 transition-colors uppercase tracking-wider"
+                                            >
+                                                Clear
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            </div>
+
+                            {/* Comprehensive Applications Table */}
+                            <div className="rounded-lg border border-slate-200 shadow-sm bg-white overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider"><input type="checkbox" className="rounded" /></th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Application Ref</th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Applicant & Target</th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Assigned Staff</th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Lender & Loan</th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Progress & Stage</th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Priority</th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider">Applied</th>
+                                                <th className="px-4 py-2.5 font-bold text-slate-600 text-[9px] uppercase tracking-wider text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {loading ? (
+                                                <tr><td colSpan={9} className="px-6 py-12 text-center">
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3" />
+                                                        <p className="text-[12px] font-bold text-slate-500">Loading applications database...</p>
+                                                    </div>
+                                                </td></tr>
+                                            ) : filteredData.length > 0 ? filteredData.map((item: any, idx: number) => {
+                                                const progress = getApplicationDisplayProgress(item);
+                                                const stageLabel = getApplicationStageLabel(item, progress);
+                                                const priorityLevel = item.priority || 'normal';
+                                                
+                                                // Resolve assigned staff member info
+                                                const assignedStaffId = item.assignedStaffId || '';
+                                                const matchedStaff = staffMembers.find((s: any) =>
+                                                    s.id === assignedStaffId ||
+                                                    s.email === assignedStaffId ||
+                                                    `${s.firstName || ''} ${s.lastName || ''}`.trim() === item.staffName
+                                                );
+                                                const staffDisplayName = matchedStaff
+                                                    ? `${matchedStaff.firstName || ''} ${matchedStaff.lastName || ''}`.trim() || matchedStaff.email
+                                                    : (item.staffName || item.processingStaff || 'Unassigned');
+                                                const isUnassigned = !assignedStaffId || assignedStaffId === 'unassigned' || assignedStaffId === 'null';
+
+                                                return (
+                                                <tr key={idx} className={`hover:bg-slate-50/70 transition-colors group ${isUnassigned ? 'bg-amber-50/20' : ''}`}>
+                                                    <td className="px-4 py-3"><input type="checkbox" className="rounded" /></td>
+                                                    
+                                                    {/* App ID & Ref */}
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-col">
+                                                            <code className="text-[11px] font-bold text-indigo-700 font-mono">{item.applicationNumber || item.id?.substring(0, 8)}</code>
+                                                            {item.referenceId && <span className="text-[9px] text-slate-400 font-medium truncate max-w-[90px]" title={item.referenceId}>Ref: {item.referenceId}</span>}
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    {/* Applicant & Target Details */}
+                                                    <td className="px-4 py-3 max-w-[180px]">
+                                                        <button
+                                                            onClick={() => handleViewUserProfile(item)}
+                                                            className="flex flex-col cursor-pointer hover:bg-indigo-50/80 p-1.5 rounded -m-1.5 transition-all group w-full text-left"
+                                                            title="Click to view applicant credentials & full profile"
+                                                        >
+                                                            <p className="font-bold text-slate-900 text-xs truncate group-hover:text-indigo-700 transition-colors flex items-center gap-1">
+                                                                {item.firstName} {item.lastName}
+                                                                <span className="material-symbols-outlined text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+                                                            </p>
+                                                            <p className="text-[10px] text-slate-500 truncate" title={item.email}>{item.email}</p>
+                                                            {(item.targetUniversity || item.universityName || item.studyDestination || item.country) && (
+                                                                <span className="text-[9px] text-slate-500 font-medium truncate mt-0.5 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 w-fit">
+                                                                    🎓 {item.targetUniversity || item.universityName || 'Uni'} ({item.studyDestination || item.country || 'Global'})
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    </td>
+                                                    
+                                                    {/* Assigned Staff Member & Inline Reassignment */}
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-col gap-1 min-w-[140px]">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <img
+                                                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${matchedStaff?.email || staffDisplayName}`}
+                                                                    alt=""
+                                                                    className="w-5 h-5 rounded-full border border-slate-200 flex-shrink-0"
+                                                                />
+                                                                <span className={`text-[11px] font-bold truncate ${isUnassigned ? 'text-amber-700' : 'text-slate-800'}`}>
+                                                                    {staffDisplayName}
+                                                                </span>
+                                                            </div>
+                                                            <select
+                                                                value={assignedStaffId || ''}
+                                                                disabled={reassigningAppId === item.id}
+                                                                onChange={(e) => handleReassignStaff(item.id, e.target.value)}
+                                                                className="px-2 py-0.5 text-[9px] font-semibold bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-600 cursor-pointer shadow-xs"
+                                                            >
+                                                                <option value="" disabled>-- Reassign Staff --</option>
+                                                                {staffMembers.map((s: any) => (
+                                                                    <option key={s.id} value={s.id}>
+                                                                        {s.firstName || s.email} {s.lastName || ''}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    {/* Lender & Amount */}
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-col text-[10px]">
+                                                            <div className="flex items-center gap-1 mb-0.5">
+                                                                {renderBankLogo(item.bank)}
+                                                                <span className="font-bold text-slate-900 text-xs">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.amount || 0)}</span>
+                                                            </div>
+                                                            <span className="text-[9px] text-slate-500 font-medium capitalize">{item.loanType || 'unsecured'} loan</span>
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    {/* Progress & Stage */}
+                                                    <td className="px-4 py-3 min-w-[150px]">
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between items-center text-[10px]">
+                                                                <span className="font-bold text-slate-800">{stageLabel}</span>
+                                                                <span className="font-bold text-indigo-600 tabular-nums">{progress}%</span>
+                                                            </div>
+                                                            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={`h-full rounded-full transition-all duration-500 ${
+                                                                        progress >= 100 ? 'bg-emerald-500' :
+                                                                        progress >= 75 ? 'bg-indigo-600' :
+                                                                        progress >= 40 ? 'bg-blue-500' :
+                                                                        'bg-amber-500'
+                                                                    }`}
+                                                                    style={{ width: `${progress}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Priority */}
+                                                    <td className="px-4 py-3">
+                                                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border ${
+                                                            priorityLevel === 'high' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                            priorityLevel === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                            'bg-slate-50 text-slate-600 border-slate-200'
+                                                        }`}>
+                                                            {priorityLevel}
+                                                        </span>
+                                                    </td>
+                                                    
+                                                    {/* Applied Date */}
+                                                    <td className="px-4 py-3 text-[10px] text-slate-500 whitespace-nowrap tabular-nums">
+                                                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN') : '—'}
+                                                    </td>
+                                                    
+                                                    {/* Actions */}
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="flex gap-1 justify-end">
+                                                            <button
+                                                                onClick={() => { setSelectedApp(item); }}
+                                                                className="px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-semibold hover:bg-slate-800 transition-colors flex items-center gap-1"
+                                                                title="View Dossier"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[13px]">visibility</span>
+                                                                Dossier
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                );
+                                            }) : (
+                                                <tr>
+                                                    <td colSpan={9} className="px-6 py-16 text-center">
+                                                        <span className="material-symbols-outlined text-4xl mb-3 opacity-20 block">folder_off</span>
+                                                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">No matching applications found</p>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* ─── BLOGS DASHBOARD ──────────────────────────────────────── */}
                     {activeSection === "blogs" && (
@@ -2370,7 +2569,22 @@ export default function AdminDashboardPage() {
                                                 <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-blue-100">
                                                     <span className="material-symbols-outlined text-blue-600 text-[20px] flex-shrink-0">person</span>
                                                     <div className="flex-1">
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Processing Staff</p>
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing Staff</p>
+                                                            <select
+                                                                value={selectedApp.assignedStaffId || ''}
+                                                                disabled={reassigningAppId === selectedApp.id}
+                                                                onChange={(e) => handleReassignStaff(selectedApp.id, e.target.value)}
+                                                                className="px-2 py-0.5 text-[10px] font-semibold bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 cursor-pointer"
+                                                            >
+                                                                <option value="" disabled>-- Reassign Staff --</option>
+                                                                {staffMembers.map((s: any) => (
+                                                                    <option key={s.id} value={s.id}>
+                                                                        {s.firstName || s.email} {s.lastName || ''}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
                                                         <p className="text-[12px] font-bold text-slate-900">{selectedApp.staffName || selectedApp.processingStaff || 'Unassigned'}</p>
                                                         {selectedApp.staffId && <p className="text-[10px] text-slate-500 font-medium mt-1">Staff ID: {selectedApp.staffId}</p>}
                                                         {selectedApp.staffEmail && <p className="text-[10px] text-slate-500 font-medium">{selectedApp.staffEmail}</p>}

@@ -30,6 +30,7 @@ import { CampaignModule } from './campaign/campaign.module';
 import { AgentModule } from './agent/agent.module';
 import { SupportModule } from './support/support.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { AssignmentModule } from './assignment/assignment.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { PrismaModule } from './prisma/prisma.module';
     CampaignModule,
     AgentModule,
     SupportModule,
+    AssignmentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

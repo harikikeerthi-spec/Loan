@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SalesforceService } from './salesforce.service';
+
+import { AssignmentService } from '../assignment/assignment.service';
 
 @Injectable()
 export class BankCronService {
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly salesforce: SalesforceService
+    private readonly salesforce: SalesforceService,
+    private readonly assignmentService: AssignmentService,
   ) {}
 
   private get db() {
@@ -334,6 +338,20 @@ export class BankCronService {
       }
     } catch (err: any) {
       console.error('[Cron: QuerySLA] Error running query SLA cron:', err.message);
+    }
+  }
+
+  /**
+   * Hourly Cron task to check for applications that have been inactive for > 48 hours
+   * and reassign them automatically using the AssignmentService.
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleInactivityReassignment(): Promise<void> {
+    console.log('[Cron: Assignment] Checking for inactive applications needing reassignment...');
+    try {
+      await this.assignmentService.checkInactivityAndReassign();
+    } catch (err: any) {
+      console.error('[Cron: Assignment] Error running assignment cron:', err.message);
     }
   }
 }

@@ -244,8 +244,13 @@ function BankLoginContent() {
         try {
             sessionStorage.setItem("selectedBank", bankId);
             localStorage.setItem("selectedBank", bankId);
-            const res = await authApi.sendOtp(email.trim()) as { success: boolean; otp?: string };
-            if (res.otp) {
+            const res = await authApi.sendOtp(email.trim()) as { success: boolean; message?: string; otp?: string };
+            if (res && res.success === false) {
+                setError(res.message || "Invalid email address");
+                setLoading(false);
+                return;
+            }
+            if (res && res.otp) {
                 setDevOtp(res.otp);
             } else {
                 setDevOtp(null);
