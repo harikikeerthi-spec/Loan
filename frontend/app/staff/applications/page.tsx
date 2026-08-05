@@ -249,7 +249,23 @@ function ApplicationsPageInner() {
     }, [appIdParam, data]);
 
     const filteredData = useMemo(() => {
+        const isPureStaff = user?.role === 'staff';
+        const staffId = (user?.id || '').toLowerCase();
+        const staffEmail = (user?.email || '').toLowerCase();
+
         return data.filter(item => {
+            // Strict per-staff isolation for pure staff role
+            if (isPureStaff && staffId) {
+                const assignedId = (item.assignedStaffId || '').toLowerCase();
+                const assignedEmail = (item.assignedStaffEmail || '').toLowerCase();
+                const matchesStaff = (
+                    assignedId === staffId ||
+                    (staffEmail && assignedId === staffEmail) ||
+                    (staffEmail && assignedEmail === staffEmail)
+                );
+                if (!matchesStaff) return false;
+            }
+
             const status = (item.status || "draft").toLowerCase();
             const bankWorkflow = (item.bankWorkflowStatus || "").toUpperCase();
 

@@ -355,8 +355,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (newUser.id) localStorage.setItem(keys.userId, newUser.id);
             localStorage.setItem(keys.user, JSON.stringify(newUser));
 
+            if (['admin', 'super_admin', 'staff_admin', 'staff', 'it'].includes(newUser.role || '')) {
+                localStorage.setItem("staffAccessToken", accessToken);
+                localStorage.setItem("staffAuthUser", JSON.stringify(newUser));
+                localStorage.setItem("adminAccessToken", accessToken);
+                localStorage.setItem("adminAuthUser", JSON.stringify(newUser));
+                if (userData?.refresh_token) {
+                    localStorage.setItem("staffRefreshToken", userData.refresh_token);
+                    localStorage.setItem("adminRefreshToken", userData.refresh_token);
+                }
+            }
+
             if (typeof window !== "undefined") {
                 document.cookie = `${keys.token}=${accessToken}; path=/; max-age=2592000; SameSite=Lax`;
+                document.cookie = `staffAccessToken=${accessToken}; path=/; max-age=2592000; SameSite=Lax`;
+                document.cookie = `adminAccessToken=${accessToken}; path=/; max-age=2592000; SameSite=Lax`;
             }
 
             notifyTokenChange(accessToken);

@@ -97,10 +97,12 @@ export const HttpApiPaths = {
         shares: (profileId: string) =>
             `${HTTP_API_PREFIX}/staff-profiles/${enc(profileId)}/shares`,
         activities: () => `${HTTP_API_PREFIX}/staff-profiles/activities`,
-        dashboardActivities: (limit: number) =>
-            `${HTTP_API_PREFIX}/staff-profiles/dashboard/activities${httpApiQuery({ limit })}`,
-        activitiesAll: (opts: { limit?: number; offset?: number; type?: string; search?: string }) =>
+        dashboardActivities: (limit: number, staffId?: string) =>
+            `${HTTP_API_PREFIX}/staff-profiles/dashboard/activities${httpApiQuery({ limit, staffId })}`,
+        activitiesAll: (opts: { limit?: number; offset?: number; type?: string; search?: string; staffId?: string }) =>
             `${HTTP_API_PREFIX}/staff-profiles/activities/all${httpApiQuery(opts)}`,
+        staffList: () => `${HTTP_API_PREFIX}/staff-profiles/activities/staff-list`,
+        toggleResign: (id: string) => `${HTTP_API_PREFIX}/staff-profiles/${enc(id)}/resign`,
         shareProfile: (studentId: string) =>
             `${HTTP_API_PREFIX}/staff-profiles/share-profile/${enc(studentId)}`,
         today: () => `${HTTP_API_PREFIX}/staff-profiles/dashboard/today`,

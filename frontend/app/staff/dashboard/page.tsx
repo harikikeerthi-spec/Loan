@@ -138,7 +138,18 @@ export default function StaffDashboardPage() {
     const [activitiesPage, setActivitiesPage] = useState(1);
     const [activitiesFilter, setActivitiesFilter] = useState("all");
     const [activitiesSearch, setActivitiesSearch] = useState("");
+    const [activitiesStaffId, setActivitiesStaffId] = useState("me");
+    const [staffMembersList, setStaffMembersList] = useState<any[]>([]);
     const activitiesLimit = 15;
+
+    useEffect(() => {
+        staffProfileApi.getStaffMembersList()
+            .then((res: any) => {
+                const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+                setStaffMembersList(list);
+            })
+            .catch(console.error);
+    }, []);
 
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
@@ -174,6 +185,7 @@ export default function StaffDashboardPage() {
                 offset,
                 type: activitiesFilter,
                 search: activitiesSearch,
+                staffId: activitiesStaffId,
             });
             let items: any[] = Array.isArray(res?.data) ? res.data : [];
             let total = res?.total ?? items.length;
@@ -190,7 +202,7 @@ export default function StaffDashboardPage() {
         } finally {
             setActivitiesLoading(false);
         }
-    }, [activitiesPage, activitiesFilter, activitiesSearch]);
+    }, [activitiesPage, activitiesFilter, activitiesSearch, activitiesStaffId]);
 
     // Initial overview load
     useEffect(() => {
@@ -417,19 +429,68 @@ export default function StaffDashboardPage() {
                     </div>
 
                     {/* Filters Bar */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="relative flex-1 max-w-md">
-                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-                            <input
-                                type="text"
-                                placeholder="Search activities by message or initiator..."
-                                value={activitiesSearch}
-                                onChange={(e) => { setActivitiesSearch(e.target.value); setActivitiesPage(1); }}
-                                className="w-full pl-11 pr-4 py-3 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 rounded-xl text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
-                            />
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col space-y-4">
+                        {/* Top row: Staff Scope Selector & Search */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            {/* Staff Scope Selector */}
+                            <div className="flex flex-wrap items-center gap-2 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
+                                <button
+                                    onClick={() => { setActivitiesStaffId("me"); setActivitiesPage(1); }}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                                        activitiesStaffId === "me"
+                                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-95"
+                                            : "text-slate-600 hover:bg-slate-200/60"
+                                    }`}
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">person</span>
+                                    My History
+                                </button>
+                                <button
+                                    onClick={() => { setActivitiesStaffId("all"); setActivitiesPage(1); }}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                                        activitiesStaffId === "all"
+                                            ? "bg-[#0f172a] text-white shadow-md shadow-slate-900/10 scale-95"
+                                            : "text-slate-600 hover:bg-slate-200/60"
+                                    }`}
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">groups</span>
+                                    All Staff
+                                </button>
+                                {staffMembersList.length > 0 && (
+                                    <div className="relative border-l border-slate-300/60 pl-2 ml-1">
+                                        <select
+                                            value={activitiesStaffId}
+                                            onChange={(e) => { setActivitiesStaffId(e.target.value); setActivitiesPage(1); }}
+                                            className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                                        >
+                                            <option value="me">Logged-In Staff Only</option>
+                                            <option value="all">All Staff Members</option>
+                                            <optgroup label="Select Specific Staff">
+                                                {staffMembersList.map((m: any) => (
+                                                    <option key={m.id} value={m.id}>
+                                                        {m.name || m.email} ({m.activityCount || 0} events)
+                                                    </option>
+                                                ))}
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="relative flex-1 max-w-md">
+                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                                <input
+                                    type="text"
+                                    placeholder="Search activities by message or initiator..."
+                                    value={activitiesSearch}
+                                    onChange={(e) => { setActivitiesSearch(e.target.value); setActivitiesPage(1); }}
+                                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 rounded-xl text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                                />
+                            </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
+                        {/* Event Category Filter Pills */}
+                        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
                             {[
                                 { key: "all", label: "ALL EVENTS", icon: "select_all", color: "bg-slate-100 text-slate-700" },
                                 { key: "new", label: "REGISTRATIONS", icon: "person_add", color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
@@ -442,7 +503,7 @@ export default function StaffDashboardPage() {
                                 <button
                                     key={badge.key}
                                     onClick={() => { setActivitiesFilter(badge.key); setActivitiesPage(1); }}
-                                    className={`px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all border ${activitiesFilter === badge.key
+                                    className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all border ${activitiesFilter === badge.key
                                         ? "bg-[#0f172a] text-white border-[#0f172a] shadow-md shadow-slate-900/10 scale-95"
                                         : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                                         }`}

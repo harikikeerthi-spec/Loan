@@ -326,6 +326,16 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         fetchBadgeStats
     }), [onlineEmails, unreadChatCount, fetchBadgeStats]);
 
+    const handleLogout = async (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        try {
+            await logout();
+        } catch (err) {
+            console.error("Logout error:", err);
+        }
+        router.push("/staff/login");
+    };
+
     if (isLoading) {
         return (
             <div className="h-screen flex items-center justify-center bg-[#f8fafc]">
@@ -335,8 +345,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     }
 
     if (pathname === "/staff/login") return <>{children}</>;
-
-    if (!isAuthenticated || !isStaff) return null;
 
     return (
         <StaffLayoutContext.Provider value={contextValue}>
@@ -389,7 +397,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                             </div>
                         </div>
                         <button
-                            onClick={(e) => { e.stopPropagation(); logout(); }}
+                            onClick={handleLogout}
                             className={`w-full px-3 py-2 rounded bg-slate-800 hover:bg-rose-500/10 hover:text-rose-400 text-slate-300 border border-slate-700 hover:border-rose-500/30 transition-all text-[11px] font-semibold flex items-center justify-center gap-2 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}
                             title="Sign Out"
                         >
@@ -496,7 +504,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                             </div>
 
                             <button
-                                onClick={logout}
+                                onClick={handleLogout}
                                 title="Sign Out"
                                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border-0 bg-transparent cursor-pointer"
                             >

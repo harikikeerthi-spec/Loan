@@ -1491,11 +1491,20 @@ export const staffProfileApi = {
             body: JSON.stringify(data),
         }),
 
-    getDashboardActivities: (limit = 15) =>
-        apiFetch(HttpApiPaths.staffProfiles.dashboardActivities(limit)),
+    getDashboardActivities: (limit = 15, staffId?: string) =>
+        apiFetch(HttpApiPaths.staffProfiles.dashboardActivities(limit, staffId)),
 
-    getAllDashboardActivities: (opts: { limit?: number; offset?: number; type?: string; search?: string }) =>
+    getAllDashboardActivities: (opts: { limit?: number; offset?: number; type?: string; search?: string; staffId?: string }) =>
         apiFetch(HttpApiPaths.staffProfiles.activitiesAll(opts)),
+
+    getStaffMembersList: () =>
+        apiFetch(HttpApiPaths.staffProfiles.staffList()),
+
+    toggleStaffResignation: (staffId: string, isResigned = true) =>
+        apiFetch(HttpApiPaths.staffProfiles.toggleResign(staffId), {
+            method: 'PATCH',
+            body: JSON.stringify({ isResigned }),
+        }),
 
     // Share a student profile with a bank or the student (Step 4 of onboarding)
     shareProfile: (studentId: string, data: {

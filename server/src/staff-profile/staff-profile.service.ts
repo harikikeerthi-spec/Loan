@@ -638,17 +638,141 @@ export class StaffProfileService {
   }
 
   /**
+   * Returns unique list of staff members who have logged activities or exist as staff users.
+   */
+  async getStaffMembersList() {
+    try {
+      // 1. Get distinct staff actors from AuditLog
+      const { data: logs } = await this.db
+        .from('AuditLog')
+        .select('initiatedBy, changes')
+        .eq('action', 'STAFF_ACTIVITY')
+        .eq('entityType', 'staff_dashboard')
+        .order('createdAt', { ascending: false })
+        .limit(300);
+
+      const staffMap = new Map<string, { id: string; name: string; email: string; activityCount: number }>();
+
+      (logs || []).forEach((row: any) => {
+        const changes = row?.changes || {};
+        const email = changes.actorEmail || '';
+        const name = changes.actorName || 'Staff Member';
+        const key = row.initiatedBy || email || name;
+        if (!key) return;
+
+        if (staffMap.has(key)) {
+          staffMap.get(key)!.activityCount++;
+        } else {
+          staffMap.set(key, {
+            id: row.initiatedBy || key,
+            name: name,
+            email: email,
+            activityCount: 1,
+          });
+        }
+      });
+
+      // 2. Fetch users with staff roles from User table
+      const { data: staffUsers } = await this.db
+        .from('User')
+        .select('id, firstName, lastName, email, role')
+        .or('role.eq.staff,role.eq.staff_admin,role.eq.admin,role.eq.super_admin');
+
+      (staffUsers || []).forEach((u: any) => {
+        const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.email || 'Staff';
+        const key = u.id;
+        if (staffMap.has(key)) {
+          const existing = staffMap.get(key)!;
+          if (!existing.email && u.email) existing.email = u.email;
+          if (existing.name === 'Staff Member' || !existing.name) existing.name = name;
+        } else {
+          staffMap.set(key, {
+            id: u.id,
+            name,
+            email: u.email || '',
+            activityCount: 0,
+          });
+        }
+      });
+
+      // 3. Fetch StaffProfiles to check resignation / invalid status
+      const resignedIds = new Set<string>();
+      try {
+        const { data: profiles } = await this.db
+          .from('StaffProfile')
+          .select('id, linkedUserId, isResigned, status');
+        
+        (profiles || []).forEach((p: any) => {
+          if (p.isResigned || p.status === 'resigned' || p.status === 'inactive' || p.status === 'invalid') {
+            if (p.linkedUserId) resignedIds.add(p.linkedUserId.toLowerCase());
+            if (p.id) resignedIds.add(p.id.toLowerCase());
+          }
+        });
+      } catch (err) {
+        console.warn('[getStaffMembersList] Could not check StaffProfile resignation:', err);
+      }
+
+      return Array.from(staffMap.values()).map(member => {
+        const isResigned = resignedIds.has(member.id.toLowerCase()) || 
+                           member.name.toLowerCase().includes('resigned') || 
+                           member.name.toLowerCase().includes('invalid');
+        const formattedName = isResigned && !member.name.includes('(Invalid)') 
+          ? `${member.name} (Invalid)` 
+          : member.name;
+
+        return {
+          ...member,
+          name: formattedName,
+          isResigned: !!isResigned,
+        };
+      });
+    } catch (e) {
+      console.error('[getStaffMembersList] Exception:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Toggles the resignation status of a staff member (marks as resigned/invalid or active).
+   */
+  async toggleStaffResignation(staffId: string, isResigned: boolean) {
+    try {
+      await this.db
+        .from('StaffProfile')
+        .update({ isResigned, isAvailable: !isResigned, status: isResigned ? 'resigned' : 'active' })
+        .or(`id.eq.${staffId},linkedUserId.eq.${staffId}`);
+
+      return { success: true, isResigned, message: `Staff member marked as ${isResigned ? 'Resigned (Invalid)' : 'Active'}` };
+    } catch (e) {
+      console.error('[toggleStaffResignation] Error:', e);
+      return { success: false, message: 'Failed to update resignation status' };
+    }
+  }
+
+  /**
    * Returns the N most recent dashboard activity entries (for the sidebar widget).
    */
-  async getDashboardActivities(limit: number = 15) {
+  async getDashboardActivities(limit: number = 15, staffId?: string, currentUser?: any) {
     try {
-      const { data, error } = await this.db
+      let query = this.db
         .from('AuditLog')
-        .select('id, entityId, changes, createdAt')
+        .select('id, entityId, initiatedBy, changes, createdAt')
         .eq('action', 'STAFF_ACTIVITY')
         .eq('entityType', 'staff_dashboard')
         .order('createdAt', { ascending: false })
         .limit(limit);
+
+      const targetStaffId = (staffId === 'me' && currentUser?.id) ? currentUser.id : staffId;
+
+      if (targetStaffId && targetStaffId !== 'all') {
+        if (targetStaffId.includes('@')) {
+          query = query.eq('changes->>actorEmail', targetStaffId);
+        } else {
+          query = query.or(`initiatedBy.eq.${targetStaffId},changes->>actorEmail.eq.${targetStaffId}`);
+        }
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('[getDashboardActivities] Error:', error);
@@ -669,18 +793,29 @@ export class StaffProfileService {
     offset: number;
     type?: string;
     search?: string;
-  }) {
+    staffId?: string;
+  }, currentUser?: any) {
     try {
       const limit = Math.max(1, Math.min(opts.limit || 50, 100));
       const offset = Math.max(0, opts.offset || 0);
 
       let query = this.db
         .from('AuditLog')
-        .select('id, entityId, changes, createdAt', { count: 'exact' })
+        .select('id, entityId, initiatedBy, changes, createdAt', { count: 'exact' })
         .eq('action', 'STAFF_ACTIVITY')
         .eq('entityType', 'staff_dashboard')
         .order('createdAt', { ascending: false })
         .range(offset, offset + limit - 1);
+
+      const targetStaffId = (opts.staffId === 'me' && currentUser?.id) ? currentUser.id : opts.staffId;
+
+      if (targetStaffId && targetStaffId !== 'all') {
+        if (targetStaffId.includes('@')) {
+          query = query.eq('changes->>actorEmail', targetStaffId);
+        } else {
+          query = query.or(`initiatedBy.eq.${targetStaffId},changes->>actorEmail.eq.${targetStaffId}`);
+        }
+      }
 
       if (opts.type && opts.type !== 'all') {
         query = query.eq('entityId', opts.type);
@@ -717,6 +852,7 @@ export class StaffProfileService {
       color: changes.color || 'bg-slate-50 text-slate-600 border-slate-100',
       actorName: changes.actorName || 'Staff',
       actorEmail: changes.actorEmail || null,
+      initiatedBy: row.initiatedBy || null,
       createdAt: row.createdAt,
     };
   }
@@ -1577,12 +1713,26 @@ export class StaffProfileService {
     try {
       const now = new Date();
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+      const userRole = (user?.role || '').toLowerCase();
+      const isPureStaff = userRole === 'staff';
+
+      let appQuery = this.db
+        .from('LoanApplication')
+        .select('id, applicationNumber, firstName, lastName, bank, status, amount, submittedAt, priorityLevel, priority, disbursedAmount, sanctionAmount, assignedStaffId, assignedStaffName, assignedStaffEmail');
+
+      if (isPureStaff && user?.id) {
+        const userIds = Array.from(new Set([user.id, user.email].filter(Boolean)));
+        const orConditions = userIds.map(id => `assignedStaffId.eq.${id}`);
+        if (orConditions.length > 0) {
+          appQuery = appQuery.or(orConditions.join(','));
+        }
+      }
 
       const [
         { data: allApps },
         { data: resolvedQueries }
       ] = await Promise.all([
-        this.db.from('LoanApplication').select('id, applicationNumber, firstName, lastName, bank, status, amount, submittedAt, priorityLevel, priority, disbursedAmount, sanctionAmount'),
+        appQuery,
         this.db.from('queries').select('*, application:LoanApplication(*)').eq('status', 'resolved')
       ]);
 

@@ -20,6 +20,7 @@ export interface ActivityLogOptions {
   pollInterval?: number;
   autoRefresh?: boolean;
   enableWebSocket?: boolean;
+  staffId?: string;
 }
 
 // Helper function to format relative time
@@ -47,7 +48,8 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     limit = 15,
     pollInterval = 30000,
     autoRefresh = true,
-    enableWebSocket = true
+    enableWebSocket = true,
+    staffId,
   } = options;
 
   const { token } = useAuth();
@@ -69,7 +71,7 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const res: any = await staffProfileApi.getDashboardActivities(limit);
+      const res: any = await staffProfileApi.getDashboardActivities(limit, staffId);
       const items: Activity[] = Array.isArray(res) ? res : (res?.data ?? []);
 
       setActivities(items.map((a: Activity) => ({
@@ -85,7 +87,7 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, staffId]);
 
   // Initialize WebSocket connection
   useEffect(() => {

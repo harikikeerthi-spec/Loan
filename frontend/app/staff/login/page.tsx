@@ -110,8 +110,9 @@ function StaffLoginContent() {
                 throw new Error((data as any).message || "Invalid OTP. Please enter the right one to login.");
             }
 
-            if (data.role !== 'staff' && data.role !== 'admin' && data.role !== 'super_admin') {
-                throw new Error("Access Denied: Staff privileges required.");
+            const allowedRoles = ['staff', 'staff_admin', 'admin', 'super_admin', 'it'];
+            if (!allowedRoles.includes(data.role)) {
+                throw new Error("Access Denied: Staff or Admin privileges required.");
             }
 
             login(data.access_token, {

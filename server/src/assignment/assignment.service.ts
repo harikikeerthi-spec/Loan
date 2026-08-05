@@ -78,62 +78,53 @@ export class AssignmentService {
 
     const selectedStaff = eligibleStaff[nextIndex];
     const staffUserId = selectedStaff.linkedUserId || selectedStaff.assignedStaffId || selectedStaff.id;
+    const staffName = `${selectedStaff.linkedUser?.firstName || selectedStaff.firstName || ''} ${selectedStaff.linkedUser?.lastName || selectedStaff.lastName || ''}`.trim() || selectedStaff.email || 'Staff Member';
+    const staffEmail = selectedStaff.linkedUser?.email || selectedStaff.email || '';
+    const now = new Date().toISOString();
 
     let assignSuccess = false;
 
-    try {
-      const { data: rpcRes, error: rpcErr } = await this.db.rpc('assign_loan_atomic', {
-        p_loan_id: loan.id,
-        p_staff_id: staffUserId,
-        p_assigned_by: triggeredBy,
-      });
+    // 1. Direct table update ensures assignedStaffId, assignedStaffName, assignedStaffEmail, processingStaff, assignedAt are persistently stored in DB
+    const { data: updateRes, error: updateErr } = await this.db
+      .from('LoanApplication')
+      .update({
+        assignedStaffId: staffUserId,
+        assignedStaffName: staffName,
+        assignedStaffEmail: staffEmail,
+        processingStaff: staffName,
+        assignedAt: now,
+        assignmentStatus: 'assigned',
+        lastActivityAt: now,
+      })
+      .eq('id', loan.id)
+      .select()
+      .maybeSingle();
 
-      if (!rpcErr && rpcRes && rpcRes.success) {
-        assignSuccess = true;
-      } else {
-        if (rpcRes?.reason === 'already_assigned') {
-          return { success: false, message: 'Loan already assigned by concurrent process' };
-        }
-        throw new Error(rpcErr?.message || 'RPC returned failure');
-      }
-    } catch (err: any) {
-      this.logger.warn(`[AssignmentEngine] RPC assign_loan_atomic unavailable or failed (${err.message}). Using manual table update.`);
-
-      const { data: updateRes, error: updateErr } = await this.db
-        .from('LoanApplication')
-        .update({
-          assignedStaffId: staffUserId,
-        })
-        .eq('id', loan.id)
-        .select()
-        .maybeSingle();
-
-      if (updateErr || !updateRes) {
-        this.logger.error(`[AssignmentEngine] Direct update failed for loan ${loan.id}:`, updateErr);
-        return { success: false, message: 'Loan update failed' };
-      }
-
-      const currentWork = selectedStaff.currentWorkload || 0;
-      try {
-        await this.db
-          .from('StaffProfile')
-          .update({ currentWorkload: currentWork + 1 })
-          .eq('id', selectedStaff.id);
-      } catch (_) {}
-
-      try {
-        await this.db.from('LoanAssignmentHistory').insert({
-          applicationId: loanId,
-          fromStaffId: null,
-          toStaffId: staffUserId,
-          assignedBy: triggeredBy,
-          reason: 'round_robin',
-          createdAt: new Date().toISOString(),
-        });
-      } catch (_) {}
-
-      assignSuccess = true;
+    if (updateErr || !updateRes) {
+      this.logger.error(`[AssignmentEngine] Direct update failed for loan ${loan.id}:`, updateErr);
+      return { success: false, message: 'Loan update failed' };
     }
+
+    const currentWork = selectedStaff.currentWorkload || 0;
+    try {
+      await this.db
+        .from('StaffProfile')
+        .update({ currentWorkload: currentWork + 1 })
+        .eq('id', selectedStaff.id);
+    } catch (_) {}
+
+    try {
+      await this.db.from('LoanAssignmentHistory').insert({
+        applicationId: loanId,
+        fromStaffId: null,
+        toStaffId: staffUserId,
+        assignedBy: triggeredBy,
+        reason: 'round_robin',
+        createdAt: now,
+      });
+    } catch (_) {}
+
+    assignSuccess = true;
 
     if (assignSuccess) {
       await this.db
@@ -141,7 +132,7 @@ export class AssignmentService {
         .upsert({
           scope: 'global',
           lastAssignedStaffId: staffUserId,
-          updatedAt: new Date().toISOString(),
+          updatedAt: now,
         }, { onConflict: 'scope' });
 
       try {
@@ -255,7 +246,8 @@ export class AssignmentService {
     let eligible = staffList.filter(staff => {
       const isAvailable = staff.isAvailable !== false;
       const isOnLeave = staff.isOnLeave === true;
-      return isAvailable && !isOnLeave;
+      const isResigned = staff.isResigned === true || ['resigned', 'inactive', 'invalid'].includes((staff.status || '').toLowerCase());
+      return isAvailable && !isOnLeave && !isResigned;
     });
 
     if (eligible.length === 0) {
@@ -271,6 +263,29 @@ export class AssignmentService {
     reason: string = 'manual',
     assignedBy: string = 'system'
   ): Promise<{ success: boolean; message: string }> {
+    // Guard against reassigning sanctioned / approved applications
+    const { data: currentLoan } = await this.db
+      .from('LoanApplication')
+      .select('assignedStaffId, status')
+      .eq('id', loanId)
+      .maybeSingle();
+
+    const currentStatus = (currentLoan?.status || '').toLowerCase();
+    const sanctionedStatuses = [
+      'sanctioned',
+      'conditional_sanction',
+      'partial_sanction',
+      'disbursed',
+      'partially_disbursed',
+      'approved',
+    ];
+    if (currentLoan && sanctionedStatuses.includes(currentStatus)) {
+      return {
+        success: false,
+        message: 'Cannot reassign loan application: Application has already been sanctioned/approved and is permanently locked to the assigned staff member.',
+      };
+    }
+
     try {
       const { data: rpcRes, error: rpcErr } = await this.db.rpc('reassign_loan_atomic', {
         p_loan_id: loanId,
@@ -295,10 +310,29 @@ export class AssignmentService {
     const previousStaffId = oldLoan?.assignedStaffId;
     const now = new Date().toISOString();
 
+    let targetStaffName = 'Staff Member';
+    let targetStaffEmail = '';
+    try {
+      const { data: targetUser } = await this.db
+        .from('User')
+        .select('id, firstName, lastName, email')
+        .or(`id.eq.${toStaffId},email.eq.${toStaffId}`)
+        .maybeSingle();
+
+      if (targetUser) {
+        targetStaffName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email || 'Staff Member';
+        targetStaffEmail = targetUser.email || '';
+      }
+    } catch (_) {}
+
     await this.db
       .from('LoanApplication')
       .update({
         assignedStaffId: toStaffId,
+        assignedStaffName: targetStaffName,
+        assignedStaffEmail: targetStaffEmail,
+        processingStaff: targetStaffName,
+        assignedAt: now,
         assignmentStatus: 'assigned',
         lastActivityAt: now,
       })
@@ -475,11 +509,21 @@ export class AssignmentService {
         .maybeSingle();
 
       if (staffUser) {
-        resolvedIds = [staffUser.id, staffUser.email].filter(Boolean);
+        resolvedIds = Array.from(new Set([...resolvedIds, staffUser.id, staffUser.email].filter(Boolean)));
       }
-    } catch (_) {
-      // Fallback: just use raw staffId
-    }
+    } catch (_) {}
+
+    try {
+      const { data: profile } = await this.db
+        .from('StaffProfile')
+        .select('id, linkedUserId, email')
+        .or(`id.eq.${staffId},linkedUserId.eq.${staffId},email.eq.${staffId}`)
+        .maybeSingle();
+
+      if (profile) {
+        resolvedIds = Array.from(new Set([...resolvedIds, profile.id, profile.linkedUserId, profile.email].filter(Boolean)));
+      }
+    } catch (_) {}
 
     // Build OR filter across all resolved IDs
     const orConditions = resolvedIds.map(id => `assignedStaffId.eq.${id}`);

@@ -181,26 +181,56 @@ export class StaffProfileController {
 
   /** Recent N activities for the sidebar widget. */
   @Get('dashboard/activities')
-  async getActivities(@Query('limit') limit?: string) {
-    const logs = await this.svc.getDashboardActivities(limit ? parseInt(limit, 10) : 15);
+  async getActivities(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+    @Query('staffId') staffId?: string,
+  ) {
+    const logs = await this.svc.getDashboardActivities(
+      limit ? parseInt(limit, 10) : 15,
+      staffId,
+      req.user,
+    );
     return { success: true, data: logs };
   }
 
   /** Full paginated + filtered Activity Log for the Activities section. */
   @Get('activities/all')
   async getAllActivities(
+    @Req() req: any,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('type') type?: string,
     @Query('search') search?: string,
+    @Query('staffId') staffId?: string,
   ) {
-    const result = await this.svc.getAllDashboardActivities({
-      limit: limit ? parseInt(limit, 10) : 50,
-      offset: offset ? parseInt(offset, 10) : 0,
-      type,
-      search,
-    });
+    const result = await this.svc.getAllDashboardActivities(
+      {
+        limit: limit ? parseInt(limit, 10) : 50,
+        offset: offset ? parseInt(offset, 10) : 0,
+        type,
+        search,
+        staffId,
+      },
+      req.user,
+    );
     return { success: true, data: result.items, total: result.total };
+  }
+
+  /** Get list of staff members for filtering activities */
+  @Get('activities/staff-list')
+  async getStaffMembers() {
+    const members = await this.svc.getStaffMembersList();
+    return { success: true, data: members };
+  }
+
+  /** Toggle staff resignation status (marks staff as Resigned (Invalid) or Active) */
+  @Patch(':id/resign')
+  async toggleResignation(
+    @Param('id') id: string,
+    @Body('isResigned') isResigned?: boolean,
+  ) {
+    return await this.svc.toggleStaffResignation(id, isResigned ?? true);
   }
 
   // ─── Today's Dashboard API (F29) ──────────────────────────────────────────

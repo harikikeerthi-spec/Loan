@@ -20,6 +20,7 @@ interface ActivityLogWidgetProps {
   refreshInterval?: number;
   showFullLog?: boolean;
   onViewAll?: () => void;
+  staffId?: string;
 }
 
 const getActivityStyles = (type: string) => {
@@ -64,8 +65,11 @@ export default function ActivityLogWidget({
   limit = 10, 
   refreshInterval = 30000,
   showFullLog = false,
-  onViewAll
+  onViewAll,
+  staffId: propStaffId
 }: ActivityLogWidgetProps) {
+  const [selectedStaffId, setSelectedStaffId] = useState<string>(propStaffId || "me");
+  const [staffMembers, setStaffMembers] = useState<{ id: string; name: string; email: string }[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,11 +78,28 @@ export default function ActivityLogWidget({
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timestampIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Load staff list for dropdown
+  useEffect(() => {
+    staffProfileApi.getStaffMembersList()
+      .then((res: any) => {
+        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        setStaffMembers(list);
+      })
+      .catch(err => console.error("Failed to load staff list:", err));
+  }, []);
+
+  // Sync propStaffId if changed from parent
+  useEffect(() => {
+    if (propStaffId !== undefined) {
+      setSelectedStaffId(propStaffId);
+    }
+  }, [propStaffId]);
+
   // Fetch activities from backend
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const res: any = await staffProfileApi.getDashboardActivities(limit);
+      const res: any = await staffProfileApi.getDashboardActivities(limit, selectedStaffId);
       const data = Array.isArray(res) ? res : res?.data || [];
       
       const formattedActivities = data.map((activity: any) => ({
@@ -162,12 +183,11 @@ export default function ActivityLogWidget({
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, [limit, refreshInterval]);
+  }, [limit, refreshInterval, selectedStaffId]);
 
   // Auto-refresh timestamp display every 10 seconds
   useEffect(() => {
     timestampIntervalRef.current = setInterval(() => {
-      // Trigger re-render to update relative times
       setRefreshKey(prev => prev + 1);
     }, 10000);
 
@@ -181,40 +201,86 @@ export default function ActivityLogWidget({
   return (
     <div className="space-y-3 pb-2">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-        <h3 className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-          <span className="material-symbols-outlined text-[18px] text-slate-600">history</span>
-          Recent Activity
-        </h3>
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5">
-            {loading && (
-              <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="flex flex-col gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-slate-600">history</span>
+            Staff History
+          </h3>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5">
+              {loading && (
+                <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+              )}
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Live connection active" />
+            </div>
+            <button
+              onClick={() => {
+                fetchActivities();
+                setRefreshKey(prev => prev + 1);
+              }}
+              className="p-1 hover:bg-slate-100 rounded transition-colors flex items-center"
+              title="Refresh activities"
+            >
+              <span className="material-symbols-outlined text-[16px] text-slate-500">refresh</span>
+            </button>
+            {onViewAll && (
+              <>
+                <div className="h-4 w-px bg-slate-200 mx-1" />
+                <button
+                  onClick={onViewAll}
+                  className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
+                  title="View full activity log"
+                >
+                  View All
+                  <span className="material-symbols-outlined text-[12px]">arrow_forward_ios</span>
+                </button>
+              </>
             )}
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Live connection active" />
           </div>
-          <button
-            onClick={() => {
-              fetchActivities();
-              setRefreshKey(prev => prev + 1);
-            }}
-            className="p-1 hover:bg-slate-100 rounded transition-colors flex items-center"
-            title="Refresh activities"
-          >
-            <span className="material-symbols-outlined text-[16px] text-slate-500">refresh</span>
-          </button>
-          {onViewAll && (
-            <>
-              <div className="h-4 w-px bg-slate-200 mx-1" />
-              <button
-                onClick={onViewAll}
-                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
-                title="View full activity log"
-              >
-                View All
-                <span className="material-symbols-outlined text-[12px]">arrow_forward_ios</span>
-              </button>
-            </>
+        </div>
+
+        {/* Staff Filter Selector Sub-Bar */}
+        <div className="flex items-center gap-2 pt-1 border-t border-slate-200/50">
+          <div className="flex bg-slate-200/60 p-0.5 rounded-lg text-[10px] font-bold">
+            <button
+              onClick={() => setSelectedStaffId("me")}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                selectedStaffId === "me" 
+                  ? "bg-white text-indigo-600 shadow-sm" 
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              My Log
+            </button>
+            <button
+              onClick={() => setSelectedStaffId("all")}
+              className={`px-2.5 py-1 rounded-md transition-all ${
+                selectedStaffId === "all" 
+                  ? "bg-white text-indigo-600 shadow-sm" 
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              All Staff
+            </button>
+          </div>
+
+          {staffMembers.length > 0 && (
+            <select
+              value={selectedStaffId}
+              onChange={(e) => setSelectedStaffId(e.target.value)}
+              className="ml-auto text-[10px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-w-[140px] truncate"
+            >
+              <option value="me">Logged In Staff</option>
+              <option value="all">All Staff Members</option>
+              <optgroup label="Individual Staff">
+                {staffMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name || member.email}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
           )}
         </div>
       </div>

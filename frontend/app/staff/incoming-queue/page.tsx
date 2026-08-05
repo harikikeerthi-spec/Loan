@@ -443,7 +443,7 @@ function IncomingQueuePageInner() {
                     console.error(e);
                 }
             }
-            
+
             const pendingIndex = currentList.findIndex((f: any) => f.status === "pending");
             if (pendingIndex > -1) {
                 currentList[pendingIndex] = {
@@ -522,7 +522,7 @@ function IncomingQueuePageInner() {
     const openFollowUpModal = (rowId: string, item: any) => {
         setEditingFollowUpId(rowId);
         setFollowUpItem(item);
-        
+
         // 1. Check app-level first
         if (followUpDates[rowId]) {
             setTempFollowUpDate(followUpDates[rowId].date);
@@ -575,13 +575,24 @@ function IncomingQueuePageInner() {
             // Fetch incoming student applications assigned to the logged-in staff member
             const res: any = await adminApi.getApplications({ limit: "1000" });
             const rawItems: any[] = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-            
-            // Filter to include active applications assigned strictly to logged-in staff member
+
+            const isPureStaff = user?.role === 'staff';
             const staffId = (user?.id || '').toLowerCase();
             const staffEmail = (user?.email || '').toLowerCase();
-            const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
             const items: any[] = rawItems.filter((app: any) => {
+                // Strict per-staff isolation for pure staff role
+                if (isPureStaff && staffId) {
+                    const assignedId = (app.assignedStaffId || '').toLowerCase();
+                    const assignedEmail = (app.assignedStaffEmail || '').toLowerCase();
+                    const matchesStaff = (
+                        assignedId === staffId ||
+                        (staffEmail && assignedId === staffEmail) ||
+                        (staffEmail && assignedEmail === staffEmail)
+                    );
+                    if (!matchesStaff) return false;
+                }
+
                 const s = (app.status || "").toLowerCase();
                 const bw = (app.bankWorkflowStatus || "").toUpperCase();
 
@@ -1089,14 +1100,14 @@ function IncomingQueuePageInner() {
                             Showing <span className="text-indigo-600 font-extrabold">{showingStart}–{Math.min(showingEnd, totalItems)}</span> of <span className="font-extrabold">{totalItems}</span> applications &nbsp;·&nbsp; Page <span className="text-indigo-600 font-extrabold">{currentPage}</span> of <span className="font-extrabold">{totalPages}</span>
                         </p>
                         <div className="flex items-center gap-1.5">
-                            <button
+                            {/* <button
                                 disabled={currentPage === 1 || loading}
                                 onClick={() => setCurrentPage(1)}
                                 className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center justify-center shadow-2xs"
                                 title="First page"
                             >
                                 <span className="material-symbols-outlined text-[15px]">first_page</span>
-                            </button>
+                            </button> */}
                             <button
                                 disabled={currentPage === 1 || loading}
                                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
@@ -1113,11 +1124,10 @@ function IncomingQueuePageInner() {
                                     <button
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
-                                        className={`w-8 h-8 rounded-lg text-[11px] font-black transition-all shadow-2xs ${
-                                            page === currentPage
-                                                ? 'bg-indigo-600 text-white border border-indigo-600'
-                                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                                        }`}
+                                        className={`w-8 h-8 rounded-lg text-[11px] font-black transition-all shadow-2xs ${page === currentPage
+                                            ? 'bg-indigo-600 text-white border border-indigo-600'
+                                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -1131,14 +1141,14 @@ function IncomingQueuePageInner() {
                                 Next
                                 <span className="material-symbols-outlined text-[15px]">chevron_right</span>
                             </button>
-                            <button
+                            {/* <button
                                 disabled={currentPage >= totalPages || loading}
                                 onClick={() => setCurrentPage(totalPages)}
                                 className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center justify-center shadow-2xs"
                                 title="Last page"
                             >
                                 <span className="material-symbols-outlined text-[15px]">last_page</span>
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 )}

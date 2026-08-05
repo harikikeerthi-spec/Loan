@@ -1088,45 +1088,18 @@ export class ApplicationService {
 
   async autoAssignUnassignedLoans() {
     try {
-      const { data: allLoans } = await this.db
+      const { data: unassignedLoans } = await this.db
         .from('LoanApplication')
-        .select('id, assignedStaffId');
+        .select('id, applicationNumber, assignedStaffId')
+        .or('assignedStaffId.is.null,assignedStaffId.eq.unassigned,assignedStaffId.eq.,assignedStaffId.eq.null');
 
-      if (allLoans && allLoans.length > 0) {
-        const eligibleStaff = await this.assignmentService.getEligibleStaff();
-        if (!eligibleStaff || eligibleStaff.length === 0) return;
-
-        // Build valid staff ID set
-        const validStaffIds = new Set<string>();
-        eligibleStaff.forEach(s => {
-          if (s.id) validStaffIds.add(s.id.toLowerCase());
-          if (s.linkedUserId) validStaffIds.add(s.linkedUserId.toLowerCase());
-          if (s.email) validStaffIds.add(s.email.toLowerCase());
-        });
-
-        // Filter unassigned loans or loans assigned to stale/deleted IDs
-        const unassignedLoans = allLoans.filter(l => {
-          const s = (l.assignedStaffId || '').trim().toLowerCase();
-          return !s || s === 'unassigned' || s === 'null' || s === 'undefined' || !validStaffIds.has(s);
-        });
-
-        // If unassigned loans exist OR staff distribution is uneven, rebalance all active applications via Round-Robin
-        if (unassignedLoans.length > 0) {
-          console.log(`[AutoAssign] Distributing ${allLoans.length} active loan applications via Round-Robin across ${eligibleStaff.length} active staff members...`);
-
-          for (let i = 0; i < allLoans.length; i++) {
-            const loan = allLoans[i];
-            const targetStaff = eligibleStaff[i % eligibleStaff.length];
-            const targetStaffId = targetStaff.linkedUserId || targetStaff.id || targetStaff.email;
-
-            try {
-              await this.db
-                .from('LoanApplication')
-                .update({ assignedStaffId: targetStaffId })
-                .eq('id', loan.id);
-            } catch (e) {
-              console.error(`[AutoAssign] Failed to update loan ${loan.id}:`, e);
-            }
+      if (unassignedLoans && unassignedLoans.length > 0) {
+        console.log(`[AutoAssign] Found ${unassignedLoans.length} unassigned loan applications. Assigning via round-robin...`);
+        for (const loan of unassignedLoans) {
+          try {
+            await this.assignmentService.assignLoan(loan.id, 'auto_assign_system');
+          } catch (e) {
+            console.error(`[AutoAssign] Failed to assign loan ${loan.id}:`, e);
           }
         }
       }

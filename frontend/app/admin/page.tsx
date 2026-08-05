@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { adminApi, assignmentApi } from "@/lib/api";
+import { adminApi, assignmentApi, staffProfileApi } from "@/lib/api";
 import { format, formatDistanceToNow } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import CampaignsDashboard from "@/components/Admin/CampaignsDashboard";
@@ -626,6 +626,44 @@ export default function AdminDashboardPage() {
             alert("Auto-assignment failed: " + (e.message || e));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleToggleResigned = async (staffId: string, currentResigned: boolean) => {
+        const nextResigned = !currentResigned;
+        const confirmMsg = nextResigned 
+            ? "Mark this staff member as Resigned (Invalid)? They will be excluded from new application assignments and labeled as Invalid."
+            : "Reinstate this staff member as Active?";
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            await staffProfileApi.toggleStaffResignation(staffId, nextResigned);
+            staffProfileApi.getStaffMembersList().then((res: any) => {
+                const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+                setStaffMembers(list);
+            }).catch(console.error);
+            loadData();
+            alert(`Staff status updated: ${nextResigned ? 'Resigned (Invalid)' : 'Active'}`);
+        } catch (err: any) {
+            console.error("Failed to update staff resignation status:", err);
+            alert("Failed to update resignation status: " + (err.message || err));
+        }
+    };
+
+    const handleToggleLeave = async (staffId: string, currentOnLeave: boolean) => {
+        const nextOnLeave = !currentOnLeave;
+        const confirmMsg = nextOnLeave
+            ? "Mark this staff member as On Leave? They will be temporarily skipped during round-robin auto-assignments."
+            : "Mark this staff member as Available?";
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            await assignmentApi.updateStaffAvailability(staffId, { isOnLeave: nextOnLeave });
+            loadData();
+            alert(`Staff status updated: ${nextOnLeave ? 'On Leave' : 'Available'}`);
+        } catch (err: any) {
+            console.error("Failed to update staff leave status:", err);
+            alert("Failed to update leave status: " + (err.message || err));
         }
     };
 
@@ -1872,7 +1910,15 @@ export default function AdminDashboardPage() {
                                                                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.email}`} alt="" className="w-full h-full object-cover" />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-[12px] font-semibold text-slate-900 group-hover:text-indigo-600 underline transition-colors">{item.firstName} {item.lastName}</p>
+                                                                    <p className="text-[12px] font-semibold text-slate-900 group-hover:text-indigo-600 underline transition-colors flex items-center gap-1.5 flex-wrap">
+                                                                        {item.firstName} {item.lastName}
+                                                                        {(item.isResigned || item.status === 'resigned') && (
+                                                                            <span className="text-[9px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">Resigned (Invalid)</span>
+                                                                        )}
+                                                                        {item.isOnLeave && (
+                                                                            <span className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">On Leave</span>
+                                                                        )}
+                                                                    </p>
                                                                     <p className="text-[10px] text-slate-500 font-medium">{item.email}</p>
                                                                 </div>
                                                             </button>
@@ -1904,6 +1950,34 @@ export default function AdminDashboardPage() {
                                                                     arrow_drop_down
                                                                 </span>
                                                             </div>
+                                                            {(item.role === 'staff' || item.role === 'staff_admin') && (
+                                                                <div className="flex items-center gap-1 mt-1.5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleToggleResigned(item.id, !!(item.isResigned || item.status === 'resigned'))}
+                                                                        className={`px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider rounded border transition-all cursor-pointer ${
+                                                                            (item.isResigned || item.status === 'resigned')
+                                                                                ? "bg-rose-600 text-white border-rose-700 shadow-xs"
+                                                                                : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-rose-50 hover:text-rose-600"
+                                                                        }`}
+                                                                        title={(item.isResigned || item.status === 'resigned') ? "Staff member is Resigned (Invalid). Click to reinstate." : "Click to mark staff member as Resigned (Invalid)"}
+                                                                    >
+                                                                        {(item.isResigned || item.status === 'resigned') ? '⛔ Resigned' : 'Resign'}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleToggleLeave(item.id, !!item.isOnLeave)}
+                                                                        className={`px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider rounded border transition-all cursor-pointer ${
+                                                                            item.isOnLeave
+                                                                                ? "bg-amber-500 text-white border-amber-600 shadow-xs"
+                                                                                : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                                                        }`}
+                                                                        title={item.isOnLeave ? "Staff member is On Leave. Click to mark available." : "Click to mark staff member On Leave"}
+                                                                    >
+                                                                        {item.isOnLeave ? '🏖️ On Leave' : 'Leave'}
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td className="px-5 py-3 text-[11px] font-medium text-slate-500 tabular-nums">
                                                             {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy') : '—'}
@@ -2405,19 +2479,30 @@ export default function AdminDashboardPage() {
                                                                     {staffDisplayName}
                                                                 </span>
                                                             </div>
-                                                            <select
-                                                                value={assignedStaffId || ''}
-                                                                disabled={reassigningAppId === item.id}
-                                                                onChange={(e) => handleReassignStaff(item.id, e.target.value)}
-                                                                className="px-2 py-0.5 text-[9px] font-semibold bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-600 cursor-pointer shadow-xs"
-                                                            >
-                                                                <option value="" disabled>-- Reassign Staff --</option>
-                                                                {staffMembers.map((s: any) => (
-                                                                    <option key={s.id} value={s.id}>
-                                                                        {s.firstName || s.email} {s.lastName || ''}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
+                                                            {['sanctioned', 'conditional_sanction', 'partial_sanction', 'disbursed', 'partially_disbursed', 'approved'].includes((item.status || '').toLowerCase()) ? (
+                                                                <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1 w-fit" title="Sanctioned application — staff assignment is permanently locked">
+                                                                    🔒 Locked (Sanctioned)
+                                                                </span>
+                                                            ) : (
+                                                                <select
+                                                                    value={assignedStaffId || ''}
+                                                                    disabled={reassigningAppId === item.id}
+                                                                    onChange={(e) => handleReassignStaff(item.id, e.target.value)}
+                                                                    className="px-2 py-0.5 text-[9px] font-semibold bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-600 cursor-pointer shadow-xs"
+                                                                >
+                                                                    <option value="" disabled>-- Reassign Staff --</option>
+                                                                    {staffMembers.map((s: any) => {
+                                                                        const isResigned = s.isResigned || s.status === 'resigned' || s.status === 'inactive' || s.status === 'invalid';
+                                                                        const name = `${s.firstName || s.email} ${s.lastName || ''}`.trim();
+                                                                        const label = isResigned && !name.includes('(Invalid)') ? `${name} (Invalid)` : name;
+                                                                        return (
+                                                                            <option key={s.id} value={s.id}>
+                                                                                {label}
+                                                                            </option>
+                                                                        );
+                                                                    })}
+                                                                </select>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     
@@ -2686,19 +2771,30 @@ export default function AdminDashboardPage() {
                                                     <div className="flex-1">
                                                         <div className="flex items-center justify-between mb-1">
                                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing Staff</p>
-                                                            <select
-                                                                value={selectedApp.assignedStaffId || ''}
-                                                                disabled={reassigningAppId === selectedApp.id}
-                                                                onChange={(e) => handleReassignStaff(selectedApp.id, e.target.value)}
-                                                                className="px-2 py-0.5 text-[10px] font-semibold bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 cursor-pointer"
-                                                            >
-                                                                <option value="" disabled>-- Reassign Staff --</option>
-                                                                {staffMembers.map((s: any) => (
-                                                                    <option key={s.id} value={s.id}>
-                                                                        {s.firstName || s.email} {s.lastName || ''}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
+                                                            {['sanctioned', 'conditional_sanction', 'partial_sanction', 'disbursed', 'partially_disbursed', 'approved'].includes((selectedApp.status || '').toLowerCase()) ? (
+                                                                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1" title="Sanctioned application — staff assignment is locked">
+                                                                    🔒 Locked (Sanctioned)
+                                                                </span>
+                                                            ) : (
+                                                                <select
+                                                                    value={selectedApp.assignedStaffId || ''}
+                                                                    disabled={reassigningAppId === selectedApp.id}
+                                                                    onChange={(e) => handleReassignStaff(selectedApp.id, e.target.value)}
+                                                                    className="px-2 py-0.5 text-[10px] font-semibold bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 cursor-pointer"
+                                                                >
+                                                                    <option value="" disabled>-- Reassign Staff --</option>
+                                                                    {staffMembers.map((s: any) => {
+                                                                        const isResigned = s.isResigned || s.status === 'resigned' || s.status === 'inactive' || s.status === 'invalid';
+                                                                        const name = `${s.firstName || s.email} ${s.lastName || ''}`.trim();
+                                                                        const label = isResigned && !name.includes('(Invalid)') ? `${name} (Invalid)` : name;
+                                                                        return (
+                                                                            <option key={s.id} value={s.id}>
+                                                                                {label}
+                                                                            </option>
+                                                                        );
+                                                                    })}
+                                                                </select>
+                                                            )}
                                                         </div>
                                                         <p className="text-[12px] font-bold text-slate-900">{selectedApp.staffName || selectedApp.processingStaff || 'Unassigned'}</p>
                                                         {selectedApp.staffId && <p className="text-[10px] text-slate-500 font-medium mt-1">Staff ID: {selectedApp.staffId}</p>}
