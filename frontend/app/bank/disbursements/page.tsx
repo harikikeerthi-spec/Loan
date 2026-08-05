@@ -535,11 +535,11 @@ export default function DisbursementTracker() {
                                         </div>
                                     </div>
 
-                                    {/* 3. Tranche ledger */}
+                                    {/* 3. Tranche ledger / Release History */}
                                     <div className="p-6 bg-white rounded-2xl border border-violet-50 shadow-sm space-y-4 text-left">
                                         <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-violet-50 pb-2 flex items-center gap-1.5">
                                             <span className="material-symbols-outlined text-xs">history</span>
-                                            Tranche Disbursement Ledger
+                                            Release History
                                         </h3>
                                         {(() => {
                                             const rec = trancheRecords[selectedApp.id] || { history: [] };
@@ -550,21 +550,15 @@ export default function DisbursementTracker() {
                                                     <table className="w-full text-left text-xs border-collapse">
                                                         <thead>
                                                             <tr className="bg-slate-50 text-[8.5px] font-black uppercase text-gray-400 tracking-wider border-b border-violet-50">
-                                                                <th className="p-3">Tranche</th><th className="p-3">Amount</th>
-                                                                <th className="p-3">Payout Date</th><th className="p-3">Mode</th>
-                                                                <th className="p-3">Transaction UTR</th>
+                                                                <th className="p-3">Tranche</th>
+                                                                <th className="p-3">Amount Disbursed</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-violet-50/50 font-medium">
                                                             {rec.history.map((t, i) => (
                                                                 <tr key={t.id} className="hover:bg-violet-50/30 transition-colors">
-                                                                    <td className="p-3 font-bold text-gray-900">#{String(i + 1).padStart(2, "0")}</td>
-                                                                    <td className="p-3 font-bold text-gray-900">&#8377;{t.amount.toLocaleString()}</td>
-                                                                    <td className="p-3 text-gray-400 font-semibold">{t.date}</td>
-                                                                    <td className="p-3 font-mono text-[9.5px] text-violet-700 font-bold">{t.mode}</td>
-                                                                    <td className="p-3 font-mono text-[9px] text-[#6605c7] hover:underline font-bold">
-                                                                        <a href="#" onClick={(e) => { e.preventDefault(); alert(`Receipt verified — sha256:${t.utr}`); }}>{t.utr}</a>
-                                                                    </td>
+                                                                    <td className="p-3 font-bold text-gray-900">Tranche #{String(i + 1).padStart(2, "0")}</td>
+                                                                    <td className="p-3 font-bold text-gray-900 text-sm">&#8377;{t.amount.toLocaleString()}</td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>

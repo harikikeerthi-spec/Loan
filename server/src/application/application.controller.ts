@@ -247,7 +247,7 @@ export class ApplicationController {
         const user = req?.user;
         let assignedStaffId: string | undefined = undefined;
         let staffEmail: string | undefined = undefined;
-        if (user && user.role !== 'admin' && user.role !== 'super_admin') {
+        if (user && user.role === 'staff') {
             assignedStaffId = user.id || user.uid;
             staffEmail = user.email;
         }

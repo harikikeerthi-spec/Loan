@@ -6,6 +6,7 @@ import { format, isWithinInterval, parseISO } from "date-fns";
 import { adminApi, bankApi, getToken } from "@/lib/api";
 import { PageHeader, DataTable, StatusBadge, PriorityTag, EmptyState, Spinner } from "@/components/bank/SharedUI";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function IncomingQueuePage() {
     const router = useRouter();
@@ -108,15 +109,28 @@ export default function IncomingQueuePage() {
         }
     }, [showViewAppDrawer, selectedApp]);
 
+    const { user } = useAuth();
+
     useEffect(() => {
         setMounted(true);
         if (typeof window !== "undefined") {
             const saved = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
-            if (saved) setCurrentBankId(saved);
+            const userBank = (user as any)?.selectedBank || user?.bankName || user?.firstName;
+            if (saved) {
+                setCurrentBankId(saved);
+            } else if (userBank) {
+                const lower = userBank.toLowerCase();
+                if (lower.includes("auxilo")) setCurrentBankId("auxilo");
+                else if (lower.includes("avanse")) setCurrentBankId("avanse");
+                else if (lower.includes("credila") || lower.includes("hdfc")) setCurrentBankId("credila");
+                else if (lower.includes("idfc")) setCurrentBankId("idfc");
+                else if (lower.includes("poonawalla")) setCurrentBankId("poonawalla");
+                else setCurrentBankId(userBank);
+            }
             const fetchedToken = getToken();
             if (fetchedToken) setToken(fetchedToken);
         }
-    }, []);
+    }, [user]);
 
     const fetchApplications = async (bankId: string) => {
         setLoading(true);

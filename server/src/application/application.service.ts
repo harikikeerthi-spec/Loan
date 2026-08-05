@@ -1127,14 +1127,43 @@ export class ApplicationService {
       if (filters?.loanType) query = query.eq('loanType', filters.loanType);
       if (filters?.bank) {
         const b = filters.bank.toLowerCase();
-        let searchPattern = `%${filters.bank}%`;
-        if (b.includes('avanse')) searchPattern = '%avanse%';
-        else if (b.includes('auxilo')) searchPattern = '%auxilo%';
-        else if (b.includes('idfc')) searchPattern = '%idfc%';
-        else if (b.includes('credila') || b.includes('hdfc')) searchPattern = '%credila%';
-        else if (b.includes('poonawalla')) searchPattern = '%poonawalla%';
+        let searchPatterns: string[] = [];
+        if (b.includes('avanse')) searchPatterns = ['%avanse%'];
+        else if (b.includes('auxilo')) searchPatterns = ['%auxilo%'];
+        else if (b.includes('idfc')) searchPatterns = ['%idfc%'];
+        else if (b.includes('credila') || b.includes('hdfc')) searchPatterns = ['%credila%', '%hdfc%'];
+        else if (b.includes('poonawalla')) searchPatterns = ['%poonawalla%'];
+        else searchPatterns = [`%${filters.bank}%`];
 
-        query = query.ilike('bank', searchPattern);
+        // Also query BankSubmission table to get application IDs assigned/shared with this bank
+        let submittedAppIds: string[] = [];
+        try {
+          let subQuery = this.db.from('BankSubmission').select('applicationId');
+          const subOrs: string[] = [];
+          searchPatterns.forEach((p) => {
+            subOrs.push(`bankId.ilike.${p}`);
+            subOrs.push(`bankName.ilike.${p}`);
+          });
+          subQuery = subQuery.or(subOrs.join(','));
+          const { data: subData } = await subQuery;
+          if (subData && subData.length > 0) {
+            submittedAppIds = subData.map((s: any) => s.applicationId).filter(Boolean);
+          }
+        } catch (e) {
+          console.warn('[getAllApplications] BankSubmission query warning:', e);
+        }
+
+        const bankOrs: string[] = [];
+        searchPatterns.forEach((p) => {
+          bankOrs.push(`bank.ilike.${p}`);
+        });
+        if (submittedAppIds.length > 0) {
+          const uniqueIds = Array.from(new Set(submittedAppIds));
+          uniqueIds.forEach((id) => {
+            bankOrs.push(`id.eq.${id}`);
+          });
+        }
+        query = query.or(bankOrs.join(','));
       }
       
       if (filters?.search) {

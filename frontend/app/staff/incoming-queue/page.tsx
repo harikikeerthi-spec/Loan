@@ -584,8 +584,22 @@ function IncomingQueuePageInner() {
             const items: any[] = rawItems.filter((app: any) => {
                 const s = (app.status || "").toLowerCase();
                 const bw = (app.bankWorkflowStatus || "").toUpperCase();
-                const isActive = s !== "draft" && s !== "rejected" && s !== "cancelled" && s !== "disbursed" && bw !== "REJECTED";
-                if (!isActive) return false;
+
+                // Exclude draft, inactive, or rejected applications
+                if (s === "draft" || s === "rejected" || s === "cancelled" || s === "disbursed" || s === "disbursement_confirmed" || bw === "REJECTED") {
+                    return false;
+                }
+
+                // Check if application has already been sent to a bank
+                const isSentToBank = Boolean(
+                    app.submittedToBankAt ||
+                    app.bankSubmissionId ||
+                    (bw && bw !== "NONE" && bw !== "") ||
+                    ["submitted_to_bank", "routed_multiparty", "file_logged", "under_bank_review", "processing", "sanctioned", "approved", "disbursed", "disbursement_confirmed"].includes(s)
+                );
+
+                // Incoming queue ONLY includes applications that have NOT been sent to a bank yet
+                if (isSentToBank) return false;
 
                 if (!isAdmin) {
                     const assigned = (app.assignedStaffId || '').toLowerCase();

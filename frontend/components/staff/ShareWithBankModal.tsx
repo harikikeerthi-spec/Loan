@@ -139,12 +139,9 @@ export default function ShareWithBankModal({
           setSubmissionId(`MULT-${applicationId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`);
         }
       } else {
-        // 1. Update the bank field on the application record
-        await adminApi.updateApplication(applicationId, { bank: selectedBankName });
-
-        // 2. Submit to bank workflow FIRST — this generates the VL-APP application number
-        //    and creates the BankSubmission record. Must succeed before we update status,
-        //    so the confirmation email sent in step 3 already carries the correct app number.
+        // Submit to bank workflow — this creates the BankSubmission record,
+        // sets bank, submittedToBankAt, bankWorkflowStatus, status='submitted_to_bank',
+        // and generates the VL-APP application number.
         let realSubmissionId = "";
         const workflowRes: any = await apiFetch("/api/bank/workflow/submit", {
           method: "POST",
@@ -153,27 +150,19 @@ export default function ShareWithBankModal({
             bankId: selectedBank,
             bankName: selectedBankName,
             submittedBy: staffName,
+            remarks: remarks || `Application routed to ${selectedBankName}`,
           }),
         });
 
         if (workflowRes?.data?.id) {
           realSubmissionId = workflowRes.data.id;
+        } else if (workflowRes?.submission?.id) {
+          realSubmissionId = workflowRes.submission.id;
         } else if (!workflowRes?.success && workflowRes?.message) {
-          // Surface server-side errors (e.g. "already submitted to this bank")
           throw new Error(workflowRes.message);
         }
 
-        // 3. Now update the application status to 'submitted_to_bank'.
-        //    This triggers the "sent to bank" confirmation email on the backend,
-        //    which will now contain the correct VL-APP number from step 2.
-        await adminApi.updateApplicationStatus(applicationId, {
-          status: "submitted_to_bank",
-          stage: "bank_review",
-          progress: 70,
-          remarks: remarks || `Application routed to ${selectedBankName}`,
-        });
-
-        // 4. Store submission reference for the success UI
+        // Store submission reference for the success UI
         const submissionRef =
           realSubmissionId ||
           `SUB-${applicationId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;

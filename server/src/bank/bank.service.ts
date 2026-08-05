@@ -40,7 +40,7 @@ export class BankService {
       return query.ilike('bank', '%auxilo%');
     }
     if (lowerName.includes('credila') || lowerName.includes('hdfc')) {
-      return query.ilike('bank', '%credila%');
+      return query.or('bank.ilike.%credila%,bank.ilike.%hdfc%');
     }
     if (lowerName.includes('idfc')) {
       return query.ilike('bank', '%idfc%');

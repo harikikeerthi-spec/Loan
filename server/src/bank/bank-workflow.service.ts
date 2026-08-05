@@ -186,6 +186,10 @@ export class BankWorkflowService {
         bankWorkflowStage: 'SUBMITTED_TO_BANK',
         submittedToBankAt: new Date().toISOString(),
         applicationNumber: appNumber,
+        status: 'submitted_to_bank',
+        stage: 'bank_review',
+        progress: 70,
+        updatedAt: new Date().toISOString(),
       })
       .eq('id', applicationId);
 

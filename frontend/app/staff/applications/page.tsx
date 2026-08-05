@@ -253,10 +253,20 @@ function ApplicationsPageInner() {
             const status = (item.status || "draft").toLowerCase();
             const bankWorkflow = (item.bankWorkflowStatus || "").toUpperCase();
 
-            // Rejected and cancelled applications belong strictly to Inactive Pipeline
-            if (status === "rejected" || status === "cancelled" || bankWorkflow === "REJECTED") {
+            // Rejected, cancelled, and draft applications do not belong in Active Pipeline
+            if (status === "rejected" || status === "cancelled" || status === "draft" || bankWorkflow === "REJECTED") {
                 return false;
             }
+
+            // Active Pipeline MUST ONLY include applications that HAVE BEEN sent to a bank
+            const isSentToBank = Boolean(
+                item.submittedToBankAt ||
+                item.bankSubmissionId ||
+                (bankWorkflow && bankWorkflow !== "NONE" && bankWorkflow !== "") ||
+                ["submitted_to_bank", "routed_multiparty", "file_logged", "under_bank_review", "processing", "sanctioned", "approved", "disbursed", "disbursement_confirmed"].includes(status)
+            );
+
+            if (!isSentToBank) return false;
 
             // STRICT INDIVIDUAL STAFF ASSIGNMENT FILTER:
             // Standard staff officers ONLY see applications assigned specifically to them
