@@ -180,12 +180,15 @@ export default function StaffDashboardPage() {
         setActivitiesLoading(true);
         try {
             const offset = (activitiesPage - 1) * activitiesLimit;
+            const isPureStaff = user?.role === "staff";
+            const effectiveStaffId = isPureStaff ? "me" : activitiesStaffId;
+
             const res: any = await staffProfileApi.getAllDashboardActivities({
                 limit: activitiesLimit,
                 offset,
                 type: activitiesFilter,
                 search: activitiesSearch,
-                staffId: activitiesStaffId,
+                staffId: effectiveStaffId,
             });
             let items: any[] = Array.isArray(res?.data) ? res.data : [];
             let total = res?.total ?? items.length;
@@ -202,7 +205,7 @@ export default function StaffDashboardPage() {
         } finally {
             setActivitiesLoading(false);
         }
-    }, [activitiesPage, activitiesFilter, activitiesSearch, activitiesStaffId]);
+    }, [activitiesPage, activitiesFilter, activitiesSearch, activitiesStaffId, user]);
 
     // Initial overview load
     useEffect(() => {
@@ -433,49 +436,51 @@ export default function StaffDashboardPage() {
                         {/* Top row: Staff Scope Selector & Search */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             {/* Staff Scope Selector */}
-                            <div className="flex flex-wrap items-center gap-2 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
-                                <button
-                                    onClick={() => { setActivitiesStaffId("me"); setActivitiesPage(1); }}
-                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                                        activitiesStaffId === "me"
-                                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-95"
-                                            : "text-slate-600 hover:bg-slate-200/60"
-                                    }`}
-                                >
-                                    <span className="material-symbols-outlined text-[14px]">person</span>
-                                    My History
-                                </button>
-                                <button
-                                    onClick={() => { setActivitiesStaffId("all"); setActivitiesPage(1); }}
-                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                                        activitiesStaffId === "all"
-                                            ? "bg-[#0f172a] text-white shadow-md shadow-slate-900/10 scale-95"
-                                            : "text-slate-600 hover:bg-slate-200/60"
-                                    }`}
-                                >
-                                    <span className="material-symbols-outlined text-[14px]">groups</span>
-                                    All Staff
-                                </button>
-                                {staffMembersList.length > 0 && (
-                                    <div className="relative border-l border-slate-300/60 pl-2 ml-1">
-                                        <select
-                                            value={activitiesStaffId}
-                                            onChange={(e) => { setActivitiesStaffId(e.target.value); setActivitiesPage(1); }}
-                                            className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                        >
-                                            <option value="me">Logged-In Staff Only</option>
-                                            <option value="all">All Staff Members</option>
-                                            <optgroup label="Select Specific Staff">
-                                                {staffMembersList.map((m: any) => (
-                                                    <option key={m.id} value={m.id}>
-                                                        {m.name || m.email} ({m.activityCount || 0} events)
-                                                    </option>
-                                                ))}
-                                            </optgroup>
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
+                            {user?.role !== "staff" && (
+                                <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
+                                    <button
+                                        onClick={() => { setActivitiesStaffId("me"); setActivitiesPage(1); }}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                                            activitiesStaffId === "me"
+                                                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-95"
+                                                : "text-slate-600 hover:bg-slate-200/60"
+                                        }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">person</span>
+                                        My History
+                                    </button>
+                                    <button
+                                        onClick={() => { setActivitiesStaffId("all"); setActivitiesPage(1); }}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                                            activitiesStaffId === "all"
+                                                ? "bg-[#0f172a] text-white shadow-md shadow-slate-900/10 scale-95"
+                                                : "text-slate-600 hover:bg-slate-200/60"
+                                        }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">groups</span>
+                                        All Staff
+                                    </button>
+                                    {staffMembersList.length > 0 && (
+                                        <div className="relative border-l border-slate-300/60 pl-2 ml-1">
+                                            <select
+                                                value={activitiesStaffId}
+                                                onChange={(e) => { setActivitiesStaffId(e.target.value); setActivitiesPage(1); }}
+                                                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                                            >
+                                                <option value="me">Logged-In Staff Only</option>
+                                                <option value="all">All Staff Members</option>
+                                                <optgroup label="Select Specific Staff">
+                                                    {staffMembersList.map((m: any) => (
+                                                        <option key={m.id} value={m.id}>
+                                                            {m.name || m.email} ({m.activityCount || 0} events)
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="relative flex-1 max-w-md">
                                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>

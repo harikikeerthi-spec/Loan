@@ -52,7 +52,7 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     staffId,
   } = options;
 
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +115,16 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     });
 
     socket.on('staff_activity', (newActivity: Activity) => {
+      if (user?.role === 'staff') {
+        const myEmail = (user?.email || '').toLowerCase();
+        const myId = (user?.id || '').toLowerCase();
+        const actEmail = ((newActivity as any).actorEmail || newActivity.actorName || '').toLowerCase();
+        const actId = ((newActivity as any).initiatedBy || '').toLowerCase();
+
+        const isMine = (myEmail && actEmail.includes(myEmail)) || (myId && actId === myId);
+        if (!isMine) return; // Skip activities of other staff members!
+      }
+
       console.log('[useActivityLog] Received staff activity:', newActivity);
       const formatted: Activity = {
         ...newActivity,

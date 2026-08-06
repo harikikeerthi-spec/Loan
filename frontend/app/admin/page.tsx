@@ -307,6 +307,19 @@ export default function AdminDashboardPage() {
     const [userProfileLoading, setUserProfileLoading] = useState(false);
     const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
 
+    // ── Resignation Handover Modal ────────────────────────────────────────────
+    const [resignModal, setResignModal] = useState<{
+        open: boolean;
+        staffId: string;
+        staffName: string;
+        staffEmail: string;
+        staffAvatar: string;
+        applications: any[];
+        loadingApps: boolean;
+    } | null>(null);
+    const [resignTargetStaff, setResignTargetStaff] = useState<string>('auto');
+    const [resignSubmitting, setResignSubmitting] = useState(false);
+
     // ─── Data loaders ──────────────────────────────────────────────────────────
 
     const loadCommunityData = useCallback(async () => {
@@ -630,23 +643,80 @@ export default function AdminDashboardPage() {
     };
 
     const handleToggleResigned = async (staffId: string, currentResigned: boolean) => {
-        const nextResigned = !currentResigned;
-        const confirmMsg = nextResigned 
-            ? "Mark this staff member as Resigned (Invalid)? They will be excluded from new application assignments and labeled as Invalid."
-            : "Reinstate this staff member as Active?";
-        if (!window.confirm(confirmMsg)) return;
+        // If REINSTATING (already resigned → active), just do a simple confirm
+        if (currentResigned) {
+            if (!window.confirm("Reinstate this staff member as Active? They will be eligible for new application assignments.")) return;
+            try {
+                await staffProfileApi.toggleStaffResignation(staffId, false);
+                staffProfileApi.getStaffMembersList().then((res: any) => {
+                    const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+                    setStaffMembers(list);
+                }).catch(console.error);
+                loadData();
+            } catch (err: any) {
+                console.error("Failed to reinstate staff:", err);
+                alert("Failed to reinstate staff: " + (err.message || err));
+            }
+            return;
+        }
 
+        // MARKING AS RESIGNED: open handover modal
+        const staffMember = staffMembers.find((s: any) => s.id === staffId || s.linkedUserId === staffId);
+        const staffName = staffMember ? `${staffMember.firstName || ''} ${staffMember.lastName || ''}`.trim() || staffMember.email : staffId;
+        const staffEmail = staffMember?.email || '';
+        const staffAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${staffEmail || staffId}`;
+
+        setResignTargetStaff('auto');
+        setResignModal({
+            open: true,
+            staffId,
+            staffName,
+            staffEmail,
+            staffAvatar,
+            applications: [],
+            loadingApps: true,
+        });
+
+        // Fetch applications assigned to this staff member
         try {
-            await staffProfileApi.toggleStaffResignation(staffId, nextResigned);
-            staffProfileApi.getStaffMembersList().then((res: any) => {
-                const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-                setStaffMembers(list);
-            }).catch(console.error);
+            const appsRes: any = await assignmentApi.getMyApplications(staffId);
+            const allApps: any[] = Array.isArray(appsRes) ? appsRes : (Array.isArray(appsRes?.data) ? appsRes.data : []);
+            // Exclude sanctioned/disbursed/approved apps (those cannot be reassigned)
+            const sanctionedStatuses = ['sanctioned', 'conditional_sanction', 'partial_sanction', 'disbursed', 'partially_disbursed', 'approved', 'disbursement_confirmed', 'closed'];
+            const pendingApps = allApps.filter((app: any) => !sanctionedStatuses.includes((app.status || '').toLowerCase()));
+            setResignModal(prev => prev ? { ...prev, applications: pendingApps, loadingApps: false } : null);
+        } catch (err) {
+            console.error('[handleToggleResigned] Failed to fetch staff applications:', err);
+            setResignModal(prev => prev ? { ...prev, applications: [], loadingApps: false } : null);
+        }
+    };
+
+    const handleConfirmResignHandover = async (skipReassign = false) => {
+        if (!resignModal) return;
+        setResignSubmitting(true);
+        try {
+            // Step 1: Mark staff as resigned/invalid
+            await staffProfileApi.toggleStaffResignation(resignModal.staffId, true);
+
+            // Step 2: Bulk-reassign pending apps (unless admin skips)
+            if (!skipReassign && resignModal.applications.length > 0) {
+                const appIds = resignModal.applications.map((a: any) => a.id).filter(Boolean);
+                if (appIds.length > 0) {
+                    await assignmentApi.bulkReassign(appIds, resignTargetStaff, 'staff_resigned_handover');
+                }
+            }
+
+            // Refresh staff list and data
+            const res: any = await staffProfileApi.getStaffMembersList();
+            const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+            setStaffMembers(list);
             loadData();
-            alert(`Staff status updated: ${nextResigned ? 'Resigned (Invalid)' : 'Active'}`);
+            setResignModal(null);
         } catch (err: any) {
-            console.error("Failed to update staff resignation status:", err);
-            alert("Failed to update resignation status: " + (err.message || err));
+            console.error('[handleConfirmResignHandover] Error:', err);
+            alert('Handover failed: ' + (err.message || err));
+        } finally {
+            setResignSubmitting(false);
         }
     };
 
@@ -3366,8 +3436,177 @@ export default function AdminDashboardPage() {
                 </div>
 
             </main>
+
+            {/* ── Staff Resignation & Application Handover Modal ─────────────────── */}
+            {resignModal?.open && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)' }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-4 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                                <span className="material-symbols-outlined text-white text-[20px]">person_off</span>
+                            </div>
+                            <div>
+                                <h2 className="text-white font-bold text-[15px] leading-tight">Staff Resignation & Application Handover</h2>
+                                <p className="text-rose-100 text-[11px] mt-0.5">This action will permanently mark the staff member as Resigned (Invalid)</p>
+                            </div>
+                            <button onClick={() => setResignModal(null)} className="ml-auto p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                            {/* Staff Info Card */}
+                            <div className="flex items-center gap-4 p-4 bg-rose-50 border border-rose-100 rounded-xl">
+                                <img src={resignModal.staffAvatar} alt="" className="w-12 h-12 rounded-full border-2 border-rose-200 object-cover flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-slate-900 text-[14px]">{resignModal.staffName}</p>
+                                    <p className="text-slate-500 text-[12px]">{resignModal.staffEmail}</p>
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                    {resignModal.loadingApps ? (
+                                        <div className="h-7 w-20 bg-rose-100 animate-pulse rounded" />
+                                    ) : (
+                                        <>
+                                            <p className="text-[22px] font-black text-rose-600">{resignModal.applications.length}</p>
+                                            <p className="text-[10px] text-slate-500 font-medium">pending app{resignModal.applications.length !== 1 ? 's' : ''} to reassign</p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Warning Message */}
+                            <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <span className="material-symbols-outlined text-amber-600 text-[18px] flex-shrink-0 mt-0.5">warning</span>
+                                <p className="text-[12px] text-amber-800 leading-relaxed">
+                                    <strong>Important:</strong> Once marked as Resigned, this staff member will be excluded from all future application assignments and labeled as Invalid across the portal.
+                                    {resignModal.applications.length > 0
+                                        ? ` Their ${resignModal.applications.length} pending application(s) must be reassigned to continue processing.`
+                                        : ' They currently have no pending applications that need reassignment.'}
+                                </p>
+                            </div>
+
+                            {/* Reassign Target Selector */}
+                            {!resignModal.loadingApps && resignModal.applications.length > 0 && (
+                                <div className="space-y-3">
+                                    <label className="block text-[12px] font-semibold text-slate-700">
+                                        Reassign {resignModal.applications.length} application(s) to:
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={resignTargetStaff}
+                                            onChange={e => setResignTargetStaff(e.target.value)}
+                                            className="w-full px-3 py-2.5 pr-8 rounded-lg border border-slate-200 bg-white text-[13px] text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-rose-400 appearance-none cursor-pointer shadow-sm transition-all"
+                                        >
+                                            <option value="auto">🔄 Auto Round-Robin — distribute evenly across active staff</option>
+                                            {staffMembers
+                                                .filter((s: any) => {
+                                                    const isResigned = s.isResigned || ['resigned', 'inactive', 'invalid'].includes((s.status || '').toLowerCase());
+                                                    return !isResigned && s.id !== resignModal.staffId && s.linkedUserId !== resignModal.staffId && (s.role === 'staff' || s.role === 'staff_admin');
+                                                })
+                                                .map((s: any) => {
+                                                    const name = `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.email;
+                                                    const workload = s.currentWorkload ?? '?';
+                                                    return (
+                                                        <option key={s.id} value={s.linkedUserId || s.id}>
+                                                            {name} — {s.email} ({workload} active apps)
+                                                        </option>
+                                                    );
+                                                })}
+                                        </select>
+                                        <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">expand_more</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Applications List */}
+                            {resignModal.loadingApps ? (
+                                <div className="space-y-2">
+                                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Loading applications...</p>
+                                    {[1,2,3].map(i => (
+                                        <div key={i} className="h-10 bg-slate-100 animate-pulse rounded-lg" />
+                                    ))}
+                                </div>
+                            ) : resignModal.applications.length > 0 ? (
+                                <div className="space-y-2">
+                                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">assignment</span>
+                                        Applications to be reassigned ({resignModal.applications.length})
+                                    </p>
+                                    <div className="rounded-xl border border-slate-200 overflow-hidden max-h-52 overflow-y-auto">
+                                        {resignModal.applications.map((app: any, idx: number) => (
+                                            <div key={app.id || idx} className={`flex items-center gap-3 px-4 py-2.5 ${idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'} border-b border-slate-100 last:border-0`}>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[12px] font-semibold text-slate-800 truncate">{app.applicationNumber || app.id}</p>
+                                                    <p className="text-[10px] text-slate-500 truncate">{[app.firstName, app.lastName].filter(Boolean).join(' ') || app.email || '—'}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <span className="text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{app.bank || 'No Bank'}</span>
+                                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                                                        (app.status || '').toLowerCase() === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                        (app.status || '').toLowerCase() === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                        'bg-amber-50 text-amber-700 border-amber-200'
+                                                    }`}>{app.status || 'Draft'}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                    <span className="material-symbols-outlined text-emerald-600 text-[22px]">check_circle</span>
+                                    <div>
+                                        <p className="text-[13px] font-semibold text-emerald-800">No pending applications</p>
+                                        <p className="text-[11px] text-emerald-600 mt-0.5">This staff member has no active applications that need to be reassigned.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+                            <button
+                                onClick={() => setResignModal(null)}
+                                disabled={resignSubmitting}
+                                className="px-4 py-2 text-[12px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition-all disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <div className="flex items-center gap-2">
+                                {resignModal.applications.length > 0 && !resignModal.loadingApps && (
+                                    <button
+                                        onClick={() => handleConfirmResignHandover(true)}
+                                        disabled={resignSubmitting}
+                                        className="px-4 py-2 text-[12px] font-semibold text-slate-500 hover:text-slate-700 transition-all disabled:opacity-50 underline underline-offset-2"
+                                    >
+                                        Mark Resigned Without Reassigning
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => handleConfirmResignHandover(false)}
+                                    disabled={resignSubmitting || resignModal.loadingApps}
+                                    className="flex items-center gap-2 px-5 py-2 text-[12px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-all disabled:opacity-50 shadow-sm"
+                                >
+                                    {resignSubmitting ? (
+                                        <>
+                                            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-symbols-outlined text-[15px]">person_off</span>
+                                            {resignModal.applications.length > 0 ? `Confirm Resignation & Reassign ${resignModal.applications.length} App${resignModal.applications.length !== 1 ? 's' : ''}` : 'Confirm Resignation'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
+
 }
 
 // ─── Helper Components ───────────────────────────────────────────────────────

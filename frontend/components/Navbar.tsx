@@ -296,7 +296,7 @@ export default function Navbar() {
                                                 iconClass="text-[#6605c7]"
                                             />
                                             <ProfileDropItem href="/support-tickets" icon="confirmation_number" label="Support Tickets" iconClass="text-indigo-500" />
-                                            <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
+                                            <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" comingSoon />
                                             <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
                                             {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
                                                 <ProfileDropItem href="/user-details" icon="info" label="Complete Profile" iconClass="text-yellow-500" />
@@ -383,13 +383,30 @@ function NavItem({ href, icon, title, desc, color = "text-[#6605c7]" }: {
     );
 }
 
-function ProfileDropItem({ href, icon, label, iconClass }: {
-    href: string; icon: string; label: string; iconClass?: string;
+function ProfileDropItem({ href, icon, label, iconClass, comingSoon }: {
+    href: string; icon: string; label: string; iconClass?: string; comingSoon?: boolean;
 }) {
     return (
-        <Link href={href} className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors">
-            <span className={`material-symbols-outlined text-lg ${iconClass}`}>{icon}</span>
-            <span className="font-medium">{label}</span>
+        <Link
+            href={comingSoon ? "#" : href}
+            onClick={(e) => { if (comingSoon) e.preventDefault(); }}
+            className={`flex items-center justify-between px-4 py-2.5 text-[13px] transition-colors ${
+                comingSoon
+                    ? "text-gray-400 bg-gray-50/50 cursor-not-allowed select-none"
+                    : "text-gray-700 hover:bg-gray-50"
+            }`}
+            title={comingSoon ? "Locked — Feature Coming Soon" : undefined}
+        >
+            <div className="flex items-center gap-3">
+                <span className={`material-symbols-outlined text-lg ${comingSoon ? "text-gray-400" : iconClass}`}>{icon}</span>
+                <span className="font-medium">{label}</span>
+            </div>
+            {comingSoon && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200/90 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                    <span className="material-symbols-outlined text-[11px] text-amber-600">lock</span>
+                    Locked
+                </span>
+            )}
         </Link>
     );
 }

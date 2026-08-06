@@ -3,7 +3,8 @@
 import { useUserDossier } from "../DossierContext";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { adminApi } from "@/lib/api";
+import { adminApi, staffProfileApi } from "@/lib/api";
+import { formatNoteTime } from "@/lib/utils";
 
 export default function NotesTab() {
     const { notes, setNotes, userApplications, actionLoading, setActionLoading } = useUserDossier();
@@ -45,6 +46,15 @@ export default function NotesTab() {
                 authorName: "Staff Member",
                 isInternal: true,
             } as any);
+
+            const studentName = [activeApp?.student?.firstName || activeApp?.user?.firstName, activeApp?.student?.lastName || activeApp?.user?.lastName].filter(Boolean).join(' ') || "Student";
+            staffProfileApi.logActivity({
+                type: "note",
+                msg: `Added internal note for ${studentName}: "${noteInput.trim().slice(0, 45)}..."`,
+                icon: "sticky_note_2",
+                color: "bg-purple-50 text-[#6605c7]"
+            }).catch(console.error);
+
             setNoteInput("");
             setIsNoteInputVisible(false);
             await fetchNotes();
@@ -55,20 +65,6 @@ export default function NotesTab() {
         }
     };
 
-    const formatNoteTime = (dateStr: string) => {
-        try {
-            return new Date(dateStr).toLocaleString("en-US", {
-                timeZone: "Asia/Kolkata",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-            });
-        } catch {
-            return dateStr;
-        }
-    };
 
     const hasApplication = userApplications.length > 0;
 

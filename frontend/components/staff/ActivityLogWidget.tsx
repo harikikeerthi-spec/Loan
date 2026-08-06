@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { io, Socket } from "socket.io-client";
 import { staffProfileApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatDateTime } from "@/lib/utils";
 
 interface Activity {
   id: string;
@@ -25,12 +27,12 @@ interface ActivityLogWidgetProps {
 
 const getActivityStyles = (type: string) => {
   const styles: Record<string, { bg: string; text: string; border: string }> = {
-    new: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
-    update: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100" },
-    upload: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
-    share: { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-100" },
-    approved: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
-    rejected: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-100" },
+    doc_view: { bg: "bg-purple-50", text: "text-[#6605c7]", border: "border-purple-100" },
+    evv: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+    status: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100" },
+    share: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
+    note: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-100" },
+    update: { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" },
     link: { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-100" },
     sync: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
   };
@@ -39,26 +41,13 @@ const getActivityStyles = (type: string) => {
 
 const formatOriginalTime = (dateStr: string): string => {
   if (!dateStr) return "";
-  try {
-    let cleanDs = dateStr;
-    if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
-      if (cleanDs.includes('T') || cleanDs.includes(':')) {
-        const formatted = cleanDs.replace(' ', 'T');
-        cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
-      }
-    }
-    const date = new Date(cleanDs);
-    return date.toLocaleString("en-US", {
-      timeZone: "Asia/Kolkata",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  } catch {
-    return dateStr;
-  }
+  return formatDateTime(dateStr, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 };
 
 export default function ActivityLogWidget({ 
@@ -68,6 +57,8 @@ export default function ActivityLogWidget({
   onViewAll,
   staffId: propStaffId
 }: ActivityLogWidgetProps) {
+  const { user } = useAuth();
+  const isPureStaff = user?.role === "staff";
   const [selectedStaffId, setSelectedStaffId] = useState<string>(propStaffId || "me");
   const [staffMembers, setStaffMembers] = useState<{ id: string; name: string; email: string }[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -78,15 +69,16 @@ export default function ActivityLogWidget({
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timestampIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load staff list for dropdown
+  // Load staff list for dropdown (admins only)
   useEffect(() => {
+    if (isPureStaff) return;
     staffProfileApi.getStaffMembersList()
       .then((res: any) => {
         const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
         setStaffMembers(list);
       })
       .catch(err => console.error("Failed to load staff list:", err));
-  }, []);
+  }, [isPureStaff]);
 
   // Sync propStaffId if changed from parent
   useEffect(() => {
@@ -99,7 +91,7 @@ export default function ActivityLogWidget({
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const res: any = await staffProfileApi.getDashboardActivities(limit, selectedStaffId);
+      const res: any = await staffProfileApi.getDashboardActivities(limit, isPureStaff ? "me" : selectedStaffId);
       const data = Array.isArray(res) ? res : res?.data || [];
       
       const formattedActivities = data.map((activity: any) => ({
@@ -147,6 +139,16 @@ export default function ActivityLogWidget({
     });
 
     socket.on("user_activity", (newActivity: Activity) => {
+      if (isPureStaff) {
+        const myEmail = (user?.email || '').toLowerCase();
+        const myId = (user?.id || '').toLowerCase();
+        const actEmail = ((newActivity as any).actorEmail || newActivity.actorName || '').toLowerCase();
+        const actId = ((newActivity as any).initiatedBy || '').toLowerCase();
+
+        const isMine = (myEmail && actEmail.includes(myEmail)) || (myId && actId === myId);
+        if (!isMine) return; // Skip activities of other staff members!
+      }
+
       console.log("[ActivityLogWidget] Received staff activity:", newActivity);
       const formatted = {
         ...newActivity,
@@ -240,49 +242,51 @@ export default function ActivityLogWidget({
           </div>
         </div>
 
-        {/* Staff Filter Selector Sub-Bar */}
-        <div className="flex items-center gap-2 pt-1 border-t border-slate-200/50">
-          <div className="flex bg-slate-200/60 p-0.5 rounded-lg text-[10px] font-bold">
-            <button
-              onClick={() => setSelectedStaffId("me")}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                selectedStaffId === "me" 
-                  ? "bg-white text-indigo-600 shadow-sm" 
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              My Log
-            </button>
-            <button
-              onClick={() => setSelectedStaffId("all")}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                selectedStaffId === "all" 
-                  ? "bg-white text-indigo-600 shadow-sm" 
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              All Staff
-            </button>
-          </div>
+        {/* Staff Filter Selector Sub-Bar (Admins Only) */}
+        {!isPureStaff && (
+          <div className="flex items-center gap-2 pt-1 border-t border-slate-200/50">
+            <div className="flex bg-slate-200/60 p-0.5 rounded-lg text-[10px] font-bold">
+              <button
+                onClick={() => setSelectedStaffId("me")}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  selectedStaffId === "me" 
+                    ? "bg-white text-indigo-600 shadow-sm" 
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                My Log
+              </button>
+              <button
+                onClick={() => setSelectedStaffId("all")}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  selectedStaffId === "all" 
+                    ? "bg-white text-indigo-600 shadow-sm" 
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                All Staff
+              </button>
+            </div>
 
-          {staffMembers.length > 0 && (
-            <select
-              value={selectedStaffId}
-              onChange={(e) => setSelectedStaffId(e.target.value)}
-              className="ml-auto text-[10px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-w-[140px] truncate"
-            >
-              <option value="me">Logged In Staff</option>
-              <option value="all">All Staff Members</option>
-              <optgroup label="Individual Staff">
-                {staffMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name || member.email}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          )}
-        </div>
+            {staffMembers.length > 0 && (
+              <select
+                value={selectedStaffId}
+                onChange={(e) => setSelectedStaffId(e.target.value)}
+                className="ml-auto text-[10px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-w-[140px] truncate"
+              >
+                <option value="me">Logged In Staff</option>
+                <option value="all">All Staff Members</option>
+                <optgroup label="Individual Staff">
+                  {staffMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name || member.email}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Activities List */}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { io, Socket } from 'socket.io-client';
+import { staffProfileApi } from '@/lib/api';
 
 interface Participant {
   id: string;
@@ -201,6 +202,12 @@ export default function MultiPartyChatInterface({ applicationId }: { application
       if (data.success) {
         setInputText('');
         socket?.emit('send_multiparty_message', data.data);
+        staffProfileApi.logActivity({
+          type: 'note',
+          msg: `Sent chat message for Application #${activeConversation.slice(-6).toUpperCase()}`,
+          icon: 'chat',
+          color: 'bg-indigo-50 text-indigo-700'
+        }).catch(console.error);
       }
     } catch (e) {
       console.error('Failed to send message', e);
@@ -225,6 +232,13 @@ export default function MultiPartyChatInterface({ applicationId }: { application
 
       const data = await res.json();
       if (data.success) {
+        staffProfileApi.logActivity({
+          type: 'share',
+          msg: `Sent email notification to ${selectedEmailRecipient} for Application #${activeConversation.slice(-6).toUpperCase()}`,
+          icon: 'mail',
+          color: 'bg-amber-50 text-amber-700'
+        }).catch(console.error);
+
         alert('Email sent successfully');
         setShowEmailNotif(false);
         setSelectedEmailRecipient('');

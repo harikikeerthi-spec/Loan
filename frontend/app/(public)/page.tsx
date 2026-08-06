@@ -66,9 +66,9 @@ export default async function HomePage() {
                 {/* Floating Referral Badge - Premium Design */}
                 <Link
                     href="/referral"
-                    aria-label="Refer and Earn ₹3,000 - Open referral program"
+                    aria-label="Refer and Earn - Locked (Coming Soon)"
                     className="hidden md:block fixed left-6 top-[75%] -translate-y-1/2 z-50 group"
-                    title="Refer & Earn ₹3,000"
+                    title="Refer & Earn — Locked (Coming Soon)"
                 >
                     <div className="relative">
                         {/* Animated rings */}
@@ -79,9 +79,9 @@ export default async function HomePage() {
                         <div className="relative flex flex-col items-center gap-1">
                             {/* Hover tooltip */}
                             <span className="absolute left-full ml-3 whitespace-nowrap bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-xl shadow-orange-500/30 opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 uppercase tracking-wider">
-                                <span className="flex items-center gap-2">
-                                    <span>Earn ₹3,000</span>
-                                    <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
+                                <span className="flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-xs">lock</span>
+                                    <span>Locked — Refer & Earn Coming Soon</span>
                                 </span>
                             </span>
 
@@ -106,14 +106,20 @@ export default async function HomePage() {
                                     </div>
                                 </div>
 
-                                {/* Sparkle decorations */}
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse shadow-lg shadow-yellow-400/50" />
-                                <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 bg-orange-300 rounded-full animate-pulse delay-300" />
+                                {/* Lock Badge Overlay */}
+                                <div className="absolute -top-1 -right-1 z-20 w-5 h-5 bg-amber-600 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                                    <span className="material-symbols-outlined text-[11px] font-bold">lock</span>
+                                </div>
                             </div>
+
                             {/* Refer Now label */}
-                            <div className="text-center">
+                            <div className="text-center flex flex-col items-center gap-0.5">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-[#1a1626] group-hover:text-[#6605c7] transition-colors whitespace-nowrap drop-shadow-sm">
-                                    Refer & Earn Now
+                                    Refer & Earn
+                                </span>
+                                <span className="inline-flex items-center gap-0.5 text-[8px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200/90 px-1.5 py-0.5 rounded-full shadow-xs">
+                                    <span className="material-symbols-outlined text-[10px] text-amber-600">lock</span>
+                                    Locked
                                 </span>
                             </div>
                         </div>

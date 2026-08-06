@@ -1117,6 +1117,12 @@ export default function UserProfileView({
                                                         <span className="font-medium text-slate-800">{firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone}</span>
                                                     </div>
                                                 ) : null}
+                                                {firstApp?.coApplicantEmail || activeProfile?.coApplicant?.email || activeProfile?.coApplicantEmail ? (
+                                                    <div className="flex items-center gap-1.5 text-[11px] mb-1">
+                                                        <span className="text-[#64748B]">Email:</span>
+                                                        <span className="font-medium text-slate-800">{firstApp?.coApplicantEmail || activeProfile?.coApplicant?.email || activeProfile?.coApplicantEmail}</span>
+                                                    </div>
+                                                ) : null}
                                                 {(() => {
                                                     const relVal = String(firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicantRelation || '').toLowerCase().trim();
                                                     const isFatherCoApp = relVal === 'father';

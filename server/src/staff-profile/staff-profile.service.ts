@@ -762,13 +762,32 @@ export class StaffProfileService {
         .order('createdAt', { ascending: false })
         .limit(limit);
 
-      const targetStaffId = (staffId === 'me' && currentUser?.id) ? currentUser.id : staffId;
+      const isPureStaff = currentUser?.role === 'staff';
+      let filterIds: string[] = [];
 
-      if (targetStaffId && targetStaffId !== 'all') {
-        if (targetStaffId.includes('@')) {
-          query = query.eq('changes->>actorEmail', targetStaffId);
-        } else {
-          query = query.or(`initiatedBy.eq.${targetStaffId},changes->>actorEmail.eq.${targetStaffId}`);
+      if (isPureStaff) {
+        // Pure staff users CAN ONLY view their own activity history
+        filterIds = Array.from(new Set([currentUser?.id, currentUser?.email].filter(Boolean)));
+      } else {
+        // Admins can filter by specific staff, 'me', or view 'all'
+        let targetId = (staffId === 'me' || !staffId) ? currentUser?.id : staffId;
+        if (targetId && targetId !== 'all') {
+          filterIds = [targetId];
+        }
+      }
+
+      if (filterIds.length > 0) {
+        const orConditions: string[] = [];
+        filterIds.forEach(id => {
+          if (id.includes('@')) {
+            orConditions.push(`changes->>actorEmail.eq.${id}`);
+          } else {
+            orConditions.push(`initiatedBy.eq.${id}`);
+            orConditions.push(`changes->>actorEmail.eq.${id}`);
+          }
+        });
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
       }
 
@@ -807,13 +826,32 @@ export class StaffProfileService {
         .order('createdAt', { ascending: false })
         .range(offset, offset + limit - 1);
 
-      const targetStaffId = (opts.staffId === 'me' && currentUser?.id) ? currentUser.id : opts.staffId;
+      const isPureStaff = currentUser?.role === 'staff';
+      let filterIds: string[] = [];
 
-      if (targetStaffId && targetStaffId !== 'all') {
-        if (targetStaffId.includes('@')) {
-          query = query.eq('changes->>actorEmail', targetStaffId);
-        } else {
-          query = query.or(`initiatedBy.eq.${targetStaffId},changes->>actorEmail.eq.${targetStaffId}`);
+      if (isPureStaff) {
+        // Pure staff users CAN ONLY view their own activity history
+        filterIds = Array.from(new Set([currentUser?.id, currentUser?.email].filter(Boolean)));
+      } else {
+        // Admins can filter by specific staff, 'me', or view 'all'
+        let targetId = (opts.staffId === 'me' || !opts.staffId) ? currentUser?.id : opts.staffId;
+        if (targetId && targetId !== 'all') {
+          filterIds = [targetId];
+        }
+      }
+
+      if (filterIds.length > 0) {
+        const orConditions: string[] = [];
+        filterIds.forEach(id => {
+          if (id.includes('@')) {
+            orConditions.push(`changes->>actorEmail.eq.${id}`);
+          } else {
+            orConditions.push(`initiatedBy.eq.${id}`);
+            orConditions.push(`changes->>actorEmail.eq.${id}`);
+          }
+        });
+        if (orConditions.length > 0) {
+          query = query.or(orConditions.join(','));
         }
       }
 

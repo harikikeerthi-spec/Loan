@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { documentApi, staffProfileApi, adminApi, chatApi } from "@/lib/api";
+import { formatDateTime } from "@/lib/utils";
 import { useDialog } from "@/contexts/DialogContext";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -206,20 +207,7 @@ const formatStepLabel = (label: string) => {
 
 const formatNoteTime = (createdAt?: string): string => {
   if (!createdAt) return "JUST NOW";
-  try {
-    const date = new Date(createdAt);
-    if (isNaN(date.getTime())) return "JUST NOW";
-    return new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }).format(date) + " IST";
-  } catch {
-    return "JUST NOW";
-  }
+  return formatDateTime(createdAt, { includeSuffixIST: true, fallback: "JUST NOW" }, "JUST NOW");
 };
 
 const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
@@ -542,6 +530,16 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     try {
       const res = await adminApi.verifyDocument(application.id || application._id, docId, "verified") as ApiResult<unknown>;
       if (res.success || (res as any).data) {
+        const studentName = [application.firstName || application.student?.firstName || application.user?.firstName, application.lastName || application.student?.lastName || application.user?.lastName].filter(Boolean).join(' ') || "Student";
+        const doc = documents.find((d: any) => d.id === docId || d._id === docId);
+        const docName = doc?.name || doc?.docType?.replace(/_/g, ' ') || "Document";
+        staffProfileApi.logActivity({
+          type: "approved",
+          msg: `Approved document "${docName}" for ${studentName}`,
+          icon: "task_alt",
+          color: "bg-emerald-50 text-emerald-700"
+        }).catch(console.error);
+
         await dialogAlert("Document verified successfully!", "Verification Success", "success");
         fetchDocuments();
       } else {
@@ -557,6 +555,16 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     try {
       const res = await adminApi.verifyDocument(application.id || application._id, docId, "rejected", reason) as ApiResult<unknown>;
       if (res.success || (res as any).data) {
+        const studentName = [application.firstName || application.student?.firstName || application.user?.firstName, application.lastName || application.student?.lastName || application.user?.lastName].filter(Boolean).join(' ') || "Student";
+        const doc = documents.find((d: any) => d.id === docId || d._id === docId);
+        const docName = doc?.name || doc?.docType?.replace(/_/g, ' ') || "Document";
+        staffProfileApi.logActivity({
+          type: "rejected",
+          msg: `Rejected document "${docName}" for ${studentName}${reason ? ` (Reason: ${reason})` : ''}`,
+          icon: "cancel",
+          color: "bg-rose-50 text-rose-700"
+        }).catch(console.error);
+
         await dialogAlert("Document rejected successfully!", "Rejection Saved", "success");
         fetchDocuments();
       } else {
@@ -735,6 +743,15 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
         authorName: 'Staff Member',
         isInternal: true
       } as any);
+
+      const studentName = [application.firstName || application.student?.firstName || application.user?.firstName, application.lastName || application.student?.lastName || application.user?.lastName].filter(Boolean).join(' ') || "Student";
+      staffProfileApi.logActivity({
+        type: "note",
+        msg: `Added internal note for ${studentName}: "${noteInput.trim().slice(0, 45)}..."`,
+        icon: "sticky_note_2",
+        color: "bg-purple-50 text-[#6605c7]"
+      }).catch(console.error);
+
       setNoteInput("");
       setIsNoteInputVisible(false);
       fetchNotes();
@@ -753,6 +770,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     try {
       // Call Backend to persist the requirement
       await documentApi.addRequirement(userId, docType, newDocName);
+
+      const studentName = [application.firstName || application.student?.firstName || application.user?.firstName, application.lastName || application.student?.lastName || application.user?.lastName].filter(Boolean).join(' ') || "Student";
+      staffProfileApi.logActivity({
+        type: "update",
+        msg: `Requested additional document "${newDocName.trim()}" for ${studentName}`,
+        icon: "note_add",
+        color: "bg-blue-50 text-blue-700"
+      }).catch(console.error);
 
       // Refresh documents to show the new requirement
       await fetchDocuments();
@@ -863,6 +888,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     try {
       const res = await documentApi.upload(userId, docType, file) as ApiResult<unknown>;
       if (res.success) {
+        const studentName = [application.firstName || application.student?.firstName || application.user?.firstName, application.lastName || application.student?.lastName || application.user?.lastName].filter(Boolean).join(' ') || "Student";
+        staffProfileApi.logActivity({
+          type: "upload",
+          msg: `Uploaded document "${docType.replace(/_/g, ' ')}" for ${studentName}`,
+          icon: "cloud_upload",
+          color: "bg-purple-50 text-[#6605c7]"
+        }).catch(console.error);
+
         fetchDocuments(); // Refresh from server
         if (typeof window !== "undefined") {
           localStorage.setItem(`dashboardDataUpdated_${userId}`, String(Date.now()));
@@ -885,6 +918,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
   const handleDownloadDocument = async (doc: OcrSummaryDoc) => {
     if (!userId || !doc.docType) return;
+    const studentName = [application.firstName || application.student?.firstName || application.user?.firstName, application.lastName || application.student?.lastName || application.user?.lastName].filter(Boolean).join(' ') || "Student";
+    staffProfileApi.logActivity({
+      type: "download",
+      msg: `Downloaded document "${(doc.name || doc.docType).replace(/_/g, ' ')}" for ${studentName}`,
+      icon: "download",
+      color: "bg-orange-50 text-orange-700"
+    }).catch(console.error);
+
     try {
       const result: any = await documentApi.getPresignedView(userId, doc.docType);
       if (result?.url) {
@@ -913,6 +954,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     try {
       const res = await documentApi.delete(userId, doc.docType) as ApiResult<unknown>;
       if (res.success) {
+        const studentName = [application.firstName || application.student?.firstName || application.user?.firstName, application.lastName || application.student?.lastName || application.user?.lastName].filter(Boolean).join(' ') || "Student";
+        staffProfileApi.logActivity({
+          type: "rejected",
+          msg: `Deleted document "${(doc.name || doc.docType).replace(/_/g, ' ')}" for ${studentName}`,
+          icon: "delete",
+          color: "bg-rose-50 text-rose-700"
+        }).catch(console.error);
+
         fetchDocuments();
       }
     } catch (err) {

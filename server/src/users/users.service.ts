@@ -1461,7 +1461,7 @@ export class UsersService {
     const runQuery = async (withRelation: boolean) => {
       let query: any = this.db.from('LoanApplication');
       if (withRelation) {
-        query = query.select('*, user:User!userId(id, intakeSeason, firstName, lastName)');
+        query = query.select('*, user:User!userId(id, intakeSeason, firstName, lastName, phoneNumber, coApplicantName, coApplicantPhone, coApplicantEmail, coApplicantRelation, coApplicantIncome, familyDetails, parents)');
       } else {
         query = query.select('*');
       }
@@ -1502,7 +1502,7 @@ export class UsersService {
           const orConds = uniqueStaffIds.map((id: string) => id.includes('@') ? `email.eq.${id}` : `id.eq.${id}`).join(',');
           const { data: staffUsers } = await this.db
             .from('User')
-            .select('id, firstName, lastName, email, phone, mobile, role, designation')
+            .select('id, firstName, lastName, email, phone, mobile, phoneNumber, role, designation')
             .or(orConds);
 
           (staffUsers || []).forEach((u: any) => {
@@ -1511,7 +1511,7 @@ export class UsersService {
               id: u.id,
               name: fullName,
               email: u.email || '',
-              phone: u.phone || u.mobile || '+91 98450 12345',
+              phone: u.phoneNumber || u.phone || u.mobile || '',
               role: u.designation || (u.role === 'admin' || u.role === 'super_admin' ? 'Senior Loan Officer & Admin' : 'Senior Education Loan Advisor'),
             };
             if (u.id) staffMap[u.id.toLowerCase()] = staffObj;
@@ -1529,7 +1529,7 @@ export class UsersService {
               id: sp.linkedUserId || sp.staffId || sp.id,
               name: fullName,
               email: sp.email || '',
-              phone: sp.phoneNumber || sp.phone || '+91 98450 12345',
+              phone: sp.phoneNumber || sp.phone || sp.mobile || '',
               role: sp.role || sp.designation || sp.department || 'Education Loan Processing Specialist',
             };
             if (sp.id) staffMap[sp.id.toLowerCase()] = staffObj;

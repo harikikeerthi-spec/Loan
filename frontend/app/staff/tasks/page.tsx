@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { adminApi } from "@/lib/api";
+import { adminApi, staffProfileApi } from "@/lib/api";
+import { formatNoteTime } from "@/lib/utils";
 
 interface FollowUp {
     date: string;
@@ -141,27 +142,19 @@ export default function RemindersPage() {
 
             // Reload notes in the modal view
             setNewNoteText("");
+            staffProfileApi.logActivity({
+                type: "update",
+                msg: `Updated follow-up task note for ${selectedFollowUp.studentName || 'Student'}`,
+                icon: "event_available",
+                color: "bg-indigo-50 text-indigo-700"
+            }).catch(console.error);
+
             await fetchApplicationNotes(selectedFollowUp.appId);
         } catch (err) {
             console.error("Failed to save note:", err);
             alert("Failed to save note. Please try again.");
         } finally {
             setSavingNote(false);
-        }
-    };
-
-    const formatNoteTime = (dateStr: string) => {
-        try {
-            return new Date(dateStr).toLocaleString("en-US", {
-                timeZone: "Asia/Kolkata",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-            });
-        } catch {
-            return dateStr;
         }
     };
 

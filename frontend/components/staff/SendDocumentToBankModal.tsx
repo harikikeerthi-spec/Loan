@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { documentApi, apiFetch } from "@/lib/api";
+import { documentApi, apiFetch, staffProfileApi } from "@/lib/api";
 
 interface SendDocumentToBankModalProps {
   isOpen: boolean;
@@ -121,6 +121,13 @@ export default function SendDocumentToBankModal({
       const ref = `DOC-${Date.now().toString(36).toUpperCase()}-${docType.toUpperCase().slice(0, 4)}`;
       setSubmissionId(ref);
       setSuccess(true);
+
+      staffProfileApi.logActivity({
+        type: "share",
+        msg: `Sent document "${docTitle || docType.replace(/_/g, ' ')}" for ${studentName || 'Student'} to ${selectedBankObj?.name || 'Bank'}`,
+        icon: "send",
+        color: "bg-amber-50 text-amber-700"
+      }).catch(console.error);
 
       setTimeout(() => {
         onClose();

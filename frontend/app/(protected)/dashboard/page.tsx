@@ -544,55 +544,56 @@ export default function DashboardPage() {
     const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
 
     const getStaffDetails = (app: any) => {
-        if (app?.assignedStaffName || app?.assignedStaff?.name) {
-            const name = app.assignedStaffName || app.assignedStaff?.name;
+        const staffName = app?.assignedStaffName || app?.assignedStaff?.name || (app?.assignedStaff?.firstName ? `${app.assignedStaff.firstName} ${app.assignedStaff.lastName || ''}`.trim() : '');
+        const staffEmail = app?.assignedStaffEmail || app?.assignedStaff?.email;
+        const staffPhone = app?.assignedStaffPhone || app?.assignedStaff?.phone || app?.assignedStaff?.phoneNumber || app?.assignedStaffMobile;
+        const staffRole = app?.assignedStaffRole || app?.assignedStaff?.role || app?.assignedStaff?.designation || "Assigned Loan Processing Officer";
+
+        if (staffName || staffEmail) {
+            const displayName = staffName || (staffEmail ? staffEmail.split('@')[0].replace(/[\._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Assigned Support Officer");
             return {
                 isAssigned: true,
-                name,
-                email: app.assignedStaffEmail || app.assignedStaff?.email || `${name.toLowerCase().replace(/\s+/g, '.')}@vtu.edu.in`,
-                phone: app.assignedStaffPhone || app.assignedStaff?.phone || "+91 98450 12345",
-                role: app.assignedStaffRole || app.assignedStaff?.role || "Assigned Loan Processing Officer",
-                initials: name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+                name: displayName,
+                email: staffEmail || "support@vidyaloans.com",
+                phone: staffPhone || "",
+                role: staffRole,
+                initials: displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
             };
         }
-        if (app?.assignedTo?.name) {
-            const name = app.assignedTo.name;
+
+        if (app?.assignedTo?.name || app?.assignedTo?.email) {
+            const name = app.assignedTo.name || app.assignedTo.email.split('@')[0];
             return {
                 isAssigned: true,
                 name,
-                email: app.assignedTo.email || "support@vtu.edu.in",
-                phone: app.assignedTo.phone || "+91 98450 12345",
+                email: app.assignedTo.email || "support@vidyaloans.com",
+                phone: app.assignedTo.phone || app.assignedTo.phoneNumber || "",
                 role: app.assignedTo.role || "Senior Loan Officer",
                 initials: name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
             };
         }
-        if (app?.assignedStaffId) {
+
+        if (app?.assignedStaffId && app.assignedStaffId !== 'unassigned' && app.assignedStaffId !== 'null') {
             const staffIdStr = String(app.assignedStaffId);
             const isEmail = staffIdStr.includes('@');
-            const cleanName = isEmail ? staffIdStr.split('@')[0].replace(/[\._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : "Dedicated Staff Officer";
+            const cleanName = isEmail ? staffIdStr.split('@')[0].replace(/[\._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Assigned Support Officer";
             return {
                 isAssigned: true,
                 name: cleanName,
-                email: isEmail ? staffIdStr : "staffloans@gmail.com",
-                phone: "+91 98450 12345",
+                email: isEmail ? staffIdStr : "support@vidyaloans.com",
+                phone: staffPhone || "",
                 role: "Senior Education Loan Advisor",
                 initials: cleanName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
             };
         }
 
-        const staffPool: Record<string, { name: string; email: string; phone: string; role: string }> = {
-            sbi: { name: "Ananya Sharma", email: "ananya.sharma@vtu.edu.in", phone: "+91 98112 34567", role: "SBI Nodal Desk Specialist" },
-            hdfc: { name: "Rajesh Kumar", email: "rajesh.kumar@vtu.edu.in", phone: "+91 98223 45678", role: "HDFC Education Loan Manager" },
-            icici: { name: "Priya Nair", email: "priya.nair@vtu.edu.in", phone: "+91 98334 56789", role: "ICICI Student Desk Lead" },
-            axis: { name: "Vikram Sengupta", email: "vikram.sengupta@vtu.edu.in", phone: "+91 98445 67890", role: "Axis Bank Relations Officer" },
-            bankofbaroda: { name: "Suresh Patil", email: "suresh.patil@vtu.edu.in", phone: "+91 98556 78901", role: "BOB Senior Underwriter" }
-        };
-        const key = (app?.bank || "sbi").toLowerCase().replace(/[^a-z]/g, "");
-        const fallback = staffPool[key] || { name: "Staff Vidya", email: "staffloans@gmail.com", phone: "+91 98450 12345", role: "Senior Education Loan Advisor" };
         return {
             isAssigned: false,
-            ...fallback,
-            initials: fallback.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+            name: "VidyaLoans Support Team",
+            email: "support@vidyaloans.com",
+            phone: "",
+            role: "Loan Processing Desk",
+            initials: "VL"
         };
     };
 
@@ -1033,25 +1034,14 @@ export default function DashboardPage() {
                                                         const staff = getStaffDetails(app);
                                                         return (
                                                             <div className="mt-4 pt-3 border-t border-slate-100/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-purple-50/40 via-indigo-50/20 to-transparent p-3 rounded-xl border border-purple-100/50">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="relative">
-                                                                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#6605c7] to-indigo-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
-                                                                            {staff.initials || "SO"}
-                                                                        </div>
-                                                                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" title="Active Staff Assigned" />
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="text-[9px] font-black uppercase tracking-wider text-[#6605c7] bg-purple-100/60 px-1.5 py-0.5 rounded">
-                                                                                {staff.isAssigned ? "Assigned Support Officer" : "Dedicated Advisor"}
-                                                                            </span>
-                                                                        </div>
-                                                                        <p className="text-xs font-extrabold text-slate-900 mt-0.5">{staff.name}</p>
-                                                                        <p className="text-[10px] text-slate-500 font-semibold">{staff.role}</p>
-                                                                    </div>
+                                                                <div>
+                                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] block">
+                                                                        Assigned Officer
+                                                                    </span>
+                                                                    <p className="text-xs font-extrabold text-slate-900 mt-0.5">{staff.name}</p>
                                                                 </div>
 
-                                                                <div className="flex items-center gap-3 text-xs shrink-0 pl-12 sm:pl-0">
+                                                                <div className="flex items-center gap-3 text-xs shrink-0">
                                                                     {staff.email && (
                                                                         <a
                                                                             href={`mailto:${staff.email}`}
@@ -1062,7 +1052,7 @@ export default function DashboardPage() {
                                                                             <span className="max-w-[140px] truncate">{staff.email}</span>
                                                                         </a>
                                                                     )}
-                                                                    {staff.phone && (
+                                                                    {staff.phone && staff.phone.trim().length > 0 && (
                                                                         <a
                                                                             href={`tel:${staff.phone.replace(/[^0-9+]/g, '')}`}
                                                                             className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-100 transition-all text-[11px] flex items-center gap-1.5 shadow-2xs"
@@ -1507,22 +1497,81 @@ export default function DashboardPage() {
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant Phone</div>
                                             <div className="text-sm font-semibold text-gray-800">
-                                                {selectedAppDetails.coApplicantPhone || selectedAppDetails.coApplicantMobile || selectedAppDetails.coApplicant_phone || selectedAppDetails.user?.coApplicantPhone || selectedAppDetails.user?.coApplicant?.mobile || selectedAppDetails.user?.coApplicant?.phone || selectedAppDetails.user?.parents?.fatherPhone || selectedAppDetails.user?.parents?.motherPhone || 'Not specified'}
+                                                {(() => {
+                                                    let localData: any = null;
+                                                    if (typeof window !== 'undefined') {
+                                                        try {
+                                                            const raw = localStorage.getItem('recent_application_submitted') || localStorage.getItem('apply_loan_form_data');
+                                                            if (raw) localData = JSON.parse(raw);
+                                                        } catch {}
+                                                    }
+                                                    return (
+                                                        selectedAppDetails.coApplicantPhone ||
+                                                        selectedAppDetails.coApplicantMobile ||
+                                                        selectedAppDetails.coApplicant_phone ||
+                                                        selectedAppDetails.user?.coApplicantPhone ||
+                                                        selectedAppDetails.user?.coApplicant?.mobile ||
+                                                        selectedAppDetails.user?.coApplicant?.phone ||
+                                                        localData?.coApplicantPhone ||
+                                                        localData?.coApplicantMobile ||
+                                                        data.family?.coApplicantPhone ||
+                                                        data.family?.coApplicantMobile ||
+                                                        data.profile?.coApplicant?.mobile ||
+                                                        data.profile?.coApplicant?.phone ||
+                                                        data.profile?.coApplicantPhone ||
+                                                        user?.coApplicantPhone ||
+                                                        user?.coApplicant?.mobile ||
+                                                        user?.coApplicant?.phone ||
+                                                        'Not specified'
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant Email</div>
                                             <div className="text-sm font-semibold text-gray-800">
-                                                {selectedAppDetails.coApplicantEmail || selectedAppDetails.coApplicant_email || selectedAppDetails.user?.coApplicantEmail || selectedAppDetails.user?.coApplicant?.email || selectedAppDetails.user?.parents?.fatherEmail || selectedAppDetails.user?.parents?.motherEmail || 'Not specified'}
+                                                {(() => {
+                                                    let localData: any = null;
+                                                    if (typeof window !== 'undefined') {
+                                                        try {
+                                                            const raw = localStorage.getItem('recent_application_submitted') || localStorage.getItem('apply_loan_form_data');
+                                                            if (raw) localData = JSON.parse(raw);
+                                                        } catch {}
+                                                    }
+                                                    return (
+                                                        selectedAppDetails.coApplicantEmail ||
+                                                        selectedAppDetails.coApplicant_email ||
+                                                        selectedAppDetails.user?.coApplicantEmail ||
+                                                        selectedAppDetails.user?.coApplicant?.email ||
+                                                        localData?.coApplicantEmail ||
+                                                        data.family?.coApplicantEmail ||
+                                                        data.profile?.coApplicant?.email ||
+                                                        data.profile?.coApplicantEmail ||
+                                                        user?.coApplicantEmail ||
+                                                        user?.coApplicant?.email ||
+                                                        'Not specified'
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Applicant Name</div>
-                                            <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.firstName} {selectedAppDetails.lastName}</div>
+                                            <div className="text-sm font-semibold text-gray-800">
+                                                {selectedAppDetails.firstName || selectedAppDetails.user?.firstName || user?.firstName || ''} {selectedAppDetails.lastName || selectedAppDetails.user?.lastName || user?.lastName || ''}
+                                            </div>
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Contact</div>
-                                            <div className="text-sm font-semibold text-gray-800">{selectedAppDetails.email} {selectedAppDetails.phone ? `• ${selectedAppDetails.phone}` : ''}</div>
+                                            <div className="text-sm font-semibold text-gray-800">
+                                                {(() => {
+                                                    const email = selectedAppDetails.email || selectedAppDetails.user?.email || user?.email || "";
+                                                    const phone = selectedAppDetails.phone || selectedAppDetails.phoneNumber || selectedAppDetails.mobile || selectedAppDetails.user?.phoneNumber || selectedAppDetails.user?.phone || user?.phoneNumber || "";
+                                                    if (email && phone) return `${email} • ${phone}`;
+                                                    if (email) return email;
+                                                    if (phone) return phone;
+                                                    return 'Not specified';
+                                                })()}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1533,25 +1582,14 @@ export default function DashboardPage() {
                                     return (
                                         <div className="sm:col-span-2 mt-2 bg-gradient-to-r from-purple-50/70 via-indigo-50/50 to-purple-50/30 p-4 rounded-xl border border-purple-100 shadow-2xs">
                                             <div className="flex items-center justify-between mb-3 border-b border-purple-100/80 pb-2">
-                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-1.5">
-                                                    <span className="material-symbols-outlined text-sm text-[#6605c7]">support_agent</span>
-                                                    Assigned Support Staff Details
+                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7]">
+                                                    Assigned Officer
                                                 </h3>
-                                                <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                    Active Advisor
-                                                </span>
                                             </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#6605c7] to-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
-                                                        {staff.initials || "SO"}
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[10px] font-extrabold text-slate-400 uppercase">Officer Name</div>
-                                                        <div className="font-extrabold text-slate-900 text-xs mt-0.5">{staff.name}</div>
-                                                        <div className="text-[10px] text-[#6605c7] font-semibold">{staff.role}</div>
-                                                    </div>
+                                                <div>
+                                                    <div className="text-[10px] font-extrabold text-slate-400 uppercase">Officer Name</div>
+                                                    <div className="font-extrabold text-slate-900 text-xs mt-0.5">{staff.name}</div>
                                                 </div>
                                                 <div>
                                                     <div className="text-[10px] font-extrabold text-slate-400 uppercase">Official Email</div>

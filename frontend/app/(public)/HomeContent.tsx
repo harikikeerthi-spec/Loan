@@ -301,15 +301,19 @@ export default function HomeContent() {
                 <Link
                     href="/referral"
                     className="fixed left-6 top-[75%] -translate-y-1/2 z-50 group transition-all duration-300 hidden md:block"
-                    title="Refer & Earn"
+                    title="Refer & Earn — Locked (Coming Soon)"
                 >
                     <div className="relative flex items-center gap-0">
-                        <span className="absolute left-16 whitespace-nowrap bg-[#1a1626] text-white text-[10px] font-black uppercase tracking-[0.3em] px-4 py-2 border-l-4 border-[#e0c389] shadow-2xl opacity-0 -translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                            GET ₹1,00,000 ⚡
+                        <span className="absolute left-16 whitespace-nowrap bg-[#1a1626] text-white text-[10px] font-black uppercase tracking-[0.3em] px-4 py-2 border-l-4 border-[#e0c389] shadow-2xl opacity-0 -translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-xs text-amber-400">lock</span>
+                            <span>LOCKED — COMING SOON ⚡</span>
                         </span>
                         <div className="w-14 h-14 bg-[#6605c7] flex items-center justify-center text-white shadow-[8px_8px_0px_rgba(224,195,137,0.4)] border border-white/20 group-hover:translate-x-1 group-hover:translate-y-1 group-hover:shadow-none transition-all duration-200 relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent" />
                             <span className="material-symbols-outlined text-2xl relative z-10 transition-transform group-hover:scale-125">card_giftcard</span>
+                            <div className="absolute -top-1 -right-1 z-20 w-5 h-5 bg-amber-600 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                                <span className="material-symbols-outlined text-[11px] font-bold">lock</span>
+                            </div>
                         </div>
                     </div>
                 </Link>
