@@ -239,20 +239,17 @@ export class AuthController {
   }
 
   /**
-   * Update user details (name, phone, date of birth)
+   * Update user details (first name, last name, pincode, target university, etc.)
+   * Note: Email, Phone Number, and Date of Birth are IMMUTABLE once set and cannot be overwritten.
    * POST /auth/update-details
-   * @body email: string (required), firstName: string (required), lastName: string (required), 
-   *       phoneNumber: string (required), dateOfBirth: string (required, DD-MM-YYYY format)
-   * @returns { success: boolean, message: string, user?: { email, firstName, lastName, phoneNumber, dateOfBirth } }
    */
   @Post('update-details')
   async updateUserDetails(@Body() body: {
     email: string;
     firstName: string;
     lastName: string;
-    phoneNumber: string;
-    dateOfBirth: string;
-    intakeSeason?: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
     profileImage?: string;
     pincode?: string;
   }) {
@@ -266,9 +263,9 @@ export class AuthController {
       body.email,
       body.firstName,
       body.lastName,
-      body.phoneNumber,
-      body.dateOfBirth,
-      body.intakeSeason,
+      body.phoneNumber || '',
+      body.dateOfBirth || '',
+      undefined, // intakeSeason removed
       body.profileImage,
       body.pincode
     );
@@ -279,29 +276,37 @@ export class AuthController {
   /**
    * Create a new loan application
    * POST /auth/create-application
-   * @body userId: string, bank: string, loanType: string, amount: number, purpose?: string
+   * @body userId: string, amount: number, country: string, university: string, etc.
    * @returns { success: boolean, application?: LoanApplication }
    */
   @Post('create-application')
   async createApplication(@Body() body: {
     userId: string;
-    bank: string;
-    loanType: string;
+    bank?: string;
+    loanType?: string;
     amount: number;
-    purpose?: string;
     courseType?: string;
     courseName?: string;
+    fieldOfStudy?: string;
     program?: string;
     programFocus?: string;
     country?: string;
+    otherCountry?: string;
     university?: string;
     universityName?: string;
     targetUniversity?: string;
-    annualFee?: string;
-    livingCost?: string;
+    annualFee?: string | number;
+    livingCost?: string | number;
+    hasCoApplicant?: boolean;
     coApplicant?: string;
     coApplicantName?: string;
-    income?: string;
+    coApplicantPhone?: string;
+    coApplicantEmail?: string;
+    coApplicantRelation?: string;
+    otherRelation?: string;
+    coApplicantIncome?: string | number;
+    income?: string | number;
+    hasCollateral?: boolean;
     collateral?: string;
     firstName?: string;
     lastName?: string;
@@ -310,7 +315,6 @@ export class AuthController {
     dateOfBirth?: string;
     address?: string;
     notes?: string;
-    intakeSeason?: string;
     pincode?: string;
     admissionStatus?: string;
   }) {
@@ -332,24 +336,32 @@ export class AuthController {
     }
 
     try {
+      const selectedBank = body.bank || 'Any Bank';
+      const selectedCountry = body.country === 'Other' ? (body.otherCountry || 'Other') : (body.country || 'Global');
+      const selectedLoanType = body.loanType || body.courseType || body.fieldOfStudy || 'Postgraduate Abroad';
+      const selectedCourse = body.courseName || body.fieldOfStudy || body.courseType || body.programFocus || body.program;
+
       const application = await this.usersService.createLoanApplication(body.userId, {
-        bank: body.bank,
-        loanType: body.loanType,
+        bank: selectedBank,
+        loanType: selectedLoanType,
         amount: amountVal,
-        purpose: body.purpose,
-        courseType: body.courseType,
-        courseName: body.courseName,
+        courseType: body.courseType || body.fieldOfStudy,
+        courseName: selectedCourse,
         program: body.program,
         programFocus: body.programFocus,
-        country: body.country,
+        country: selectedCountry,
         university: body.university,
-        universityName: body.universityName,
-        targetUniversity: body.targetUniversity,
-        annualFee: body.annualFee,
-        livingCost: body.livingCost,
-        coApplicant: body.coApplicant,
+        universityName: body.universityName || body.university || body.targetUniversity,
+        targetUniversity: body.targetUniversity || body.university,
+        annualFee: String(body.annualFee || ''),
+        livingCost: String(body.livingCost || ''),
+        hasCoApplicant: body.hasCoApplicant,
+        coApplicant: body.coApplicant || body.coApplicantRelation,
         coApplicantName: body.coApplicantName,
-        income: body.income,
+        coApplicantPhone: body.coApplicantPhone,
+        coApplicantEmail: body.coApplicantEmail,
+        income: String(body.coApplicantIncome || body.income || ''),
+        hasCollateral: body.hasCollateral,
         collateral: body.collateral,
         firstName: body.firstName,
         lastName: body.lastName,
@@ -358,7 +370,6 @@ export class AuthController {
         dateOfBirth: body.dateOfBirth,
         address: body.address,
         notes: body.notes,
-        intakeSeason: body.intakeSeason,
         pincode: body.pincode,
         admissionStatus: body.admissionStatus,
       });

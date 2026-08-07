@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminApi, assignmentApi, staffProfileApi } from "@/lib/api";
 import { format, formatDistanceToNow } from "date-fns";
@@ -208,12 +208,92 @@ const AnnouncementItem = ({ ann, onDelete }: { ann: any; onDelete: (id: string) 
     </div>
 );
 
+// ─── Section URL Route Mappings ────────────────────────────────────────────────
+const sectionToPathMap: Record<string, string> = {
+    overview: '/admin/dashboard',
+    applications: '/admin/applications',
+    users: '/admin/users',
+    analytics: '/admin/analytics',
+    system: '/admin/system',
+    banks: '/admin/banks',
+    countries: '/admin/countries',
+    chat: '/admin/chat',
+    community: '/admin/community',
+    audit_logs: '/admin/audit-logs',
+    blogs: '/admin/blogs',
+    campaigns_dashboard: '/admin/campaigns',
+    campaigns_create: '/admin/campaigns/create',
+    campaigns_templates: '/admin/campaigns/templates',
+    campaigns_audience: '/admin/campaigns/audience',
+    campaigns_scheduled: '/admin/campaigns/scheduled',
+    campaigns_queued: '/admin/campaigns/queued',
+    campaigns_sent: '/admin/campaigns/sent',
+    campaigns_analytics: '/admin/campaigns/analytics',
+    campaigns_prompts: '/admin/campaigns/prompts',
+    campaigns_settings: '/admin/campaigns/settings',
+};
+
+const pathToSectionMap: Record<string, string> = {
+    '/admin': 'overview',
+    '/admin/dashboard': 'overview',
+    '/admin/applications': 'applications',
+    '/admin/users': 'users',
+    '/admin/analytics': 'analytics',
+    '/admin/system': 'system',
+    '/admin/banks': 'banks',
+    '/admin/countries': 'countries',
+    '/admin/chat': 'chat',
+    '/admin/community': 'community',
+    '/admin/audit-logs': 'audit_logs',
+    '/admin/blogs': 'blogs',
+    '/admin/campaigns': 'campaigns_dashboard',
+    '/admin/campaigns/create': 'campaigns_create',
+    '/admin/campaigns/templates': 'campaigns_templates',
+    '/admin/campaigns/audience': 'campaigns_audience',
+    '/admin/campaigns/scheduled': 'campaigns_scheduled',
+    '/admin/campaigns/queued': 'campaigns_queued',
+    '/admin/campaigns/sent': 'campaigns_sent',
+    '/admin/campaigns/analytics': 'campaigns_analytics',
+    '/admin/campaigns/prompts': 'campaigns_prompts',
+    '/admin/campaigns/settings': 'campaigns_settings',
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { user, logout } = useAuth();
-    const [activeSection, setActiveSection] = useState("overview");
+
+    // Resolve initial activeSection from current URL path or search params
+    const getInitialSection = () => {
+        const querySec = searchParams ? searchParams.get('section') : null;
+        if (querySec && sectionToPathMap[querySec]) return querySec;
+        if (pathname && pathToSectionMap[pathname]) return pathToSectionMap[pathname];
+        return 'overview';
+    };
+
+    const [activeSection, setActiveSectionState] = useState(getInitialSection);
+
+    // Synchronize activeSection state when browser location path changes
+    useEffect(() => {
+        const querySec = searchParams ? searchParams.get('section') : null;
+        if (querySec && sectionToPathMap[querySec]) {
+            setActiveSectionState(querySec);
+        } else if (pathname && pathToSectionMap[pathname]) {
+            setActiveSectionState(pathToSectionMap[pathname]);
+        }
+    }, [pathname, searchParams]);
+
+    // Custom setter that updates component state AND updates browser URL path
+    const setActiveSection = useCallback((sec: string) => {
+        setActiveSectionState(sec);
+        const targetPath = sectionToPathMap[sec] || '/admin/dashboard';
+        if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+            window.history.pushState(null, '', targetPath);
+        }
+    }, []);
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<any>({});
@@ -226,6 +306,7 @@ export default function AdminDashboardPage() {
     const [filterLoanType, setFilterLoanType] = useState("all");
     const [filterStage, setFilterStage] = useState("all");
     const [filterStaff, setFilterStaff] = useState("all");
+    const [appPage, setAppPage] = useState(1);
     const [staffMembers, setStaffMembers] = useState<any[]>([]);
     const [reassigningAppId, setReassigningAppId] = useState<string | null>(null);
     const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
@@ -393,7 +474,7 @@ export default function AdminDashboardPage() {
                 res = await adminApi.getBlogs(params);
                 setData(res.data || []);
             } else if (activeSection === "applications") {
-                const params: any = {};
+                const params: any = { limit: '1000' };
                 if (filterStatus !== "all") params.status = filterStatus;
                 if (filterBank !== "all") params.bank = filterBank;
                 if (filterLoanType !== "all") params.loanType = filterLoanType;
@@ -404,10 +485,12 @@ export default function AdminDashboardPage() {
 
                 const [appRes, staffRes]: [any, any] = await Promise.all([
                     adminApi.getApplications(params).catch(() => ({ data: [] })),
-                    adminApi.getUsers(200, 0, "", "staff").catch(() => ({ data: [] }))
+                    adminApi.getUsers(500, 0, "", "").catch(() => ({ data: [] }))
                 ]);
+                const allUsers = staffRes.data || [];
+                const staffOnly = allUsers.filter((u: any) => u.role === 'staff' || u.role === 'admin' || u.role === 'super_admin');
                 setData(appRes.data || []);
-                setStaffMembers(staffRes.data || []);
+                setStaffMembers(staffOnly.length > 0 ? staffOnly : allUsers);
             } else if (activeSection === "community") {
                 res = await adminApi.getForumPosts(50);
                 setData(res.data || []);
@@ -452,7 +535,10 @@ export default function AdminDashboardPage() {
         if (activeSection === "users") {
             setCurrentPage(1);
         }
-    }, [roleFilter, lastSearchQuery, activeSection]);
+        if (activeSection === "applications") {
+            setAppPage(1);
+        }
+    }, [roleFilter, lastSearchQuery, activeSection, searchQuery, filterStaff, filterStatus, filterBank, filterLoanType]);
 
     useEffect(() => {
         if (activeSection === "overview") loadOverview();
@@ -781,6 +867,41 @@ export default function AdminDashboardPage() {
         }
     };
 
+    const handleAutoAssignUnassigned = async () => {
+        const unassignedCount = data.filter((a: any) => {
+            const sid = (a.assignedStaffId || '').trim();
+            if (!sid || sid === 'unassigned' || sid === 'null' || sid === 'undefined') return true;
+            // Check if sid matches any active staff member in staffMembers
+            const matchesStaff = staffMembers.some((s: any) => {
+                if (!s) return false;
+                const sId = String(s.id || '').toLowerCase();
+                const sLink = String(s.linkedUserId || '').toLowerCase();
+                const sEmail = String(s.email || '').toLowerCase();
+                const targetId = sid.toLowerCase();
+                return sId === targetId || sLink === targetId || sEmail === targetId;
+            });
+            return !matchesStaff;
+        }).length;
+
+        if (unassignedCount === 0) {
+            alert("All applications are currently assigned to active staff members.");
+            return;
+        }
+        if (!window.confirm(`Auto-assign ${unassignedCount} unassigned/unallocated application(s) across all active staff members using Round-Robin?`)) return;
+
+        try {
+            setLoading(true);
+            const res: any = await assignmentApi.autoAssignAllUnassigned();
+            const countMsg = res?.data?.assigned !== undefined ? `Assigned ${res.data.assigned} application(s).` : '';
+            alert(res?.data?.message || res?.message || `Applications assigned successfully via Round-Robin. ${countMsg}`);
+            loadData();
+        } catch (e: any) {
+            alert("Auto-assign failed: " + (e.message || e));
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     const handleAIReview = async (appId: string) => {
         setAiReviewLoading(true); setAiReview(null); setDrawerTab('ai_review');
@@ -889,16 +1010,39 @@ export default function AdminDashboardPage() {
             return item.title?.toLowerCase().includes(query) || item.authorName?.toLowerCase().includes(query);
         }
         if (activeSection === 'applications') {
-            const matchesQuery = (
+            const matchesQuery = !query || (
                 item.applicationNumber?.toLowerCase().includes(query) ||
+                item.id?.toLowerCase().includes(query) ||
                 item.firstName?.toLowerCase().includes(query) ||
                 item.lastName?.toLowerCase().includes(query) ||
                 item.bank?.toLowerCase().includes(query) ||
                 item.email?.toLowerCase().includes(query) ||
                 item.staffName?.toLowerCase().includes(query) ||
-                item.processingStaff?.toLowerCase().includes(query)
+                item.processingStaff?.toLowerCase().includes(query) ||
+                item.targetUniversity?.toLowerCase().includes(query) ||
+                item.universityName?.toLowerCase().includes(query)
             );
             if (!matchesQuery) return false;
+
+            if (filterStatus !== 'all') {
+                const status = (item.status || '').toLowerCase();
+                if (filterStatus === 'pending' && status !== 'pending' && status !== 'submitted') return false;
+                if (filterStatus === 'processing' && status !== 'processing' && status !== 'in_progress' && status !== 'under_review') return false;
+                if (filterStatus === 'approved' && status !== 'approved' && status !== 'sanctioned' && status !== 'conditional_sanction') return false;
+                if (filterStatus === 'disbursed' && status !== 'disbursed' && status !== 'partially_disbursed') return false;
+                if (filterStatus === 'rejected' && status !== 'rejected' && status !== 'cancelled') return false;
+            }
+
+            if (filterBank !== 'all') {
+                const bank = (item.bank || '').toLowerCase();
+                if (!bank.includes(filterBank.toLowerCase())) return false;
+            }
+
+            if (filterLoanType !== 'all') {
+                const type = (item.loanType || '').toLowerCase();
+                if (filterLoanType === 'unsecured' && !type.includes('unsecured') && !type.includes('abroad')) return false;
+                if (filterLoanType === 'secured' && !type.includes('secured') && !type.includes('property')) return false;
+            }
 
             if (filterStaff === 'unassigned') {
                 return !item.assignedStaffId || item.assignedStaffId === 'unassigned' || item.assignedStaffId === 'null';
@@ -914,6 +1058,21 @@ export default function AdminDashboardPage() {
         }
         return true;
     });
+
+    const sortedApplications = activeSection === 'applications'
+        ? [...filteredData].sort((a, b) => {
+            const timeA = new Date(a.submittedAt || a.createdAt || a.date || a.submitted_at || 0).getTime();
+            const timeB = new Date(b.submittedAt || b.createdAt || b.date || b.submitted_at || 0).getTime();
+            return timeB - timeA; // Newest applications at top of Page 1, oldest on last page
+        })
+        : filteredData;
+
+    const APP_PAGE_SIZE = 20;
+    const totalAppPages = Math.ceil(sortedApplications.length / APP_PAGE_SIZE) || 1;
+    const currentAppPage = Math.min(appPage, totalAppPages);
+    const pagedApplications = activeSection === 'applications'
+        ? sortedApplications.slice((currentAppPage - 1) * APP_PAGE_SIZE, currentAppPage * APP_PAGE_SIZE)
+        : filteredData;
 
     const filteredAuditLogs = allAuditLogs.filter(log => {
         if (auditFilter === 'all') return true;
@@ -2329,7 +2488,7 @@ export default function AdminDashboardPage() {
                                     </div>
 
                                     {/* Filters */}
-                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full md:w-auto">
+                                    <div className="grid grid-cols-2 md:grid-cols-6 gap-2.5 w-full md:w-auto">
                                         <div>
                                             <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Assigned Staff</label>
                                             <select value={filterStaff} onChange={e => setFilterStaff(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
@@ -2389,6 +2548,18 @@ export default function AdminDashboardPage() {
                                                 className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-semibold text-slate-600 hover:bg-slate-200 transition-colors uppercase tracking-wider"
                                             >
                                                 Clear
+                                            </button>
+                                        </div>
+
+                                        <div>
+                                            <label className="block opacity-0 text-[10px] mb-1.5">Auto-Assign</label>
+                                            <button
+                                                onClick={handleAutoAssignUnassigned}
+                                                className="w-full px-2 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-[10px] transition-colors uppercase tracking-wider flex items-center justify-center gap-1 shadow-xs cursor-pointer whitespace-nowrap"
+                                                title="Distribute all unassigned applications evenly across active staff members"
+                                            >
+                                                <span className="material-symbols-outlined text-[13px]">published_with_changes</span>
+                                                Auto-Assign
                                             </button>
                                         </div>
                                     </div>
@@ -2457,8 +2628,8 @@ export default function AdminDashboardPage() {
                                                     <input
                                                         type="checkbox"
                                                         className="rounded cursor-pointer accent-indigo-600 w-3.5 h-3.5"
-                                                        checked={filteredData.length > 0 && filteredData.every((item: any) => selectedAppIds.includes(item.id))}
-                                                        onChange={() => toggleSelectAll(filteredData)}
+                                                        checked={pagedApplications.length > 0 && pagedApplications.every((item: any) => selectedAppIds.includes(item.id))}
+                                                        onChange={() => toggleSelectAll(pagedApplications)}
                                                         title="Select / Deselect All"
                                                     />
                                                 </th>
@@ -2480,24 +2651,34 @@ export default function AdminDashboardPage() {
                                                         <p className="text-[12px] font-bold text-slate-500">Loading applications database...</p>
                                                     </div>
                                                 </td></tr>
-                                            ) : filteredData.length > 0 ? filteredData.map((item: any, idx: number) => {
+                                            ) : pagedApplications.length > 0 ? pagedApplications.map((item: any, idx: number) => {
                                                 const progress = getApplicationDisplayProgress(item);
                                                 const stageLabel = getApplicationStageLabel(item, progress);
                                                 const priorityLevel = item.priority || 'normal';
                                                 
                                                 // Resolve assigned staff member info
-                                                const assignedStaffId = item.assignedStaffId || '';
-                                                const matchedStaff = staffMembers.find((s: any) =>
-                                                    s.id === assignedStaffId ||
-                                                    s.linkedUserId === assignedStaffId ||
-                                                    s.email === assignedStaffId ||
-                                                    (s.email && item.assignedStaffEmail && s.email.toLowerCase() === item.assignedStaffEmail.toLowerCase()) ||
-                                                    `${s.firstName || ''} ${s.lastName || ''}`.trim() === item.staffName
-                                                );
+                                                const assignedStaffId = (item.assignedStaffId || '').trim();
+                                                const assignedStaffEmail = (item.assignedStaffEmail || '').trim().toLowerCase();
+                                                const targetName = (item.assignedStaffName || item.staffName || item.processingStaff || '').trim().toLowerCase();
+
+                                                const matchedStaff = staffMembers.find((s: any) => {
+                                                    if (!s) return false;
+                                                    const sId = String(s.id || '').toLowerCase();
+                                                    const sLink = String(s.linkedUserId || '').toLowerCase();
+                                                    const sEmail = String(s.email || '').toLowerCase();
+                                                    const sName = `${s.firstName || ''} ${s.lastName || ''}`.trim().toLowerCase();
+                                                    const targetId = assignedStaffId.toLowerCase();
+
+                                                    return (
+                                                        (targetId && (sId === targetId || sLink === targetId || sEmail === targetId)) ||
+                                                        (assignedStaffEmail && sEmail === assignedStaffEmail) ||
+                                                        (targetName && (sName === targetName || sEmail === targetName))
+                                                    );
+                                                });
                                                 const staffDisplayName = matchedStaff
                                                     ? `${matchedStaff.firstName || ''} ${matchedStaff.lastName || ''}`.trim() || matchedStaff.email
-                                                    : (item.staffName || item.processingStaff || 'Unassigned');
-                                                const isUnassigned = (!assignedStaffId || assignedStaffId === 'unassigned' || assignedStaffId === 'null') && !matchedStaff;
+                                                    : (item.assignedStaffName || item.staffName || item.processingStaff || 'Unassigned');
+                                                const isUnassigned = (!assignedStaffId || assignedStaffId === 'unassigned' || assignedStaffId === 'null') && !matchedStaff && !item.assignedStaffName && !item.staffName;
 
                                                 return (
                                                 <tr key={idx} className={`hover:bg-slate-50/70 transition-colors group ${selectedAppIds.includes(item.id) ? 'bg-indigo-50/60' : (isUnassigned ? 'bg-amber-50/20' : '')}`}>
@@ -2512,8 +2693,17 @@ export default function AdminDashboardPage() {
                                                     
                                                     {/* App ID & Ref */}
                                                     <td className="px-4 py-3">
-                                                        <div className="flex flex-col">
-                                                            <code className="text-[11px] font-bold text-indigo-700 font-mono">{item.applicationNumber || item.id?.substring(0, 8)}</code>
+                                                        <div className="flex flex-col gap-0.5">
+                                                            {item.applicationNumber ? (
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    <code className="text-[11px] font-bold text-indigo-700 font-mono bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">{item.applicationNumber}</code>
+                                                                </span>
+                                                            ) : (
+                                                                <>
+                                                                    <code className="text-[11px] font-semibold text-slate-600 font-mono">{item.id?.substring(0, 8)}</code>
+                                                                    <span className="text-[9px] text-amber-600 font-medium truncate" title="Application has not been submitted to bank yet. VL-APP ID generates on bank submission.">Pre-bank submission</span>
+                                                                </>
+                                                            )}
                                                             {item.referenceId && <span className="text-[9px] text-slate-400 font-medium truncate max-w-[90px]" title={item.referenceId}>Ref: {item.referenceId}</span>}
                                                         </div>
                                                     </td>
@@ -2652,6 +2842,61 @@ export default function AdminDashboardPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                {/* Applications Pagination Bar */}
+                                {!loading && sortedApplications.length > 0 && (
+                                    <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                                        <div className="text-slate-600 font-medium text-[11px]">
+                                            Showing <strong className="text-slate-900">{(currentAppPage - 1) * 20 + 1}</strong> to{' '}
+                                            <strong className="text-slate-900">{Math.min(currentAppPage * 20, sortedApplications.length)}</strong> of{' '}
+                                            <strong className="text-indigo-600">{sortedApplications.length}</strong> applications
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                onClick={() => setAppPage(p => Math.max(1, p - 1))}
+                                                disabled={currentAppPage <= 1}
+                                                className="px-2.5 py-1 bg-white border border-slate-200 rounded-md font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer shadow-2xs text-[11px]"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">chevron_left</span>
+                                                Previous
+                                            </button>
+
+                                            <div className="flex items-center gap-1">
+                                                {Array.from({ length: totalAppPages }, (_, i) => i + 1)
+                                                    .filter(p => p === 1 || p === totalAppPages || Math.abs(p - currentAppPage) <= 1)
+                                                    .map((p, idx, arr) => {
+                                                        const prevP = arr[idx - 1];
+                                                        const showEllipsis = prevP && p - prevP > 1;
+                                                        return (
+                                                            <Fragment key={p}>
+                                                                {showEllipsis && <span className="px-1 text-slate-400 text-xs">...</span>}
+                                                                <button
+                                                                    onClick={() => setAppPage(p)}
+                                                                    className={`w-7 h-7 rounded-md font-bold text-xs transition-all cursor-pointer ${
+                                                                        p === currentAppPage
+                                                                            ? 'bg-indigo-600 text-white shadow-xs'
+                                                                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                                    }`}
+                                                                >
+                                                                    {p}
+                                                                </button>
+                                                            </Fragment>
+                                                        );
+                                                    })}
+                                            </div>
+
+                                            <button
+                                                onClick={() => setAppPage(p => Math.min(totalAppPages, p + 1))}
+                                                disabled={currentAppPage >= totalAppPages}
+                                                className="px-2.5 py-1 bg-white border border-slate-200 rounded-md font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer shadow-2xs text-[11px]"
+                                            >
+                                                Next
+                                                <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

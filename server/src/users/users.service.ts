@@ -567,16 +567,23 @@ export class UsersService {
     const updatePayload: any = {};
     if (firstName !== undefined) updatePayload.firstName = firstName;
     if (lastName !== undefined) updatePayload.lastName = lastName;
-    if (phoneNumber !== undefined) {
+
+    // IMMUTABLE FIELD GUARD: Phone Number, DOB, and Email CANNOT be updated once set!
+    const existingPhone = targetUser.phoneNumber || targetUser.mobile;
+    if (phoneNumber !== undefined && !existingPhone) {
       updatePayload.phoneNumber = phoneNumber;
       updatePayload.mobile = phoneNumber;
     }
-    if (dobDate !== null) updatePayload.dateOfBirth = dobDate;
+
+    if (dobDate !== null && !targetUser.dateOfBirth) {
+      updatePayload.dateOfBirth = dobDate;
+    }
+
     if (intakeSeason !== undefined) updatePayload.intakeSeason = intakeSeason;
     if (pincode !== undefined) updatePayload.pincode = pincode;
     if (targetUniversity !== undefined) updatePayload.targetUniversity = targetUniversity;
     if (studyDestination !== undefined) updatePayload.studyDestination = studyDestination;
-    if (email) updatePayload.email = email;
+    // Email is strictly immutable and cannot be updated via updateUserDetails
 
     // Parse and handle academic object
     let parsedAcademic: any = {};
@@ -1216,7 +1223,7 @@ export class UsersService {
   async createLoanApplication(
     userId: string,
     data: {
-      bank: string;
+      bank?: string;
       loanType: string;
       amount: number;
       purpose?: string;
@@ -1230,9 +1237,14 @@ export class UsersService {
       targetUniversity?: string;
       annualFee?: string;
       livingCost?: string;
+      hasCoApplicant?: boolean;
       coApplicant?: string;
       coApplicantName?: string;
+      coApplicantPhone?: string;
+      coApplicantEmail?: string;
+      coApplicantRelation?: string;
       income?: string;
+      hasCollateral?: boolean;
       collateral?: string;
       firstName?: string;
       lastName?: string;

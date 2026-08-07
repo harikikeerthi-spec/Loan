@@ -24,6 +24,8 @@ export default function SOPWriterPage() {
         careerGoals: ""
     });
 
+    const [validationError, setValidationError] = useState<string | null>(null);
+
     useEffect(() => {
         if (typeof window !== "undefined") {
             const saved = localStorage.getItem("pending_sop_data");
@@ -39,11 +41,46 @@ export default function SOPWriterPage() {
     }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setValidationError(null);
+
+        // Max length bounds per field
+        if ((name === "studentName" || name === "currentDegree") && value.length > 80) return;
+        if ((name === "university" || name === "fieldOfStudy" || name === "currentUniversity") && value.length > 100) return;
+        if ((name === "researchInterests" || name === "achievements" || name === "careerGoals") && value.length > 500) return;
+
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const validateForm = () => {
+        if (!formData.studentName.trim()) return "Please enter your Full Name.";
+        if (formData.studentName.length > 30) return "Full Name cannot exceed 30 characters.";
+
+        if (!formData.university.trim()) return "Please enter a Target University.";
+        if (formData.university.length > 50) return "Target University cannot exceed 50 characters.";
+
+        if (!formData.fieldOfStudy.trim()) return "Please enter your Field of Study.";
+        if (formData.fieldOfStudy.length > 30) return "Field of Study cannot exceed 30 characters.";
+
+        if (formData.currentDegree.length > 20) return "Current Degree cannot exceed 20 characters.";
+        if (formData.currentUniversity.length > 30) return "Current University cannot exceed 30 characters.";
+
+        if (formData.researchInterests.length > 500) return "Research Interests cannot exceed 500 characters.";
+        if (formData.achievements.length > 500) return "Achievements cannot exceed 500 characters.";
+        if (formData.careerGoals.length > 500) return "Career Goals cannot exceed 500 characters.";
+
+        return null;
     };
 
     const generateSOP = async (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError(null);
+
+        const errMessage = validateForm();
+        if (errMessage) {
+            setValidationError(errMessage);
+            return;
+        }
 
         if (!isAuthenticated) {
             localStorage.setItem("pending_sop_data", JSON.stringify(formData));
@@ -135,20 +172,27 @@ export default function SOPWriterPage() {
                                 </div>
 
                                 <form onSubmit={generateSOP} className="space-y-4">
-                                    <FormInput label="Full Name" icon="person" name="studentName" value={formData.studentName} onChange={handleChange} placeholder="e.g., John Doe" required />
+                                    {validationError && (
+                                        <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 text-[13px] font-medium animate-shake">
+                                            <span className="material-symbols-outlined text-lg shrink-0">error</span>
+                                            <span>{validationError}</span>
+                                        </div>
+                                    )}
+
+                                    <FormInput label="Full Name" icon="person" name="studentName" value={formData.studentName} onChange={handleChange} maxLength={80} placeholder="e.g., John Doe" required />
                                     <div className="grid grid-cols-2 gap-4">
-                                        <FormInput label="Target Univ" icon="school" name="university" value={formData.university} onChange={handleChange} placeholder="e.g., Stanford" required />
-                                        <FormInput label="Field of Study" icon="science" name="fieldOfStudy" value={formData.fieldOfStudy} onChange={handleChange} placeholder="e.g., AI/ML" required />
+                                        <FormInput label="Target Univ" icon="school" name="university" value={formData.university} onChange={handleChange} maxLength={100} placeholder="e.g., Stanford" required />
+                                        <FormInput label="Field of Study" icon="science" name="fieldOfStudy" value={formData.fieldOfStudy} onChange={handleChange} maxLength={100} placeholder="e.g., AI/ML" required />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <FormInput label="Current Degree" icon="military_tech" name="currentDegree" value={formData.currentDegree} onChange={handleChange} placeholder="e.g., B.Tech CS" />
-                                        <FormInput label="Current Univ" icon="domain" name="currentUniversity" value={formData.currentUniversity} onChange={handleChange} placeholder="e.g., XYZ Univ" />
+                                        <FormInput label="Current Degree" icon="military_tech" name="currentDegree" value={formData.currentDegree} onChange={handleChange} maxLength={80} placeholder="e.g., B.Tech CS" />
+                                        <FormInput label="Current Univ" icon="domain" name="currentUniversity" value={formData.currentUniversity} onChange={handleChange} maxLength={100} placeholder="e.g., XYZ Univ" />
                                     </div>
 
-                                    <FormTextarea label="Research Interests" icon="lab_research" name="researchInterests" value={formData.researchInterests} onChange={handleChange} placeholder="What topics excite you?" />
-                                    <FormTextarea label="Achievements" icon="emoji_events" name="achievements" value={formData.achievements} onChange={handleChange} placeholder="Awards, GPA, Papers..." />
-                                    <FormTextarea label="Career Goals" icon="target" name="careerGoals" value={formData.careerGoals} onChange={handleChange} placeholder="Where do you see yourself in 5 years?" />
+                                    <FormTextarea label="Research Interests" icon="lab_research" name="researchInterests" value={formData.researchInterests} onChange={handleChange} maxLength={500} placeholder="What topics excite you? (max 500 chars)" />
+                                    <FormTextarea label="Achievements" icon="emoji_events" name="achievements" value={formData.achievements} onChange={handleChange} maxLength={500} placeholder="Awards, GPA, Papers... (max 500 chars)" />
+                                    <FormTextarea label="Career Goals" icon="target" name="careerGoals" value={formData.careerGoals} onChange={handleChange} maxLength={500} placeholder="Where do you see yourself in 5 years? (max 500 chars)" />
 
                                     <button
                                         type="submit"
@@ -333,30 +377,50 @@ export default function SOPWriterPage() {
     );
 }
 
-function FormInput({ label, icon, required, ...props }: any) {
+function FormInput({ label, icon, required, maxLength, value, ...props }: any) {
+    const currentLen = typeof value === 'string' ? value.length : 0;
     return (
         <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-gray-500 flex items-center gap-1.5 uppercase tracking-wider">
-                <span className="material-symbols-outlined text-[14px]">{icon}</span>
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
+            <div className="flex justify-between items-center">
+                <label className="text-[11px] font-bold text-gray-500 flex items-center gap-1.5 uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-[14px]">{icon}</span>
+                    {label} {required && <span className="text-red-500">*</span>}
+                </label>
+                {maxLength && (
+                    <span className={`text-[10px] font-medium ${currentLen >= maxLength ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
+                        {currentLen}/{maxLength}
+                    </span>
+                )}
+            </div>
             <input
                 {...props}
+                value={value}
+                maxLength={maxLength}
                 className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#6605c7]/[0.1] focus:border-[#6605c7] transition-all text-[13px] outline-none"
             />
         </div>
     );
 }
 
-function FormTextarea({ label, icon, ...props }: any) {
+function FormTextarea({ label, icon, maxLength, value, ...props }: any) {
+    const currentLen = typeof value === 'string' ? value.length : 0;
     return (
         <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-gray-500 flex items-center gap-1.5 uppercase tracking-wider">
-                <span className="material-symbols-outlined text-[14px]">{icon}</span>
-                {label}
-            </label>
+            <div className="flex justify-between items-center">
+                <label className="text-[11px] font-bold text-gray-500 flex items-center gap-1.5 uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-[14px]">{icon}</span>
+                    {label}
+                </label>
+                {maxLength && (
+                    <span className={`text-[10px] font-medium ${currentLen >= maxLength ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
+                        {currentLen}/{maxLength}
+                    </span>
+                )}
+            </div>
             <textarea
                 {...props}
+                value={value}
+                maxLength={maxLength}
                 rows={3}
                 className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-[#6605c7]/[0.1] focus:border-[#6605c7] transition-all text-[13px] leading-relaxed resize-none outline-none"
             />
@@ -407,7 +471,7 @@ function generateSOPDraft(data: any) {
 
 function wrapInStructure(text: string, name: string) {
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    
+
     // Strip any pre-existing header blocks or duplicated Statement of Purpose titles
     let cleanText = text || '';
     cleanText = cleanText.replace(/<div class="text-center mb-10 pb-6 border-b-2 border-gray-200">[\s\S]*?<\/div>/gi, '');

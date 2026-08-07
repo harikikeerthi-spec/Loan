@@ -263,7 +263,7 @@ export class ApplicationController {
             search,
             fromDate,
             toDate,
-            limit: limit ? parseInt(limit, 10) : 20,
+            limit: limit ? parseInt(limit, 10) : 1000,
             offset: offset ? parseInt(offset, 10) : 0,
             sortBy,
             sortOrder: sortOrder as 'asc' | 'desc',

@@ -1074,6 +1074,8 @@ export const adminApi = {
         apiFetch(HttpApiPaths.admin.applicationSyncVault(id), {
             method: "POST",
         }),
+    viewDocument: (applicationId: string, documentId: string): Promise<Blob> =>
+        fetchBlob(HttpApiPaths.admin.applicationDocumentView(applicationId, documentId)),
 
     // Community
     getCommunityStats: () =>
@@ -1160,9 +1162,6 @@ export const adminApi = {
             body: JSON.stringify({ status, rejectionReason }),
             headers: authHeaders(),
         }),
-
-    viewDocument: (applicationId: string, documentId: string): Promise<Blob> =>
-        fetchBlob(HttpApiPaths.admin.applicationDocumentView(applicationId, documentId)),
 };
 
 // ─── Documents ────────────────────────────────────────────────────────
@@ -1562,6 +1561,13 @@ export const assignmentApi = {
             body: JSON.stringify({ loanIds, toStaffId, reason: reason || 'bulk_reassign_admin' }),
         }),
 
+    // Assign all unassigned applications via round robin
+    assignAllUnassigned: () =>
+        apiFetch(`${API_URL}/assignment/assign-all-unassigned`, { method: 'POST' }),
+
+    autoAssignAllUnassigned: () =>
+        apiFetch(`${API_URL}/assignment/assign-all-unassigned`, { method: 'POST' }),
+
 
     // Get all applications assigned to the current (or specified) staff member (optionally including unassigned)
     getMyApplications: (staffId?: string, status?: string, includeUnassigned?: boolean) => {
@@ -1600,10 +1606,6 @@ export const assignmentApi = {
             method: 'PATCH',
             body: JSON.stringify(data),
         }),
-
-    // Bulk round-robin auto-assign all unassigned applications
-    assignAllUnassigned: () =>
-        apiFetch(`${API_URL}/assignment/assign-all-unassigned`, { method: 'POST' }),
 };
 
 export const bankApi = {

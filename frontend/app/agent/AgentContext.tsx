@@ -347,7 +347,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         return {
             id: apiApp.id,
             userId: apiApp.userId || apiApp.user?.id,
-            applicationNumber: apiApp.applicationNumber || `VL-APP-2026-${String(apiApp.id).slice(-5)}`,
+            applicationNumber: apiApp.applicationNumber || null,
             firstName: apiApp.firstName || apiApp.user?.firstName || "Student",
             lastName: apiApp.lastName || apiApp.user?.lastName || "",
             email: apiApp.email || apiApp.user?.email || "",

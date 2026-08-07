@@ -1248,7 +1248,7 @@ export class ApplicationService {
       if (filters?.fromDate) query = query.gte('submittedAt', filters.fromDate);
       if (filters?.toDate) query = query.lte('submittedAt', filters.toDate);
       
-      const limit = filters?.limit || 20;
+      const limit = filters?.limit || 1000;
       const offset = filters?.offset || 0;
       query = query.range(offset, offset + limit - 1);
 
@@ -1262,6 +1262,58 @@ export class ApplicationService {
       }
 
       console.log(`[ApplicationService.getAllApplications] Success. Count: ${count}, Data size: ${applications?.length}`);
+
+      // Enrich assigned staff details (name, email, role)
+      if (applications && applications.length > 0) {
+        try {
+          const rawStaffIds = applications.map((app: any) => app.assignedStaffId).filter(Boolean);
+          const uniqueStaffIds = Array.from(new Set(rawStaffIds)) as string[];
+          if (uniqueStaffIds.length > 0) {
+            const staffUserIds = uniqueStaffIds.filter(id => !id.includes('@'));
+            const staffEmails = uniqueStaffIds.filter(id => id.includes('@'));
+
+            const fetchedStaffList: any[] = [];
+            if (staffUserIds.length > 0) {
+              const { data: uList } = await this.db
+                .from('User')
+                .select('id, email, firstName, lastName, role')
+                .in('id', staffUserIds);
+              if (uList) fetchedStaffList.push(...uList);
+            }
+            if (staffEmails.length > 0) {
+              const { data: eList } = await this.db
+                .from('User')
+                .select('id, email, firstName, lastName, role')
+                .in('email', staffEmails);
+              if (eList) fetchedStaffList.push(...eList);
+            }
+
+            if (fetchedStaffList.length > 0) {
+              const staffMap = new Map<string, any>();
+              fetchedStaffList.forEach((s: any) => {
+                if (s.id) staffMap.set(String(s.id).toLowerCase(), s);
+                if (s.email) staffMap.set(String(s.email).toLowerCase(), s);
+              });
+
+              applications.forEach((app: any) => {
+                if (app.assignedStaffId) {
+                  const key = String(app.assignedStaffId).toLowerCase();
+                  const staff = staffMap.get(key);
+                  if (staff) {
+                    const name = `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || staff.email;
+                    app.assignedStaffName = name;
+                    app.assignedStaffEmail = staff.email;
+                    app.assignedStaffRole = staff.role;
+                    app.staffName = name;
+                  }
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('[getAllApplications] Failed to enrich staff details:', e);
+        }
+      }
       
       return { 
         success: true, 

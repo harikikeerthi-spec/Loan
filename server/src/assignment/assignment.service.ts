@@ -6,6 +6,10 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 @Injectable()
 export class AssignmentService {
   private readonly logger = new Logger(AssignmentService.name);
+  private lastAssignedStaffIdInMemory: string | null = null;
+  // Numeric index tracker — advances regardless of whether ID lookup succeeds.
+  // This ensures pure sequential round-robin even when staff IDs change.
+  private lastAssignedIndexInMemory: number = -1;
 
   private get db() {
     return this.supabase.getClient();
@@ -89,14 +93,27 @@ export class AssignmentService {
     try {
       const { data: tracker } = await this.db
         .from('AssignmentTracker')
-        .select('lastAssignedStaffId')
+        .select('lastAssignedStaffId, lastAssignedIndex')
         .eq('scope', 'global')
         .maybeSingle();
       if (tracker?.lastAssignedStaffId) {
         lastAssignedStaffId = tracker.lastAssignedStaffId;
       }
+      // Restore numeric index from DB tracker if available
+      if (tracker?.lastAssignedIndex !== undefined && tracker?.lastAssignedIndex !== null) {
+        const dbIdx = parseInt(String(tracker.lastAssignedIndex), 10);
+        if (!isNaN(dbIdx) && dbIdx >= 0) {
+          this.lastAssignedIndexInMemory = dbIdx;
+        }
+      }
     } catch (_) {}
 
+    if (!lastAssignedStaffId) {
+      lastAssignedStaffId = this.lastAssignedStaffIdInMemory;
+    }
+
+    // Determine nextIndex using BOTH the staff ID lookup AND the numeric index tracker.
+    // The numeric index is the authoritative fallback when staff IDs don't match (e.g. after schema changes).
     let nextIndex = 0;
     if (lastAssignedStaffId) {
       const currentIndex = eligibleStaff.findIndex(
@@ -106,14 +123,28 @@ export class AssignmentService {
       );
       if (currentIndex !== -1) {
         nextIndex = (currentIndex + 1) % eligibleStaff.length;
-        this.logger.log(`[AssignmentEngine] Pure Sequential RR — Last assigned: ${lastAssignedStaffId} (idx ${currentIndex}). Next target idx ${nextIndex}`);
+        this.logger.log(`[AssignmentEngine] RR by ID — Last: ${lastAssignedStaffId} (idx ${currentIndex}) → Next: idx ${nextIndex}`);
       } else {
-        this.logger.log(`[AssignmentEngine] Pure Sequential RR — Last assigned ${lastAssignedStaffId} not found in current staff list. Starting at idx 0`);
-        nextIndex = 0;
+        // Staff ID not found — use numeric index tracker instead of falling back to 0
+        const lastNumericIndex = this.lastAssignedIndexInMemory;
+        if (lastNumericIndex >= 0) {
+          nextIndex = (lastNumericIndex + 1) % eligibleStaff.length;
+          this.logger.log(`[AssignmentEngine] RR by numeric index (ID not found) — Last numeric idx: ${lastNumericIndex} → Next: idx ${nextIndex}`);
+        } else {
+          nextIndex = 0;
+          this.logger.log(`[AssignmentEngine] RR — No prior tracker. Starting at idx 0`);
+        }
       }
     } else {
-      this.logger.log(`[AssignmentEngine] Pure Sequential RR — No tracker found. Starting sequence at idx 0`);
-      nextIndex = 0;
+      // No ID tracker — use numeric index tracker
+      const lastNumericIndex = this.lastAssignedIndexInMemory;
+      if (lastNumericIndex >= 0) {
+        nextIndex = (lastNumericIndex + 1) % eligibleStaff.length;
+        this.logger.log(`[AssignmentEngine] RR by numeric index only — Last numeric idx: ${lastNumericIndex} → Next: idx ${nextIndex}`);
+      } else {
+        this.logger.log(`[AssignmentEngine] RR — No tracker at all. Starting sequence at idx 0`);
+        nextIndex = 0;
+      }
     }
 
     this.logger.log(
@@ -126,6 +157,10 @@ export class AssignmentService {
     this.logger.log(`[AssignmentEngine] SELECTED STAFF [idx ${nextIndex}]: ${selectedStaff.email}`);
 
     const staffUserId = selectedStaff.linkedUserId || selectedStaff.assignedStaffId || selectedStaff.id;
+    // Update BOTH the in-memory ID tracker AND the numeric index tracker immediately
+    // so that the next concurrent/sequential call advances correctly.
+    this.lastAssignedStaffIdInMemory = staffUserId;
+    this.lastAssignedIndexInMemory = nextIndex;
     const staffName = `${selectedStaff.linkedUser?.firstName || selectedStaff.firstName || ''} ${selectedStaff.linkedUser?.lastName || selectedStaff.lastName || ''}`.trim() || selectedStaff.email || 'Staff Member';
     const staffEmail = selectedStaff.linkedUser?.email || selectedStaff.email || '';
     const now = new Date().toISOString();
@@ -184,13 +219,21 @@ export class AssignmentService {
     assignSuccess = true;
 
     if (assignSuccess) {
-      await this.db
-        .from('AssignmentTracker')
-        .upsert({
-          scope: 'global',
-          lastAssignedStaffId: staffUserId,
-          updatedAt: now,
-        }, { onConflict: 'scope' });
+      // Persist both the staff ID and the numeric index to the tracker table.
+      // This ensures round-robin survives server restarts.
+      try {
+        await this.db
+          .from('AssignmentTracker')
+          .upsert({
+            scope: 'global',
+            lastAssignedStaffId: staffUserId,
+            lastAssignedIndex: nextIndex,
+            updatedAt: now,
+          }, { onConflict: 'scope' });
+      } catch (trackerErr: any) {
+        // Non-fatal: the in-memory tracker is still updated and will work for this server instance
+        this.logger.warn(`[AssignmentEngine] AssignmentTracker DB upsert skipped (table may not exist): ${trackerErr?.message}`);
+      }
 
       try {
         if (selectedStaff.linkedUser?.email) {
@@ -489,11 +532,22 @@ export class AssignmentService {
     }
 
     let successCount = 0;
+    const isAutoRoundRobin = toStaffId === 'auto' || toStaffId === 'round_robin' || !toStaffId;
 
     for (const loanId of loanIds) {
       try {
-        const res = await this.reassignLoan(loanId, toStaffId, reason, assignedBy);
-        if (res.success) successCount++;
+        if (isAutoRoundRobin) {
+          await this.db
+            .from('LoanApplication')
+            .update({ assignedStaffId: null })
+            .eq('id', loanId);
+
+          const res = await this.assignLoan(loanId, assignedBy);
+          if (res.success) successCount++;
+        } else {
+          const res = await this.reassignLoan(loanId, toStaffId, reason, assignedBy);
+          if (res.success) successCount++;
+        }
       } catch (err) {
         this.logger.error(`[BulkReassign] Failed to reassign loan ${loanId}:`, err);
       }
@@ -505,6 +559,8 @@ export class AssignmentService {
       message: `Successfully reassigned ${successCount} application(s).`,
     };
   }
+
+
 
 
   async lockApplication(loanId: string, staffId: string): Promise<{ success: boolean; message: string; lockedBy?: string }> {
@@ -721,44 +777,71 @@ export class AssignmentService {
    * any apps that slipped through without being auto-assigned.
    */
   async assignAllUnassigned(triggeredBy = 'system'): Promise<{ assigned: number; skipped: number; failed: number }> {
-    const { data: unassigned, error } = await this.db
-      .from('LoanApplication')
-      .select('id, applicationNumber, loanType, firstName, lastName, email')
-      .or('assignedStaffId.is.null,assignedStaffId.eq.unassigned,assignedStaffId.eq.,assignedStaffId.eq.null')
-      .not('status', 'in', '("rejected","cancelled","draft")');
+    try {
+      // 1. Fetch eligible staff to know all valid staff IDs/emails
+      const eligibleStaff = await this.getEligibleStaff();
+      const validStaffKeys = new Set<string>();
+      for (const s of eligibleStaff) {
+        if (s.id) validStaffKeys.add(String(s.id).toLowerCase().trim());
+        if (s.linkedUserId) validStaffKeys.add(String(s.linkedUserId).toLowerCase().trim());
+        if (s.email) validStaffKeys.add(String(s.email).toLowerCase().trim());
+      }
 
-    if (error) {
-      this.logger.error(`[assignAllUnassigned] Failed to fetch unassigned apps: ${error.message}`);
+      // 2. Fetch all active applications (excluding draft, rejected, cancelled)
+      const { data: allApps, error } = await this.db
+        .from('LoanApplication')
+        .select('id, applicationNumber, assignedStaffId, status')
+        .not('status', 'in', '(rejected,cancelled,draft)');
+
+      if (error) {
+        this.logger.error(`[assignAllUnassigned] Failed to fetch apps: ${error.message}`);
+        return { assigned: 0, skipped: 0, failed: 0 };
+      }
+
+      const queue = (allApps || []).filter((loan: any) => {
+        const sid = String(loan.assignedStaffId || '').toLowerCase().trim();
+        if (!sid || sid === 'unassigned' || sid === 'null' || sid === 'undefined') {
+          return true;
+        }
+        // If assigned to an invalid or non-staff ID (e.g. legacy student ID), treat as unassigned
+        return !validStaffKeys.has(sid);
+      });
+
+      let assigned = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      this.logger.log(`[assignAllUnassigned] Found ${queue.length} unassigned/invalid-staff applications out of ${allApps?.length || 0} active apps. Distributing via round-robin...`);
+
+      for (const loan of queue) {
+        try {
+          // Clear legacy/invalid assignedStaffId so assignLoan proceeds
+          await this.db
+            .from('LoanApplication')
+            .update({ assignedStaffId: null })
+            .eq('id', loan.id);
+
+          const result = await this.assignLoan(loan.id, triggeredBy);
+          if (result.success) {
+            assigned++;
+          } else if (result.message === 'Application is already assigned') {
+            skipped++;
+          } else {
+            this.logger.warn(`[assignAllUnassigned] Stopped at ${loan.id}: ${result.message}`);
+            skipped += queue.length - assigned - failed - skipped;
+            break;
+          }
+        } catch (err: any) {
+          this.logger.error(`[assignAllUnassigned] Failed for ${loan.id}: ${err.message}`);
+          failed++;
+        }
+      }
+
+      this.logger.log(`[assignAllUnassigned] Completed. assigned=${assigned}, skipped=${skipped}, failed=${failed}`);
+      return { assigned, skipped, failed };
+    } catch (globalErr: any) {
+      this.logger.error(`[assignAllUnassigned] Unexpected error: ${globalErr.message || globalErr}`);
       return { assigned: 0, skipped: 0, failed: 0 };
     }
-
-    const queue = unassigned || [];
-    let assigned = 0;
-    let skipped = 0;
-    let failed = 0;
-
-    this.logger.log(`[assignAllUnassigned] Found ${queue.length} unassigned applications. Assigning now...`);
-
-    for (const loan of queue) {
-      try {
-        const result = await this.assignLoan(loan.id, triggeredBy);
-        if (result.success) {
-          assigned++;
-        } else if (result.message === 'Application is already assigned') {
-          skipped++;
-        } else {
-          // No eligible staff — stop trying further to avoid empty loops
-          this.logger.warn(`[assignAllUnassigned] Stopped at ${loan.id}: ${result.message}`);
-          skipped += queue.length - assigned - failed - skipped;
-          break;
-        }
-      } catch (err: any) {
-        this.logger.error(`[assignAllUnassigned] Failed for ${loan.id}: ${err.message}`);
-        failed++;
-      }
-    }
-
-    this.logger.log(`[assignAllUnassigned] Done. assigned=${assigned}, skipped=${skipped}, failed=${failed}`);
-    return { assigned, skipped, failed };
   }
 }

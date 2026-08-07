@@ -11,6 +11,8 @@ export default function AdmitPredictorPage() {
     const pathname = usePathname();
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
+    const [validationError, setValidationError] = useState<string | null>(null);
+
     const [formData, setFormData] = useState({
         targetUniversity: "",
         programLevel: "Masters",
@@ -38,8 +40,85 @@ export default function AdmitPredictorPage() {
         }
     }, []);
 
+    // Get score limits for Standardized Test
+    const getTestScoreLimits = (type: string) => {
+        switch (type) {
+            case "GRE": return { min: 260, max: 340, step: 1, placeholder: "e.g. 320 (260-340)" };
+            case "GMAT": return { min: 200, max: 800, step: 10, placeholder: "e.g. 710 (200-800)" };
+            case "SAT": return { min: 400, max: 1600, step: 10, placeholder: "e.g. 1450 (400-1600)" };
+            default: return { min: 0, max: 0, step: 1, placeholder: "N/A" };
+        }
+    };
+
+    // Get score limits for English Test
+    const getEnglishScoreLimits = (type: string) => {
+        switch (type) {
+            case "IELTS": return { min: 0, max: 9.0, step: 0.5, placeholder: "e.g. 7.5 (0-9)" };
+            case "TOEFL": return { min: 0, max: 120, step: 1, placeholder: "e.g. 100 (0-120)" };
+            case "PTE": return { min: 10, max: 90, step: 1, placeholder: "e.g. 75 (10-90)" };
+            case "Duolingo": return { min: 10, max: 160, step: 5, placeholder: "e.g. 125 (10-160)" };
+            default: return { min: 0, max: 0, step: 1, placeholder: "N/A" };
+        }
+    };
+
+    const validateForm = () => {
+        // Target University
+        if (!formData.targetUniversity.trim()) {
+            return "Please enter a Target University.";
+        }
+        if (formData.targetUniversity.trim().length > 100) {
+            return "Target University name cannot exceed 100 characters.";
+        }
+
+        // GPA
+        const gpaVal = parseFloat(formData.gpa);
+        const maxGpa = formData.gpaScale === "10" ? 10.0 : 4.0;
+        if (isNaN(gpaVal) || gpaVal < 0 || gpaVal > maxGpa) {
+            return `GPA must be between 0 and ${maxGpa.toFixed(1)} on a ${formData.gpaScale}.0 scale.`;
+        }
+
+        // Standardized Test Score
+        if (formData.testScoreType !== "None" && formData.testScore !== "") {
+            const score = parseFloat(formData.testScore);
+            const limits = getTestScoreLimits(formData.testScoreType);
+            if (isNaN(score) || score < limits.min || score > limits.max) {
+                return `${formData.testScoreType} score must be between ${limits.min} and ${limits.max}.`;
+            }
+        }
+
+        // English Test Score
+        if (formData.englishTestType !== "None" && formData.englishTestScore !== "") {
+            const score = parseFloat(formData.englishTestScore);
+            const limits = getEnglishScoreLimits(formData.englishTestType);
+            if (isNaN(score) || score < limits.min || score > limits.max) {
+                return `${formData.englishTestType} score must be between ${limits.min} and ${limits.max}.`;
+            }
+        }
+
+        // Work Exp
+        const exp = parseFloat(formData.experienceYears);
+        if (isNaN(exp) || exp < 0 || exp > 50) {
+            return "Work experience must be between 0 and 50 years.";
+        }
+
+        // Research Papers
+        const papers = parseInt(formData.researchPapers, 10);
+        if (isNaN(papers) || papers < 0 || papers > 50) {
+            return "Research papers count must be between 0 and 50.";
+        }
+
+        return null;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError(null);
+
+        const errMessage = validateForm();
+        if (errMessage) {
+            setValidationError(errMessage);
+            return;
+        }
 
         if (!isAuthenticated) {
             localStorage.setItem("pending_admit_predictor_data", JSON.stringify(formData));
@@ -61,8 +140,35 @@ export default function AdmitPredictorPage() {
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        const { name, value } = e.target;
+        setValidationError(null);
+
+        if (name === "targetUniversity" && value.length > 100) return;
+
+        if (name === "gpaScale") {
+            const maxGpa = value === "10" ? 10.0 : 4.0;
+            setFormData(prev => {
+                const currentGpa = parseFloat(prev.gpa);
+                return {
+                    ...prev,
+                    gpaScale: value,
+                    gpa: !isNaN(currentGpa) && currentGpa > maxGpa ? maxGpa.toString() : prev.gpa
+                };
+            });
+            return;
+        }
+
+        if (name === "experienceYears" || name === "researchPapers") {
+            const num = parseFloat(value);
+            if (!isNaN(num) && num > 50) return;
+        }
+
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
+
+    const testLimits = getTestScoreLimits(formData.testScoreType);
+    const englishLimits = getEnglishScoreLimits(formData.englishTestType);
+    const maxGpaValue = formData.gpaScale === "10" ? 10.0 : 4.0;
 
     return (
         <main className="relative z-10 pt-32 pb-24">
@@ -81,15 +187,41 @@ export default function AdmitPredictorPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-10 items-start">
                     <div className="bg-white/80 backdrop-blur-xl border border-gray-100 rounded-xl p-10 shadow-xl">
                         <form onSubmit={handleSubmit} className="space-y-8">
+                            {validationError && (
+                                <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 text-[13px] font-medium animate-shake">
+                                    <span className="material-symbols-outlined text-lg shrink-0">error</span>
+                                    <span>{validationError}</span>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Target University */}
                                 <div className="col-span-full space-y-2">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Target University</label>
-                                    <input name="targetUniversity" type="text" placeholder="e.g. Stanford University" required value={formData.targetUniversity} onChange={handleChange} className="w-full px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 placeholder:text-gray-300 text-[13px]" />
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Target University</label>
+                                        <span className="text-[10px] text-gray-400 font-medium">{formData.targetUniversity.length}/100 chars</span>
+                                    </div>
+                                    <input
+                                        name="targetUniversity"
+                                        type="text"
+                                        maxLength={100}
+                                        placeholder="e.g. Stanford University"
+                                        required
+                                        value={formData.targetUniversity}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 placeholder:text-gray-300 text-[13px]"
+                                    />
                                 </div>
 
+                                {/* Program Level */}
                                 <div className="space-y-2">
                                     <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Program Level</label>
-                                    <select name="programLevel" value={formData.programLevel} onChange={handleChange} className="w-full px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]">
+                                    <select
+                                        name="programLevel"
+                                        value={formData.programLevel}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]"
+                                    >
                                         <option value="Undergraduate">Undergraduate</option>
                                         <option value="Masters">Masters (MS/MA)</option>
                                         <option value="MBA">MBA</option>
@@ -97,50 +229,146 @@ export default function AdmitPredictorPage() {
                                     </select>
                                 </div>
 
+                                {/* GPA */}
                                 <div className="space-y-2">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">GPA ({formData.gpaScale}.0 Scale)</label>
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">GPA ({formData.gpaScale}.0 Scale)</label>
+                                        <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">Max: {maxGpaValue.toFixed(1)}</span>
+                                    </div>
                                     <div className="flex gap-4">
-                                        <input name="gpa" type="number" step="0.01" placeholder="3.8" required value={formData.gpa} onChange={handleChange} className="flex-1 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]" />
-                                        <select name="gpaScale" value={formData.gpaScale} onChange={handleChange} className="w-24 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]">
+                                        <input
+                                            name="gpa"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            max={maxGpaValue}
+                                            placeholder={`0.0 - ${maxGpaValue.toFixed(1)}`}
+                                            required
+                                            value={formData.gpa}
+                                            onChange={handleChange}
+                                            className="flex-1 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]"
+                                        />
+                                        <select
+                                            name="gpaScale"
+                                            value={formData.gpaScale}
+                                            onChange={handleChange}
+                                            className="w-24 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]"
+                                        >
                                             <option value="4">4.0</option>
                                             <option value="10">10.0</option>
                                         </select>
                                     </div>
                                 </div>
 
+                                {/* Standardized Test */}
                                 <div className="space-y-2">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Standardized Test</label>
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Standardized Test</label>
+                                        {formData.testScoreType !== "None" && (
+                                            <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                                                Range: {testLimits.min} - {testLimits.max}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="flex gap-4">
-                                        <select name="testScoreType" value={formData.testScoreType} onChange={handleChange} className="w-28 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]">
+                                        <select
+                                            name="testScoreType"
+                                            value={formData.testScoreType}
+                                            onChange={handleChange}
+                                            className="w-28 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]"
+                                        >
                                             <option value="None">None</option>
                                             <option value="GRE">GRE</option>
                                             <option value="GMAT">GMAT</option>
                                             <option value="SAT">SAT</option>
                                         </select>
-                                        <input name="testScore" type="number" placeholder="Score" value={formData.testScore} onChange={handleChange} className="flex-1 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]" />
+                                        <input
+                                            name="testScore"
+                                            type="number"
+                                            min={testLimits.min}
+                                            max={testLimits.max}
+                                            step={testLimits.step}
+                                            disabled={formData.testScoreType === "None"}
+                                            placeholder={testLimits.placeholder}
+                                            value={formData.testScore}
+                                            onChange={handleChange}
+                                            className="flex-1 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px] disabled:opacity-40"
+                                        />
                                     </div>
                                 </div>
 
+                                {/* English Proficiency */}
                                 <div className="space-y-2">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">English Proficiency</label>
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">English Proficiency</label>
+                                        {formData.englishTestType !== "None" && (
+                                            <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                                                Range: {englishLimits.min} - {englishLimits.max}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="flex gap-4">
-                                        <select name="englishTestType" value={formData.englishTestType} onChange={handleChange} className="w-28 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]">
+                                        <select
+                                            name="englishTestType"
+                                            value={formData.englishTestType}
+                                            onChange={handleChange}
+                                            className="w-28 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]"
+                                        >
                                             <option value="IELTS">IELTS</option>
                                             <option value="TOEFL">TOEFL</option>
                                             <option value="PTE">PTE</option>
+                                            <option value="Duolingo">Duolingo</option>
+                                            <option value="None">None</option>
                                         </select>
-                                        <input name="englishTestScore" type="number" step="0.5" placeholder="7.5" value={formData.englishTestScore} onChange={handleChange} className="flex-1 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]" />
+                                        <input
+                                            name="englishTestScore"
+                                            type="number"
+                                            min={englishLimits.min}
+                                            max={englishLimits.max}
+                                            step={englishLimits.step}
+                                            disabled={formData.englishTestType === "None"}
+                                            placeholder={englishLimits.placeholder}
+                                            value={formData.englishTestScore}
+                                            onChange={handleChange}
+                                            className="flex-1 px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px] disabled:opacity-40"
+                                        />
                                     </div>
                                 </div>
 
+                                {/* Work Exp (Years) */}
                                 <div className="space-y-2">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Work Exp (Years)</label>
-                                    <input name="experienceYears" type="number" value={formData.experienceYears} onChange={handleChange} className="w-full px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]" />
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Work Exp (Years)</label>
+                                        <span className="text-[10px] text-gray-400 font-medium">Max: 50 yrs</span>
+                                    </div>
+                                    <input
+                                        name="experienceYears"
+                                        type="number"
+                                        min="0"
+                                        max="50"
+                                        step="0.5"
+                                        value={formData.experienceYears}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]"
+                                    />
                                 </div>
 
+                                {/* Research Papers */}
                                 <div className="space-y-2">
-                                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Research Papers</label>
-                                    <input name="researchPapers" type="number" value={formData.researchPapers} onChange={handleChange} className="w-full px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]" />
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Research Papers</label>
+                                        <span className="text-[10px] text-gray-400 font-medium">Max: 50 papers</span>
+                                    </div>
+                                    <input
+                                        name="researchPapers"
+                                        type="number"
+                                        min="0"
+                                        max="50"
+                                        step="1"
+                                        value={formData.researchPapers}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-4 rounded-xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px]"
+                                    />
                                 </div>
                             </div>
 

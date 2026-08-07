@@ -652,22 +652,30 @@ export default function UserProfileView({
                                     />
                                 </div>
                                 <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date of Birth</label>
+                                        {user?.dateOfBirth && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">🔒 Immutable</span>}
+                                    </div>
                                     <DatePicker
-                                        label="Date of Birth"
                                         value={personalForm.dateOfBirth}
                                         onChange={(val: string) => setPersonalForm(p => ({ ...p, dateOfBirth: val }))}
                                         placeholder="Select DOB"
+                                        disabled={!!user?.dateOfBirth}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Phone Number</label>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phone Number</label>
+                                        {(user?.phoneNumber || user?.mobile) && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">🔒 Immutable</span>}
+                                    </div>
                                     <input
                                         type="tel"
                                         value={personalForm.phoneNumber}
                                         onChange={(e) => setPersonalForm(p => ({ ...p, phoneNumber: formatPhone(e.target.value) }))}
+                                        disabled={!!(user?.phoneNumber || user?.mobile)}
                                         maxLength={10}
                                         inputMode="numeric"
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
+                                        className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all ${user?.phoneNumber || user?.mobile ? 'bg-slate-100/80 text-slate-500 cursor-not-allowed border-slate-200' : 'bg-slate-50/50 text-slate-700 border-slate-200'}`}
                                     />
                                 </div>
                             </div>

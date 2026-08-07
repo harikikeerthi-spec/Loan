@@ -111,7 +111,6 @@ export default function ApplyLoanPage() {
         pincode: "",
         notes: "",
         admissionStatus: "waiting", // confirmed, conditional, waiting
-        intakeSeason: "",
     });
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -226,7 +225,6 @@ export default function ApplyLoanPage() {
                         phone: prev.phone || user?.phoneNumber || user?.mobile || "",
                         // Support both DD-MM-YYYY (from DatePicker / backend) and fallback fields
                         dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
-                        intakeSeason: prev.intakeSeason || user?.intakeSeason || "",
                         pincode: prev.pincode || user?.pincode || "",
                         coApplicantName: prev.coApplicantName || user?.coApplicantName || user?.coApplicant?.name || user?.family?.fatherName || user?.family?.motherName || "",
                         coApplicantPhone: prev.coApplicantPhone || user?.coApplicantPhone || user?.coApplicant?.mobile || user?.coApplicant?.phone || user?.family?.fatherPhone || user?.family?.motherPhone || "",
@@ -594,7 +592,6 @@ export default function ApplyLoanPage() {
                         lastName: formData.lastName,
                         phoneNumber: formData.phone,
                         dateOfBirth: formData.dateOfBirth, // Custom DatePicker already returns DD-MM-YYYY
-                        intakeSeason: formData.intakeSeason,
                         pincode: formData.pincode,
                         targetUniversity: formData.university,
                         studyDestination: formData.country === "Other" ? formData.otherCountry : formData.country,

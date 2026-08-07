@@ -422,7 +422,7 @@ function IncomingQueuePageInner() {
                 date: tempFollowUpDate,
                 time: selectedTime,
                 studentName,
-                appNumber: appNumber || `VL-APP-${appId.slice(-5).toUpperCase()}`,
+                appNumber: appNumber || `#${appId.slice(0, 8)}`,
                 notes: tempFollowUpNotes
             }
         };
@@ -462,7 +462,7 @@ function IncomingQueuePageInner() {
                     createdAt: new Date().toISOString(),
                     studentId: sId,
                     studentName,
-                    appNumber: appNumber || `VL-APP-${appId.slice(-5).toUpperCase()}`,
+                    appNumber: appNumber || `#${appId.slice(0, 8)}`,
                     appId
                 });
             }
@@ -643,7 +643,7 @@ function IncomingQueuePageInner() {
                         time: app.followUpTime || "",
                         notes: app.followUpNotes || "",
                         studentName: `${app.firstName || ''} ${app.lastName || ''}`.trim() || app.email,
-                        appNumber: app.applicationNumber || `VL-APP-${(app.id || '').slice(-5).toUpperCase()}`
+                        appNumber: app.applicationNumber || `#${(app.id || '').slice(0, 8)}`
                     };
                 }
             });
