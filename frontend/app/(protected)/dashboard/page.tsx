@@ -576,13 +576,14 @@ export default function DashboardPage() {
         if (app?.assignedStaffId && app.assignedStaffId !== 'unassigned' && app.assignedStaffId !== 'null') {
             const staffIdStr = String(app.assignedStaffId);
             const isEmail = staffIdStr.includes('@');
-            const cleanName = isEmail ? staffIdStr.split('@')[0].replace(/[\._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Assigned Support Officer";
+            const cleanName = app?.assignedStaffName || (isEmail ? staffIdStr.split('@')[0].replace(/[\._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Education Loan Officer");
+            const cleanEmail = app?.assignedStaffEmail || (isEmail ? staffIdStr : "support@vidyaloans.com");
             return {
                 isAssigned: true,
                 name: cleanName,
-                email: isEmail ? staffIdStr : "support@vidyaloans.com",
+                email: cleanEmail,
                 phone: staffPhone || "",
-                role: "Senior Education Loan Advisor",
+                role: staffRole || "Senior Education Loan Advisor",
                 initials: cleanName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
             };
         }
@@ -1472,8 +1473,15 @@ export default function DashboardPage() {
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant</div>
                                             <div className="text-sm font-semibold text-gray-800">
                                                 {(() => {
-                                                    const rawName = selectedAppDetails.coApplicantName || selectedAppDetails.user?.coApplicantName || selectedAppDetails.user?.coApplicant?.name || "";
-                                                    const rawRel = selectedAppDetails.coApplicantRelation || selectedAppDetails.coApplicant || "";
+                                                    let localData: any = null;
+                                                    if (typeof window !== 'undefined') {
+                                                        try {
+                                                            const raw = localStorage.getItem('recent_application_submitted') || localStorage.getItem('apply_loan_form_data');
+                                                            if (raw) localData = JSON.parse(raw);
+                                                        } catch {}
+                                                    }
+                                                    const rawName = selectedAppDetails.coApplicantName || selectedAppDetails.fatherName || selectedAppDetails.motherName || selectedAppDetails.user?.coApplicantName || selectedAppDetails.user?.coApplicant?.name || data.family?.coApplicantName || data.family?.fatherName || data.family?.motherName || data.profile?.coApplicant?.name || localData?.coApplicantName || user?.coApplicantName || "";
+                                                    const rawRel = selectedAppDetails.coApplicantRelation || selectedAppDetails.coApplicant || localData?.coApplicantRelation || localData?.coApplicant || user?.coApplicantRelation || "";
                                                     const relationLabel = rawRel && rawRel.toLowerCase() !== 'coapplicant' ? (rawRel.charAt(0).toUpperCase() + rawRel.slice(1)) : '';
 
                                                     const isValidName = rawName && !['coapplicant', 'father', 'mother', 'spouse', 'brother', 'sister'].includes(rawName.toLowerCase());
@@ -1491,7 +1499,17 @@ export default function DashboardPage() {
                                         <div>
                                             <div className="text-[11px] font-bold text-gray-400 uppercase">Co-Applicant Income</div>
                                             <div className="text-sm font-semibold text-gray-800">
-                                                {selectedAppDetails.coApplicantIncome ? `₹${selectedAppDetails.coApplicantIncome.toLocaleString("en-IN")}` : 'Not specified'}
+                                                {(() => {
+                                                    let localData: any = null;
+                                                    if (typeof window !== 'undefined') {
+                                                        try {
+                                                            const raw = localStorage.getItem('recent_application_submitted') || localStorage.getItem('apply_loan_form_data');
+                                                            if (raw) localData = JSON.parse(raw);
+                                                        } catch {}
+                                                    }
+                                                    const income = selectedAppDetails.coApplicantIncome || localData?.coApplicantIncome || localData?.income || data.family?.coApplicantIncome || data.profile?.coApplicant?.monthlyIncome || user?.coApplicantIncome;
+                                                    return income ? `₹${Number(income).toLocaleString("en-IN")}` : 'Not specified';
+                                                })()}
                                             </div>
                                         </div>
                                         <div>
@@ -1509,6 +1527,8 @@ export default function DashboardPage() {
                                                         selectedAppDetails.coApplicantPhone ||
                                                         selectedAppDetails.coApplicantMobile ||
                                                         selectedAppDetails.coApplicant_phone ||
+                                                        selectedAppDetails.fatherPhone ||
+                                                        selectedAppDetails.motherPhone ||
                                                         selectedAppDetails.user?.coApplicantPhone ||
                                                         selectedAppDetails.user?.coApplicant?.mobile ||
                                                         selectedAppDetails.user?.coApplicant?.phone ||
@@ -1516,6 +1536,8 @@ export default function DashboardPage() {
                                                         localData?.coApplicantMobile ||
                                                         data.family?.coApplicantPhone ||
                                                         data.family?.coApplicantMobile ||
+                                                        data.family?.fatherPhone ||
+                                                        data.family?.motherPhone ||
                                                         data.profile?.coApplicant?.mobile ||
                                                         data.profile?.coApplicant?.phone ||
                                                         data.profile?.coApplicantPhone ||
@@ -1541,6 +1563,8 @@ export default function DashboardPage() {
                                                     return (
                                                         selectedAppDetails.coApplicantEmail ||
                                                         selectedAppDetails.coApplicant_email ||
+                                                        selectedAppDetails.fatherEmail ||
+                                                        selectedAppDetails.motherEmail ||
                                                         selectedAppDetails.user?.coApplicantEmail ||
                                                         selectedAppDetails.user?.coApplicant?.email ||
                                                         localData?.coApplicantEmail ||
@@ -1565,7 +1589,7 @@ export default function DashboardPage() {
                                             <div className="text-sm font-semibold text-gray-800">
                                                 {(() => {
                                                     const email = selectedAppDetails.email || selectedAppDetails.user?.email || user?.email || "";
-                                                    const phone = selectedAppDetails.phone || selectedAppDetails.phoneNumber || selectedAppDetails.mobile || selectedAppDetails.user?.phoneNumber || selectedAppDetails.user?.phone || user?.phoneNumber || "";
+                                                    const phone = selectedAppDetails.phone || selectedAppDetails.phoneNumber || selectedAppDetails.mobile || selectedAppDetails.user?.phoneNumber || selectedAppDetails.user?.phone || selectedAppDetails.user?.mobile || user?.phoneNumber || user?.mobile || "";
                                                     if (email && phone) return `${email} • ${phone}`;
                                                     if (email) return email;
                                                     if (phone) return phone;

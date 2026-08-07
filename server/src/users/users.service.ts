@@ -1461,7 +1461,7 @@ export class UsersService {
     const runQuery = async (withRelation: boolean) => {
       let query: any = this.db.from('LoanApplication');
       if (withRelation) {
-        query = query.select('*, user:User!userId(id, intakeSeason, firstName, lastName, phoneNumber, coApplicantName, coApplicantPhone, coApplicantEmail, coApplicantRelation, coApplicantIncome, familyDetails, parents)');
+        query = query.select('*, user:User!userId(id, intakeSeason, firstName, lastName, email, phoneNumber, mobile, familyDetails, parents)');
       } else {
         query = query.select('*');
       }
@@ -1500,10 +1500,14 @@ export class UsersService {
 
           // 1. Fetch from User table
           const orConds = uniqueStaffIds.map((id: string) => id.includes('@') ? `email.eq.${id}` : `id.eq.${id}`).join(',');
-          const { data: staffUsers } = await this.db
+          const { data: staffUsers, error: userQueryErr } = await this.db
             .from('User')
-            .select('id, firstName, lastName, email, phone, mobile, phoneNumber, role, designation')
+            .select('id, firstName, lastName, email, mobile, phoneNumber, role')
             .or(orConds);
+
+          if (userQueryErr) {
+            console.warn('[UsersService.getUserApplications] User query warning:', userQueryErr.message);
+          }
 
           (staffUsers || []).forEach((u: any) => {
             const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || 'Support Staff';
@@ -1511,32 +1515,38 @@ export class UsersService {
               id: u.id,
               name: fullName,
               email: u.email || '',
-              phone: u.phoneNumber || u.phone || u.mobile || '',
-              role: u.designation || (u.role === 'admin' || u.role === 'super_admin' ? 'Senior Loan Officer & Admin' : 'Senior Education Loan Advisor'),
+              phone: u.phoneNumber || u.mobile || '',
+              role: (u.role === 'admin' || u.role === 'super_admin' ? 'Senior Loan Officer & Admin' : 'Senior Education Loan Advisor'),
             };
             if (u.id) staffMap[u.id.toLowerCase()] = staffObj;
             if (u.email) staffMap[u.email.toLowerCase()] = staffObj;
           });
 
-          // 2. Fetch from StaffProfile table for extra profile info
-          const { data: staffProfiles } = await this.db
-            .from('StaffProfile')
-            .select('*');
+          // 2. Safely fetch from StaffProfile table for extra profile info if table exists
+          try {
+            const { data: staffProfiles, error: spErr } = await this.db
+              .from('StaffProfile')
+              .select('*');
 
-          (staffProfiles || []).forEach((sp: any) => {
-            const fullName = sp.fullName || sp.name || 'Support Officer';
-            const staffObj = {
-              id: sp.linkedUserId || sp.staffId || sp.id,
-              name: fullName,
-              email: sp.email || '',
-              phone: sp.phoneNumber || sp.phone || sp.mobile || '',
-              role: sp.role || sp.designation || sp.department || 'Education Loan Processing Specialist',
-            };
-            if (sp.id) staffMap[sp.id.toLowerCase()] = staffObj;
-            if (sp.staffId) staffMap[sp.staffId.toLowerCase()] = staffObj;
-            if (sp.linkedUserId) staffMap[sp.linkedUserId.toLowerCase()] = staffObj;
-            if (sp.email) staffMap[sp.email.toLowerCase()] = staffObj;
-          });
+            if (!spErr && staffProfiles) {
+              (staffProfiles || []).forEach((sp: any) => {
+                const fullName = sp.fullName || sp.name;
+                if (fullName) {
+                  const staffObj = {
+                    id: sp.linkedUserId || sp.staffId || sp.id,
+                    name: fullName,
+                    email: sp.email || '',
+                    phone: sp.phoneNumber || sp.phone || sp.mobile || '',
+                    role: sp.role || sp.designation || sp.department || 'Education Loan Processing Specialist',
+                  };
+                  if (sp.id) staffMap[sp.id.toLowerCase()] = staffObj;
+                  if (sp.staffId) staffMap[sp.staffId.toLowerCase()] = staffObj;
+                  if (sp.linkedUserId) staffMap[sp.linkedUserId.toLowerCase()] = staffObj;
+                  if (sp.email) staffMap[sp.email.toLowerCase()] = staffObj;
+                }
+              });
+            }
+          } catch (_) {}
 
           // Attach to applications
           resultList = resultList.map((app: any) => {

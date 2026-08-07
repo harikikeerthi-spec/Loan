@@ -2489,13 +2489,15 @@ export default function AdminDashboardPage() {
                                                 const assignedStaffId = item.assignedStaffId || '';
                                                 const matchedStaff = staffMembers.find((s: any) =>
                                                     s.id === assignedStaffId ||
+                                                    s.linkedUserId === assignedStaffId ||
                                                     s.email === assignedStaffId ||
+                                                    (s.email && item.assignedStaffEmail && s.email.toLowerCase() === item.assignedStaffEmail.toLowerCase()) ||
                                                     `${s.firstName || ''} ${s.lastName || ''}`.trim() === item.staffName
                                                 );
                                                 const staffDisplayName = matchedStaff
                                                     ? `${matchedStaff.firstName || ''} ${matchedStaff.lastName || ''}`.trim() || matchedStaff.email
                                                     : (item.staffName || item.processingStaff || 'Unassigned');
-                                                const isUnassigned = !assignedStaffId || assignedStaffId === 'unassigned' || assignedStaffId === 'null';
+                                                const isUnassigned = (!assignedStaffId || assignedStaffId === 'unassigned' || assignedStaffId === 'null') && !matchedStaff;
 
                                                 return (
                                                 <tr key={idx} className={`hover:bg-slate-50/70 transition-colors group ${selectedAppIds.includes(item.id) ? 'bg-indigo-50/60' : (isUnassigned ? 'bg-amber-50/20' : '')}`}>
@@ -2555,7 +2557,7 @@ export default function AdminDashboardPage() {
                                                                 </span>
                                                             ) : (
                                                                 <select
-                                                                    value={assignedStaffId || ''}
+                                                                    value={matchedStaff ? matchedStaff.id : (assignedStaffId || '')}
                                                                     disabled={reassigningAppId === item.id}
                                                                     onChange={(e) => handleReassignStaff(item.id, e.target.value)}
                                                                     className="px-2 py-0.5 text-[9px] font-semibold bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-600 cursor-pointer shadow-xs"
@@ -2846,27 +2848,46 @@ export default function AdminDashboardPage() {
                                                                     🔒 Locked (Sanctioned)
                                                                 </span>
                                                             ) : (
-                                                                <select
-                                                                    value={selectedApp.assignedStaffId || ''}
-                                                                    disabled={reassigningAppId === selectedApp.id}
-                                                                    onChange={(e) => handleReassignStaff(selectedApp.id, e.target.value)}
-                                                                    className="px-2 py-0.5 text-[10px] font-semibold bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 cursor-pointer"
-                                                                >
-                                                                    <option value="" disabled>-- Reassign Staff --</option>
-                                                                    {staffMembers.map((s: any) => {
-                                                                        const isResigned = s.isResigned || s.status === 'resigned' || s.status === 'inactive' || s.status === 'invalid';
-                                                                        const name = `${s.firstName || s.email} ${s.lastName || ''}`.trim();
-                                                                        const label = isResigned && !name.includes('(Invalid)') ? `${name} (Invalid)` : name;
-                                                                        return (
-                                                                            <option key={s.id} value={s.id}>
-                                                                                {label}
-                                                                            </option>
-                                                                        );
-                                                                    })}
-                                                                </select>
+                                                                (() => {
+                                                                    const drawerMatchedStaff = staffMembers.find((s: any) =>
+                                                                        s.id === selectedApp.assignedStaffId ||
+                                                                        s.linkedUserId === selectedApp.assignedStaffId ||
+                                                                        s.email === selectedApp.assignedStaffId ||
+                                                                        `${s.firstName || ''} ${s.lastName || ''}`.trim() === selectedApp.staffName
+                                                                    );
+                                                                    return (
+                                                                        <select
+                                                                            value={drawerMatchedStaff ? drawerMatchedStaff.id : (selectedApp.assignedStaffId || '')}
+                                                                            disabled={reassigningAppId === selectedApp.id}
+                                                                            onChange={(e) => handleReassignStaff(selectedApp.id, e.target.value)}
+                                                                            className="px-2 py-0.5 text-[10px] font-semibold bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 cursor-pointer"
+                                                                        >
+                                                                            <option value="" disabled>-- Reassign Staff --</option>
+                                                                            {staffMembers.map((s: any) => {
+                                                                                const isResigned = s.isResigned || s.status === 'resigned' || s.status === 'inactive' || s.status === 'invalid';
+                                                                                const name = `${s.firstName || s.email} ${s.lastName || ''}`.trim();
+                                                                                const label = isResigned && !name.includes('(Invalid)') ? `${name} (Invalid)` : name;
+                                                                                return (
+                                                                                    <option key={s.id} value={s.id}>
+                                                                                        {label}
+                                                                                    </option>
+                                                                                );
+                                                                            })}
+                                                                        </select>
+                                                                    );
+                                                                })()
                                                             )}
                                                         </div>
-                                                        <p className="text-[12px] font-bold text-slate-900">{selectedApp.staffName || selectedApp.processingStaff || 'Unassigned'}</p>
+                                                        {(() => {
+                                                            const drawerMatchedStaff = staffMembers.find((s: any) =>
+                                                                s.id === selectedApp.assignedStaffId ||
+                                                                s.linkedUserId === selectedApp.assignedStaffId ||
+                                                                s.email === selectedApp.assignedStaffId ||
+                                                                `${s.firstName || ''} ${s.lastName || ''}`.trim() === selectedApp.staffName
+                                                            );
+                                                            const name = drawerMatchedStaff ? `${drawerMatchedStaff.firstName || ''} ${drawerMatchedStaff.lastName || ''}`.trim() || drawerMatchedStaff.email : (selectedApp.staffName || selectedApp.processingStaff || 'Unassigned');
+                                                            return <p className="text-[12px] font-bold text-slate-900">{name}</p>;
+                                                        })()}
                                                         {selectedApp.staffId && <p className="text-[10px] text-slate-500 font-medium mt-1">Staff ID: {selectedApp.staffId}</p>}
                                                         {selectedApp.staffEmail && <p className="text-[10px] text-slate-500 font-medium">{selectedApp.staffEmail}</p>}
                                                     </div>

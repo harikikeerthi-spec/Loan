@@ -533,10 +533,14 @@ export class ApplicationService {
           const staffMap: Record<string, any> = {};
 
           const orConds = uniqueStaffIds.map((id: string) => id.includes('@') ? `email.eq.${id}` : `id.eq.${id}`).join(',');
-          const { data: staffUsers } = await this.db
+          const { data: staffUsers, error: userQueryErr } = await this.db
             .from('User')
-            .select('id, firstName, lastName, email, phone, mobile, role, designation')
+            .select('id, firstName, lastName, email, mobile, phoneNumber, role')
             .or(orConds);
+
+          if (userQueryErr) {
+            console.warn('[ApplicationService.getUserApplications] User query warning:', userQueryErr.message);
+          }
 
           (staffUsers || []).forEach((u: any) => {
             const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || 'Support Staff';
@@ -544,28 +548,34 @@ export class ApplicationService {
               id: u.id,
               name: fullName,
               email: u.email || '',
-              phone: u.phone || u.mobile || '+91 98450 12345',
-              role: u.designation || (u.role === 'admin' || u.role === 'super_admin' ? 'Senior Loan Officer & Admin' : 'Senior Education Loan Advisor'),
+              phone: u.phoneNumber || u.mobile || '',
+              role: (u.role === 'admin' || u.role === 'super_admin' ? 'Senior Loan Officer & Admin' : 'Senior Education Loan Advisor'),
             };
             if (u.id) staffMap[u.id.toLowerCase()] = staffObj;
             if (u.email) staffMap[u.email.toLowerCase()] = staffObj;
           });
 
-          const { data: staffProfiles } = await this.db.from('StaffProfile').select('*');
-          (staffProfiles || []).forEach((sp: any) => {
-            const fullName = sp.fullName || sp.name || 'Support Officer';
-            const staffObj = {
-              id: sp.linkedUserId || sp.staffId || sp.id,
-              name: fullName,
-              email: sp.email || '',
-              phone: sp.phoneNumber || sp.phone || '+91 98450 12345',
-              role: sp.role || sp.designation || sp.department || 'Education Loan Processing Specialist',
-            };
-            if (sp.id) staffMap[sp.id.toLowerCase()] = staffObj;
-            if (sp.staffId) staffMap[sp.staffId.toLowerCase()] = staffObj;
-            if (sp.linkedUserId) staffMap[sp.linkedUserId.toLowerCase()] = staffObj;
-            if (sp.email) staffMap[sp.email.toLowerCase()] = staffObj;
-          });
+          try {
+            const { data: staffProfiles, error: spErr } = await this.db.from('StaffProfile').select('*');
+            if (!spErr && staffProfiles) {
+              (staffProfiles || []).forEach((sp: any) => {
+                const fullName = sp.fullName || sp.name;
+                if (fullName) {
+                  const staffObj = {
+                    id: sp.linkedUserId || sp.staffId || sp.id,
+                    name: fullName,
+                    email: sp.email || '',
+                    phone: sp.phoneNumber || sp.phone || sp.mobile || '',
+                    role: sp.role || sp.designation || sp.department || 'Education Loan Processing Specialist',
+                  };
+                  if (sp.id) staffMap[sp.id.toLowerCase()] = staffObj;
+                  if (sp.staffId) staffMap[sp.staffId.toLowerCase()] = staffObj;
+                  if (sp.linkedUserId) staffMap[sp.linkedUserId.toLowerCase()] = staffObj;
+                  if (sp.email) staffMap[sp.email.toLowerCase()] = staffObj;
+                }
+              });
+            }
+          } catch (_) {}
 
           resultList = resultList.map((app: any) => {
             if (app.assignedStaffId) {
@@ -1112,8 +1122,9 @@ export class ApplicationService {
     try {
       console.log('[ApplicationService.getAllApplications] Filters:', JSON.stringify(filters));
 
-      // Auto-assign any existing unassigned applications so every active loan belongs strictly to 1 staff member
-      await this.autoAssignUnassignedLoans();
+      // NOTE: Auto-assignment is triggered directly when each application is created/submitted
+      // and via the explicit admin "Auto-Assign Unassigned" button. Do NOT call it here
+      // as getAllApplications is invoked on every page load causing race conditions.
 
       let query = this.db
         .from('LoanApplication')

@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../auth/email.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 
 @Injectable()
 export class AssignmentService {
@@ -16,6 +16,30 @@ export class AssignmentService {
     private readonly emailService: EmailService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  @OnEvent('application.created')
+  async handleApplicationCreated(payload: any) {
+    if (payload?.applicationId) {
+      this.logger.log(`[AssignmentEngine] Auto-assigning application.created event for loan: ${payload.applicationId}`);
+      try {
+        await this.assignLoan(payload.applicationId, 'auto_assign_event');
+      } catch (err: any) {
+        this.logger.error(`[AssignmentEngine] Auto-assign on application.created failed for ${payload.applicationId}: ${err?.message}`);
+      }
+    }
+  }
+
+  @OnEvent('application.submitted')
+  async handleApplicationSubmitted(payload: any) {
+    if (payload?.applicationId) {
+      this.logger.log(`[AssignmentEngine] Auto-assigning application.submitted event for loan: ${payload.applicationId}`);
+      try {
+        await this.assignLoan(payload.applicationId, 'auto_assign_event');
+      } catch (err: any) {
+        this.logger.error(`[AssignmentEngine] Auto-assign on application.submitted failed for ${payload.applicationId}: ${err?.message}`);
+      }
+    }
+  }
 
   async assignLoan(loanId: string, triggeredBy = 'system'): Promise<{ success: boolean; assignedStaffId?: string; message?: string }> {
     this.logger.log(`[AssignmentEngine] Attempting round-robin assignment for loan application: ${loanId}`);
@@ -60,23 +84,47 @@ export class AssignmentService {
       return { success: false, message: 'No eligible staff members available at this moment' };
     }
 
-    const { data: tracker } = await this.db
-      .from('AssignmentTracker')
-      .select('*')
-      .eq('scope', 'global')
-      .maybeSingle();
-
-    const lastAssignedStaffId = tracker?.lastAssignedStaffId;
+    // 1. Fetch tracker for last assigned staff pointer
+    let lastAssignedStaffId: string | null = null;
+    try {
+      const { data: tracker } = await this.db
+        .from('AssignmentTracker')
+        .select('lastAssignedStaffId')
+        .eq('scope', 'global')
+        .maybeSingle();
+      if (tracker?.lastAssignedStaffId) {
+        lastAssignedStaffId = tracker.lastAssignedStaffId;
+      }
+    } catch (_) {}
 
     let nextIndex = 0;
     if (lastAssignedStaffId) {
-      const currentIndex = eligibleStaff.findIndex(s => s.id === lastAssignedStaffId || s.linkedUserId === lastAssignedStaffId);
+      const currentIndex = eligibleStaff.findIndex(
+        s => s.id === lastAssignedStaffId
+          || s.linkedUserId === lastAssignedStaffId
+          || (s.email && s.email.toLowerCase() === lastAssignedStaffId.toLowerCase())
+      );
       if (currentIndex !== -1) {
         nextIndex = (currentIndex + 1) % eligibleStaff.length;
+        this.logger.log(`[AssignmentEngine] Pure Sequential RR — Last assigned: ${lastAssignedStaffId} (idx ${currentIndex}). Next target idx ${nextIndex}`);
+      } else {
+        this.logger.log(`[AssignmentEngine] Pure Sequential RR — Last assigned ${lastAssignedStaffId} not found in current staff list. Starting at idx 0`);
+        nextIndex = 0;
       }
+    } else {
+      this.logger.log(`[AssignmentEngine] Pure Sequential RR — No tracker found. Starting sequence at idx 0`);
+      nextIndex = 0;
     }
 
+    this.logger.log(
+      `[AssignmentEngine] Staff sequence (${eligibleStaff.length}): ${eligibleStaff
+        .map((s, idx) => `[${idx}] ${s.email}`)
+        .join(', ')}`
+    );
+
     const selectedStaff = eligibleStaff[nextIndex];
+    this.logger.log(`[AssignmentEngine] SELECTED STAFF [idx ${nextIndex}]: ${selectedStaff.email}`);
+
     const staffUserId = selectedStaff.linkedUserId || selectedStaff.assignedStaffId || selectedStaff.id;
     const staffName = `${selectedStaff.linkedUser?.firstName || selectedStaff.firstName || ''} ${selectedStaff.linkedUser?.lastName || selectedStaff.lastName || ''}`.trim() || selectedStaff.email || 'Staff Member';
     const staffEmail = selectedStaff.linkedUser?.email || selectedStaff.email || '';
@@ -84,25 +132,34 @@ export class AssignmentService {
 
     let assignSuccess = false;
 
-    // 1. Direct table update ensures assignedStaffId, assignedStaffName, assignedStaffEmail, processingStaff, assignedAt are persistently stored in DB
+    // STEP 1 — Critical write: assignedStaffId (the only field we MUST set for routing)
+    // This uses only the base column guaranteed to exist in the DB schema.
     const { data: updateRes, error: updateErr } = await this.db
       .from('LoanApplication')
-      .update({
-        assignedStaffId: staffUserId,
-        assignedStaffName: staffName,
-        assignedStaffEmail: staffEmail,
-        processingStaff: staffName,
-        assignedAt: now,
-        assignmentStatus: 'assigned',
-        lastActivityAt: now,
-      })
+      .update({ assignedStaffId: staffUserId })
       .eq('id', loan.id)
-      .select()
+      .select('id, assignedStaffId')
       .maybeSingle();
 
     if (updateErr || !updateRes) {
-      this.logger.error(`[AssignmentEngine] Direct update failed for loan ${loan.id}:`, updateErr);
-      return { success: false, message: 'Loan update failed' };
+      this.logger.error(`[AssignmentEngine] Critical assignedStaffId write failed for loan ${loan.id}:`, updateErr);
+      return { success: false, message: 'Loan assignment failed: ' + (updateErr?.message || 'unknown error') };
+    }
+
+    // STEP 2 — Optional write: extended metadata columns (may fail if schema cache is stale — non-fatal)
+    try {
+      await this.db
+        .from('LoanApplication')
+        .update({
+          assignedStaffName: staffName,
+          assignedStaffEmail: staffEmail,
+          processingStaff: staffName,
+          assignmentStatus: 'assigned',
+          lastActivityAt: now,
+        })
+        .eq('id', loan.id);
+    } catch (metaErr: any) {
+      this.logger.warn(`[AssignmentEngine] Extended metadata write skipped (schema cache may be stale): ${metaErr?.message}`);
     }
 
     const currentWork = selectedStaff.currentWorkload || 0;
@@ -179,7 +236,7 @@ export class AssignmentService {
     try {
       const { data: profiles } = await this.db
         .from('StaffProfile')
-        .select('*, linkedUser:User!linkedUserId(id, firstName, lastName, email, role)');
+        .select('*, linkedUser:User!linkedUserId(id, firstName, lastName, email, role, createdAt)');
 
       if (profiles && profiles.length > 0) {
         for (const p of profiles) {
@@ -198,6 +255,11 @@ export class AssignmentService {
               linkedUser: p.linkedUser || { id: uid, email },
               isAvailable: p.isAvailable !== false,
               isOnLeave: p.isOnLeave === true,
+              // FIX: include resignation fields so resigned staff are properly excluded
+              isResigned: p.isResigned === true,
+              status: p.status || 'active',
+              currentWorkload: p.currentWorkload || 0,
+              createdAt: p.createdAt || p.linkedUser?.createdAt || '1970-01-01T00:00:00.000Z',
             });
           }
         }
@@ -210,7 +272,7 @@ export class AssignmentService {
     try {
       const { data: users } = await this.db
         .from('User')
-        .select('id, email, firstName, lastName, role');
+        .select('id, email, firstName, lastName, role, createdAt');
 
       if (users && users.length > 0) {
         for (const u of users) {
@@ -234,6 +296,7 @@ export class AssignmentService {
               linkedUser: u,
               isAvailable: true,
               isOnLeave: false,
+              createdAt: u.createdAt || '1970-01-01T00:00:00.000Z',
             });
           }
         }
@@ -254,7 +317,13 @@ export class AssignmentService {
       eligible = staffList;
     }
 
-    return eligible.sort((a, b) => ((a.linkedUserId || a.id) > (b.linkedUserId || b.id) ? 1 : -1));
+    // Sort by createdAt ASC — oldest staff members first (Staff V -> Loans Staff -> Kiran Staff -> new staff)
+    return eligible.sort((a, b) => {
+      const tA = new Date(a.createdAt || 0).getTime();
+      const tB = new Date(b.createdAt || 0).getTime();
+      if (tA !== tB) return tA - tB;
+      return (a.email || '').toLowerCase().localeCompare((b.email || '').toLowerCase());
+    });
   }
 
   async reassignLoan(
@@ -286,16 +355,50 @@ export class AssignmentService {
       };
     }
 
+    let targetStaffUserId = toStaffId;
+
+    if (toStaffId === 'auto' || toStaffId === 'round_robin') {
+      const eligibleStaff = await this.getEligibleStaff();
+      if (!eligibleStaff || eligibleStaff.length === 0) {
+        return { success: false, message: 'No eligible staff members available for reassignment' };
+      }
+      const { data: activeApps } = await this.db
+        .from('LoanApplication')
+        .select('id, assignedStaffId, status')
+        .not('status', 'in', '("rejected","cancelled","draft","closed")');
+      const appList = activeApps || [];
+
+      for (const staff of eligibleStaff) {
+        const uid = (staff.linkedUserId || '').toLowerCase();
+        const sid = (staff.id || '').toLowerCase();
+        const semail = (staff.email || '').toLowerCase();
+
+        const count = appList.filter((app: any) => {
+          const target = (app.assignedStaffId || '').trim().toLowerCase();
+          if (!target) return false;
+          return target === uid || target === sid || target === semail;
+        }).length;
+
+        staff.liveWorkload = count;
+      }
+      eligibleStaff.sort((a, b) => {
+        if (a.liveWorkload !== b.liveWorkload) return a.liveWorkload - b.liveWorkload;
+        return (a.email || '').toLowerCase().localeCompare((b.email || '').toLowerCase());
+      });
+      const selected = eligibleStaff[0];
+      targetStaffUserId = selected.linkedUserId || selected.assignedStaffId || selected.id;
+    }
+
     try {
       const { data: rpcRes, error: rpcErr } = await this.db.rpc('reassign_loan_atomic', {
         p_loan_id: loanId,
-        p_new_staff_id: toStaffId,
+        p_new_staff_id: targetStaffUserId,
         p_assigned_by: assignedBy,
         p_reason: reason,
       });
 
       if (!rpcErr && rpcRes && rpcRes.success) {
-        return { success: true, message: `Loan successfully reassigned to ${toStaffId}` };
+        return { success: true, message: `Loan successfully reassigned to ${targetStaffUserId}` };
       }
     } catch (err) {
       this.logger.warn(`[AssignmentEngine] RPC reassign_loan_atomic failed. Fallback manual update.`);
@@ -316,7 +419,7 @@ export class AssignmentService {
       const { data: targetUser } = await this.db
         .from('User')
         .select('id, firstName, lastName, email')
-        .or(`id.eq.${toStaffId},email.eq.${toStaffId}`)
+        .or(`id.eq.${targetStaffUserId},email.eq.${targetStaffUserId}`)
         .maybeSingle();
 
       if (targetUser) {
@@ -325,18 +428,31 @@ export class AssignmentService {
       }
     } catch (_) {}
 
-    await this.db
+    // STEP 1 — Critical write: assignedStaffId only (guaranteed column)
+    const { error: reassignErr } = await this.db
       .from('LoanApplication')
-      .update({
-        assignedStaffId: toStaffId,
-        assignedStaffName: targetStaffName,
-        assignedStaffEmail: targetStaffEmail,
-        processingStaff: targetStaffName,
-        assignedAt: now,
-        assignmentStatus: 'assigned',
-        lastActivityAt: now,
-      })
+      .update({ assignedStaffId: targetStaffUserId })
       .eq('id', loanId);
+
+    if (reassignErr) {
+      this.logger.error(`[AssignmentEngine] reassignLoan critical write failed for ${loanId}:`, reassignErr);
+    }
+
+    // STEP 2 — Optional extended metadata write (non-fatal if schema cache stale)
+    try {
+      await this.db
+        .from('LoanApplication')
+        .update({
+          assignedStaffName: targetStaffName,
+          assignedStaffEmail: targetStaffEmail,
+          processingStaff: targetStaffName,
+          assignmentStatus: 'assigned',
+          lastActivityAt: now,
+        })
+        .eq('id', loanId);
+    } catch (metaErr: any) {
+      this.logger.warn(`[AssignmentEngine] reassignLoan extended metadata write skipped: ${metaErr?.message}`);
+    }
 
     if (previousStaffId) {
       const { data: oldStaff } = await this.db.from('StaffProfile').select('currentWorkload').eq('linkedUserId', previousStaffId).maybeSingle();
@@ -345,15 +461,15 @@ export class AssignmentService {
       }
     }
 
-    const { data: newStaff } = await this.db.from('StaffProfile').select('currentWorkload').eq('linkedUserId', toStaffId).maybeSingle();
+    const { data: newStaff } = await this.db.from('StaffProfile').select('currentWorkload').eq('linkedUserId', targetStaffUserId).maybeSingle();
     if (newStaff) {
-      await this.db.from('StaffProfile').update({ currentWorkload: (newStaff.currentWorkload || 0) + 1 }).eq('linkedUserId', toStaffId);
+      await this.db.from('StaffProfile').update({ currentWorkload: (newStaff.currentWorkload || 0) + 1 }).eq('linkedUserId', targetStaffUserId);
     }
 
     await this.db.from('LoanAssignmentHistory').insert({
       applicationId: loanId,
       fromStaffId: previousStaffId || null,
-      toStaffId,
+      toStaffId: targetStaffUserId,
       assignedBy,
       reason,
       createdAt: now,
@@ -374,33 +490,12 @@ export class AssignmentService {
 
     let successCount = 0;
 
-    if (toStaffId === 'auto' || toStaffId === 'round_robin') {
-      const eligibleStaff = await this.getEligibleStaff();
-      if (!eligibleStaff || eligibleStaff.length === 0) {
-        return { success: false, count: 0, message: 'No eligible staff members available for round-robin assignment' };
-      }
-
-      let staffIdx = 0;
-      for (const loanId of loanIds) {
-        const selectedStaff = eligibleStaff[staffIdx % eligibleStaff.length];
-        const staffUserId = selectedStaff.linkedUserId || selectedStaff.assignedStaffId || selectedStaff.id;
-        staffIdx++;
-
-        try {
-          const res = await this.reassignLoan(loanId, staffUserId, reason, assignedBy);
-          if (res.success) successCount++;
-        } catch (err) {
-          this.logger.error(`[BulkReassign] Failed to round-robin assign loan ${loanId}:`, err);
-        }
-      }
-    } else {
-      for (const loanId of loanIds) {
-        try {
-          const res = await this.reassignLoan(loanId, toStaffId, reason, assignedBy);
-          if (res.success) successCount++;
-        } catch (err) {
-          this.logger.error(`[BulkReassign] Failed to reassign loan ${loanId} to ${toStaffId}:`, err);
-        }
+    for (const loanId of loanIds) {
+      try {
+        const res = await this.reassignLoan(loanId, toStaffId, reason, assignedBy);
+        if (res.success) successCount++;
+      } catch (err) {
+        this.logger.error(`[BulkReassign] Failed to reassign loan ${loanId}:`, err);
       }
     }
 
@@ -629,7 +724,7 @@ export class AssignmentService {
     const { data: unassigned, error } = await this.db
       .from('LoanApplication')
       .select('id, applicationNumber, loanType, firstName, lastName, email')
-      .is('assignedStaffId', null)
+      .or('assignedStaffId.is.null,assignedStaffId.eq.unassigned,assignedStaffId.eq.,assignedStaffId.eq.null')
       .not('status', 'in', '("rejected","cancelled","draft")');
 
     if (error) {
