@@ -159,7 +159,7 @@ export default function LoanEligibilityPage() {
                         </form>
                     </div>
 
-                    <div className="sticky top-28 bg-gray-50/50 border border-gray-100 rounded-xl p-8">
+                    <div className="sticky top-38 bg-gray-50/50 border border-gray-100 rounded-xl p-8">
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-lg font-bold text-gray-900">Eligibility Report</h3>
                             <span className={`text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-md border ${!result ? "bg-white text-gray-400 border-gray-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"}`}>
@@ -212,7 +212,7 @@ export default function LoanEligibilityPage() {
                                     </ul>
                                 </div>
 
-                                <div className="p-6 bg-[#6605c7]/[0.02] rounded-xl border border-[#6605c7]/[0.05]">
+                                {/* <div className="p-6 bg-[#6605c7]/[0.02] rounded-xl border border-[#6605c7]/[0.05]">
                                     <h4 className="text-[10px] font-bold text-[#6605c7] uppercase tracking-widest mb-4">Best Financial Match</h4>
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="font-bold text-gray-900 text-[13px]">{result.recommendations?.primary?.offer?.bank}</div>
@@ -220,7 +220,7 @@ export default function LoanEligibilityPage() {
                                     </div>
                                     <div className="text-[11px] text-gray-500 mb-5">{result.recommendations?.primary?.offer?.name}</div>
                                     <a href="/apply-loan" className="block w-full py-3 bg-[#6605c7] text-white text-center rounded-xl font-bold text-[11px] uppercase tracking-widest hover:bg-[#5504a6] transition-all shadow-lg shadow-purple-500/10">Start Application</a>
-                                </div>
+                                </div> */}
                             </div>
                         )}
                     </div>

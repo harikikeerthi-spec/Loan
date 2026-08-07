@@ -65,7 +65,7 @@ export default async function HomePage() {
             <div className="relative z-10">
                 {/* Floating Referral Badge - Premium Design */}
                 <Link
-                    href="/referral"
+                    href=""
                     aria-label="Refer and Earn - Locked (Coming Soon)"
                     className="hidden md:block fixed left-6 top-[75%] -translate-y-1/2 z-50 group"
                     title="Refer & Earn — Locked (Coming Soon)"

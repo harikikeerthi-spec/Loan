@@ -179,15 +179,15 @@ export default function SOPWriterPage() {
                                         </div>
                                     )}
 
-                                    <FormInput label="Full Name" icon="person" name="studentName" value={formData.studentName} onChange={handleChange} maxLength={80} placeholder="e.g., John Doe" required />
+                                    <FormInput label="Full Name" icon="person" name="studentName" value={formData.studentName} onChange={handleChange} maxLength={30} placeholder="e.g., John Doe" required />
                                     <div className="grid grid-cols-2 gap-4">
-                                        <FormInput label="Target Univ" icon="school" name="university" value={formData.university} onChange={handleChange} maxLength={100} placeholder="e.g., Stanford" required />
-                                        <FormInput label="Field of Study" icon="science" name="fieldOfStudy" value={formData.fieldOfStudy} onChange={handleChange} maxLength={100} placeholder="e.g., AI/ML" required />
+                                        <FormInput label="Target Univ" icon="school" name="university" value={formData.university} onChange={handleChange} maxLength={50} placeholder="e.g., Stanford" required />
+                                        <FormInput label="Field of Study" icon="science" name="fieldOfStudy" value={formData.fieldOfStudy} onChange={handleChange} maxLength={50} placeholder="e.g., AI/ML" required />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <FormInput label="Current Degree" icon="military_tech" name="currentDegree" value={formData.currentDegree} onChange={handleChange} maxLength={80} placeholder="e.g., B.Tech CS" />
-                                        <FormInput label="Current Univ" icon="domain" name="currentUniversity" value={formData.currentUniversity} onChange={handleChange} maxLength={100} placeholder="e.g., XYZ Univ" />
+                                        <FormInput label="Current Degree" icon="military_tech" name="currentDegree" value={formData.currentDegree} onChange={handleChange} maxLength={50} placeholder="e.g., B.Tech CS" />
+                                        <FormInput label="Current Univ" icon="domain" name="currentUniversity" value={formData.currentUniversity} onChange={handleChange} maxLength={50} placeholder="e.g., XYZ Univ" />
                                     </div>
 
                                     <FormTextarea label="Research Interests" icon="lab_research" name="researchInterests" value={formData.researchInterests} onChange={handleChange} maxLength={500} placeholder="What topics excite you? (max 500 chars)" />

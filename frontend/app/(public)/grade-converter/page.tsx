@@ -43,8 +43,103 @@ export default function GradeConverterPage() {
         }
     }, []);
 
+    const [singleError, setSingleError] = useState<string | null>(null);
+    const [multipleError, setMultipleError] = useState<string | null>(null);
+
+    // Reset input value and errors when input type changes
+    const handleInputTypeChange = (newType: string) => {
+        setFormData(prev => ({ ...prev, inputType: newType, inputValue: "" }));
+        setSingleError(null);
+    };
+
+    // Helper for input type constraints
+    const getInputConstraints = (type: string) => {
+        switch (type) {
+            case "percentage":
+                return {
+                    placeholder: "e.g. 85.5 (0 - 100%)",
+                    maxLength: 6,
+                    hint: "Enter percentage between 0 and 100",
+                    validate: (val: string) => {
+                        const num = parseFloat(val);
+                        if (isNaN(num)) return "Please enter a valid percentage";
+                        if (num < 0 || num > 100) return "Percentage must be between 0 and 100";
+                        return null;
+                    }
+                };
+            case "gpa":
+                return {
+                    placeholder: "e.g. 3.8 (0.0 - 4.0)",
+                    maxLength: 4,
+                    hint: "Enter GPA on 4.0 scale (0.0 - 4.0)",
+                    validate: (val: string) => {
+                        const num = parseFloat(val);
+                        if (isNaN(num)) return "Please enter a valid GPA number";
+                        if (num < 0 || num > 4.0) return "GPA must be between 0.0 and 4.0";
+                        return null;
+                    }
+                };
+            case "cgpa":
+                return {
+                    placeholder: "e.g. 8.5 (0.0 - 10.0)",
+                    maxLength: 5,
+                    hint: "Enter CGPA on 10.0 scale (0.0 - 10.0)",
+                    validate: (val: string) => {
+                        const num = parseFloat(val);
+                        if (isNaN(num)) return "Please enter a valid CGPA number";
+                        if (num < 0 || num > 10.0) return "CGPA must be between 0.0 and 10.0";
+                        return null;
+                    }
+                };
+            case "letterGrade":
+                return {
+                    placeholder: "e.g. A+, A, B, C",
+                    maxLength: 3,
+                    hint: "Enter letter grade (A+, A, A-, B+, B, B-, C+, C, C-, D, F)",
+                    validate: (val: string) => {
+                        const validGrades = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F", "S", "O", "E"];
+                        if (!validGrades.includes(val.trim().toUpperCase())) {
+                            return "Invalid letter grade (accepted: A+, A, A-, B+, B, B-, C+, C, C-, D, F, O, S, E)";
+                        }
+                        return null;
+                    }
+                };
+            case "marks":
+            default:
+                return {
+                    placeholder: "e.g. 85",
+                    maxLength: 6,
+                    hint: "Enter obtained marks",
+                    validate: (val: string, totalMarksStr?: string) => {
+                        const num = parseFloat(val);
+                        if (isNaN(num) || num < 0) return "Please enter valid obtained marks";
+                        if (totalMarksStr && totalMarksStr.trim()) {
+                            const total = parseFloat(totalMarksStr);
+                            if (!isNaN(total) && num > total) return `Obtained marks (${num}) cannot exceed Total Marks (${total})`;
+                        }
+                        return null;
+                    }
+                };
+        }
+    };
+
+    const currentConstraints = getInputConstraints(formData.inputType);
+
     const handleSingleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSingleError(null);
+
+        // Client validation
+        const valErr = currentConstraints.validate(formData.inputValue, formData.totalMarks);
+        if (valErr) {
+            setSingleError(valErr);
+            return;
+        }
+
+        if (formData.totalMarks && (isNaN(Number(formData.totalMarks)) || Number(formData.totalMarks) <= 0)) {
+            setSingleError("Total Marks must be a positive number");
+            return;
+        }
 
         if (!isAuthenticated) {
             localStorage.setItem("pending_grade_converter_data", JSON.stringify({ activeTab, formData, multipleData }));
@@ -57,13 +152,13 @@ export default function GradeConverterPage() {
         try {
             const res = await aiApi.gradeConverter({
                 ...formData,
-                inputValue: Number(formData.inputValue),
+                inputValue: formData.inputType === "letterGrade" ? formData.inputValue.trim().toUpperCase() : Number(formData.inputValue),
                 totalMarks: formData.totalMarks ? Number(formData.totalMarks) : null
             }) as any;
             setResult(res.gradeConversion);
         } catch (err) {
             console.error(err);
-            alert("Failed to convert grade");
+            setSingleError(err instanceof Error ? err.message : "Failed to convert grade");
         } finally {
             setLoading(false);
         }
@@ -71,6 +166,39 @@ export default function GradeConverterPage() {
 
     const handleMultipleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setMultipleError(null);
+
+        if (!multipleData.marks.trim()) {
+            setMultipleError("Please enter marks separated by commas");
+            return;
+        }
+
+        const totalPerSub = Number(multipleData.totalMarks);
+        if (isNaN(totalPerSub) || totalPerSub <= 0) {
+            setMultipleError("Total marks per subject must be a positive number");
+            return;
+        }
+
+        const rawMarks = multipleData.marks.split(",").map(m => m.trim()).filter(m => m !== "");
+        const parsedMarks: number[] = [];
+
+        for (const m of rawMarks) {
+            const num = Number(m);
+            if (isNaN(num) || num < 0) {
+                setMultipleError(`Invalid mark value '${m}'. Please enter valid numbers only.`);
+                return;
+            }
+            if (num > totalPerSub) {
+                setMultipleError(`Mark '${num}' exceeds Total Marks per subject (${totalPerSub})`);
+                return;
+            }
+            parsedMarks.push(num);
+        }
+
+        if (parsedMarks.length === 0) {
+            setMultipleError("Please enter at least one valid mark");
+            return;
+        }
 
         if (!isAuthenticated) {
             localStorage.setItem("pending_grade_converter_data", JSON.stringify({ activeTab, formData, multipleData }));
@@ -81,17 +209,16 @@ export default function GradeConverterPage() {
 
         setLoading(true);
         try {
-            const marks = multipleData.marks.split(",").map(m => Number(m.trim())).filter(m => !isNaN(m));
             const subjects = multipleData.subjects ? multipleData.subjects.split(",").map(s => s.trim()) : undefined;
             const res = await aiApi.gradeAnalyzer({
-                marks,
-                totalMarks: Number(multipleData.totalMarks),
+                marks: parsedMarks,
+                totalMarks: totalPerSub,
                 subjects
             }) as any;
             setResult(res.gradeAnalysis);
         } catch (err) {
             console.error(err);
-            alert("Failed to analyze grades");
+            setMultipleError(err instanceof Error ? err.message : "Failed to analyze grades");
         } finally {
             setLoading(false);
         }
@@ -127,20 +254,34 @@ export default function GradeConverterPage() {
 
                         {activeTab === "single" ? (
                             <form onSubmit={handleSingleSubmit} className="space-y-6">
+                                {singleError && (
+                                    <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-semibold flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-base">error</span>
+                                        {singleError}
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Input Type</label>
-                                        <select value={formData.inputType} onChange={e => setFormData({ ...formData, inputType: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-gray-100 bg-gray-50/30 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px] outline-none">
-                                            <option value="marks">Marks</option>
-                                            <option value="percentage">Percentage</option>
-                                            <option value="gpa">GPA (4.0)</option>
-                                            <option value="cgpa">CGPA (10.0)</option>
-                                            <option value="letterGrade">Letter Grade</option>
+                                        <select
+                                            value={formData.inputType}
+                                            onChange={e => handleInputTypeChange(e.target.value)}
+                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-sm outline-none cursor-pointer"
+                                        >
+                                            <option value="percentage">Percentage (0 - 100%)</option>
+                                            <option value="gpa">GPA (4.0 Scale)</option>
+                                            <option value="cgpa">CGPA (10.0 Scale)</option>
+                                            <option value="marks">Raw Marks</option>
+                                            <option value="letterGrade">Letter Grade (A+, A, B...)</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Output Type</label>
-                                        <select value={formData.outputType} onChange={e => setFormData({ ...formData, outputType: e.target.value })} className="w-full px-4 py-4 rounded-2xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900">
+                                        <select
+                                            value={formData.outputType}
+                                            onChange={e => setFormData({ ...formData, outputType: e.target.value })}
+                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-sm outline-none cursor-pointer"
+                                        >
                                             <option value="percentage">Percentage</option>
                                             <option value="gpa">GPA (4.0)</option>
                                             <option value="cgpa">CGPA (10.0)</option>
@@ -148,16 +289,42 @@ export default function GradeConverterPage() {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Input Value</label>
-                                        <input type="text" value={formData.inputValue} onChange={e => setFormData({ ...formData, inputValue: e.target.value })} required placeholder="e.g. 85" className="w-full px-4 py-4 rounded-2xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900" />
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Input Value</label>
+                                            <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                                                Max {currentConstraints.maxLength} chars
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={formData.inputValue}
+                                            onChange={e => setFormData({ ...formData, inputValue: e.target.value })}
+                                            maxLength={currentConstraints.maxLength}
+                                            required
+                                            placeholder={currentConstraints.placeholder}
+                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-sm"
+                                        />
+                                        <p className="text-[10px] text-gray-400 font-medium ml-1">{currentConstraints.hint}</p>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Marks (Optional)</label>
-                                        <input type="number" value={formData.totalMarks} onChange={e => setFormData({ ...formData, totalMarks: e.target.value })} placeholder="100" className="w-full px-4 py-4 rounded-2xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900" />
+                                        <input
+                                            type="number"
+                                            value={formData.totalMarks}
+                                            onChange={e => setFormData({ ...formData, totalMarks: e.target.value })}
+                                            maxLength={6}
+                                            placeholder="100"
+                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-sm"
+                                        />
+                                        <p className="text-[10px] text-gray-400 font-medium ml-1">Max 6 digits (e.g. 100, 1000)</p>
                                     </div>
                                     <div className="col-span-full space-y-2">
                                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Grading System</label>
-                                        <select value={formData.gradingSystem} onChange={e => setFormData({ ...formData, gradingSystem: e.target.value })} className="w-full px-4 py-4 rounded-2xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900">
+                                        <select
+                                            value={formData.gradingSystem}
+                                            onChange={e => setFormData({ ...formData, gradingSystem: e.target.value })}
+                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-sm outline-none cursor-pointer"
+                                        >
                                             <option value="US">US System</option>
                                             <option value="UK">UK System</option>
                                             <option value="India">India System</option>
@@ -166,27 +333,67 @@ export default function GradeConverterPage() {
                                         </select>
                                     </div>
                                 </div>
-                                <button type="submit" disabled={loading} className="w-full py-4 bg-[#6605c7] text-white rounded-lg font-bold uppercase tracking-widest text-[11px] hover:bg-[#5504a6] transition-all shadow-lg shadow-purple-500/10 disabled:opacity-50 mt-4">
+                                <button type="submit" disabled={loading} className="w-full py-4 bg-[#6605c7] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#5504a6] transition-all shadow-lg shadow-purple-500/10 disabled:opacity-50 mt-4">
                                     {loading ? "Converting..." : "Convert Grade"}
                                 </button>
                             </form>
                         ) : (
-                            <form onSubmit={handleMultipleSubmit} className="space-y-8">
+                            <form onSubmit={handleMultipleSubmit} className="space-y-6">
+                                {multipleError && (
+                                    <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-semibold flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-base">error</span>
+                                        {multipleError}
+                                    </div>
+                                )}
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Marks (Comma Separated)</label>
-                                    <input type="text" value={multipleData.marks} onChange={e => setMultipleData({ ...multipleData, marks: e.target.value })} required placeholder="e.g. 85, 92, 78, 88" className="w-full px-4 py-4 rounded-2xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900" />
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Marks (Comma Separated)</label>
+                                        <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                                            {multipleData.marks.length}/200
+                                        </span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={multipleData.marks}
+                                        onChange={e => setMultipleData({ ...multipleData, marks: e.target.value })}
+                                        maxLength={200}
+                                        required
+                                        placeholder="e.g. 85, 92, 78, 88"
+                                        className="w-full px-4 py-3.5 rounded-xl border border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-sm"
+                                    />
+                                    <p className="text-[10px] text-gray-400 font-medium ml-1">Enter marks separated by commas</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Marks Per Subject</label>
-                                        <input type="number" value={multipleData.totalMarks} onChange={e => setMultipleData({ ...multipleData, totalMarks: e.target.value })} required className="w-full px-4 py-4 rounded-2xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900" />
+                                        <input
+                                            type="number"
+                                            value={multipleData.totalMarks}
+                                            onChange={e => setMultipleData({ ...multipleData, totalMarks: e.target.value })}
+                                            maxLength={5}
+                                            required
+                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-sm"
+                                        />
+                                        <p className="text-[10px] text-gray-400 font-medium ml-1">Max 5 digits (e.g. 100)</p>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Subjects (Optional)</label>
-                                        <input type="text" value={multipleData.subjects} onChange={e => setMultipleData({ ...multipleData, subjects: e.target.value })} placeholder="e.g. Math, Physics, CS" className="w-full px-4 py-4 rounded-2xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900" />
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Subjects (Optional)</label>
+                                            <span className="text-[9px] font-bold text-gray-400">
+                                                {multipleData.subjects.length}/150
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={multipleData.subjects}
+                                            onChange={e => setMultipleData({ ...multipleData, subjects: e.target.value })}
+                                            maxLength={150}
+                                            placeholder="e.g. Math, Physics, CS"
+                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-sm"
+                                        />
                                     </div>
                                 </div>
-                                <button type="submit" disabled={loading} className="w-full py-5 bg-[#6605c7] text-white rounded-full font-bold uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl transition-all disabled:opacity-50">
+                                <button type="submit" disabled={loading} className="w-full py-4 bg-[#6605c7] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#5504a6] shadow-lg shadow-purple-500/10 transition-all disabled:opacity-50">
                                     {loading ? "Analyzing..." : "Analyze Grades"}
                                 </button>
                             </form>
