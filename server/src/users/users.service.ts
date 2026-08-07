@@ -2144,6 +2144,8 @@ export class UsersService {
         if (!sanitizedUser.studyDestination) {
           sanitizedUser.studyDestination = firstApp.country || firstApp.destinationCountry || null;
         }
+        delete sanitizedUser.intakeSeason;
+        delete sanitizedUser.courseName;
         delete sanitizedUser.password;
         delete sanitizedUser.refreshToken;
       }

@@ -752,6 +752,22 @@ export class AuthService {
         }
       }
 
+      let targetUniversity = user.targetUniversity || '';
+      let studyDestination = user.studyDestination || '';
+
+      if (!targetUniversity || !studyDestination) {
+        try {
+          const apps = await this.usersService.getUserApplications(user.id);
+          if (apps && apps.length > 0) {
+            const latest = apps[0];
+            if (!targetUniversity) targetUniversity = latest.universityName || latest.targetUniversity || latest.university || '';
+            if (!studyDestination) studyDestination = latest.country || latest.destinationCountry || '';
+          }
+        } catch (err) {
+          console.error('[AuthService.getUserDashboard] Error resolving application fallback:', err);
+        }
+      }
+
       return {
         success: true,
         user: {
@@ -763,10 +779,8 @@ export class AuthService {
           dateOfBirth: formattedDob || '',
           role: user.role || 'user',
           createdAt: user.createdAt,
-          intakeSeason: user.intakeSeason || '',
-          studyDestination: user.studyDestination || '',
-          courseName: user.courseName || '',
-          targetUniversity: user.targetUniversity || '',
+          studyDestination,
+          targetUniversity,
         }
       };
     } catch (error) {
