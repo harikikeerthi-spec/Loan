@@ -241,8 +241,16 @@ export default function BankNotificationsPanel({
       const data = await apiFetch<any>("/api/notifications");
       if (data && data.success && Array.isArray(data.items)) {
         const filtered = data.items.filter(isNotificationForThisBank);
-        setNotifications(filtered.slice(0, 50));
-        setUnreadCount(filtered.filter((n: any) => !n.isRead).length);
+        // Deduplicate by ID
+        const seen = new Set<string>();
+        const unique = filtered.filter((n: any) => {
+          const key = n.id ? String(n.id) : `${n.title}-${n.timestamp}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setNotifications(unique.slice(0, 50));
+        setUnreadCount(unique.filter((n: any) => !n.isRead).length);
       }
     } catch (err) {
       console.error("[BankNotificationsPanel] Fetch error:", err);
@@ -298,7 +306,17 @@ export default function BankNotificationsPanel({
         console.log("[BankNotificationsPanel] Ignored notification for another bank");
         return;
       }
-      setNotifications((prev) => [payload, ...prev].slice(0, 50));
+      setNotifications((prev) => {
+        const merged = [payload, ...prev];
+        const seen = new Set<string>();
+        const unique = merged.filter((n) => {
+          const key = n.id ? String(n.id) : `${n.title}-${n.timestamp}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        return unique.slice(0, 50);
+      });
       setUnreadCount((prev) => prev + 1);
 
       // Show toast
@@ -499,7 +517,7 @@ export default function BankNotificationsPanel({
                       const style = getNotificationStyle(notif.type);
                       return (
                         <motion.div
-                          key={notif.id || index}
+                          key={notif.id ? `panel-${notif.id}-${index}` : `panel-notif-${index}`}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
@@ -743,7 +761,7 @@ export default function BankNotificationsPanel({
                         const style = getNotificationStyle(notif.type);
                         return (
                           <div
-                            key={notif.id || index}
+                            key={notif.id ? `page-${notif.id}-${index}` : `page-notif-${index}`}
                             onClick={() => handleNotificationClick(notif)}
                             className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 relative overflow-hidden ${notif.isRead
                               ? "border-gray-100 opacity-70 hover:opacity-100"

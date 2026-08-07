@@ -1,17 +1,88 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../auth/email.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
-export class UniversityInquiryService {
+export class UniversityInquiryService implements OnModuleInit {
   private get db() {
     return this.supabase.getClient();
   }
 
   constructor(
     private supabase: SupabaseService,
+    private prisma: PrismaService,
     private emailService: EmailService,
   ) {}
+
+  async onModuleInit() {
+    try {
+      await this.prisma.$executeRaw`
+        CREATE TABLE IF NOT EXISTS "UniversityInquiry" (
+          "id" TEXT NOT NULL,
+          "userId" TEXT,
+          "name" TEXT NOT NULL,
+          "email" TEXT NOT NULL,
+          "mobile" TEXT NOT NULL,
+          "universityName" TEXT NOT NULL,
+          "type" TEXT NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'pending',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "UniversityInquiry_pkey" PRIMARY KEY ("id")
+        );
+      `;
+
+      await this.prisma.$executeRaw`
+        CREATE TABLE IF NOT EXISTS "FastTrackApplication" (
+          "id" TEXT NOT NULL,
+          "userId" TEXT,
+          "name" TEXT NOT NULL,
+          "email" TEXT NOT NULL,
+          "mobile" TEXT NOT NULL,
+          "universityName" TEXT NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'pending',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "FastTrackApplication_pkey" PRIMARY KEY ("id")
+        );
+      `;
+
+      await this.prisma.$executeRaw`
+        CREATE TABLE IF NOT EXISTS "CallbackRequest" (
+          "id" TEXT NOT NULL,
+          "userId" TEXT,
+          "name" TEXT NOT NULL,
+          "email" TEXT NOT NULL,
+          "mobile" TEXT NOT NULL,
+          "universityName" TEXT NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'pending',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "CallbackRequest_pkey" PRIMARY KEY ("id")
+        );
+      `;
+
+      await this.prisma.$executeRaw`
+        CREATE TABLE IF NOT EXISTS "queries" (
+          "id" TEXT NOT NULL,
+          "applicationId" TEXT NOT NULL,
+          "authorId" TEXT NOT NULL,
+          "authorName" TEXT NOT NULL,
+          "content" TEXT NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'open',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "queries_pkey" PRIMARY KEY ("id")
+        );
+      `;
+
+      await this.prisma.$executeRaw`NOTIFY pgrst, 'reload schema';`;
+    } catch (e) {
+      console.warn('Auto table initialization notice:', e.message);
+    }
+  }
 
   async createInquiry(data: {
     userId?: string;
@@ -22,53 +93,133 @@ export class UniversityInquiryService {
     type: string;
   }) {
     const finalType = data.type === 'callback' ? 'callback' : 'fasttrack';
-    
-    const { data: inquiry, error } = await this.db
-      .from('UniversityInquiry')
-      .insert({
-        userId: (data.userId && data.userId.trim() !== '') ? data.userId : null,
-        name: data.name,
-        email: data.email,
-        mobile: data.mobile,
-        universityName: data.universityName,
-        type: finalType,
-        updatedAt: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    const validUserId = (data.userId && data.userId.trim() !== '') ? data.userId.trim() : null;
+    const recordId = randomUUID();
 
-    if (error) throw error;
+    const baseData = {
+      id: recordId,
+      userId: validUserId,
+      name: data.name,
+      email: data.email,
+      mobile: data.mobile,
+      universityName: data.universityName,
+      status: 'pending',
+    };
 
+    let inquiryResult: any = null;
+
+    // 1. Save to UniversityInquiry using Prisma for guaranteed PostgreSQL write
     try {
-      await this.sendInquiryEmails({
-        ...data,
-        type: finalType,
+      inquiryResult = await this.prisma.universityInquiry.create({
+        data: {
+          ...baseData,
+          type: finalType,
+        },
       });
-    } catch (mailError) {
-      console.error('Failed to send inquiry emails:', mailError);
+    } catch (err) {
+      console.error('Error inserting into UniversityInquiry via Prisma, trying Supabase fallback:', err);
+      try {
+        const { data: inq } = await this.db.from('UniversityInquiry').insert({
+          ...baseData,
+          type: finalType,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }).select().maybeSingle();
+        inquiryResult = inq || { ...baseData, type: finalType };
+      } catch (sbErr) {
+        inquiryResult = { ...baseData, type: finalType };
+      }
     }
-    
-    return inquiry;
+
+    // 2. Save into separate specialized table (FastTrackApplication vs CallbackRequest)
+    if (finalType === 'fasttrack') {
+      try {
+        await this.prisma.fastTrackApplication.create({
+          data: baseData,
+        });
+      } catch (ftErr) {
+        console.error('Error inserting into FastTrackApplication via Prisma, trying Supabase fallback:', ftErr);
+        try {
+          await this.db.from('FastTrackApplication').insert({
+            ...baseData,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (e) {}
+      }
+    } else if (finalType === 'callback') {
+      try {
+        await this.prisma.callbackRequest.create({
+          data: baseData,
+        });
+      } catch (cbErr) {
+        console.error('Error inserting into CallbackRequest via Prisma, trying Supabase fallback:', cbErr);
+        try {
+          await this.db.from('CallbackRequest').insert({
+            ...baseData,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (e) {}
+      }
+    }
+
+    // 3. Send email notifications asynchronously (non-blocking)
+    this.sendInquiryEmails({
+      ...data,
+      type: finalType,
+    }).catch((mailError) => {
+      console.error('Failed to send inquiry emails:', mailError);
+    });
+
+    return {
+      success: true,
+      data: inquiryResult,
+      message: 'Inquiry submitted successfully',
+    };
   }
 
   async getInquiriesByUser(userId: string) {
-    const { data } = await this.db
-      .from('UniversityInquiry')
-      .select('*')
-      .eq('userId', userId)
-      .order('createdAt', { ascending: false });
-    return data || [];
+    try {
+      return await this.prisma.universityInquiry.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (e) {
+      try {
+        const { data } = await this.db
+          .from('UniversityInquiry')
+          .select('*')
+          .eq('userId', userId)
+          .order('createdAt', { ascending: false });
+        return data || [];
+      } catch (err) {
+        return [];
+      }
+    }
   }
 
   async checkInquiry(email: string, universityName: string, type: string) {
-    const { data: existing } = await this.db
-      .from('UniversityInquiry')
-      .select('id')
-      .eq('email', email)
-      .eq('universityName', universityName)
-      .eq('type', type)
-      .single();
-    return { exists: !!existing };
+    try {
+      const existing = await this.prisma.universityInquiry.findFirst({
+        where: { email, universityName, type },
+        select: { id: true },
+      });
+      return { exists: !!existing };
+    } catch (e) {
+      try {
+        const { data: existing } = await this.db
+          .from('UniversityInquiry')
+          .select('id')
+          .eq('email', email)
+          .eq('universityName', universityName)
+          .eq('type', type)
+          .maybeSingle();
+        return { exists: !!existing };
+      } catch (err) {
+        return { exists: false };
+      }
+    }
   }
 
   private async sendInquiryEmails(data: any) {

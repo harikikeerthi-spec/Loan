@@ -584,8 +584,17 @@ export default function ApplicationManagement() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div>
-                                                    <p className="text-[14.5px] font-bold text-slate-950 hover:text-purple-600 transition-colors">
-                                                        {row.firstName} {row.lastName}
+                                                    <p
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const idToUse = row.id || row._id;
+                                                            router.push(`/bank/decisions?id=${idToUse}`);
+                                                        }}
+                                                        className="text-[14.5px] font-bold text-slate-950 hover:text-[#6605c7] hover:underline transition-colors cursor-pointer inline-flex items-center gap-1 group"
+                                                        title="Click to view full student details page"
+                                                    >
+                                                        <span>{row.firstName} {row.lastName}</span>
+                                                        <span className="material-symbols-outlined text-xs text-[#6605c7] opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
                                                     </p>
                                                     <p className="text-xs text-slate-400 font-medium truncate max-w-[180px]">
                                                         {row.universityName || "Foreign University"}
@@ -682,20 +691,38 @@ export default function ApplicationManagement() {
                                 <div className="px-6 py-4 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
                                     <div>
                                         <div className="flex items-center gap-2.5 flex-wrap">
-
-                                            <h2 className="text-base md:text-xl font-black text-slate-900 uppercase tracking-tight">
-                                                {selectedApp.firstName} {selectedApp.lastName}
+                                            <h2
+                                                onClick={() => {
+                                                    const idToUse = selectedApp.id || selectedApp._id;
+                                                    router.push(`/bank/decisions?id=${idToUse}`);
+                                                }}
+                                                className="text-base md:text-xl font-black text-slate-900 hover:text-[#6605c7] hover:underline cursor-pointer uppercase tracking-tight inline-flex items-center gap-1.5 group"
+                                                title="Click to view full student details page"
+                                            >
+                                                <span>{selectedApp.firstName} {selectedApp.lastName}</span>
+                                                <span className="material-symbols-outlined text-sm text-[#6605c7] group-hover:translate-x-0.5 transition-transform">open_in_new</span>
                                             </h2>
                                         </div>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="text-xs font-mono font-bold text-slate-400">
                                                 App ID: {selectedApp.applicationNumber || `VTU-APP-2026-${(selectedApp.id || '00004').slice(-5).toUpperCase()}`}
                                             </span>
-
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const idToUse = selectedApp.id || selectedApp._id;
+                                                router.push(`/bank/decisions?id=${idToUse}`);
+                                            }}
+                                            className="px-3 py-1.5 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[11px] font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+                                            title="View full student details page"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">visibility</span>
+                                            View Student Details Page
+                                        </button>
                                         <StatusBadge status={selectedApp.status} />
                                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-3 py-1 rounded-lg">
                                             Stage: {selectedApp.currentStage || "Bank Review"}

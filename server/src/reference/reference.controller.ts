@@ -99,6 +99,15 @@ export class ReferenceController {
         return this.referenceService.getDisbursedAmount();
     }
 
+    /**
+     * Get dynamic platform statistics (students count, countries count, programs count)
+     * GET /reference/platform-stats
+     */
+    @Get('platform-stats')
+    async getPlatformStats() {
+        return this.referenceService.getPlatformStats();
+    }
+
     // ==================== BANKS ====================
 
     /**

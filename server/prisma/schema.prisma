@@ -60,6 +60,8 @@ model User {
   eligibilityChecks     LoanEligibilityCheck[]
   visaMockInterviews    VisaMockInterviewResult[]
   universityInquiries   UniversityInquiry[]
+  fastTrackApplications FastTrackApplication[]
+  callbackRequests      CallbackRequest[]
 }
 
 model LoanEligibilityCheck {
@@ -1052,6 +1054,58 @@ model UniversityInquiry {
   @@index([email])
   @@index([mobile])
   @@index([universityName])
+}
+
+model FastTrackApplication {
+  id             String   @id @default(uuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name           String
+  email          String
+  mobile         String
+  universityName String
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([email])
+  @@index([mobile])
+  @@index([universityName])
+}
+
+model CallbackRequest {
+  id             String   @id @default(uuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name           String
+  email          String
+  mobile         String
+  universityName String
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([email])
+  @@index([mobile])
+  @@index([universityName])
+}
+
+model Query {
+  id            String   @id @default(uuid())
+  applicationId String
+  authorId      String
+  authorName    String
+  content       String   @db.Text
+  status        String   @default("open")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([applicationId])
+  @@index([authorId])
+  @@index([status])
+  @@map("queries")
 }
 
 // ==================== CAMPAIGN & QUEUE MODELS ====================

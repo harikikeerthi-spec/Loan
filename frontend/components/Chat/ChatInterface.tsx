@@ -1317,9 +1317,9 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
             )}
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex overflow-hidden bg-[#FFFFFF] relative">
+            <div className="flex-1 flex min-w-0 overflow-hidden bg-[#FFFFFF] relative">
                 {/* Chat column */}
-                <div className={`flex flex-col h-full transition-all duration-300 ${showDocPanel ? 'flex-1' : 'w-full'}`}>
+                <div className={`flex flex-col h-full min-w-0 flex-1 transition-all duration-300`}>
                     {activeConversation ? (() => {
                         const activeConv = conversations.find(c => c.id === activeConversation);
                         const displayName = activeConv ? getConversationDisplayName(activeConv) : '';
@@ -1360,10 +1360,10 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                                                     {activeConv?.metadata?.type === 'agent_to_staff' ? 'RM DISCUSSION' : 'STAFF CHANNEL'}
                                                 </span> */}
                                             </div>
-                                            <p className="text-[10px] text-[#8A94A6] truncate mt-0.5 font-medium flex items-center gap-2">
-                                                <span>{activeConv?.customerEmail || 'support@student-loan.org'}</span>
+                                            <p className="text-[10px] text-[#8A94A6] truncate mt-0.5 font-medium flex items-center gap-2 min-w-0">
+                                                <span className="truncate">{activeConv?.customerEmail || 'support@student-loan.org'}</span>
                                                 {activeConv?.customerPhone && (
-                                                    <span className="font-mono text-[#5A42E4]">({activeConv.customerPhone})</span>
+                                                    <span className="font-mono text-[#5A42E4] truncate max-w-[180px] sm:max-w-[260px]">({activeConv.customerPhone})</span>
                                                 )}
                                             </p>
                                         </div>
@@ -1757,14 +1757,14 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
 
                 {/* Document Side Panel */}
                 {showDocPanel && activeConversation && (
-                    <div className="w-80 border-l border-[#E2E8F0] bg-[#F8F9FC] flex flex-col shrink-0 animate-in slide-in-from-right duration-300 h-full overflow-hidden font-sans">
+                    <div className="w-72 sm:w-80 border-l border-[#E2E8F0] bg-[#F8F9FC] flex flex-col shrink-0 animate-in slide-in-from-right duration-300 h-full overflow-hidden font-sans">
                         {/* Panel Header */}
                         <div className="px-5 py-4 border-b border-[#E2E8F0] bg-[#FFFFFF] flex items-center justify-between shrink-0">
-                            <div>
+                            <div className="min-w-0 pr-2">
                                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#5A42E4]">Document Vault</p>
-                                <h5 className="text-sm font-bold text-[#1A1D20] mt-0.5 truncate max-w-[180px]">
-                                    {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
-                                        ? getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId)
+                                <h5 className="text-sm font-bold text-[#1A1D20] mt-0.5 truncate max-w-[200px]">
+                                    {conversations.find(c => c.id === activeConversation)?.metadata?.bank
+                                        ? conversations.find(c => c.id === activeConversation)?.metadata?.bank
                                         : (conversations.find(c => c.id === activeConversation)?.customerName || 'Student')
                                     }&apos;s Files
                                 </h5>

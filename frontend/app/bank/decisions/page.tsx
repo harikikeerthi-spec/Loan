@@ -188,6 +188,20 @@ export default function DecisionsHub() {
         }
     }, [currentBankId, mounted]);
 
+    // Read URL query parameter to auto-open student details workspace
+    useEffect(() => {
+        if (mounted && applications.length > 0 && typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const appId = params.get("id");
+            if (appId) {
+                const found = applications.find(a => a.id === appId || a._id === appId || a.applicationNumber === appId);
+                if (found) {
+                    handleAppraiseFile(found);
+                }
+            }
+        }
+    }, [applications, mounted]);
+
     const handleRefresh = () => {
         fetchApplications(currentBankId);
     };
@@ -419,15 +433,35 @@ export default function DecisionsHub() {
 
     const handleDispatchQuery = async () => {
         if (!newQueryText.trim() || !selectedApp) return;
+        const textToDispatch = newQueryText.trim();
+        setNewQueryText("");
         try {
-            await bankApi.raiseQuery({
+            const res: any = await bankApi.raiseQuery({
                 applicationId: selectedApp.id,
-                content: newQueryText.trim()
+                content: textToDispatch
             });
-            setNewQueryText("");
+
+            // Immediately append query locally for instant UI update
+            const newQueryObj = res?.query || res?.data || {
+                id: `q-${Date.now()}`,
+                applicationId: selectedApp.id,
+                authorName: 'Credit Officer',
+                content: textToDispatch,
+                status: 'open',
+                createdAt: new Date().toISOString()
+            };
+
+            setSelectedApp((prev: any) => {
+                if (!prev) return prev;
+                const existing = prev.queries || [];
+                return {
+                    ...prev,
+                    queries: [...existing, newQueryObj]
+                };
+            });
 
             const detailRes = await bankApi.getFileDetail(selectedApp.id);
-            if (detailRes) {
+            if (detailRes && Array.isArray(detailRes.queries)) {
                 setSelectedApp(detailRes);
             }
             await fetchTimeline(selectedApp.id);
@@ -2208,13 +2242,19 @@ export default function DecisionsHub() {
 
                                                             {/* Send query input */}
                                                             <div className="flex gap-2">
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Type a new query parameter to student..."
-                                                                    value={newQueryText}
-                                                                    onChange={e => setNewQueryText(e.target.value)}
-                                                                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7] text-gray-700"
-                                                                />
+                                                                 <input
+                                                                     type="text"
+                                                                     placeholder="Type a new query parameter to student..."
+                                                                     value={newQueryText}
+                                                                     onChange={e => setNewQueryText(e.target.value)}
+                                                                     onKeyDown={e => {
+                                                                         if (e.key === 'Enter') {
+                                                                             e.preventDefault();
+                                                                             handleDispatchQuery();
+                                                                         }
+                                                                     }}
+                                                                     className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#6605c7] text-gray-700"
+                                                                 />
                                                                 <button
                                                                     type="button"
                                                                     onClick={handleDispatchQuery}

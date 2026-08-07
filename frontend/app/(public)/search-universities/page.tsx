@@ -122,7 +122,7 @@ export default function SearchUniversitiesPage() {
     const showingEnd = Math.min(currentPage * itemsPerPage, filteredData.length);
 
     return (
-        <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12 pt-8 px-4 sm:px-6 font-sans">
+        <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12 pt-28 px-4 sm:px-6 font-sans">
             {/* Header & Controls Bar */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
@@ -159,11 +159,10 @@ export default function SearchUniversitiesPage() {
                     <button
                         key={c}
                         onClick={() => { setSelectedCountry(c); setCurrentPage(1); }}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 cursor-pointer ${
-                            selectedCountry === c
-                                ? "bg-[#4F46E5] text-white border-indigo-600 shadow-sm"
-                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 cursor-pointer ${selectedCountry === c
+                            ? "bg-[#4F46E5] text-white border-indigo-600 shadow-sm"
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            }`}
                     >
                         {c}
                     </button>

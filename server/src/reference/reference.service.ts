@@ -198,6 +198,63 @@ export class ReferenceService {
     };
   }
 
+  async getPlatformStats() {
+    const baseStudents = 1000;
+    const baseCountries = 10;
+    const basePrograms = 18000;
+
+    let dynamicUserCount = 0;
+    try {
+      const { count, error } = await this.db
+        .from('User')
+        .select('*', { count: 'exact', head: true });
+      if (!error && typeof count === 'number') {
+        dynamicUserCount = count;
+      }
+    } catch (e) {
+      console.error('Error fetching user count for platform stats:', e);
+    }
+
+    let countryCount = baseCountries;
+    try {
+      const { count, error } = await this.db
+        .from('Country')
+        .select('*', { count: 'exact', head: true });
+      if (!error && typeof count === 'number' && count > baseCountries) {
+        countryCount = count;
+      }
+    } catch (e) {}
+
+    let programCount = basePrograms;
+    try {
+      const { count, error } = await this.db
+        .from('Program')
+        .select('*', { count: 'exact', head: true });
+      if (!error && typeof count === 'number' && count > basePrograms) {
+        programCount = count;
+      }
+    } catch (e) {}
+
+    const totalStudents = baseStudents + dynamicUserCount;
+    const studentsFormatted = totalStudents >= 100000 
+      ? `${(totalStudents / 100000).toFixed(1)} lakh` 
+      : `${totalStudents.toLocaleString()}+`;
+
+    return {
+      success: true,
+      data: {
+        students: totalStudents,
+        studentsFormatted,
+        rawStudents: totalStudents,
+        countries: countryCount,
+        countriesFormatted: `${countryCount}+`,
+        programs: programCount,
+        programsFormatted: `${programCount.toLocaleString()}+`,
+      },
+    };
+  }
+
+
 
   // ==================== COUNTRIES ====================
 

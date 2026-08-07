@@ -720,6 +720,30 @@ export default function OnboardingPage() {
     // Welcome screen state
     const [hasStarted, setHasStarted] = useState(false);
 
+    // Platform stats state (dynamic students starting from 1000, countries, programs)
+    const [platformStats, setPlatformStats] = useState({
+        studentsFormatted: '1,000+',
+        students: 1000,
+        countriesFormatted: '10+',
+        countries: 10,
+        programsFormatted: '18,000+',
+        programs: 18000,
+    });
+
+    useEffect(() => {
+        async function fetchPlatformStats() {
+            try {
+                const res: any = await referenceApi.getPlatformStats();
+                if (res?.success && res?.data) {
+                    setPlatformStats(res.data);
+                }
+            } catch (e) {
+                console.error('Error fetching platform stats:', e);
+            }
+        }
+        fetchPlatformStats();
+    }, []);
+
     // GPA state
     const [gpaMode, setGpaMode] = useState<'cgpa' | 'pct'>('cgpa');
     const [gpaValue, setGpaValue] = useState('');
@@ -1155,7 +1179,7 @@ export default function OnboardingPage() {
     // Stats counters
     useEffect(() => {
         const counters = [
-            { id: 'stat1', target: 50000 },
+            { id: 'stat1', target: platformStats.students },
             { id: 'stat2', target: 2500 },
             { id: 'stat3', target: 98 },
             { id: 'stat4', target: 15 },
@@ -1173,7 +1197,7 @@ export default function OnboardingPage() {
                     const inc = obj.target / steps;
                     const timer = setInterval(() => {
                         current = Math.min(current + inc, obj.target);
-                        if (obj.id === 'stat1') el.textContent = current >= 1000 ? Math.floor(current / 1000) + 'K+' : String(Math.floor(current));
+                        if (obj.id === 'stat1') el.textContent = current >= 100000 ? (current / 100000).toFixed(1) + ' lakh' : Math.floor(current).toLocaleString() + '+';
                         else if (obj.id === 'stat2') el.textContent = '₹' + Math.floor(current) + 'Cr+';
                         else el.textContent = Math.floor(current) + (obj.id === 'stat4' ? '+' : '%');
                         if (current >= obj.target) clearInterval(timer);
@@ -1183,7 +1207,7 @@ export default function OnboardingPage() {
         }, { threshold: 0.3 });
         if (heroRef.current) obs.observe(heroRef.current);
         return () => obs.disconnect();
-    }, []);
+    }, [platformStats]);
 
     // Social proof toast cycling
     useEffect(() => {
@@ -3544,7 +3568,7 @@ export default function OnboardingPage() {
                         </h2>
                         <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1f2937', marginBottom: '12px', lineHeight: 1.3 }}>Looking for answers to your<br /><span style={{ background: 'linear-gradient(135deg,#6605c7,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>masters abroad</span> questions?</h1>
                         <p style={{ fontSize: '16px', color: '#6b7280', lineHeight: '1.6', marginBottom: '32px' }}>
-                            We've helped over <strong style={{ color: '#7c3aed' }}>2.6 lakh</strong> students across <strong style={{ color: '#7c3aed' }}>18+</strong> countries and <strong style={{ color: '#7c3aed' }}>18,000+</strong> programs. Let's find the right path for you.
+                            We've helped over <strong style={{ color: '#7c3aed' }}>{platformStats.studentsFormatted}</strong> students across <strong style={{ color: '#7c3aed' }}>{platformStats.countriesFormatted}</strong> countries and <strong style={{ color: '#7c3aed' }}>{platformStats.programsFormatted}</strong> programs. Let's find the right path for you.
                         </p>
                         <button
                             onClick={() => setHasStarted(true)}

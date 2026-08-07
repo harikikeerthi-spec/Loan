@@ -68,7 +68,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addNotification = useCallback((notification: any) => {
-    const id = notification.id || `notif-${Date.now()}`;
+    const id = notification.id || `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     setNotifications(prev => [...prev, { ...notification, id }]);
 
     // Auto-remove after 5 seconds

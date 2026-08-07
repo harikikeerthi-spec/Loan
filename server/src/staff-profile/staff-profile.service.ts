@@ -1653,7 +1653,7 @@ export class StaffProfileService {
         }
 
         if (bankUserId) {
-          const notifId = 'notif-' + Date.now();
+          const notifId = 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
           const notifData = {
             id: notifId,
             userId: bankUserId,

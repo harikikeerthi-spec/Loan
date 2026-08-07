@@ -127,8 +127,8 @@ export default function CompareLoansPage() {
                                         {selectedData.map(loan => (
                                             <th key={loan.id} className="py-4 px-4 bg-gray-50/50 first:rounded-l-xl last:rounded-r-xl">
                                                 <div className="flex flex-col items-center gap-2">
-                                                    <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg shadow-sm border border-gray-100 p-2">
-                                                        <img src={loan.logo} alt={loan.bank} className="w-full h-full object-contain" />
+                                                    <div className="w-10 h-10">
+                                                        <img src={loan.logo} alt={loan.bank} className="w-full h-auto" />
                                                     </div>
                                                     <span className="font-bold text-gray-900 text-[11px] uppercase tracking-wider whitespace-nowrap">{loan.bank}</span>
                                                 </div>

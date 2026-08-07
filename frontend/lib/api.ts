@@ -876,6 +876,8 @@ export const referenceApi = {
         }),
     getUniversities: () =>
         apiFetch(HttpApiPaths.reference.universities()),
+    getPlatformStats: () =>
+        apiFetch(`${API_URL}/reference/platform-stats`),
 };
 
 // ─── Onboarding ───────────────────────────────────────────────────────

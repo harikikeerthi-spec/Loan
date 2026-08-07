@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { randomUUID } from 'crypto';
 import { LoanStateMachine } from './loan-state-machine';
 import { SlackService } from './slack.service';
 import { SalesforceService } from './salesforce.service';
@@ -17,6 +19,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 export class BankService {
   constructor(
     private readonly supabase: SupabaseService,
+    private readonly prisma: PrismaService,
     private readonly slack: SlackService,
     private readonly salesforce: SalesforceService,
     private readonly eventEmitter: EventEmitter2,
@@ -789,17 +792,19 @@ export class BankService {
 
     // Log status history transition
     try {
-      await this.db.from('ApplicationStatusHistory').insert({
-        applicationId: applicationId,
-        fromStatus: application.status,
-        toStatus: targetStatus,
-        fromStage: application.stage,
-        toStage: updatedStage,
-        changedBy: bankUser?.id || bankUser?.email || 'bank-user',
-        changedByName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
-        changeReason: `Decision submitted: ${decisionType}`,
-        isAutomatic: false,
-        createdAt: nowStr
+      await this.prisma.applicationStatusHistory.create({
+        data: {
+          id: randomUUID(),
+          applicationId: applicationId,
+          fromStatus: application.status,
+          toStatus: targetStatus,
+          fromStage: application.stage,
+          toStage: updatedStage,
+          changedBy: bankUser?.id || bankUser?.email || 'bank-user',
+          changedByName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
+          changeReason: `Decision submitted: ${decisionType}`,
+          isAutomatic: false,
+        }
       });
     } catch (hErr: any) {
       console.warn(`[BankService] ApplicationStatusHistory insert note: ${hErr?.message || hErr}`);
@@ -854,19 +859,20 @@ export class BankService {
 
     // Thread serialization in ApplicationNote
     try {
-      await this.db.from('ApplicationNote').insert({
-        applicationId: applicationId,
-        authorId: bankUser?.id || bankUser?.email || 'bank-user',
-        authorName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
-        content: JSON.stringify({
-          action: decisionType,
-          details: detailsObj,
-          timestamp: nowStr
-        }),
-        type: decisionType,
-        isInternal: false,
-        createdAt: nowStr,
-        updatedAt: nowStr
+      await this.prisma.applicationNote.create({
+        data: {
+          id: randomUUID(),
+          applicationId: applicationId,
+          authorId: bankUser?.id || bankUser?.email || 'bank-user',
+          authorName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
+          content: JSON.stringify({
+            action: decisionType,
+            details: detailsObj,
+            timestamp: nowStr
+          }),
+          type: decisionType,
+          isInternal: false,
+        }
       });
     } catch (noteErr: any) {
       console.warn(`[BankService] ApplicationNote insert note: ${noteErr?.message || noteErr}`);
@@ -928,134 +934,184 @@ export class BankService {
   ): Promise<any> {
     console.log(`[BankService] Raising document query on App ID: ${applicationId}`);
 
-    const { data: application } = await this.db
-      .from('LoanApplication')
-      .select('status, stage, bank, applicationNumber, phone, mobile, email, firstName, lastName')
-      .eq('id', applicationId)
-      .single();
+    const authorId = bankUser?.id || bankUser?.email || 'bank_officer';
+    const authorName = bankUser
+      ? (`${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email || 'Bank Representative')
+      : 'Bank Representative';
+
+    let application: any = null;
+    try {
+      const { data } = await this.db
+        .from('LoanApplication')
+        .select('status, stage, bank, applicationNumber, phone, mobile, email, firstName, lastName')
+        .eq('id', applicationId)
+        .maybeSingle();
+      application = data;
+    } catch (e) {
+      console.warn('[BankService] Error fetching application details:', e);
+    }
 
     // Check if status shifts to query_raised
     if (application && application.status !== 'query_raised') {
-      await this.db
-        .from('LoanApplication')
-        .update({
-          status: 'query_raised',
-          progress: LoanStateMachine.getProgressByStatus('query_raised'),
-          updatedAt: new Date().toISOString()
-        })
-        .eq('id', applicationId);
+      try {
+        await this.db
+          .from('LoanApplication')
+          .update({
+            status: 'query_raised',
+            progress: LoanStateMachine.getProgressByStatus('query_raised'),
+            updatedAt: new Date().toISOString()
+          })
+          .eq('id', applicationId);
+      } catch (e) {
+        console.warn('[BankService] Error updating LoanApplication status:', e);
+      }
     }
 
-    // Insert Query
-    const { data: queryRecord, error: queryError } = await this.db
-      .from('queries')
-      .insert({
-        applicationId: applicationId,
-        authorId: bankUser.id,
-        authorName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
-        content: content,
-        status: 'open'
-      })
-      .select()
-      .single();
-
-    if (queryError) throw queryError;
-
-    // Serialize ApplicationNote query
-    await this.db.from('ApplicationNote').insert({
+    const queryId = randomUUID();
+    const queryPayload = {
+      id: queryId,
       applicationId: applicationId,
-      authorId: bankUser.id,
-      authorName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
-      content: JSON.stringify({
-        action: 'query_raised',
-        content: content,
-        timestamp: new Date().toISOString()
-      }),
-      type: 'query_raised',
-      isInternal: false,
+      authorId: authorId,
+      authorName: authorName,
+      content: content,
+      status: 'open',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    let queryRecord: any = null;
+
+    // Insert Query via Prisma for guaranteed DB write
+    try {
+      queryRecord = await this.prisma.query.create({
+        data: {
+          id: queryId,
+          applicationId: applicationId,
+          authorId: authorId,
+          authorName: authorName,
+          content: content,
+          status: 'open',
+        },
+      });
+    } catch (prismaErr) {
+      console.error('[BankService] Error inserting query via Prisma, trying Supabase fallback:', prismaErr);
+      try {
+        const { data: qData } = await this.db
+          .from('queries')
+          .insert(queryPayload)
+          .select()
+          .maybeSingle();
+        queryRecord = qData || queryPayload;
+      } catch (err) {
+        queryRecord = queryPayload;
+      }
+    }
+
+    // Serialize ApplicationNote query
+    try {
+      await this.prisma.applicationNote.create({
+        data: {
+          id: randomUUID(),
+          applicationId: applicationId,
+          authorId: authorId,
+          authorName: authorName,
+          content: JSON.stringify({
+            action: 'query_raised',
+            content: content,
+            timestamp: new Date().toISOString()
+          }),
+          type: 'query_raised',
+          isInternal: false,
+        },
+      });
+    } catch (noteErr) {
+      console.warn('[BankService] Error creating ApplicationNote:', noteErr);
+    }
 
     // Notify via in-app
-    const notifData = {
-      id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      userId: 'staff',
-      title: '❓ Partner Query Raised',
-      body: `Bank officer ${bankUser.firstName || 'Banker'} raised a clarification query on App: ${application?.applicationNumber || applicationId}`,
-      type: 'query_raised',
-      isRead: false,
-      timestamp: new Date().toISOString(),
-      metadata: {
-        applicationId: applicationId,
-        applicationNumber: application?.applicationNumber || null,
-        bank: application?.bank || null,
-        status: 'query_raised'
-      }
-    };
-    await this.db.from('Notification').insert(notifData);
-    this.eventEmitter.emit('notification.created', notifData);
+    try {
+      const notifData = {
+        id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        userId: 'staff',
+        title: '❓ Partner Query Raised',
+        body: `Bank officer ${authorName} raised a clarification query on App: ${application?.applicationNumber || applicationId}`,
+        type: 'query_raised',
+        isRead: false,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          applicationId: applicationId,
+          applicationNumber: application?.applicationNumber || null,
+          bank: application?.bank || null,
+          status: 'query_raised'
+        }
+      };
+      await this.db.from('Notification').insert(notifData);
+      this.eventEmitter.emit('notification.created', notifData);
+    } catch (notifErr) {
+      console.warn('[BankService] Error inserting Notification:', notifErr);
+    }
 
     // Push query message to the chat conversation
     if (application) {
-      // 1. Send message to student chat channel (as before)
-      const rawPhone = application.phone || application.mobile;
-      const phone = this.normalizePhone(rawPhone || '');
-      if (phone) {
-        // Find or create conversation for the student
-        let { data: conv } = await this.db
-          .from('Conversation')
-          .select('*')
-          .eq('customerPhone', phone)
-          .maybeSingle();
-
-        if (!conv) {
-          const fullName = `${application.firstName || ''} ${application.lastName || ''}`.trim();
-          const { data: newConv } = await this.db
+      try {
+        const rawPhone = application.phone || application.mobile;
+        const phone = this.normalizePhone(rawPhone || '');
+        if (phone) {
+          let { data: conv } = await this.db
             .from('Conversation')
-            .insert({
-              customerPhone: phone,
-              status: 'active',
-              customerEmail: application.email || null,
-              customerName: fullName || null,
-              metadata: { type: 'staff' }
-            })
-            .select()
-            .single();
-          conv = newConv;
-        }
+            .select('*')
+            .eq('customerPhone', phone)
+            .maybeSingle();
 
-        if (conv) {
-          const bankName = bankUser.firstName || 'Banker';
-          const msgContent = `[BANK QUERY from ${bankName}]: ${content}`;
-          const { data: chatMessage } = await this.db
-            .from('Message')
-            .insert({
-              conversationId: conv.id,
-              senderType: 'system',
-              senderId: bankUser.email,
-              receiverType: 'staff',
-              content: msgContent,
-              messageType: 'text',
-              status: 'sent'
-            })
-            .select()
-            .single();
-
-          if (chatMessage) {
-            // Update conversation timestamp
-            await this.db
+          if (!conv) {
+            const fullName = `${application.firstName || ''} ${application.lastName || ''}`.trim();
+            const { data: newConv } = await this.db
               .from('Conversation')
-              .update({ updatedAt: new Date().toISOString() })
-              .eq('id', conv.id);
+              .insert({
+                id: randomUUID(),
+                customerPhone: phone,
+                status: 'active',
+                customerEmail: application.email || null,
+                customerName: fullName || null,
+                metadata: { type: 'staff' }
+              })
+              .select()
+              .maybeSingle();
+            conv = newConv;
+          }
 
-            // Emit the programmatically created message so WebSocket clients receive it in real-time
-            this.eventEmitter.emit('chat.message_created', chatMessage);
+          if (conv) {
+            const msgContent = `[BANK QUERY from ${authorName}]: ${content}`;
+            const { data: chatMessage } = await this.db
+              .from('Message')
+              .insert({
+                id: randomUUID(),
+                conversationId: conv.id,
+                senderType: 'system',
+                senderId: bankUser?.email || 'bank-system',
+                receiverType: 'staff',
+                content: msgContent,
+                messageType: 'text',
+                status: 'sent'
+              })
+              .select()
+              .maybeSingle();
+
+            if (chatMessage) {
+              await this.db
+                .from('Conversation')
+                .update({ updatedAt: new Date().toISOString() })
+                .eq('id', conv.id);
+
+              this.eventEmitter.emit('chat.message_created', chatMessage);
+            }
           }
         }
+      } catch (convErr) {
+        console.warn('[BankService] Error updating student conversation:', convErr);
       }
 
-      // 2. Also send query message to the dedicated Bank chat channel (shows up in staff chat Banks tab)
+      // Send query message to the dedicated Bank chat channel
       try {
         const safeBank = (application.bank || 'Unknown_Bank').toUpperCase().replace(/[^A-Z0-9]/g, '_');
         const shortAppId = application.applicationNumber || applicationId.slice(0, 8);
@@ -1075,21 +1131,19 @@ export class BankService {
         );
 
         if (conversation) {
-          const bankName = bankUser.firstName || 'Banker';
           const msgContent = `❓ **Query Raised**\n\nThe bank has raised a query on the loan application:\n\n"${content}"`;
 
           const savedMessage = await this.chatService.saveMessage({
             conversationId: conversation.id,
             senderType: 'bank',
-            senderId: bankUser.email || bankUser.id || 'bank-system',
-            senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+            senderId: bankUser?.email || bankUser?.id || 'bank-system',
+            senderName: `${authorName} (${application.bank || 'Bank'})`,
             content: msgContent,
             messageType: 'text',
             status: 'sent'
           });
 
           if (savedMessage) {
-            // Emit the programmatically created message so WebSocket clients receive it in real-time
             this.eventEmitter.emit('chat.message_created', savedMessage);
           }
         }
@@ -1288,39 +1342,67 @@ export class BankService {
   // ==================== NEW METHODS ====================
 
   async getFileDetail(applicationId: string): Promise<any> {
-    const { data, error } = await this.db
-      .from('LoanApplication')
-      .select('*')
-      .eq('id', applicationId)
-      .maybeSingle();
-
-    if (error || !data) {
-      throw new NotFoundException(`Loan application with ID "${applicationId}" not found or error: ${error?.message}`);
+    let data: any = null;
+    try {
+      data = await this.prisma.loanApplication.findFirst({
+        where: {
+          OR: [
+            { id: applicationId },
+            { applicationNumber: applicationId }
+          ]
+        }
+      });
+    } catch (e) {
+      console.warn('[BankService.getFileDetail] Prisma lookup notice:', e);
     }
 
+    if (!data) {
+      const { data: sbData, error: sbError } = await this.db
+        .from('LoanApplication')
+        .select('*')
+        .or(`id.eq.${applicationId},applicationNumber.eq.${applicationId}`)
+        .maybeSingle();
+
+      if (sbError || !sbData) {
+        throw new NotFoundException(`Loan application with ID/AppNo "${applicationId}" not found.`);
+      }
+      data = sbData;
+    }
+
+    const targetId = data.id;
+
     // Fetch relations manually to avoid PostgREST relationship schema cache failures
+    let queriesList: any[] = [];
+    try {
+      queriesList = await this.prisma.query.findMany({
+        where: { applicationId: targetId },
+        orderBy: { createdAt: 'asc' },
+      });
+    } catch (e) {
+      const { data: qData } = await this.db.from('queries').select('*').eq('applicationId', targetId);
+      queriesList = qData || [];
+    }
+
     const [
-      { data: bankDecisions },
-      { data: disbursements },
-      { data: fileQualityScores },
-      { data: queries },
-      { data: processingFee },
-      { data: condSanctions }
+      bankDecisionsRes,
+      disbursementsRes,
+      fileQualityScoresRes,
+      processingFeeRes,
+      condSanctionsRes
     ] = await Promise.all([
-      this.db.from('BankDecision').select('*').eq('applicationId', applicationId),
-      this.db.from('disbursements').select('*').eq('applicationId', applicationId),
-      this.db.from('file_quality_scores').select('*').eq('applicationId', applicationId),
-      this.db.from('queries').select('*').eq('applicationId', applicationId),
-      this.db.from('ProcessingFee').select('*').eq('applicationId', applicationId),
-      this.db.from('conditional_sanctions').select('*').eq('applicationId', applicationId).order('createdAt', { ascending: false })
+      Promise.resolve(this.db.from('BankDecision').select('*').eq('applicationId', targetId)).catch(() => ({ data: [] })),
+      Promise.resolve(this.db.from('disbursements').select('*').eq('applicationId', targetId)).catch(() => ({ data: [] })),
+      Promise.resolve(this.db.from('file_quality_scores').select('*').eq('applicationId', targetId)).catch(() => ({ data: [] })),
+      Promise.resolve(this.db.from('ProcessingFee').select('*').eq('applicationId', targetId)).catch(() => ({ data: [] })),
+      Promise.resolve(this.db.from('conditional_sanctions').select('*').eq('applicationId', targetId).order('createdAt', { ascending: false })).catch(() => ({ data: [] }))
     ]);
 
-    data.BankDecision = bankDecisions || [];
-    data.disbursements = disbursements || [];
-    data.file_quality_scores = fileQualityScores || [];
-    data.queries = queries || [];
-    data.ProcessingFee = processingFee || [];
-    data.conditional_sanctions = condSanctions || [];
+    data.BankDecision = bankDecisionsRes?.data || [];
+    data.disbursements = disbursementsRes?.data || [];
+    data.file_quality_scores = fileQualityScoresRes?.data || [];
+    data.queries = queriesList;
+    data.ProcessingFee = processingFeeRes?.data || [];
+    data.conditional_sanctions = condSanctionsRes?.data || [];
 
     return data;
   }

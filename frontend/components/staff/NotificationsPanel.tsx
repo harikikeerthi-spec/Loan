@@ -666,7 +666,7 @@ const NotificationsPanel = ({
                       const style = getNotificationStyle(notif.type);
                       return (
                         <motion.div
-                          key={notif.id || index}
+                          key={notif.id ? `staff-panel-${notif.id}-${index}` : `staff-panel-notif-${index}`}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
@@ -874,7 +874,7 @@ const NotificationsPanel = ({
                         const style = getNotificationStyle(notif.type);
                         return (
                           <div
-                            key={notif.id || index}
+                            key={notif.id ? `staff-all-${notif.id}-${index}` : `staff-all-notif-${index}`}
                             onClick={() => {
                               handleNotificationClick(notif);
                               setIsAllModalOpen(false);
