@@ -275,43 +275,7 @@ export class AssignmentService {
   async getEligibleStaff(loanType?: string): Promise<any[]> {
     const staffMap = new Map<string, any>();
 
-    // 1. Fetch from StaffProfile table — only profiles linked to staff role users
-    try {
-      const { data: profiles } = await this.db
-        .from('StaffProfile')
-        .select('*, linkedUser:User!linkedUserId(id, firstName, lastName, email, role, createdAt)');
-
-      if (profiles && profiles.length > 0) {
-        for (const p of profiles) {
-          const linkedRole = (p.linkedUser?.role || '').toLowerCase();
-          // Skip admin/super_admin linked profiles — only pure 'staff' role
-          if (linkedRole && linkedRole !== 'staff') continue;
-
-          const uid = p.linkedUserId || p.id;
-          const email = p.linkedUser?.email || p.email;
-          if (uid) {
-            staffMap.set(uid.toLowerCase(), {
-              id: p.id,
-              linkedUserId: uid,
-              email: email,
-              role: p.linkedUser?.role || 'staff',
-              linkedUser: p.linkedUser || { id: uid, email },
-              isAvailable: p.isAvailable !== false,
-              isOnLeave: p.isOnLeave === true,
-              // FIX: include resignation fields so resigned staff are properly excluded
-              isResigned: p.isResigned === true,
-              status: p.status || 'active',
-              currentWorkload: p.currentWorkload || 0,
-              createdAt: p.createdAt || p.linkedUser?.createdAt || '1970-01-01T00:00:00.000Z',
-            });
-          }
-        }
-      }
-    } catch (err) {
-      this.logger.warn(`[AssignmentEngine] Could not query StaffProfile table: ${err}`);
-    }
-
-    // 2. Fetch all Users with STAFF role only from User table (admins must not receive loan assignments)
+    // 1. Fetch all Users with staff roles from User table (strictly excluding admin, super_admin, bank, agent, etc.)
     try {
       const { data: users } = await this.db
         .from('User')
@@ -320,39 +284,74 @@ export class AssignmentService {
       if (users && users.length > 0) {
         for (const u of users) {
           const roleLower = (u.role || '').toLowerCase();
-          // Only include pure 'staff' role — NOT admin or super_admin
-          const isStaffOnly = roleLower === 'staff';
-          if (!isStaffOnly) continue;
+          const isExcludedAdmin = ['admin', 'super_admin', 'bank', 'partner_bank', 'agent', 'partner_agent', 'student', 'user', 'customer'].includes(roleLower);
+          const isStaffRole = (roleLower === 'staff' || roleLower === 'staff_admin' || roleLower === 'loans_staff' || roleLower.includes('staff')) && !isExcludedAdmin;
 
-          const uidKey = u.id?.toLowerCase();
-          const emailKey = u.email?.toLowerCase();
-          
-          const alreadyExists = (uidKey && staffMap.has(uidKey)) ||
-            (emailKey && Array.from(staffMap.values()).some(s => s.email?.toLowerCase() === emailKey));
+          if (!isStaffRole) continue;
 
-          if (!alreadyExists) {
-            staffMap.set(u.id.toLowerCase(), {
-              id: u.id,
-              linkedUserId: u.id,
-              email: u.email,
-              role: u.role,
-              linkedUser: u,
-              isAvailable: true,
-              isOnLeave: false,
-              createdAt: u.createdAt || '1970-01-01T00:00:00.000Z',
-            });
-          }
+          staffMap.set(u.id.toLowerCase(), {
+            id: u.id,
+            linkedUserId: u.id,
+            email: u.email,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            role: u.role,
+            linkedUser: u,
+            isAvailable: true,
+            isOnLeave: false,
+            isResigned: false,
+            status: 'active',
+            currentWorkload: 0,
+            createdAt: u.createdAt || '1970-01-01T00:00:00.000Z',
+          });
         }
       }
     } catch (err) {
       this.logger.warn(`[AssignmentEngine] Could not query User table: ${err}`);
     }
 
+    // 2. Fetch StaffProfile table to overlay availability, leave, and resignation status
+    try {
+      const { data: profiles } = await this.db
+        .from('StaffProfile')
+        .select('*');
+
+      if (profiles && profiles.length > 0) {
+        for (const p of profiles) {
+          const profileUserId = (p.linkedUserId || '').toLowerCase();
+          const profileEmail = (p.email || '').toLowerCase();
+
+          let existingKey: string | null = null;
+          if (profileUserId && staffMap.has(profileUserId)) {
+            existingKey = profileUserId;
+          } else if (profileEmail) {
+            for (const [k, v] of staffMap.entries()) {
+              if ((v.email || '').toLowerCase() === profileEmail) {
+                existingKey = k;
+                break;
+              }
+            }
+          }
+
+          if (existingKey) {
+            const entry = staffMap.get(existingKey);
+            entry.isAvailable = p.isAvailable !== false;
+            entry.isOnLeave = p.isOnLeave === true;
+            entry.isResigned = p.isResigned === true || ['resigned', 'inactive', 'invalid'].includes((p.status || '').toLowerCase());
+            entry.currentWorkload = p.currentWorkload || 0;
+            if (p.id) entry.profileId = p.id;
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`[AssignmentEngine] Could not query StaffProfile table: ${err}`);
+    }
+
     const staffList = Array.from(staffMap.values());
     let eligible = staffList.filter(staff => {
       const isAvailable = staff.isAvailable !== false;
       const isOnLeave = staff.isOnLeave === true;
-      const isResigned = staff.isResigned === true || ['resigned', 'inactive', 'invalid'].includes((staff.status || '').toLowerCase());
+      const isResigned = staff.isResigned === true;
       return isAvailable && !isOnLeave && !isResigned;
     });
 
@@ -360,7 +359,7 @@ export class AssignmentService {
       eligible = staffList;
     }
 
-    // Sort by createdAt ASC — oldest staff members first (Staff V -> Loans Staff -> Kiran Staff -> new staff)
+    // Sort by createdAt ASC — oldest staff members first for consistent round-robin
     return eligible.sort((a, b) => {
       const tA = new Date(a.createdAt || 0).getTime();
       const tB = new Date(b.createdAt || 0).getTime();

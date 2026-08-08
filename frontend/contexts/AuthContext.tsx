@@ -443,7 +443,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isAuthenticated = user !== null && !!token;
     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
     const isBank = user?.role === 'bank' || user?.role === 'partner_bank';
-    const isStaff = user?.role === 'staff' || isAdmin; // Admin can also be treated as staff
+    const isStaff = user?.role === 'staff';
     const isAgent = user?.role === 'agent' || user?.role === 'partner_agent' || isAdmin;
 
     return (

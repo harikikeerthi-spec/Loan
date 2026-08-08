@@ -38,10 +38,13 @@ export class AssignmentController {
    * Useful for backfill on startup or after adding new staff members.
    */
   @Post('assign-all-unassigned')
+  @Post('auto-assign-all-unassigned')
+  @Post('auto-assign')
+  @Post('auto-assign-all')
   async assignAllUnassigned(@Req() req: any) {
     const triggeredBy = req.user?.id || req.user?.uid || 'system';
     const result = await this.assignmentService.assignAllUnassigned(triggeredBy);
-    return { success: true, data: result };
+    return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
   }
 
   @Post('reassign/:loanId')

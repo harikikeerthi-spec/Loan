@@ -98,15 +98,19 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     const [isSupportOpen, setIsSupportOpen] = useState(false);
 
     // Authentication and authorization checks
-    // useEffect(() => {
-    //     if (!isLoading && pathname !== "/staff/login") {
-    //         if (!isAuthenticated) {
-    //             router.replace("/staff/login?redirect=" + encodeURIComponent(pathname));
-    //         } else if (!isStaff) {
-    //             router.replace("/dashboard");
-    //         }
-    //     }
-    // }, [isStaff, isLoading, isAuthenticated, router, pathname]);
+    useEffect(() => {
+        if (!isLoading && pathname !== "/staff/login") {
+            if (!isAuthenticated) {
+                router.replace("/staff/login?redirect=" + encodeURIComponent(pathname));
+            } else if (!isStaff) {
+                if (user?.role === 'admin' || user?.role === 'super_admin') {
+                    router.replace("/admin/dashboard");
+                } else {
+                    router.replace("/dashboard");
+                }
+            }
+        }
+    }, [isStaff, isLoading, isAuthenticated, user, router, pathname]);
 
     // Update real-time clock
     useEffect(() => {

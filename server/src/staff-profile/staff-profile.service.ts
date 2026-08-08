@@ -676,7 +676,25 @@ export class StaffProfileService {
       const { data: staffUsers } = await this.db
         .from('User')
         .select('id, firstName, lastName, email, role')
-        .or('role.eq.staff,role.eq.staff_admin,role.eq.admin,role.eq.super_admin');
+        .or('role.eq.staff,role.eq.staff_admin');
+
+      const { data: adminUsers } = await this.db
+        .from('User')
+        .select('id, email, role')
+        .or('role.eq.admin,role.eq.super_admin');
+
+      const adminKeys = new Set<string>();
+      (adminUsers || []).forEach((u: any) => {
+        if (u.id) adminKeys.add(u.id.toLowerCase());
+        if (u.email) adminKeys.add(u.email.toLowerCase());
+      });
+
+      // Remove admin users from staffMap if present via audit logs
+      for (const [key, member] of Array.from(staffMap.entries())) {
+        if (adminKeys.has(key.toLowerCase()) || (member.email && adminKeys.has(member.email.toLowerCase()))) {
+          staffMap.delete(key);
+        }
+      }
 
       (staffUsers || []).forEach((u: any) => {
         const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.email || 'Staff';
@@ -1354,9 +1372,6 @@ export class StaffProfileService {
 
       if (!application) {
         const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
-        const isBankRecipient = body.recipientType?.toLowerCase() === 'bank';
-        // Only generate VL-APP- application number when routing to bank
-        const appNumber = isBankRecipient ? await this.generateApplicationNumber('default') : undefined;
         const insertApp: any = {
           id: 'la-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
           userId: studentId,
@@ -1375,9 +1390,6 @@ export class StaffProfileService {
           email: mappedDetails.email || studentUser?.email || null,
           phone: mappedDetails.phone || studentUser?.mobile || studentUser?.phone || null,
         };
-        if (appNumber) {
-          insertApp.applicationNumber = appNumber;
-        }
 
         const { data: newApp, error: createAppErr } = await this.db
           .from('LoanApplication')
@@ -1408,19 +1420,12 @@ export class StaffProfileService {
         });
       } else {
         // If application already exists, update it with onboarding details!
-        const isBankRecipient = body.recipientType?.toLowerCase() === 'bank';
-        let updatedAppNumber = application.applicationNumber;
-        if (isBankRecipient && !updatedAppNumber) {
-          updatedAppNumber = await this.generateApplicationNumber('default');
-        }
-
         const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
         const { data: updatedApp, error: updateAppErr } = await this.db
           .from('LoanApplication')
           .update({
             bank: body.recipientName || application.bank,
             updatedAt: new Date().toISOString(),
-            applicationNumber: updatedAppNumber,
             ...mappedDetails,
             firstName: mappedDetails.firstName || application.firstName || studentUser?.firstName || 'Student',
             lastName: mappedDetails.lastName || application.lastName || studentUser?.lastName || 'Applicant',

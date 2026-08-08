@@ -452,10 +452,12 @@ export default function AdminDashboardPage() {
         }
     }, []);
 
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (isSilent = false) => {
         if (activeSection === "overview") return;
-        setLoading(true);
-        setData([]);
+        if (!isSilent) {
+            setLoading(true);
+            setData([]);
+        }
         try {
             let res: any;
             if (activeSection === "users") {
@@ -488,14 +490,14 @@ export default function AdminDashboardPage() {
                     adminApi.getUsers(500, 0, "", "").catch(() => ({ data: [] }))
                 ]);
                 const allUsers = staffRes.data || [];
-                const staffOnly = allUsers.filter((u: any) => u.role === 'staff' || u.role === 'admin' || u.role === 'super_admin');
+                const staffOnly = allUsers.filter((u: any) => u.role === 'staff' || u.role === 'staff_admin');
                 setData(appRes.data || []);
-                setStaffMembers(staffOnly.length > 0 ? staffOnly : allUsers);
+                setStaffMembers(staffOnly);
             } else if (activeSection === "community") {
                 res = await adminApi.getForumPosts(50);
                 setData(res.data || []);
             } else if (activeSection === "analytics") {
-                setAnalyticsLoading(true);
+                if (!isSilent) setAnalyticsLoading(true);
                 const [aStats, uData]: [any, any] = await Promise.all([
                     adminApi.getApplicationStats().catch(() => ({ data: {} })),
                     adminApi.getUsers().catch(() => ({ data: [] }))
@@ -512,7 +514,7 @@ export default function AdminDashboardPage() {
                     },
                     recentUsers: userList.slice(-7).map((u: any) => userList.indexOf(u) + 1),
                 });
-                setAnalyticsLoading(false);
+                if (!isSilent) setAnalyticsLoading(false);
             } else if (activeSection === "audit_logs") {
                 const logs: any = await adminApi.getAuditLogs(100).catch(() => ({ data: [] }));
                 setAllAuditLogs(logs.data || []);
@@ -520,7 +522,7 @@ export default function AdminDashboardPage() {
         } catch (e) {
             console.error(e);
         } finally {
-            setLoading(false);
+            if (!isSilent) setLoading(false);
         }
     }, [activeSection, filterStatus, filterBank, filterLoanType, filterStage, filterFromDate, filterToDate, lastSearchQuery, filterBlogTime, currentPage, roleFilter]);
 
@@ -558,36 +560,40 @@ export default function AdminDashboardPage() {
             // Refresh community data every 20 seconds
             autoRefreshInterval.current = setInterval(() => {
                 loadCommunityData();
-                loadData();
+                loadData(true);
                 setLastRefresh(new Date());
             }, 20000);
         } else if (activeSection === "applications") {
-            // Refresh applications every 15 seconds for real-time updates
+            // Refresh applications every 15 seconds for real-time updates silently
             if (autoRefreshEnabled) {
                 autoRefreshInterval.current = setInterval(() => {
-                    loadData();
+                    loadData(true);
                     setLastRefresh(new Date());
                 }, 15000);
             }
         } else if (activeSection === "analytics") {
             // Refresh analytics every 60 seconds
             autoRefreshInterval.current = setInterval(() => {
-                loadData();
+                loadData(true);
                 setLastRefresh(new Date());
             }, 60000);
         }
 
-        // Also update active users count periodically
+        return () => {
+            if (autoRefreshInterval.current) clearInterval(autoRefreshInterval.current);
+        };
+    }, [activeSection, loadOverview, loadData, loadCommunityData, autoRefreshEnabled]);
+
+    useEffect(() => {
         const userCountInterval = setInterval(() => {
             const count = Math.floor(Math.random() * (stats.userCount || 1) * 0.3) + 1;
             setActiveUsersCount(count);
         }, 15000);
 
         return () => {
-            if (autoRefreshInterval.current) clearInterval(autoRefreshInterval.current);
             clearInterval(userCountInterval);
         };
-    }, [activeSection, loadOverview, loadData, loadCommunityData, stats.userCount, autoRefreshEnabled]);
+    }, [stats.userCount]);
 
     // Initial load of community data
     useEffect(() => {
@@ -1749,7 +1755,7 @@ export default function AdminDashboardPage() {
                                             {f.charAt(0).toUpperCase() + f.slice(1)}
                                         </button>
                                     ))}
-                                    <button onClick={loadData} className="ml-1 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors bg-white border border-slate-200 rounded shadow-sm">
+                                    <button onClick={() => loadData()} className="ml-1 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors bg-white border border-slate-200 rounded shadow-sm">
                                         <span className="material-symbols-outlined text-[16px]">refresh</span>
                                     </button>
                                 </div>
@@ -2357,7 +2363,7 @@ export default function AdminDashboardPage() {
                                         <span className="material-symbols-outlined text-[14px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
                                         {autoRefreshEnabled ? 'Live' : 'Paused'}
                                     </button>
-                                    <button onClick={loadData} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px] hover:bg-slate-200 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <button onClick={() => loadData()} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px] hover:bg-slate-200 transition-colors flex items-center gap-1.5 shadow-sm">
                                         <span className="material-symbols-outlined text-[14px]">refresh</span>Now
                                     </button>
                                 </div>
@@ -2694,7 +2700,7 @@ export default function AdminDashboardPage() {
                                                     {/* App ID & Ref */}
                                                     <td className="px-4 py-3">
                                                         <div className="flex flex-col gap-0.5">
-                                                            {item.applicationNumber ? (
+                                                            {(item.applicationNumber && (item.status === 'submitted_to_bank' || item.bankWorkflowStatus || item.status === 'under_bank_review' || item.status === 'approved' || item.status === 'disbursed')) ? (
                                                                 <span className="inline-flex items-center gap-1">
                                                                     <code className="text-[11px] font-bold text-indigo-700 font-mono bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">{item.applicationNumber}</code>
                                                                 </span>
@@ -2822,10 +2828,10 @@ export default function AdminDashboardPage() {
                                                             <button
                                                                 onClick={() => { setSelectedApp(item); }}
                                                                 className="px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-semibold hover:bg-slate-800 transition-colors flex items-center gap-1"
-                                                                title="View Dossier"
+                                                                title="View Profile"
                                                             >
                                                                 <span className="material-symbols-outlined text-[13px]">visibility</span>
-                                                                Dossier
+                                                                Profile
                                                             </button>
                                                         </div>
                                                     </td>
@@ -2922,7 +2928,7 @@ export default function AdminDashboardPage() {
                                     <button onClick={() => window.location.href = '/admin/blogs/create'} className="px-3 py-1.5 bg-slate-900 text-white rounded font-semibold text-[10px] hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-sm">
                                         <span className="material-symbols-outlined text-[14px]">add</span>New Post
                                     </button>
-                                    <button onClick={loadData} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all bg-white border border-slate-200 rounded-lg shadow-sm">
+                                    <button onClick={() => loadData()} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all bg-white border border-slate-200 rounded-lg shadow-sm">
                                         <span className="material-symbols-outlined text-[20px]">refresh</span>
                                     </button>
                                 </div>
@@ -2993,7 +2999,7 @@ export default function AdminDashboardPage() {
                                             <span className="material-symbols-outlined text-[20px]">description</span>
                                         </div>
                                         <div>
-                                            <h2 className="text-[20px] font-bold text-slate-900 tracking-tight">Application Dossier</h2>
+                                            <h2 className="text-[20px] font-bold text-slate-900 tracking-tight">Application Profile</h2>
                                             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Ref: {selectedApp.applicationNumber || selectedApp.id?.substring(0, 12)}</p>
                                         </div>
                                     </div>

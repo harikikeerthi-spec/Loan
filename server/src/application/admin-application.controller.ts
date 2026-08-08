@@ -1,11 +1,24 @@
 import { Controller, Post, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AdminApplicationService } from './admin-application.service';
+import { AssignmentService } from '../assignment/assignment.service';
 import { StaffGuard } from '../auth/staff.guard';
 
 @Controller('admin/applications')
 @UseGuards(StaffGuard)
 export class AdminApplicationController {
-    constructor(private adminApplicationService: AdminApplicationService) {}
+    constructor(
+        private adminApplicationService: AdminApplicationService,
+        private assignmentService: AssignmentService,
+    ) {}
+
+    @Post('assign-all-unassigned')
+    @Post('auto-assign-all-unassigned')
+    @Post('auto-assign')
+    async assignAllUnassigned(@Request() req: any) {
+        const triggeredBy = req.user?.id || req.user?.uid || 'admin';
+        const result = await this.assignmentService.assignAllUnassigned(triggeredBy);
+        return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
+    }
 
     /**
      * POST /admin/applications/:id/remarks

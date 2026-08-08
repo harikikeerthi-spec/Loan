@@ -117,10 +117,16 @@ export default function ApplicationManagement() {
         setLoadingDetail(true);
         try {
             const appId = row.id || row._id;
-            const detailRes = await bankApi.getFileDetail(appId);
-            if (detailRes) {
-                setSelectedApp((prev: any) => ({ ...prev, ...detailRes }));
-            }
+            const [detailRes, docsRes]: [any, any] = await Promise.all([
+                bankApi.getFileDetail(appId).catch(() => null),
+                bankApi.getDocuments(appId).catch(() => [])
+            ]);
+            const docsList = Array.isArray(docsRes) ? docsRes : (docsRes?.data || docsRes?.documents || []);
+            setSelectedApp((prev: any) => ({
+                ...prev,
+                ...(detailRes || {}),
+                documents: docsList.length > 0 ? docsList : (detailRes?.documents || prev?.documents || [])
+            }));
         } catch (err) {
             console.error("Error loading complete student details:", err);
         } finally {
@@ -613,11 +619,10 @@ export default function ApplicationManagement() {
                                                             e.stopPropagation();
                                                             handleOpenStudentDetail(row);
                                                         }}
-                                                        className="text-[14.5px] font-bold text-slate-950 hover:text-[#6605c7] hover:underline transition-colors cursor-pointer inline-flex items-center gap-1.5 group"
+                                                        className="text-[14.5px] font-bold text-slate-950 hover:text-indigo-600 hover:underline transition-colors cursor-pointer inline-flex items-center gap-1.5 group"
                                                         title="Click to view complete student profile and all details"
                                                     >
                                                         <span>{row.firstName} {row.lastName}</span>
-                                                        <span className="material-symbols-outlined text-xs text-[#6605c7] opacity-80 group-hover:scale-110 transition-transform">account_circle</span>
                                                     </p>
                                                     <p className="text-xs text-slate-400 font-medium truncate max-w-[180px]">
                                                         {row.universityName || "Foreign University"}
@@ -1346,23 +1351,23 @@ export default function ApplicationManagement() {
                             exit={{ scale: 0.95, opacity: 0, y: 10 }}
                             className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden border border-slate-200/90 my-8 max-h-[92vh] flex flex-col"
                         >
-                            {/* Modal Header */}
-                            <div className="bg-slate-900 text-white p-6 flex flex-wrap items-center justify-between gap-4 shrink-0 relative">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6605c7] to-[#9333ea] flex items-center justify-center text-white text-xl font-black shadow-lg shadow-purple-500/20 border border-purple-400/30">
+                            {/* Modal Executive Header Banner */}
+                            <div className="bg-white px-6 py-5 border-b border-[#E2E8F0] flex flex-wrap items-center justify-between gap-4 shrink-0 font-sans">
+                                <div className="flex items-center gap-3.5">
+                                    <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-extrabold text-lg shadow-2xs">
                                         {(selectedApp.firstName || '?')[0]}{(selectedApp.lastName || '')[0] || ''}
                                     </div>
                                     <div>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <h2 className="text-xl font-black uppercase tracking-tight text-white">
+                                        <div className="flex items-center gap-3 flex-wrap">
+                                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                                                 {selectedApp.firstName} {selectedApp.lastName}
                                             </h2>
                                             <StatusBadge status={selectedApp.status} />
                                         </div>
-                                        <p className="text-xs text-slate-400 font-mono mt-0.5 flex items-center gap-3">
-                                            <span>LAN: <strong className="text-purple-300">{selectedApp.lanNumber || "Pending"}</strong></span>
-                                            <span>•</span>
-                                            <span>App ID: <strong className="text-slate-300">{selectedApp.applicationNumber || selectedApp.id?.slice(0, 14)}</strong></span>
+                                        <p className="text-xs text-[#64748B] font-mono mt-0.5 flex items-center gap-3">
+                                            <span>LAN: <strong className="text-indigo-600 font-bold">{selectedApp.lanNumber || "Pending"}</strong></span>
+                                            <span className="opacity-40">•</span>
+                                            <span>App ID: <strong className="text-slate-700 font-bold">{selectedApp.applicationNumber || selectedApp.id?.slice(0, 14)}</strong></span>
                                         </p>
                                     </div>
                                 </div>
@@ -1370,20 +1375,9 @@ export default function ApplicationManagement() {
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            const idToUse = selectedApp.id || selectedApp._id;
-                                            router.push(`/bank/decisions?id=${idToUse}`);
-                                        }}
-                                        className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer uppercase tracking-wider"
-                                        title="Open full underwriting appraisal page"
-                                    >
-                                        <span>Appraisal Workspace</span>
-                                        <span className="material-symbols-outlined text-sm">open_in_new</span>
-                                    </button>
-                                    <button
-                                        type="button"
                                         onClick={() => setShowUserDetailModal(false)}
-                                        className="w-9 h-9 rounded-full bg-slate-800 hover:bg-rose-500 text-slate-400 hover:text-white transition-all flex items-center justify-center cursor-pointer"
+                                        className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-all flex items-center justify-center cursor-pointer border-0"
+                                        title="Close details viewer"
                                     >
                                         <span className="material-symbols-outlined text-lg">close</span>
                                     </button>
@@ -1391,7 +1385,7 @@ export default function ApplicationManagement() {
                             </div>
 
                             {/* Modal Tabs Navigation */}
-                            <div className="bg-slate-50 border-b border-slate-200/80 px-6 pt-3 flex items-center gap-1 overflow-x-auto shrink-0 custom-scrollbar">
+                            <div className="bg-white border-b border-[#E2E8F0] px-6 pt-2 flex items-center gap-1.5 overflow-x-auto shrink-0 custom-scrollbar font-sans">
                                 {[
                                     { id: "personal", label: "Personal Profile", icon: "person" },
                                     { id: "academic", label: "Academic & Scores", icon: "school" },
@@ -1404,9 +1398,9 @@ export default function ApplicationManagement() {
                                         <button
                                             key={tab.id}
                                             onClick={() => setDetailTab(tab.id as any)}
-                                            className={`px-4 py-2.5 rounded-t-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer border-b-2 ${isActive
-                                                ? "bg-white text-[#6605c7] border-[#6605c7] shadow-sm"
-                                                : "text-slate-500 hover:text-slate-900 border-transparent hover:bg-slate-100/60"
+                                            className={`px-4 py-2.5 rounded-t-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer border-b-2 ${isActive
+                                                ? "bg-indigo-50/70 text-indigo-600 border-indigo-600 font-bold shadow-2xs"
+                                                : "text-slate-500 hover:text-slate-900 border-transparent hover:bg-slate-50"
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-base">{tab.icon}</span>
@@ -1417,10 +1411,10 @@ export default function ApplicationManagement() {
                             </div>
 
                             {/* Modal Body Container */}
-                            <div className="p-6 overflow-y-auto flex-1 max-h-[calc(92vh-220px)] custom-scrollbar bg-slate-50/30">
+                            <div className="p-6 overflow-y-auto flex-1 max-h-[calc(92vh-220px)] custom-scrollbar bg-slate-50/30 font-sans">
                                 {loadingDetail ? (
                                     <div className="py-12 flex flex-col items-center justify-center gap-3">
-                                        <div className="w-10 h-10 border-3 border-purple-200 border-t-[#6605c7] rounded-full animate-spin" />
+                                        <div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                                         <span className="text-xs font-bold text-slate-500">Retrieving full student records & files...</span>
                                     </div>
                                 ) : (
@@ -1428,241 +1422,318 @@ export default function ApplicationManagement() {
                                         {/* Tab 1: Personal Profile */}
                                         {detailTab === "personal" && (
                                             <div className="space-y-6">
-                                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-2 pb-2 border-b border-slate-100">
-                                                        <span className="material-symbols-outlined text-base">badge</span>
+                                                <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+                                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-3 border-b border-[#E2E8F0]">
+                                                        <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                            <span className="material-symbols-outlined text-base">badge</span>
+                                                        </span>
                                                         Identity & Contact Information
                                                     </h3>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">First Name</span>
-                                                            <span className="font-extrabold text-slate-900 text-sm">{selectedApp.firstName || "N/A"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">First Name</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.firstName || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Last Name</span>
-                                                            <span className="font-extrabold text-slate-900 text-sm">{selectedApp.lastName || "N/A"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Last Name</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.lastName || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Gender & DOB</span>
-                                                            <span className="font-bold text-slate-800">{selectedApp.gender || "Male"} • {selectedApp.dob || "15/08/2000"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Gender & DOB</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.gender || "N/A"} {selectedApp.dob ? `• ${selectedApp.dob}` : ""}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email Address</span>
-                                                            <span className="font-bold text-slate-900 truncate block">{selectedApp.email || "N/A"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Email Address</span>
+                                                            <span className="text-sm font-semibold text-slate-800 truncate block">{selectedApp.email || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mobile / Phone</span>
-                                                            <span className="font-bold text-slate-900">{selectedApp.phone || selectedApp.mobile || "+91 98765 43210"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Mobile / Phone</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.phone || selectedApp.mobile || selectedApp.phoneNumber || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Student System ID</span>
-                                                            <span className="font-mono font-bold text-purple-700">{selectedApp.userId || selectedApp.studentId || selectedApp.id}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Student System ID</span>
+                                                            <span className="font-mono font-bold text-slate-900">{selectedApp.userId || selectedApp.studentId || selectedApp.id}</span>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-2 pb-2 border-b border-slate-100">
-                                                        <span className="material-symbols-outlined text-base">home_pin</span>
+                                                <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+                                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-3 border-b border-[#E2E8F0]">
+                                                        <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                            <span className="material-symbols-outlined text-base">home_pin</span>
+                                                        </span>
                                                         Address & National Identifiers
                                                     </h3>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                                                        <div className="md:col-span-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Permanent Residence Address</span>
-                                                            <span className="font-semibold text-slate-800">{selectedApp.address || "H-42, Academic Green Colony, Jubilee Hills, Hyderabad"} {selectedApp.city ? `, ${selectedApp.city}` : ""}{selectedApp.state ? `, ${selectedApp.state}` : ""} {selectedApp.pincode || "500033"}</span>
+                                                        <div className="md:col-span-3 bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Permanent Residence Address</span>
+                                                            <span className="text-sm font-semibold text-slate-800">
+                                                                {selectedApp.address ? `${selectedApp.address}${selectedApp.city ? `, ${selectedApp.city}` : ""}${selectedApp.state ? `, ${selectedApp.state}` : ""}${selectedApp.pincode ? ` - ${selectedApp.pincode}` : ""}` : "Not Provided"}
+                                                            </span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">PAN Card Number</span>
-                                                            <span className="font-mono font-bold text-slate-900 uppercase">{selectedApp.panNumber || "ABCDE1234F"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">PAN Card Number</span>
+                                                            <span className="font-mono text-sm font-semibold text-slate-800 uppercase">{selectedApp.panNumber || selectedApp.pan || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Aadhaar Number</span>
-                                                            <span className="font-mono font-bold text-slate-900">{selectedApp.aadhaarNumber || "XXXX-XXXX-8921"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Aadhaar Number</span>
+                                                            <span className="font-mono text-sm font-semibold text-slate-800">{selectedApp.aadhaarNumber || selectedApp.aadhaar || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Passport Number</span>
-                                                            <span className="font-mono font-bold text-slate-900 uppercase">{selectedApp.passportNumber || "Z8901234"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Passport Number</span>
+                                                            <span className="font-mono text-sm font-semibold text-slate-800 uppercase">{selectedApp.passportNumber || selectedApp.passport || "N/A"}</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Tab 2: Academic & Test Scores */}
+                                        {/* Tab 2: Academic & Test Scores (DYNAMIC) */}
                                         {detailTab === "academic" && (
                                             <div className="space-y-6">
-                                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-2 pb-2 border-b border-slate-100">
-                                                        <span className="material-symbols-outlined text-base">school</span>
+                                                <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+                                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-3 border-b border-[#E2E8F0]">
+                                                        <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                            <span className="material-symbols-outlined text-base">school</span>
+                                                        </span>
                                                         Target Program & Country
                                                     </h3>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                                                        <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
-                                                            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Target Foreign University</span>
-                                                            <span className="font-black text-slate-900 text-base">{selectedApp.universityName || "Heidelberg University"}</span>
+                                                        <div className="bg-indigo-50/40 p-4 rounded-xl border border-indigo-100">
+                                                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block mb-1">Target Foreign University</span>
+                                                            <span className="font-extrabold text-slate-900 text-base">{selectedApp.universityName || selectedApp.university || selectedApp.targetUniversity || "Not Specified"}</span>
                                                         </div>
-                                                        <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
-                                                            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Degree & Course</span>
-                                                            <span className="font-black text-slate-900 text-base">{selectedApp.courseName || "MS in Computer Science & AI"} ({selectedApp.degree || "Masters"})</span>
+                                                        <div className="bg-indigo-50/40 p-4 rounded-xl border border-indigo-100">
+                                                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block mb-1">Degree & Course</span>
+                                                            <span className="font-extrabold text-slate-900 text-base">
+                                                                {selectedApp.courseName || selectedApp.course || selectedApp.program || "Course Pending"}
+                                                                {selectedApp.degree ? ` (${selectedApp.degree})` : ""}
+                                                            </span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Destination Country</span>
-                                                            <span className="font-bold text-slate-900">{selectedApp.country || "Germany / USA"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Destination Country</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.country || selectedApp.countryOfStudy || selectedApp.studyDestination || "Not Specified"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Target Intake</span>
-                                                            <span className="font-bold text-slate-900">{selectedApp.intakeYear || "Fall 2026"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Target Intake</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.intakeYear || selectedApp.intake || selectedApp.targetIntake || "Not Specified"}</span>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-2 pb-2 border-b border-slate-100">
-                                                        <span className="material-symbols-outlined text-base">analytics</span>
+                                                <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+                                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-3 border-b border-[#E2E8F0]">
+                                                        <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                            <span className="material-symbols-outlined text-base">analytics</span>
+                                                        </span>
                                                         Standardized Test Scores & Prior Academics
                                                     </h3>
                                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Academic % / GPA</span>
-                                                            <span className="font-black text-emerald-700 text-lg">{selectedApp.academicPercentage || "88.4%"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] text-center">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Academic % / GPA</span>
+                                                            <span className="font-extrabold text-slate-900 text-base">
+                                                                {selectedApp.academicPercentage || selectedApp.academicScore || selectedApp.percentage || (selectedApp.sscScore ? `SSC: ${selectedApp.sscScore}%` : null) || "N/A"}
+                                                            </span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">GRE Score</span>
-                                                            <span className="font-black text-purple-700 text-lg">{selectedApp.greScore || "322 / 340"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] text-center">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">GRE Score</span>
+                                                            <span className="font-extrabold text-slate-900 text-base">
+                                                                {selectedApp.greScore || selectedApp.gre || selectedApp.user?.greScore || "N/A"}
+                                                            </span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">IELTS Band</span>
-                                                            <span className="font-black text-indigo-700 text-lg">{selectedApp.ieltsScore || "7.5 / 9.0"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] text-center">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">IELTS Band</span>
+                                                            <span className="font-extrabold text-slate-900 text-base">
+                                                                {selectedApp.ieltsScore || selectedApp.ielts || selectedApp.user?.ieltsScore || "N/A"}
+                                                            </span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">TOEFL Score</span>
-                                                            <span className="font-black text-blue-700 text-lg">{selectedApp.toeflScore || "105 / 120"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] text-center">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">TOEFL Score</span>
+                                                            <span className="font-extrabold text-slate-900 text-base">
+                                                                {selectedApp.toeflScore || selectedApp.toefl || selectedApp.user?.toeflScore || "N/A"}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Tab 3: Co-Applicant & Financials */}
+                                        {/* Tab 3: Co-Applicant & Financials (DYNAMIC) */}
                                         {detailTab === "financial" && (
                                             <div className="space-y-6">
-                                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-2 pb-2 border-b border-slate-100">
-                                                        <span className="material-symbols-outlined text-base">supervisor_account</span>
+                                                <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+                                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-3 border-b border-[#E2E8F0]">
+                                                        <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                            <span className="material-symbols-outlined text-base">supervisor_account</span>
+                                                        </span>
                                                         Co-Applicant / Guarantor Profile
                                                     </h3>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Co-Applicant Name</span>
-                                                            <span className="font-extrabold text-slate-900 text-sm">{selectedApp.coApplicantName || "Rajesh Sharma"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Co-Applicant Name</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.coApplicantName || selectedApp.coApplicant || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Relationship</span>
-                                                            <span className="font-bold text-slate-800">{selectedApp.coApplicantRelation || "Father"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Relationship</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.coApplicantRelation || selectedApp.relation || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Occupation</span>
-                                                            <span className="font-bold text-slate-800">{selectedApp.coApplicantOccupation || "Senior Business Executive"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Occupation</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.coApplicantOccupation || selectedApp.occupation || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Annual Income</span>
-                                                            <span className="font-black text-emerald-700 text-sm">₹{(selectedApp.coApplicantIncome || 1450000).toLocaleString("en-IN")} / year</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Annual Income</span>
+                                                            <span className="text-sm font-semibold text-emerald-700 font-mono">
+                                                                {selectedApp.coApplicantIncome ? `₹${Number(selectedApp.coApplicantIncome).toLocaleString("en-IN")} / year` : "N/A"}
+                                                            </span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Co-Applicant PAN</span>
-                                                            <span className="font-mono font-bold text-slate-900 uppercase">{selectedApp.coApplicantPan || "FGHIJ5678K"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Co-Applicant PAN</span>
+                                                            <span className="font-mono text-sm font-semibold text-slate-800 uppercase">{selectedApp.coApplicantPan || "N/A"}</span>
                                                         </div>
-                                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Co-Applicant Mobile</span>
-                                                            <span className="font-bold text-slate-900">{selectedApp.coApplicantMobile || "+91 98490 12345"}</span>
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Co-Applicant Mobile</span>
+                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.coApplicantMobile || selectedApp.coappPhone || "N/A"}</span>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-2 pb-2 border-b border-slate-100">
-                                                        <span className="material-symbols-outlined text-base">credit_score</span>
+                                                <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+                                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-3 border-b border-[#E2E8F0]">
+                                                        <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                            <span className="material-symbols-outlined text-base">credit_score</span>
+                                                        </span>
                                                         Loan Amount & Credit Rating
                                                     </h3>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                                                        <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                                                            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Total Loan Requested</span>
-                                                            <span className="font-black text-[#6605c7] text-xl font-mono">₹{(selectedApp.amount || 0).toLocaleString("en-IN")}</span>
+                                                        <div className="bg-indigo-50/40 p-4 rounded-xl border border-indigo-100">
+                                                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block mb-1">Total Loan Requested</span>
+                                                            <span className="font-extrabold text-slate-900 text-xl font-mono">₹{(selectedApp.amount || 0).toLocaleString("en-IN")}</span>
                                                         </div>
-                                                        <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                                                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">CIBIL Credit Score</span>
-                                                            <span className="font-black text-emerald-800 text-xl font-mono flex items-center gap-1">
-                                                                <span className="material-symbols-outlined text-base">verified</span>
-                                                                765 <span className="text-xs font-normal text-emerald-700">(Excellent)</span>
+                                                        <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">CIBIL Credit Score</span>
+                                                            {(() => {
+                                                                const score = selectedApp.cibilScore || selectedApp.cibil || selectedApp.creditScore || selectedApp.user?.cibilScore || selectedApp.user?.cibil;
+                                                                if (!score) {
+                                                                    return <span className="font-semibold text-slate-500 text-sm">Pending</span>;
+                                                                }
+                                                                const scoreNum = Number(score);
+                                                                let rating = "Good";
+                                                                let colorClass = "text-emerald-700";
+                                                                if (scoreNum >= 750) { rating = "Excellent"; colorClass = "text-emerald-700"; }
+                                                                else if (scoreNum >= 700) { rating = "Good"; colorClass = "text-emerald-600"; }
+                                                                else if (scoreNum >= 650) { rating = "Fair"; colorClass = "text-amber-600"; }
+                                                                else { rating = "Needs Improvement"; colorClass = "text-rose-600"; }
+
+                                                                return (
+                                                                    <span className={`font-extrabold text-xl font-mono flex items-center gap-1.5 ${colorClass}`}>
+                                                                        <span className="material-symbols-outlined text-base">verified</span>
+                                                                        {scoreNum} <span className="text-xs font-medium text-slate-600">({rating})</span>
+                                                                    </span>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                        <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Collateral Offered</span>
+                                                            <span className="text-sm font-semibold text-slate-800">
+                                                                {selectedApp.collateralOffered || selectedApp.hasCollateral
+                                                                    ? `${selectedApp.collateralType || 'Property'} (₹${(Number(selectedApp.collateralValue) || 0).toLocaleString('en-IN')})`
+                                                                    : "Unsecured Loan (No Collateral)"}
                                                             </span>
-                                                        </div>
-                                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Collateral Offered</span>
-                                                            <span className="font-bold text-slate-900">{selectedApp.collateralOffered ? `${selectedApp.collateralType || 'Property'} (₹${(selectedApp.collateralValue || 0).toLocaleString('en-IN')})` : "Unsecured Loan (No Collateral)"}</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Tab 4: Uploaded Documents */}
+                                        {/* Tab 4: Uploaded Documents (DYNAMIC - ONLY UPLOADED FILES) */}
                                         {detailTab === "documents" && (
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7]">
-                                                        Attached Student Application Files
-                                                    </h3>
-                                                    <span className="text-xs text-slate-400 font-medium">All documents verified by VidyaLoans Audit</span>
-                                                </div>
+                                            <div className="space-y-4 font-sans">
+                                                {(() => {
+                                                    const rawDocs: any[] = selectedApp.documents || selectedApp.userDocuments || selectedApp.uploadedDocuments || [];
+                                                    const uploadedDocs = rawDocs.filter((doc: any) => {
+                                                        if (doc.status === "not_uploaded") return false;
+                                                        return !!(doc.filePath || doc.url || doc.uploaded || doc.status === "uploaded" || doc.status === "verified" || doc.fileName);
+                                                    });
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                                                    {[
-                                                        { title: "Student Passport Copy", type: "Identification", file: `${selectedApp.firstName}_Passport.pdf` },
-                                                        { title: "University Admission Offer Letter", type: "Academic", file: `${selectedApp.universityName || 'University'}_Admission.pdf` },
-                                                        { title: "10th & 12th Academic Transcripts", type: "Academic", file: "Academic_Marksheets_Combined.pdf" },
-                                                        { title: "Bachelor Degree Certificate & Semester Slips", type: "Academic", file: "Degree_Consolidated.pdf" },
-                                                        { title: "Co-Applicant ITR & Salary Slips (Last 3 Yrs)", type: "Financial", file: "Income_Tax_Returns_CoApp.pdf" },
-                                                        { title: "Bank Account Statements (6 Months)", type: "Financial", file: "Bank_Statement_6M.pdf" },
-                                                    ].map((doc, idx) => (
-                                                        <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200/80 hover:border-purple-200 shadow-xs flex items-center justify-between gap-3 transition-all">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-xl bg-purple-50 text-[#6605c7] flex items-center justify-center border border-purple-100">
-                                                                    <span className="material-symbols-outlined text-xl">description</span>
-                                                                </div>
-                                                                <div>
-                                                                    <h4 className="font-extrabold text-slate-900">{doc.title}</h4>
-                                                                    <p className="text-[11px] text-slate-400 font-mono">{doc.file}</p>
-                                                                </div>
+                                                    return (
+                                                        <>
+                                                            <div className="flex items-center justify-between">
+                                                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                                    Attached Student Application Files ({uploadedDocs.length})
+                                                                </h3>
+                                                                <span className="text-xs text-[#64748B] font-medium">All documents verified by VidyaLoans Audit</span>
                                                             </div>
-                                                            <a
-                                                                href={`/api/documents/download?appId=${selectedApp.id}&file=${encodeURIComponent(doc.file)}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="px-3 py-1.5 bg-slate-100 hover:bg-[#6605c7] text-slate-700 hover:text-white rounded-xl font-bold text-[11px] transition-all flex items-center gap-1 shrink-0"
-                                                            >
-                                                                <span className="material-symbols-outlined text-xs">visibility</span>
-                                                                View
-                                                            </a>
-                                                        </div>
-                                                    ))}
-                                                </div>
+
+                                                            {uploadedDocs.length === 0 ? (
+                                                                <div className="bg-white p-8 rounded-2xl border border-[#E2E8F0] text-center space-y-2 my-2">
+                                                                    <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+                                                                        <span className="material-symbols-outlined text-2xl">folder_off</span>
+                                                                    </div>
+                                                                    <p className="text-sm font-bold text-slate-800">No Uploaded Documents Found</p>
+                                                                    <p className="text-xs text-slate-500">The student has not uploaded any document files for this application yet.</p>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                                                    {uploadedDocs.map((doc: any, idx: number) => {
+                                                                        const docTitle = doc.docName || doc.title || doc.fileName || doc.name || doc.docType || `Uploaded Document ${idx + 1}`;
+                                                                        const docFileName = doc.fileName || doc.filePath?.split("/").pop() || `${doc.docType || 'Document'}.pdf`;
+                                                                        const docTypeLabel = doc.docType || doc.category || "Uploaded File";
+                                                                        const fileTarget = doc.filePath || doc.url || docFileName;
+                                                                        const downloadUrl = `/api/documents/download?appId=${selectedApp.id}&file=${encodeURIComponent(fileTarget)}`;
+
+                                                                        return (
+                                                                            <div key={doc.id || idx} className="bg-white p-4 rounded-2xl border border-[#E2E8F0] hover:border-indigo-200 shadow-2xs flex items-center justify-between gap-3 transition-all">
+                                                                                <div className="flex items-center gap-3 min-w-0">
+                                                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
+                                                                                        <span className="material-symbols-outlined text-xl">
+                                                                                            {docTypeLabel.toLowerCase().includes("passport") || docTypeLabel.toLowerCase().includes("id") ? "badge" :
+                                                                                             docTypeLabel.toLowerCase().includes("academic") || docTypeLabel.toLowerCase().includes("transcript") || docTypeLabel.toLowerCase().includes("degree") || docTypeLabel.toLowerCase().includes("offer") ? "school" :
+                                                                                             docTypeLabel.toLowerCase().includes("tax") || docTypeLabel.toLowerCase().includes("statement") || docTypeLabel.toLowerCase().includes("bank") || docTypeLabel.toLowerCase().includes("itr") ? "payments" : "description"}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="min-w-0">
+                                                                                        <h4 className="font-bold text-slate-900 truncate" title={docTitle}>{docTitle}</h4>
+                                                                                        <p className="text-[11px] text-slate-400 font-mono truncate" title={docFileName}>{docFileName}</p>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <a
+                                                                                    href={downloadUrl}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-[#0F172A] text-slate-700 hover:text-white rounded-xl font-bold text-[11px] transition-all flex items-center gap-1 shrink-0 border-0"
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-xs">visibility</span>
+                                                                                    View
+                                                                                </a>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         )}
 
                                         {/* Tab 5: Bank Decisions & Actions */}
                                         {detailTab === "decisions" && (
                                             <div className="space-y-6">
-                                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-2 pb-2 border-b border-slate-100">
-                                                        <span className="material-symbols-outlined text-base">gavel</span>
+                                                <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-4">
+                                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 pb-3 border-b border-[#E2E8F0]">
+                                                        <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                            <span className="material-symbols-outlined text-base">gavel</span>
+                                                        </span>
                                                         Current Decision Status & Actions
                                                     </h3>
 
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assigned LAN Number</span>
+                                                        <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] space-y-2">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block">Assigned LAN Number</span>
                                                             <div className="flex items-center gap-2">
-                                                                <span className="font-mono font-black text-purple-700 text-sm bg-purple-50 px-3 py-1 rounded-lg border border-purple-200">
+                                                                <span className="font-mono font-bold text-indigo-600 text-sm bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
                                                                     {selectedApp.lanNumber || "Not Assigned"}
                                                                 </span>
                                                                 {!selectedApp.lanNumber && (
@@ -1672,7 +1743,7 @@ export default function ApplicationManagement() {
                                                                             setShowUserDetailModal(false);
                                                                             setShowLanModal(true);
                                                                         }}
-                                                                        className="px-3 py-1 bg-[#6605c7] text-white rounded-lg font-bold text-[11px] hover:bg-[#5203a4]"
+                                                                        className="px-3 py-1 bg-[#0F172A] hover:bg-[#1E293B] text-white rounded-lg font-bold text-[11px] transition-all border-0"
                                                                     >
                                                                         Assign LAN
                                                                     </button>
@@ -1680,8 +1751,8 @@ export default function ApplicationManagement() {
                                                             </div>
                                                         </div>
 
-                                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Audit Verdict</span>
+                                                        <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] space-y-2">
+                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block">Audit Verdict</span>
                                                             <StatusBadge status={selectedApp.status} />
                                                         </div>
                                                     </div>
@@ -1693,22 +1764,10 @@ export default function ApplicationManagement() {
                                                                 setShowUserDetailModal(false);
                                                                 setShowDecisionModal(true);
                                                             }}
-                                                            className="px-4 py-2.5 bg-[#6605c7] hover:bg-[#5203a4] text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider"
+                                                            className="px-4 py-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider border-0"
                                                         >
                                                             <span className="material-symbols-outlined text-base">gavel</span>
                                                             Submit Decision (Sanction / Reject / Counter)
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setShowUserDetailModal(false);
-                                                                const idToUse = selectedApp.id || selectedApp._id;
-                                                                router.push(`/bank/decisions?id=${idToUse}`);
-                                                            }}
-                                                            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer uppercase tracking-wider"
-                                                        >
-                                                            <span className="material-symbols-outlined text-base">open_in_new</span>
-                                                            Open Underwriting Appraisal Workspace
                                                         </button>
                                                     </div>
                                                 </div>
