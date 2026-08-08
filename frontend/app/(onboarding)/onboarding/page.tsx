@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UniversityCard from "@/components/UniversityCard";
 import UniDetailModal from "@/components/UniDetailModal";
-import { aiApi, onboardingApi, documentApi, authApi } from '@/lib/api';
+import { aiApi, onboardingApi, documentApi, authApi, referenceApi } from '@/lib/api';
 import { useAuth } from "@/contexts/AuthContext";
 
 const COUNTRY_FLAGS: Record<string, string> = {

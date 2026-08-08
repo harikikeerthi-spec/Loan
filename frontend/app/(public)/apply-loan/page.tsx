@@ -943,17 +943,34 @@ export default function ApplyLoanPage() {
                                                 <span className="material-symbols-outlined text-lg text-[#6605c7]">payments</span>
                                                 Requested Loan Amount
                                             </label>
-                                            <span className="text-base font-black text-[#6605c7] bg-purple-50 border border-purple-100 px-4 py-2 rounded-2xl shadow-sm self-start sm:self-auto select-none">
-                                                {formatAmountDisplay(formData.amount)}
-                                            </span>
+                                            <div className="flex flex-col items-start sm:items-end gap-1.5">
+                                                <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-100 px-4 py-2 rounded-2xl shadow-sm">
+                                                    <span className="text-base font-black text-[#6605c7]">₹</span>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.amount}
+                                                        onChange={(e) => {
+                                                            const formatted = formatIndianCurrency(e.target.value, 8);
+                                                            update("amount", formatted);
+                                                        }}
+                                                        className="text-base font-black text-[#6605c7] bg-transparent text-right w-36 focus:outline-none"
+                                                        placeholder="40,00,000"
+                                                    />
+                                                </div>
+                                                {formData.amount && convertNumberToWords(formData.amount) && (
+                                                    <span className="text-[11px] font-bold text-[#6605c7] bg-purple-100/70 border border-purple-200/50 px-3 py-1 rounded-xl shadow-xs">
+                                                        {convertNumberToWords(formData.amount)} Rupees
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="relative pt-4 pb-2 px-1">
                                             <input
                                                 type="range"
-                                                min="0"
+                                                min="1"
                                                 max="150"
-                                                step="5"
+                                                step="1"
                                                 value={amountLakhs}
                                                 onChange={(e) => handleSliderChange(Number(e.target.value))}
                                                 className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-[#6605c7] focus:outline-none transition-all duration-300"
@@ -962,7 +979,7 @@ export default function ApplyLoanPage() {
                                                 }}
                                             />
                                             <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-wider mt-4 px-1 select-none">
-                                                <span>0</span>
+                                                <span>1L</span>
                                                 <span>20L</span>
                                                 <span>40L</span>
                                                 <span>60L</span>

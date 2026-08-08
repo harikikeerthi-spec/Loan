@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props) {
     const dbBank = await getDynamicBankBySlug(slug);
     const name = dbBank ? dbBank.name : (banks[slug]?.name || "Bank Not Found");
     const description = dbBank ? (dbBank.features?.[0] || `Get customized education loans from ${dbBank.name}.`) : (banks[slug]?.description || "");
-    
+
     return {
         title: `${name} Education Loan - VidyaLoan`,
         description: description,
@@ -42,10 +42,10 @@ export default async function BankPage({ params }: Props) {
     let bank = banks[slug];
 
     if (dbBank) {
-        const roiStr = dbBank.interestRateMin === dbBank.interestRateMax 
-            ? `${dbBank.interestRateMin}%` 
+        const roiStr = dbBank.interestRateMin === dbBank.interestRateMax
+            ? `${dbBank.interestRateMin}%`
             : `${dbBank.interestRateMin}% - ${dbBank.interestRateMax}%`;
-            
+
         const dbFeatures = dbBank.features && dbBank.features.length > 0 ? dbBank.features.map((feat: string, i: number) => {
             const colors = [
                 { iconColor: "text-red-500", bgColor: "bg-red-500/10", icon: "percent" },
@@ -233,10 +233,10 @@ export default async function BankPage({ params }: Props) {
                                         <span className="material-symbols-outlined">verified_user</span>
                                         Check Eligibility
                                     </Link>
-                                    <Link href="/referral" className="px-8 py-4 bg-gradient-to-r from-[#e0c389] to-[#d4a743] rounded-xl font-bold text-gray-900 shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center gap-2">
+                                    {/* <Link href="/referral" className="px-8 py-4 bg-gradient-to-r from-[#e0c389] to-[#d4a743] rounded-xl font-bold text-gray-900 shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center gap-2">
                                         <span className="material-symbols-outlined">card_giftcard</span>
                                         Refer & Earn ₹3,000
-                                    </Link>
+                                    </Link> */}
                                 </div>
                             </div>
                         </div>
@@ -455,10 +455,10 @@ export default async function BankPage({ params }: Props) {
                                     <p className="text-gray-700 mt-2">No limits! Keep referring. Keep earning.</p>
                                 </div>
                             </div>
-                            <Link href="/referral" className="px-10 py-5 bg-gray-900 text-white rounded-xl font-bold text-lg hover:bg-gray-800 hover:scale-105 active:scale-95 transition-all shadow-xl uppercase tracking-wider flex items-center gap-3 whitespace-nowrap">
+                            {/* <Link href="/referral" className="px-10 py-5 bg-gray-900 text-white rounded-xl font-bold text-lg hover:bg-gray-800 hover:scale-105 active:scale-95 transition-all shadow-xl uppercase tracking-wider flex items-center gap-3 whitespace-nowrap">
                                 <span className="material-symbols-outlined text-xl">card_giftcard</span>
                                 Refer Now
-                            </Link>
+                            </Link> */}
                         </div>
                     </div>
                 </section>
@@ -549,10 +549,10 @@ export default async function BankPage({ params }: Props) {
                                 <Link href="/loan-eligibility" className="px-12 py-5 bg-white/20 backdrop-blur-md border border-white/40 text-white rounded-xl font-bold text-base hover:bg-white/30 transition-all uppercase tracking-wider">
                                     Check Eligibility
                                 </Link>
-                                <Link href="/referral" className="px-12 py-5 bg-gradient-to-r from-[#e0c389] to-[#d4a743] text-gray-900 rounded-xl font-bold text-base hover:shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-2">
+                                {/* <Link href="/referral" className="px-12 py-5 bg-gradient-to-r from-[#e0c389] to-[#d4a743] text-gray-900 rounded-xl font-bold text-base hover:shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase tracking-wider flex items-center gap-2">
                                     <span className="material-symbols-outlined">card_giftcard</span>
                                     Refer & Earn
-                                </Link>
+                                </Link> */}
                             </div>
                             <div className="flex flex-wrap justify-center gap-8 items-center opacity-80 text-sm font-medium">
                                 <span className="flex items-center gap-2"><span className="material-symbols-outlined text-lg">verified</span> 100% Free Service</span>

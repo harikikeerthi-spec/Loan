@@ -210,13 +210,28 @@ export default function DecisionsHub() {
         try {
             const res: any = await adminApi.getRemarks(appId);
             if (res && res.success && res.data) {
-                setNotesList(res.data.map((n: any) => ({
-                    id: n.id,
-                    author: n.authorName || "Staff",
-                    role: n.type || "Underwriter",
-                    text: n.content,
-                    timestamp: format(new Date(n.createdAt), "dd MMM yyyy, hh:mm a")
-                })));
+                setNotesList(res.data.map((n: any) => {
+                    let noteText = n.content;
+                    let noteTime = n.createdAt;
+                    if (typeof n.content === 'string' && n.content.trim().startsWith('{')) {
+                        try {
+                            const parsed = JSON.parse(n.content);
+                            if (parsed.content) noteText = parsed.content;
+                            if (parsed.timestamp) noteTime = parsed.timestamp;
+                        } catch (_) {}
+                    }
+                    let formattedTime = "Just now";
+                    try {
+                        if (noteTime) formattedTime = format(new Date(noteTime), "dd MMM yyyy, hh:mm a");
+                    } catch (_) {}
+                    return {
+                        id: n.id,
+                        author: n.authorName || "Staff",
+                        role: n.type || "Underwriter",
+                        text: noteText,
+                        timestamp: formattedTime
+                    };
+                }));
             }
         } catch (err) {
             console.error("Failed to load remarks:", err);
@@ -2205,7 +2220,7 @@ export default function DecisionsHub() {
                                                                                     {q.content}
                                                                                 </div>
                                                                                 <span className="text-[7px] text-gray-400 font-bold uppercase mt-1">
-                                                                                    {q.createdAt ? format(new Date(q.createdAt), "MMM dd, HH:mm") : 'Just now'}
+                                                                                    {q.createdAt ? format(new Date(q.createdAt), "MMM dd, hh:mm a") : 'Just now'}
                                                                                 </span>
                                                                             </div>
                                                                         );

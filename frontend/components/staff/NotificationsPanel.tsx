@@ -431,14 +431,38 @@ const NotificationsPanel = ({
         return;
       }
 
-      // 3. Bank Notifications (Bank Note, Counter Offer, Bank Query, Disbursed, Bank Approvals, etc.)
+      // 3. Bank Query Notifications -> Staff Chat Section (/staff/chat-customer)
+      const isBankQueryNotif =
+        notifType === 'query_raised' ||
+        notifType === 'bank_query' ||
+        notifType === 'bank_query_raised' ||
+        notifTitle.toLowerCase().includes('query raised') ||
+        notifTitle.toLowerCase().includes('partner query') ||
+        notifTitle.toLowerCase().includes('bank query');
+
+      if (isBankQueryNotif) {
+        const appId = metadata?.applicationId || metadata?.id;
+        const convId = metadata?.conversationId;
+        const appNum = metadata?.applicationNumber;
+        const studentId = metadata?.studentId || metadata?.userId;
+        let url = '/staff/chat-customer';
+        const params: string[] = [];
+        if (convId) params.push(`conversationId=${encodeURIComponent(convId)}`);
+        if (appId) params.push(`applicationId=${encodeURIComponent(appId)}`);
+        if (appNum) params.push(`applicationNumber=${encodeURIComponent(appNum)}`);
+        if (studentId) params.push(`userId=${encodeURIComponent(studentId)}`);
+        if (params.length > 0) url += `?${params.join('&')}`;
+        router.push(url);
+        return;
+      }
+
+      // 4. Other Bank Notifications (Bank Note, Counter Offer, Disbursed, Bank Approvals, etc.)
       // -> Bank Applications tab in User Profile view (/staff/users/[id]/applications)
       const isBankNotif =
         notifType.includes('bank') ||
         notifType.includes('counter') ||
         notifType.includes('disburs') ||
         notifType === 'application_counter' ||
-        notifType === 'query_raised' ||
         notifType === 'bank_note_added' ||
         notifTitle.includes('bank') ||
         notifTitle.includes('counter offer') ||

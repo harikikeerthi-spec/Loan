@@ -792,19 +792,17 @@ export class BankService {
 
     // Log status history transition
     try {
-      await this.prisma.applicationStatusHistory.create({
-        data: {
-          id: randomUUID(),
-          applicationId: applicationId,
-          fromStatus: application.status,
-          toStatus: targetStatus,
-          fromStage: application.stage,
-          toStage: updatedStage,
-          changedBy: bankUser?.id || bankUser?.email || 'bank-user',
-          changedByName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
-          changeReason: `Decision submitted: ${decisionType}`,
-          isAutomatic: false,
-        }
+      await this.db.from('ApplicationStatusHistory').insert({
+        id: randomUUID(),
+        applicationId: applicationId,
+        fromStatus: application.status,
+        toStatus: targetStatus,
+        fromStage: application.stage,
+        toStage: updatedStage,
+        changedBy: bankUser?.id || bankUser?.email || 'bank-user',
+        changedByName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
+        changeReason: `Decision submitted: ${decisionType}`,
+        isAutomatic: false,
       });
     } catch (hErr: any) {
       console.warn(`[BankService] ApplicationStatusHistory insert note: ${hErr?.message || hErr}`);
@@ -859,20 +857,18 @@ export class BankService {
 
     // Thread serialization in ApplicationNote
     try {
-      await this.prisma.applicationNote.create({
-        data: {
-          id: randomUUID(),
-          applicationId: applicationId,
-          authorId: bankUser?.id || bankUser?.email || 'bank-user',
-          authorName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
-          content: JSON.stringify({
-            action: decisionType,
-            details: detailsObj,
-            timestamp: nowStr
-          }),
-          type: decisionType,
-          isInternal: false,
-        }
+      await this.db.from('ApplicationNote').insert({
+        id: randomUUID(),
+        applicationId: applicationId,
+        authorId: bankUser?.id || bankUser?.email || 'bank-user',
+        authorName: `${bankUser?.firstName || ''} ${bankUser?.lastName || ''}`.trim() || bankUser?.email || 'Bank Officer',
+        content: JSON.stringify({
+          action: decisionType,
+          details: detailsObj,
+          timestamp: nowStr
+        }),
+        type: decisionType,
+        isInternal: false,
       });
     } catch (noteErr: any) {
       console.warn(`[BankService] ApplicationNote insert note: ${noteErr?.message || noteErr}`);
@@ -941,15 +937,26 @@ export class BankService {
 
     let application: any = null;
     try {
-      const { data } = await this.db
+      let { data } = await this.db
         .from('LoanApplication')
-        .select('status, stage, bank, applicationNumber, phone, mobile, email, firstName, lastName')
+        .select('*')
         .eq('id', applicationId)
         .maybeSingle();
+
+      if (!data) {
+        const { data: fallbackData } = await this.db
+          .from('LoanApplication')
+          .select('*')
+          .eq('applicationNumber', applicationId)
+          .maybeSingle();
+        data = fallbackData;
+      }
       application = data;
     } catch (e) {
       console.warn('[BankService] Error fetching application details:', e);
     }
+
+    const resolvedAppId = application?.id || applicationId;
 
     // Check if status shifts to query_raised
     if (application && application.status !== 'query_raised') {
@@ -961,7 +968,7 @@ export class BankService {
             progress: LoanStateMachine.getProgressByStatus('query_raised'),
             updatedAt: new Date().toISOString()
           })
-          .eq('id', applicationId);
+          .eq('id', resolvedAppId);
       } catch (e) {
         console.warn('[BankService] Error updating LoanApplication status:', e);
       }
@@ -970,7 +977,7 @@ export class BankService {
     const queryId = randomUUID();
     const queryPayload = {
       id: queryId,
-      applicationId: applicationId,
+      applicationId: resolvedAppId,
       authorId: authorId,
       authorName: authorName,
       content: content,
@@ -979,91 +986,86 @@ export class BankService {
       updatedAt: new Date().toISOString()
     };
 
+    // Insert Query across all query tables for complete DB persistence
     let queryRecord: any = null;
-
-    // Insert Query via Prisma for guaranteed DB write
     try {
-      queryRecord = await this.prisma.query.create({
-        data: {
-          id: queryId,
-          applicationId: applicationId,
-          authorId: authorId,
-          authorName: authorName,
-          content: content,
-          status: 'open',
-        },
+      const { data: qData, error: qErr } = await this.db
+        .from('queries')
+        .insert(queryPayload)
+        .select()
+        .maybeSingle();
+
+      if (qErr) throw qErr;
+      queryRecord = qData || queryPayload;
+    } catch (err) {
+      console.error('[BankService] Error inserting query:', err);
+      queryRecord = queryPayload;
+    }
+
+    // Also persist in BankQuery table
+    try {
+      await this.db.from('BankQuery').insert({
+        id: queryId,
+        applicationId: resolvedAppId,
+        raisedBy: authorName || bankUser?.email || 'bank_officer',
+        queryType: 'VERIFICATION',
+        description: content,
+        content: content,
+        status: 'OPEN',
+        createdAt: new Date().toISOString()
       });
-    } catch (prismaErr) {
-      console.error('[BankService] Error inserting query via Prisma, trying Supabase fallback:', prismaErr);
-      try {
-        const { data: qData } = await this.db
-          .from('queries')
-          .insert(queryPayload)
-          .select()
-          .maybeSingle();
-        queryRecord = qData || queryPayload;
-      } catch (err) {
-        queryRecord = queryPayload;
-      }
+    } catch (bqErr) {
+      console.warn('[BankService] Note: BankQuery table insert error:', bqErr);
+    }
+
+    // Also persist in BankWorkflowQueryRequest table
+    try {
+      await this.db.from('BankWorkflowQueryRequest').insert({
+        id: queryId,
+        applicationId: resolvedAppId,
+        queryType: 'VERIFICATION',
+        queryDescription: content,
+        raisedBy: authorName || bankUser?.email || 'bank_officer',
+        status: 'PENDING',
+        createdAt: new Date().toISOString()
+      });
+    } catch (bwqErr) {
+      console.warn('[BankService] Note: BankWorkflowQueryRequest insert error:', bwqErr);
     }
 
     // Serialize ApplicationNote query
     try {
-      await this.prisma.applicationNote.create({
-        data: {
-          id: randomUUID(),
-          applicationId: applicationId,
-          authorId: authorId,
-          authorName: authorName,
-          content: JSON.stringify({
-            action: 'query_raised',
-            content: content,
-            timestamp: new Date().toISOString()
-          }),
-          type: 'query_raised',
-          isInternal: false,
-        },
+      await this.db.from('ApplicationNote').insert({
+        id: randomUUID(),
+        applicationId: resolvedAppId,
+        authorId: authorId,
+        authorName: authorName,
+        content: JSON.stringify({
+          action: 'query_raised',
+          content: content,
+          timestamp: new Date().toISOString()
+        }),
+        type: 'query_raised',
+        isInternal: false,
       });
     } catch (noteErr) {
       console.warn('[BankService] Error creating ApplicationNote:', noteErr);
     }
 
-    // Notify via in-app
-    try {
-      const notifData = {
-        id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-        userId: 'staff',
-        title: '❓ Partner Query Raised',
-        body: `Bank officer ${authorName} raised a clarification query on App: ${application?.applicationNumber || applicationId}`,
-        type: 'query_raised',
-        isRead: false,
-        timestamp: new Date().toISOString(),
-        metadata: {
-          applicationId: applicationId,
-          applicationNumber: application?.applicationNumber || null,
-          bank: application?.bank || null,
-          status: 'query_raised'
-        }
-      };
-      await this.db.from('Notification').insert(notifData);
-      this.eventEmitter.emit('notification.created', notifData);
-    } catch (notifErr) {
-      console.warn('[BankService] Error inserting Notification:', notifErr);
-    }
-
-    // Push query message to the chat conversation
+    // 1. Resolve or create chat conversation for this application & push query message
+    let conv: any = null;
     if (application) {
       try {
         const rawPhone = application.phone || application.mobile;
         const phone = this.normalizePhone(rawPhone || '');
         if (phone) {
-          let { data: conv } = await this.db
+          let { data: existingConv } = await this.db
             .from('Conversation')
             .select('*')
             .eq('customerPhone', phone)
             .maybeSingle();
 
-          if (!conv) {
+          if (!existingConv) {
             const fullName = `${application.firstName || ''} ${application.lastName || ''}`.trim();
             const { data: newConv } = await this.db
               .from('Conversation')
@@ -1073,22 +1075,24 @@ export class BankService {
                 status: 'active',
                 customerEmail: application.email || null,
                 customerName: fullName || null,
-                metadata: { type: 'staff' }
+                metadata: { type: 'staff', applicationId, applicationNumber: application.applicationNumber }
               })
               .select()
               .maybeSingle();
-            conv = newConv;
+            existingConv = newConv;
           }
+          conv = existingConv;
 
           if (conv) {
-            const msgContent = `[BANK QUERY from ${authorName}]: ${content}`;
+            const msgContent = `❓ **Bank Query from ${authorName} (${application.bank || 'Bank'})**:\n"${content}"`;
             const { data: chatMessage } = await this.db
               .from('Message')
               .insert({
                 id: randomUUID(),
                 conversationId: conv.id,
-                senderType: 'system',
-                senderId: bankUser?.email || 'bank-system',
+                senderType: 'bank',
+                senderId: bankUser?.email || bankUser?.id || 'bank-system',
+                senderName: `${authorName} (${application.bank || 'Bank'})`,
                 receiverType: 'staff',
                 content: msgContent,
                 messageType: 'text',
@@ -1110,8 +1114,36 @@ export class BankService {
       } catch (convErr) {
         console.warn('[BankService] Error updating student conversation:', convErr);
       }
+    }
 
-      // Send query message to the dedicated Bank chat channel
+    // 2. Notify staff via in-app notification with conversationId metadata
+    try {
+      const appNum = application?.applicationNumber || applicationId;
+      const notifData = {
+        id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        userId: application?.assignedStaffId || 'staff',
+        title: '❓ Partner Query Raised',
+        body: `Bank officer ${authorName} raised a query on App #${appNum}: "${content}"`,
+        type: 'query_raised',
+        isRead: false,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          applicationId: applicationId,
+          applicationNumber: application?.applicationNumber || null,
+          conversationId: conv?.id || null,
+          studentId: application?.userId || null,
+          bank: application?.bank || null,
+          status: 'query_raised'
+        }
+      };
+      await this.db.from('Notification').insert(notifData);
+      this.eventEmitter.emit('notification.created', notifData);
+    } catch (notifErr) {
+      console.warn('[BankService] Error inserting Notification:', notifErr);
+    }
+
+    // 3. Send query message to the dedicated Bank chat channel
+    if (application) {
       try {
         const safeBank = (application.bank || 'Unknown_Bank').toUpperCase().replace(/[^A-Z0-9]/g, '_');
         const shortAppId = application.applicationNumber || applicationId.slice(0, 8);
@@ -1342,45 +1374,129 @@ export class BankService {
   // ==================== NEW METHODS ====================
 
   async getFileDetail(applicationId: string): Promise<any> {
-    let data: any = null;
-    try {
-      data = await this.prisma.loanApplication.findFirst({
-        where: {
-          OR: [
-            { id: applicationId },
-            { applicationNumber: applicationId }
-          ]
-        }
-      });
-    } catch (e) {
-      console.warn('[BankService.getFileDetail] Prisma lookup notice:', e);
+    if (!applicationId) {
+      throw new BadRequestException('Application ID is required');
+    }
+
+    // Try lookup by primary key ID first
+    let { data, error } = await this.db
+      .from('LoanApplication')
+      .select('*')
+      .eq('id', applicationId)
+      .maybeSingle();
+
+    // Fallback lookup by applicationNumber if not found by UUID
+    if (!data) {
+      const res2 = await this.db
+        .from('LoanApplication')
+        .select('*')
+        .eq('applicationNumber', applicationId)
+        .maybeSingle();
+      data = res2.data;
     }
 
     if (!data) {
-      const { data: sbData, error: sbError } = await this.db
-        .from('LoanApplication')
-        .select('*')
-        .or(`id.eq.${applicationId},applicationNumber.eq.${applicationId}`)
-        .maybeSingle();
-
-      if (sbError || !sbData) {
-        throw new NotFoundException(`Loan application with ID/AppNo "${applicationId}" not found.`);
-      }
-      data = sbData;
+      throw new NotFoundException(`Loan application with ID/AppNo "${applicationId}" not found.`);
     }
 
     const targetId = data.id;
 
-    // Fetch relations manually to avoid PostgREST relationship schema cache failures
+    // Fetch queries from all database query tables by target UUID or applicationNumber
     let queriesList: any[] = [];
+    const appNumber = data.applicationNumber;
+
     try {
-      queriesList = await this.prisma.query.findMany({
-        where: { applicationId: targetId },
-        orderBy: { createdAt: 'asc' },
-      });
+      // 1. Check `queries` table
+      let q1 = this.db.from('queries').select('*');
+      if (appNumber && appNumber !== targetId) {
+        q1 = q1.or(`applicationId.eq.${targetId},applicationId.eq.${appNumber}`);
+      } else {
+        q1 = q1.eq('applicationId', targetId);
+      }
+      const { data: res1 } = await q1.order('createdAt', { ascending: true });
+      if (res1 && res1.length > 0) {
+        queriesList.push(...res1);
+      }
+
+      // 2. Check `BankQuery` table
+      let q2 = this.db.from('BankQuery').select('*');
+      if (appNumber && appNumber !== targetId) {
+        q2 = q2.or(`applicationId.eq.${targetId},applicationId.eq.${appNumber}`);
+      } else {
+        q2 = q2.eq('applicationId', targetId);
+      }
+      const { data: res2 } = await q2.order('createdAt', { ascending: true });
+      if (res2 && res2.length > 0) {
+        res2.forEach((bq: any) => {
+          if (!queriesList.some((e: any) => e.id === bq.id)) {
+            queriesList.push({
+              id: bq.id,
+              applicationId: targetId,
+              authorName: bq.raisedBy || 'Bank Officer',
+              content: bq.description || bq.content || bq.queryText || 'Query raised',
+              status: (bq.status || 'open').toLowerCase(),
+              createdAt: bq.createdAt || bq.created_at
+            });
+          }
+        });
+      }
+
+      // 3. Check `BankWorkflowQueryRequest` table
+      let q3 = this.db.from('BankWorkflowQueryRequest').select('*');
+      if (appNumber && appNumber !== targetId) {
+        q3 = q3.or(`applicationId.eq.${targetId},applicationId.eq.${appNumber}`);
+      } else {
+        q3 = q3.eq('applicationId', targetId);
+      }
+      const { data: res3 } = await q3.order('createdAt', { ascending: true });
+      if (res3 && res3.length > 0) {
+        res3.forEach((bwq: any) => {
+          if (!queriesList.some((e: any) => e.id === bwq.id)) {
+            queriesList.push({
+              id: bwq.id,
+              applicationId: targetId,
+              authorName: bwq.raisedBy || 'Bank Officer',
+              content: bwq.queryDescription || bwq.description || 'Query raised',
+              status: (bwq.status || 'open').toLowerCase(),
+              createdAt: bwq.createdAt || bwq.created_at
+            });
+          }
+        });
+      }
+
+      // 4. Check `ApplicationNote` table for query_raised notes
+      let q4 = this.db.from('ApplicationNote').select('*');
+      if (appNumber && appNumber !== targetId) {
+        q4 = q4.or(`applicationId.eq.${targetId},applicationId.eq.${appNumber}`);
+      } else {
+        q4 = q4.eq('applicationId', targetId);
+      }
+      const { data: res4 } = await q4.eq('type', 'query_raised').order('createdAt', { ascending: true });
+      if (res4 && res4.length > 0) {
+        res4.forEach((note: any) => {
+          let parsedText = note.content;
+          let noteTime = note.createdAt || note.created_at;
+          if (typeof note.content === 'string' && note.content.startsWith('{')) {
+            try {
+              const obj = JSON.parse(note.content);
+              parsedText = obj.content || note.content;
+              if (obj.timestamp) noteTime = obj.timestamp;
+            } catch (_) {}
+          }
+          if (!queriesList.some((e: any) => e.id === note.id || e.content === parsedText)) {
+            queriesList.push({
+              id: note.id,
+              applicationId: targetId,
+              authorName: note.authorName || 'Bank Officer',
+              content: parsedText,
+              status: 'open',
+              createdAt: noteTime
+            });
+          }
+        });
+      }
     } catch (e) {
-      const { data: qData } = await this.db.from('queries').select('*').eq('applicationId', targetId);
-      queriesList = qData || [];
+      console.warn('[BankService] Error fetching queries from tables:', e);
     }
 
     const [

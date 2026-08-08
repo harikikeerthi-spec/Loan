@@ -38,10 +38,11 @@ export class StaffGuard implements CanActivate {
             // Verify JWT token signature and expiry
             const payload = await this.jwtService.verifyAsync(token);
 
-            const allowedRoles = ['staff', 'admin', 'super_admin', 'bank', 'partner_bank', 'support', 'it', 'user', 'agent'];
+            const allowedRoles = ['staff', 'admin', 'super_admin', 'bank', 'partner_bank', 'support', 'it', 'user', 'agent', 'partner_agent'];
 
             // Fast path: role is embedded in the JWT payload — no DB lookup needed
-            if (payload.role && allowedRoles.includes(payload.role)) {
+            const payloadRoleLower = (payload.role || '').toLowerCase();
+            if (payload.role && (allowedRoles.includes(payloadRoleLower) || payloadRoleLower.startsWith('bank_'))) {
                 request.user = {
                     id: payload.sub || payload.id,
                     email: payload.email,
@@ -60,7 +61,8 @@ export class StaffGuard implements CanActivate {
                 throw new UnauthorizedException('User not found');
             }
 
-            if (!allowedRoles.includes(user.role)) {
+            const dbRoleLower = (user.role || '').toLowerCase();
+            if (!allowedRoles.includes(dbRoleLower) && !dbRoleLower.startsWith('bank_')) {
                 console.warn(`[StaffGuard] Access denied for role: ${user.role}. User: ${user.email}`);
                 throw new ForbiddenException('Access denied. Elevated privileges required.');
             }

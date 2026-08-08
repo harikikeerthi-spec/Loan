@@ -14,11 +14,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     
     const pool = new Pool({
       connectionString,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      max: 10,
+      idleTimeoutMillis: 10000, // Proactively close idle sockets before cloud DB/firewall severs them
+      connectionTimeoutMillis: 30000, // Allow up to 30s for acquiring/establishing new pool connection
       keepAlive: true,
-      keepAliveInitialDelayMillis: 10000,
+      keepAliveInitialDelayMillis: 5000,
     });
 
     pool.on('error', (err) => {

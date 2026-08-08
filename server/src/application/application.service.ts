@@ -157,9 +157,11 @@ export class ApplicationService {
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
+    const appNum = await this.generateApplicationNumber();
+
     const insertPayload: any = {
         userId,
-        applicationNumber: null,
+        applicationNumber: appNum,
         bank: data.bank,
         loanType: data.loanType,
         amount: parseFloat(data.amount),
@@ -1254,11 +1256,23 @@ export class ApplicationService {
 
       console.log(`[ApplicationService.getAllApplications] Executing query: sort=${sortCol}, limit=${limit}, offset=${offset}`);
       
-      const { data: applications, count, error } = await query;
+      let { data: applications, count, error } = await query;
 
       if (error) {
-        console.error('[ApplicationService.getAllApplications] Supabase Error:', error);
-        throw error;
+        console.error('[ApplicationService.getAllApplications] Supabase Error, executing clean fallback query:', error);
+        let fallbackQuery = this.db
+          .from('LoanApplication')
+          .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason, tests)', { count: 'exact' });
+
+        if (filters?.status) fallbackQuery = fallbackQuery.eq('status', filters.status);
+        if (filters?.excludeStatus) fallbackQuery = fallbackQuery.neq('status', filters.excludeStatus);
+        if (filters?.stage) fallbackQuery = fallbackQuery.eq('stage', filters.stage);
+        if (filters?.loanType) fallbackQuery = fallbackQuery.eq('loanType', filters.loanType);
+
+        fallbackQuery = fallbackQuery.order(sortCol, { ascending: isAsc }).range(offset, offset + limit - 1);
+        const fallbackRes = await fallbackQuery;
+        applications = fallbackRes.data || [];
+        count = fallbackRes.count || (applications?.length || 0);
       }
 
       console.log(`[ApplicationService.getAllApplications] Success. Count: ${count}, Data size: ${applications?.length}`);

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { randomInt, randomUUID } from 'crypto';
 import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -52,7 +52,7 @@ export function sanitizeUserPayload(payload: any): Record<string, any> {
 }
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   private get db() {
     return this.supabase.getClient();
   }
@@ -62,6 +62,89 @@ export class UsersService {
     private eventEmitter: EventEmitter2,
     private emailService: EmailService,
   ) { }
+
+  async onModuleInit() {
+    // Run backfill for missing application numbers and auto-assign unassigned applications asynchronously after startup
+    setTimeout(() => {
+      this.backfillAndAutoAssignApplications().catch(err => {
+        console.error('[UsersService] Error during startup backfill and auto-assign:', err);
+      });
+    }, 3000);
+  }
+
+  public async generateApplicationNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `VL-APP-${year}-`;
+
+    try {
+      const { data, error } = await this.db
+        .from('LoanApplication')
+        .select('applicationNumber')
+        .like('applicationNumber', `${prefix}%`)
+        .order('applicationNumber', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let nextSeq = 1;
+      if (data && data.applicationNumber) {
+        const parts = data.applicationNumber.split('-');
+        if (parts.length === 4) {
+          const currentSeq = parseInt(parts[3], 10);
+          if (!isNaN(currentSeq)) {
+            nextSeq = currentSeq + 1;
+          }
+        }
+      }
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    } catch (err) {
+      console.error('[UsersService] Failed to generate sequential application number:', err);
+      const seq = String(Math.floor(Math.random() * 100_000)).padStart(5, '0');
+      return `${prefix}${seq}`;
+    }
+  }
+
+  public async backfillAndAutoAssignApplications() {
+    try {
+      // 1. Backfill missing/invalid application numbers
+      const { data: allApps } = await this.db
+        .from('LoanApplication')
+        .select('id, applicationNumber, createdAt')
+        .order('createdAt', { ascending: true });
+
+      if (allApps && allApps.length > 0) {
+        for (const app of allApps) {
+          const num = (app.applicationNumber || '').trim();
+          const isValidFormat = num.startsWith('VL-APP-') || num.startsWith('VTU-APP-') || num.startsWith('VTU-BNK-');
+          if (!isValidFormat) {
+            const newAppNum = await this.generateApplicationNumber();
+            console.log(`[UsersService] Backfilling missing applicationNumber for loan ${app.id}: "${num}" -> ${newAppNum}`);
+            await this.db
+              .from('LoanApplication')
+              .update({ applicationNumber: newAppNum })
+              .eq('id', app.id);
+          }
+        }
+      }
+
+      // 2. Trigger auto-assignment event for unassigned loans
+      const { data: unassignedLoans } = await this.db
+        .from('LoanApplication')
+        .select('id, applicationNumber, assignedStaffId')
+        .or('assignedStaffId.is.null,assignedStaffId.eq.unassigned,assignedStaffId.eq.,assignedStaffId.eq.null');
+
+      if (unassignedLoans && unassignedLoans.length > 0) {
+        console.log(`[UsersService] Found ${unassignedLoans.length} unassigned loan applications. Emitting auto-assignment events...`);
+        for (const loan of unassignedLoans) {
+          this.eventEmitter.emit('application.created', {
+            applicationId: loan.id,
+            applicationNumber: loan.applicationNumber,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[UsersService] Failed in backfillAndAutoAssignApplications:', err);
+    }
+  }
 
   private parseDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
@@ -1184,41 +1267,6 @@ export class UsersService {
     }
   }
 
-  public async generateApplicationNumber(): Promise<string> {
-    const year = new Date().getFullYear();
-    const prefix = `VL-APP-${year}-`;
-
-    try {
-      const { data, error } = await this.db
-        .from('LoanApplication')
-        .select('applicationNumber')
-        .like('applicationNumber', `${prefix}%`)
-        .order('applicationNumber', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[UsersService] Error fetching max application number:', error);
-      }
-
-      let nextSeq = 1;
-      if (data && data.applicationNumber) {
-        const parts = data.applicationNumber.split('-');
-        if (parts.length === 4) {
-          const currentSeq = parseInt(parts[3], 10);
-          if (!isNaN(currentSeq)) {
-            nextSeq = currentSeq + 1;
-          }
-        }
-      }
-      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
-    } catch (err) {
-      console.error('[UsersService] Failed to generate sequential application number, falling back to random:', err);
-      const seq = String(Math.floor(Math.random() * 100_000)).padStart(5, '0');
-      return `${prefix}${seq}`;
-    }
-  }
-
   // Loan Application Methods
   async createLoanApplication(
     userId: string,
@@ -1268,7 +1316,8 @@ export class UsersService {
 
     const now = new Date().toISOString();
 
-    // Note: applicationNumber is NOT generated here — it is assigned only when the application is submitted to the bank.
+    // Generate clean sequential application number (VL-APP-2026-XXXXX)
+    const appNum = await this.generateApplicationNumber();
 
     // Calculate estimated completion (14 days from now)
     const estimatedCompletionAt = new Date();
@@ -1279,6 +1328,7 @@ export class UsersService {
     const insertPayload: any = {
       id: randomUUID(),
       userId,
+      applicationNumber: appNum,
       bank: data.bank,
       loanType: data.loanType,
       amount: data.amount,

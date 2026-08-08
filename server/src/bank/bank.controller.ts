@@ -110,9 +110,10 @@ export class BankController {
   @Post('queries')
   async raiseQuery(
     @Request() req,
-    @Body('applicationId') applicationId: string,
-    @Body('content') content: string
+    @Body() body: any
   ) {
+    const applicationId = body?.applicationId || body?.appId || body?.id;
+    const content = body?.content || body?.queryText || body?.description || body?.queryDescription || 'Document verification required';
     return this.bankService.raiseQuery(applicationId, content, req.user);
   }
 

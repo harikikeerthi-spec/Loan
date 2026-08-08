@@ -1,9 +1,10 @@
 
+require('dotenv').config();
 const { Client } = require('pg');
 
 async function main() {
     const client = new Client({
-        connectionString: "postgresql://postgres.mhhmqdbzsmwyizmvwtsx:VidhyaLOan2@13.239.87.90:5432/postgres"
+        connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL
     });
 
     try {

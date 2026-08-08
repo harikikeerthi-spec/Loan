@@ -810,7 +810,7 @@ export default async function HomePage() {
                                             Know someone planning to study abroad? Refer them to VidyaLoan and earn rewards for every successful loan disbursement. Plus, unlock ₹10,000 bonus when you hit 5 referrals!
                                         </p>
 
-                                        <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                                        {/* <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                                             <Link href="/referral" className="px-8 py-4 bg-white text-amber-600 font-black rounded-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all text-[13px] uppercase tracking-widest flex items-center justify-center gap-2">
                                                 <span className="material-symbols-outlined" aria-hidden="true">share</span>
                                                 Start Referring
@@ -819,7 +819,7 @@ export default async function HomePage() {
                                                 <span className="material-symbols-outlined" aria-hidden="true">info</span>
                                                 Learn More
                                             </Link>
-                                        </div>
+                                        </div> */}
 
                                         {/* Stats */}
                                         <div className="flex flex-wrap gap-6 mt-8 justify-center lg:justify-start">
