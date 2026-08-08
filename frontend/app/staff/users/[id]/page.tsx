@@ -83,6 +83,8 @@ export default function ProfileTab() {
         motherPan: "",
         coappName: "",
         coappRelation: "",
+        coappPhone: "",
+        coappEmail: "",
         coappIncome: "",
         coappAadhar: "",
         coappPan: "",
@@ -442,9 +444,11 @@ export default function ProfileTab() {
             motherAadhar: motherData?.aadharNumber || parsedFamily?.motherAadhar || "",
             motherPan: motherData?.panNumber || parsedFamily?.motherPan || "",
 
-            coappName: coapplicantData?.name || parsedCoApp?.name || userData?.coApplicantName || "",
-            coappRelation: coapplicantData?.relation || parsedCoApp?.relation || parsedCoApp?.relationship || "",
-            coappIncome: parsedCoApp?.monthlyIncome || userData?.coApplicantIncome || "",
+            coappName: coapplicantData?.name || parsedCoApp?.name || userData?.coApplicantName || (userApplications && userApplications[0]?.coApplicantName) || "",
+            coappRelation: coapplicantData?.relation || parsedCoApp?.relation || parsedCoApp?.relationship || userData?.coApplicantRelation || (userApplications && userApplications[0]?.coApplicantRelation) || "",
+            coappPhone: coapplicantData?.mobile || coapplicantData?.phone || parsedCoApp?.mobile || parsedCoApp?.phone || parsedCoApp?.coApplicantPhone || userData?.coApplicantPhone || (userApplications && userApplications[0]?.coApplicantPhone) || "",
+            coappEmail: coapplicantData?.email || parsedCoApp?.email || parsedCoApp?.coApplicantEmail || userData?.coApplicantEmail || (userApplications && userApplications[0]?.coApplicantEmail) || "",
+            coappIncome: parsedCoApp?.monthlyIncome || userData?.coApplicantIncome || (userApplications && userApplications[0]?.coApplicantIncome) || "",
             coappAadhar: coapplicantData?.aadharNumber || parsedCoApp?.aadharNumber || "",
             coappPan: coapplicantData?.panNumber || parsedCoApp?.panNumber || "",
 
@@ -518,6 +522,8 @@ export default function ProfileTab() {
                     motherPan: editForm.motherPan,
                     coappName: editForm.coappName,
                     coappRelation: editForm.coappRelation,
+                    coappPhone: editForm.coappPhone,
+                    coappEmail: editForm.coappEmail,
                     coappAadhar: editForm.coappAadhar,
                     coappPan: editForm.coappPan,
                 },
@@ -527,6 +533,9 @@ export default function ProfileTab() {
                     name: editForm.coappName,
                     relation: editForm.coappRelation,
                     monthlyIncome: editForm.coappIncome,
+                    mobile: editForm.coappPhone,
+                    phone: editForm.coappPhone,
+                    email: editForm.coappEmail,
                     aadharNumber: editForm.coappAadhar,
                     panNumber: editForm.coappPan,
                 },
@@ -544,7 +553,7 @@ export default function ProfileTab() {
                 parents: [
                     { relation: 'father', name: editForm.fatherName, aadharNumber: editForm.fatherAadhar, panNumber: editForm.fatherPan },
                     { relation: 'mother', name: editForm.motherName, aadharNumber: editForm.motherAadhar, panNumber: editForm.motherPan },
-                    { relation: 'coapplicant', name: editForm.coappName, aadharNumber: editForm.coappAadhar, panNumber: editForm.coappPan }
+                    { relation: 'coapplicant', name: editForm.coappName, mobile: editForm.coappPhone, phone: editForm.coappPhone, email: editForm.coappEmail, aadharNumber: editForm.coappAadhar, panNumber: editForm.coappPan }
                 ]
             };
 
@@ -585,6 +594,9 @@ export default function ProfileTab() {
                         fatherName: editForm.fatherName,
                         motherName: editForm.motherName,
                         coApplicantName: editForm.coappName,
+                        coApplicantRelation: editForm.coappRelation,
+                        coApplicantPhone: editForm.coappPhone,
+                        coApplicantEmail: editForm.coappEmail,
                     })
                 )
             ]);
@@ -812,6 +824,8 @@ export default function ProfileTab() {
                                                     <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#7C3AED]">Primary Co-Applicant</td>
                                                     <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#0F172A]">{coApp1Name}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] font-medium">
+                                                        <div className="mb-1 text-[#64748B]">Phone: <span className={(coapplicantData?.mobile || coapplicantData?.phone || userData?.coApplicantPhone || userApplications?.[0]?.coApplicantPhone) ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.mobile || coapplicantData?.phone || userData?.coApplicantPhone || userApplications?.[0]?.coApplicantPhone || "Pending"}</span></div>
+                                                        <div className="mb-1 text-[#64748B]">Email: <span className={(coapplicantData?.email || userData?.coApplicantEmail || userApplications?.[0]?.coApplicantEmail) ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.email || userData?.coApplicantEmail || userApplications?.[0]?.coApplicantEmail || "Pending"}</span></div>
                                                         <div className="mb-1 text-[#64748B]">Aadhaar: <span className={coapplicantData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.aadharNumber || "Pending"}</span></div>
                                                         <div className="text-[#64748B]">PAN: <span className={coapplicantData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.panNumber || "Pending"}</span></div>
                                                     </td>
@@ -1352,6 +1366,26 @@ export default function ProfileTab() {
                                                     value={editForm.coappIncome}
                                                     onChange={(e) => setEditForm(prev => ({ ...prev, coappIncome: e.target.value }))}
                                                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Mobile / Phone</label>
+                                                <input
+                                                    type="text"
+                                                    value={editForm.coappPhone}
+                                                    onChange={(e) => setEditForm(prev => ({ ...prev, coappPhone: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                                                    placeholder="e.g. 9876543210"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
+                                                <input
+                                                    type="email"
+                                                    value={editForm.coappEmail}
+                                                    onChange={(e) => setEditForm(prev => ({ ...prev, coappEmail: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                                                    placeholder="e.g. coapplicant@example.com"
                                                 />
                                             </div>
                                             <div />

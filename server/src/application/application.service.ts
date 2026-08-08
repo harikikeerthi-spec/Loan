@@ -157,11 +157,10 @@ export class ApplicationService {
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
-    const appNum = await this.generateApplicationNumber();
-
     const insertPayload: any = {
         userId,
-        applicationNumber: appNum,
+        // applicationNumber is intentionally NOT set here.
+        // It will be assigned only when staff submits to a bank (submitApplicationToBank).
         bank: data.bank,
         loanType: data.loanType,
         amount: parseFloat(data.amount),
@@ -267,7 +266,7 @@ export class ApplicationService {
         const targetUni = application.universityName || 'Target University';
         this.eventEmitter.emit('dashboard.activity', {
           type: 'application',
-          msg: `Student ${name} submitted a new Loan Application #${application.applicationNumber} for ${targetUni}.`,
+          msg: `Student ${name} submitted a new Loan Application for ${targetUni}.`,
           icon: 'assignment',
           color: 'bg-indigo-50 text-indigo-700 border-indigo-100',
           actorName: name,

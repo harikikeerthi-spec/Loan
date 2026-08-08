@@ -33,6 +33,17 @@ export default function AdminBanksSection() {
     const [showModal, setShowModal] = useState(false);
     const [editingBank, setEditingBank] = useState<BankPartner | null>(null);
 
+    // Search and filter states
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterType, setFilterType] = useState("all");
+
+    // Quick ROI modal states
+    const [showRoiModal, setShowRoiModal] = useState(false);
+    const [roiBank, setRoiBank] = useState<BankPartner | null>(null);
+    const [minRoiInput, setMinRoiInput] = useState<number>(9.55);
+    const [maxRoiInput, setMaxRoiInput] = useState<number>(14.5);
+    const [savingRoi, setSavingRoi] = useState(false);
+
     // Form states
     const [form, setForm] = useState({
         name: "",
@@ -133,6 +144,51 @@ export default function AdminBanksSection() {
         setShowModal(true);
     };
 
+    const handleOpenRoiModal = (bank: BankPartner) => {
+        setRoiBank(bank);
+        setMinRoiInput(bank.interestRateMin || 9.55);
+        setMaxRoiInput(bank.interestRateMax || 14.5);
+        setShowRoiModal(true);
+    };
+
+    const handleSaveRoi = async () => {
+        if (!roiBank) return;
+        if (minRoiInput <= 0 || maxRoiInput <= 0) {
+            alert("ROI rates must be greater than 0");
+            return;
+        }
+        if (minRoiInput > maxRoiInput) {
+            alert("Min ROI cannot exceed Max ROI");
+            return;
+        }
+
+        setSavingRoi(true);
+        try {
+            const res: any = await adminApi.updateBank(roiBank.id, {
+                interestRateMin: minRoiInput,
+                interestRateMax: maxRoiInput
+            });
+            if (res?.success) {
+                alert(`ROI updated successfully for ${roiBank.name}! (${minRoiInput}% - ${maxRoiInput}% p.a.)`);
+                setShowRoiModal(false);
+                loadBanks();
+            } else {
+                alert(res?.message || "Failed to update ROI");
+            }
+        } catch (err: any) {
+            alert(err?.message || "Error updating ROI");
+        } finally {
+            setSavingRoi(false);
+        }
+    };
+
+    const handleAccessBank = (bank: BankPartner) => {
+        localStorage.setItem("currentBankId", bank.shortName);
+        localStorage.setItem("currentBankName", bank.name);
+        localStorage.setItem("bankId", bank.shortName);
+        window.open(`/bank/decisions?bankId=${encodeURIComponent(bank.shortName)}`, "_blank");
+    };
+
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`Are you sure you want to delete bank partner "${name}"?`)) return;
         try {
@@ -198,6 +254,15 @@ export default function AdminBanksSection() {
     const nbfcCount = banks.filter(b => b.type === "NBFC").length;
     const avgMinRate = banks.length > 0 ? (banks.reduce((acc, b) => acc + (b.interestRateMin || 0), 0) / banks.length).toFixed(2) : "0.00";
 
+    const filteredBanks = banks.filter(bank => {
+        const query = searchQuery.trim().toLowerCase();
+        const matchesSearch = !query ||
+            (bank.name || "").toLowerCase().includes(query) ||
+            (bank.shortName || "").toLowerCase().includes(query);
+        const matchesType = filterType === "all" || bank.type === filterType;
+        return matchesSearch && matchesType;
+    });
+
     return (
         <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto pb-12">
             {/* Header section */}
@@ -206,12 +271,12 @@ export default function AdminBanksSection() {
                     <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Lending Bank Partners</h2>
                     <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-[14px]">account_balance</span>
-                        Configuring active financial institutions in the education loan network
+                        Configuring active financial institutions & interest rates in the education loan network
                     </p>
                 </div>
                 <button
                     onClick={handleOpenAdd}
-                    className="px-3 py-1.5 bg-indigo-600 text-white rounded text-[11px] font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                     <span className="material-symbols-outlined text-[16px]">add_business</span>
                     Add Bank Partner
@@ -248,10 +313,33 @@ export default function AdminBanksSection() {
 
             {/* Table layout */}
             <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div>
-                        <h3 className="text-sm font-semibold text-slate-900">Registered Lenders</h3>
-                        <p className="text-[11px] text-slate-500 mt-1">Configured records active in system memory</p>
+                        <h3 className="text-sm font-semibold text-slate-900">Registered Lenders ({filteredBanks.length})</h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Dynamic bank partner configuration & ROI management</p>
+                    </div>
+                    {/* Search & Filter Bar */}
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="relative flex-1 md:w-64">
+                            <span className="material-symbols-outlined absolute left-2.5 top-2.5 text-slate-400 text-[16px]">search</span>
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder="Search bank or code..."
+                                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-medium"
+                            />
+                        </div>
+                        <select
+                            value={filterType}
+                            onChange={e => setFilterType(e.target.value)}
+                            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-700 cursor-pointer"
+                        >
+                            <option value="all">All Types</option>
+                            <option value="Public">Public Sector</option>
+                            <option value="Private">Private Sector</option>
+                            <option value="NBFC">NBFC</option>
+                        </select>
                     </div>
                 </div>
 
@@ -260,12 +348,11 @@ export default function AdminBanksSection() {
                         <thead className="bg-slate-50 border-b border-slate-200 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
                             <tr>
                                 <th className="px-5 py-3">Bank Details</th>
-                                <th className="px-5 py-3">Short Name</th>
-                                <th className="px-5 py-3">Institution Type</th>
-                                <th className="px-5 py-3">ROI Spreads</th>
+                                <th className="px-5 py-3">Short Code</th>
+                                <th className="px-5 py-3">Type</th>
+                                <th className="px-5 py-3">ROI Spreads (% p.a.)</th>
                                 <th className="px-5 py-3">Max Loan</th>
                                 <th className="px-5 py-3">Processing Fee</th>
-                                <th className="px-5 py-3">Processing Time</th>
                                 <th className="px-5 py-3">Popular</th>
                                 <th className="px-5 py-3 text-right">Actions</th>
                             </tr>
@@ -273,19 +360,19 @@ export default function AdminBanksSection() {
                         <tbody className="divide-y divide-slate-100 text-slate-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={9} className="px-5 py-10 text-center text-slate-400 text-xs">
+                                    <td colSpan={8} className="px-5 py-10 text-center text-slate-400 text-xs">
                                         <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-2" />
-                                        Fetching partners...
+                                        Fetching dynamic partners...
                                     </td>
                                 </tr>
-                            ) : banks.length === 0 ? (
+                            ) : filteredBanks.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-5 py-10 text-center text-slate-400 text-xs">
-                                        No bank partners registered. Click "Add Bank Partner" to begin.
+                                    <td colSpan={8} className="px-5 py-10 text-center text-slate-400 text-xs">
+                                        No bank partners found matching your search.
                                     </td>
                                 </tr>
                             ) : (
-                                banks.map((bank) => (
+                                filteredBanks.map((bank) => (
                                     <tr key={bank.id} className="hover:bg-slate-50/50 transition-colors text-xs font-medium">
                                         <td className="px-5 py-4 flex items-center gap-3">
                                             <div className="w-8 h-8 rounded border border-slate-200 bg-white p-1 overflow-hidden flex items-center justify-center flex-shrink-0">
@@ -300,7 +387,7 @@ export default function AdminBanksSection() {
                                                 <span className="text-[10px] text-slate-400 block">{bank.website || "No website"}</span>
                                             </div>
                                         </td>
-                                        <td className="px-5 py-4 font-mono text-[10px] text-slate-500">{bank.shortName}</td>
+                                        <td className="px-5 py-4 font-mono text-[10px] text-slate-500 font-bold">{bank.shortName}</td>
                                         <td className="px-5 py-4">
                                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${bank.type === "NBFC" ? "bg-amber-50 text-amber-700 border border-amber-100" :
                                                     bank.type === "Private" ? "bg-blue-50 text-blue-700 border border-blue-100" :
@@ -309,12 +396,22 @@ export default function AdminBanksSection() {
                                                 {bank.type}
                                             </span>
                                         </td>
-                                        <td className="px-5 py-4 text-slate-900 font-bold">
-                                            {bank.interestRateMin}% - {bank.interestRateMax}% p.a.
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-900 font-bold bg-purple-50 border border-purple-100 text-purple-700 px-2 py-0.5 rounded text-[11px]">
+                                                    {bank.interestRateMin}% - {bank.interestRateMax}%
+                                                </span>
+                                                <button
+                                                    onClick={() => handleOpenRoiModal(bank)}
+                                                    className="px-1.5 py-0.5 bg-slate-100 hover:bg-purple-100 text-purple-700 rounded text-[9.5px] font-bold transition-all border border-slate-200 cursor-pointer"
+                                                    title="Set ROI Rates"
+                                                >
+                                                    Set ROI
+                                                </button>
+                                            </div>
                                         </td>
-                                        <td className="px-5 py-4 text-slate-900">{bank.maxLoanAmount}</td>
+                                        <td className="px-5 py-4 text-slate-900 font-medium">{bank.maxLoanAmount}</td>
                                         <td className="px-5 py-4 text-slate-600">{bank.processingFee}</td>
-                                        <td className="px-5 py-4 text-slate-600">{bank.processingTime}</td>
                                         <td className="px-5 py-4">
                                             {bank.isPopular ? (
                                                 <span className="text-indigo-600 font-bold flex items-center gap-0.5">
@@ -326,18 +423,26 @@ export default function AdminBanksSection() {
                                             )}
                                         </td>
                                         <td className="px-5 py-4 text-right">
-                                            <div className="flex justify-end gap-1.5">
+                                            <div className="flex justify-end items-center gap-2">
+                                                <button
+                                                    onClick={() => handleAccessBank(bank)}
+                                                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-md text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                                                    title="Access Bank Underwriting Portal"
+                                                >
+                                                    <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                                                    Access Bank
+                                                </button>
                                                 <button
                                                     onClick={() => handleOpenEdit(bank)}
                                                     className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                                                    title="Edit Partner"
+                                                    title="Edit Partner Details & ROI"
                                                 >
                                                     <span className="material-symbols-outlined text-[16px]">edit</span>
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(bank.id, bank.name)}
                                                     className="p-1 text-slate-600 hover:text-red-600 hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                                                    title="Delete Partner"
+                                                    title="Delete Bank Partner"
                                                 >
                                                     <span className="material-symbols-outlined text-[16px]">delete</span>
                                                 </button>
@@ -351,220 +456,75 @@ export default function AdminBanksSection() {
                 </div>
             </div>
 
-            {/* Add / Edit Modal */}
-            {showModal && (
+            {/* Quick Set ROI Modal */}
+            {showRoiModal && roiBank && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-slate-100 overflow-hidden">
-                        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                            <h3 className="font-semibold text-slate-900 text-sm">
-                                {editingBank ? `Edit Partner: ${editingBank.name}` : "Register New Bank Partner"}
-                            </h3>
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-100 space-y-5 animate-scale-in">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <div>
+                                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-purple-600 text-base">percent</span>
+                                    Set Interest Rates (ROI)
+                                </h3>
+                                <p className="text-[11px] text-slate-400 font-medium mt-0.5">{roiBank.name} ({roiBank.shortName})</p>
+                            </div>
                             <button
-                                onClick={() => setShowModal(false)}
+                                onClick={() => setShowRoiModal(false)}
                                 className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-[18px]">close</span>
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                            {/* Section 1: Basic Info */}
+                        <div className="space-y-4">
                             <div>
-                                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4">Basic Information</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bank Name</label>
-                                        <input
-                                            type="text"
-                                            value={form.name}
-                                            onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                                            placeholder="e.g., Auxilo Finserve"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Short Name / Slug</label>
-                                        <input
-                                            type="text"
-                                            value={form.shortName}
-                                            onChange={e => setForm(p => ({ ...p, shortName: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") }))}
-                                            placeholder="e.g., auxilo (lowercase alphanumeric)"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                                            required
-                                            disabled={!!editingBank}
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Logo Image Path / URL</label>
-                                        <input
-                                            type="text"
-                                            value={form.logoUrl}
-                                            onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
-                                            placeholder="e.g., /banks/auxilo.png"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Institution Type</label>
-                                        <select
-                                            value={form.type}
-                                            onChange={e => setForm(p => ({ ...p, type: e.target.value }))}
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                        >
-                                            <option value="Public">Public Sector Bank</option>
-                                            <option value="Private">Private Sector Bank</option>
-                                            <option value="NBFC">NBFC Specialist</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Website URL</label>
-                                        <input
-                                            type="url"
-                                            value={form.website}
-                                            onChange={e => setForm(p => ({ ...p, website: e.target.value }))}
-                                            placeholder="https://example.com"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-6 mt-4">
-                                        <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
-                                            <input
-                                                type="checkbox"
-                                                checked={form.isPopular}
-                                                onChange={e => setForm(p => ({ ...p, isPopular: e.target.checked }))}
-                                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                            />
-                                            Show as Popular
-                                        </label>
-                                    </div>
-                                </div>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                    Minimum ROI (% p.a.)
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={minRoiInput}
+                                    onChange={e => setMinRoiInput(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-purple-600 text-slate-900"
+                                    required
+                                />
                             </div>
 
-                            {/* Section 2: Financial Criteria */}
                             <div>
-                                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4">Financial Criteria</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Min ROI (% p.a.)</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={form.interestRateMin}
-                                            onChange={e => setForm(p => ({ ...p, interestRateMin: parseFloat(e.target.value) || 0 }))}
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Max ROI (% p.a.)</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={form.interestRateMax}
-                                            onChange={e => setForm(p => ({ ...p, interestRateMax: parseFloat(e.target.value) || 0 }))}
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Max Loan Amount</label>
-                                        <input
-                                            type="text"
-                                            value={form.maxLoanAmount}
-                                            onChange={e => setForm(p => ({ ...p, maxLoanAmount: e.target.value }))}
-                                            placeholder="e.g., ₹40 Lakhs or No Limit"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Processing Fee</label>
-                                        <input
-                                            type="text"
-                                            value={form.processingFee}
-                                            onChange={e => setForm(p => ({ ...p, processingFee: e.target.value }))}
-                                            placeholder="e.g., 1% + GST"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Processing / Approval Time</label>
-                                        <input
-                                            type="text"
-                                            value={form.processingTime}
-                                            onChange={e => setForm(p => ({ ...p, processingTime: e.target.value }))}
-                                            placeholder="e.g., 48 hours or 3 days"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Collateral Free Limit</label>
-                                        <input
-                                            type="text"
-                                            value={form.collateralFreeLimit}
-                                            onChange={e => setForm(p => ({ ...p, collateralFreeLimit: e.target.value }))}
-                                            placeholder="e.g., ₹40 Lakhs"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                </div>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                    Maximum ROI (% p.a.)
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={maxRoiInput}
+                                    onChange={e => setMaxRoiInput(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-purple-600 text-slate-900"
+                                    required
+                                />
                             </div>
 
-                            {/* Section 3: Key Features list */}
-                            <div>
-                                <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">Key Features</h4>
-                                <div className="space-y-3">
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={featureInput}
-                                            onChange={e => setFeatureInput(e.target.value)}
-                                            placeholder="Add feature description..."
-                                            className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={handleAddFeature}
-                                            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold transition-all cursor-pointer"
-                                        >
-                                            Add
-                                        </button>
-                                    </div>
-                                    <ul className="space-y-1.5 max-h-36 overflow-y-auto">
-                                        {form.features.map((feat, index) => (
-                                            <li key={index} className="flex justify-between items-center bg-slate-50 px-3 py-1.5 rounded border border-slate-200 text-xs">
-                                                <span className="truncate pr-4">{feat}</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveFeature(index)}
-                                                    className="text-red-500 hover:text-red-700 text-xs cursor-pointer"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
+                            <div className="p-3 bg-purple-50/60 border border-purple-100 rounded-lg text-[11px] font-semibold text-purple-800">
+                                Effective ROI spread: <strong>{minRoiInput}% - {maxRoiInput}% p.a.</strong>
                             </div>
-                        </form>
+                        </div>
 
-                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+                        <div className="flex justify-end gap-3 pt-2">
                             <button
                                 type="button"
-                                onClick={() => setShowModal(false)}
-                                className="px-4 py-2 border border-slate-200 rounded text-xs text-slate-600 hover:bg-slate-100 transition-all font-semibold cursor-pointer"
+                                onClick={() => setShowRoiModal(false)}
+                                className="px-4 py-2 border border-slate-200 rounded-lg text-xs text-slate-600 hover:bg-slate-100 transition-all font-semibold cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
-                                onClick={handleSubmit}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition-all cursor-pointer"
+                                onClick={handleSaveRoi}
+                                disabled={savingRoi}
+                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-50"
                             >
-                                {editingBank ? "Update Details" : "Register Partner"}
+                                {savingRoi ? "Saving ROI..." : "Save ROI Rates"}
                             </button>
                         </div>
                     </div>

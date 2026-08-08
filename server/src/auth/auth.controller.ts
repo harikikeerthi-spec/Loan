@@ -246,28 +246,45 @@ export class AuthController {
   @Post('update-details')
   async updateUserDetails(@Body() body: {
     email: string;
-    firstName: string;
-    lastName: string;
+    firstName?: string;
+    lastName?: string;
     phoneNumber?: string;
     dateOfBirth?: string;
+    intakeSeason?: string;
     profileImage?: string;
     pincode?: string;
+    targetUniversity?: string;
+    studyDestination?: string;
+    fatherName?: string;
+    motherName?: string;
+    family?: any;
+    coApplicant?: any;
+    academic?: any;
+    userId?: string;
   }) {
-    if (!body || !body.email) {
+    if (!body || (!body.email && !body.userId)) {
       return {
         success: false,
-        message: 'Email is required',
+        message: 'Email or userId is required',
       };
     }
-    return this.authService.updateUserDetails(
+    return this.usersService.updateUserDetails(
       body.email,
-      body.firstName,
-      body.lastName,
+      body.firstName || '',
+      body.lastName || '',
       body.phoneNumber || '',
       body.dateOfBirth || '',
-      undefined, // intakeSeason removed
+      body.intakeSeason,
       body.profileImage,
-      body.pincode
+      body.pincode,
+      body.targetUniversity,
+      body.studyDestination,
+      body.fatherName,
+      body.motherName,
+      body.family,
+      body.coApplicant,
+      body.academic,
+      body.userId
     );
   }
 

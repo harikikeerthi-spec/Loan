@@ -700,19 +700,21 @@ export default function DocumentVaultPage() {
         return direct;
     };
 
-    const renderDocGroup = (title: string, icon: string, docList: any[], onAddOther?: () => void) => (
-        <div className="mb-10">
-            <div className="flex justify-between items-center mb-5">
-                <h2 className="text-[13px] font-bold flex items-center gap-2 text-gray-900 uppercase tracking-wider">
-                    <div className="w-8 h-8 rounded-lg bg-[#6605c7]/[0.05] flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px] text-[#6605c7]">{icon}</span>
-                    </div>
-                    {title}
-                </h2>
-                {onAddOther && (
-                    <button
-                        onClick={onAddOther}
-                        className="px-4 py-2 bg-[#6605c7] hover:bg-[#5504a6] text-white text-[11px] font-bold rounded-xl transition-all flex items-center gap-2 shadow-sm shadow-purple-500/10 active:scale-95 animate-fade-in"
+    const renderDocGroup = (title: string, icon: string, docList: any[], onAddOther?: () => void) => {
+        if (!docList || docList.length === 0) return null;
+        return (
+            <div className="mb-10">
+                <div className="flex justify-between items-center mb-5">
+                    <h2 className="text-[13px] font-bold flex items-center gap-2 text-gray-900 uppercase tracking-wider">
+                        <div className="w-8 h-8 rounded-lg bg-[#6605c7]/[0.05] flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[18px] text-[#6605c7]">{icon}</span>
+                        </div>
+                        {title}
+                    </h2>
+                    {onAddOther && (
+                        <button
+                            onClick={onAddOther}
+                            className="px-4 py-2 bg-[#6605c7] hover:bg-[#5504a6] text-white text-[11px] font-bold rounded-xl transition-all flex items-center gap-2 shadow-sm shadow-purple-500/10 active:scale-95 animate-fade-in"
                     >
                         <span className="material-symbols-outlined text-[16px]">add_circle</span>
                         Add Other Documents
@@ -872,6 +874,7 @@ export default function DocumentVaultPage() {
             </div>
         </div>
     );
+};
 
     if (!mounted) return null;
 

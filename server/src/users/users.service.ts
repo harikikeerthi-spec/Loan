@@ -37,7 +37,10 @@ export const USER_VALID_COLUMNS = new Set([
   'pincode',
   'loanAmount',
   'admitStatus',
-  'tests'
+  'tests',
+  'family',
+  'coApplicant',
+  'academic'
 ]);
 
 export function sanitizeUserPayload(payload: any): Record<string, any> {
@@ -105,28 +108,11 @@ export class UsersService implements OnModuleInit {
 
   public async backfillAndAutoAssignApplications() {
     try {
-      // 1. Backfill missing/invalid application numbers
-      const { data: allApps } = await this.db
-        .from('LoanApplication')
-        .select('id, applicationNumber, createdAt')
-        .order('createdAt', { ascending: true });
+      // NOTE: We intentionally do NOT backfill application numbers here.
+      // VL-APP-YYYY-XXXXX numbers are ONLY generated when staff submits to a bank.
+      // Applications without a number are in 'pending review' state waiting for staff action.
 
-      if (allApps && allApps.length > 0) {
-        for (const app of allApps) {
-          const num = (app.applicationNumber || '').trim();
-          const isValidFormat = num.startsWith('VL-APP-') || num.startsWith('VTU-APP-') || num.startsWith('VTU-BNK-');
-          if (!isValidFormat) {
-            const newAppNum = await this.generateApplicationNumber();
-            console.log(`[UsersService] Backfilling missing applicationNumber for loan ${app.id}: "${num}" -> ${newAppNum}`);
-            await this.db
-              .from('LoanApplication')
-              .update({ applicationNumber: newAppNum })
-              .eq('id', app.id);
-          }
-        }
-      }
-
-      // 2. Trigger auto-assignment event for unassigned loans
+      // Trigger auto-assignment for unassigned loans only
       const { data: unassignedLoans } = await this.db
         .from('LoanApplication')
         .select('id, applicationNumber, assignedStaffId')
@@ -139,6 +125,8 @@ export class UsersService implements OnModuleInit {
             applicationId: loan.id,
             applicationNumber: loan.applicationNumber,
           });
+          // Small delay between events to prevent DB overload
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
     } catch (err) {
@@ -716,6 +704,13 @@ export class UsersService implements OnModuleInit {
       coAppObj = { ...coAppObj, ...parsedCoApp };
     }
 
+    if (family !== undefined || fatherName !== undefined || motherName !== undefined) {
+      updatePayload.family = familyObj;
+    }
+    if (coApplicant !== undefined) {
+      updatePayload.coApplicant = coAppObj;
+    }
+
     // Sanitize payload to ONLY include valid columns on User table (avoids PGRST204)
     const safeUserPayload = sanitizeUserPayload(updatePayload);
 
@@ -728,8 +723,18 @@ export class UsersService implements OnModuleInit {
         .select()
         .maybeSingle();
 
-      if (error) throw error;
-      if (data) updatedUser = data;
+      if (error) {
+        console.warn(`[UsersService.updateUserDetails] Full payload update notice: ${error.message}. Retrying with basic columns...`);
+        const basicPayload = { ...safeUserPayload };
+        delete basicPayload.family;
+        delete basicPayload.coApplicant;
+        if (Object.keys(basicPayload).length > 0) {
+          const { data: bData } = await this.db.from('User').update(basicPayload).eq('id', targetUser.id).select().maybeSingle();
+          if (bData) updatedUser = bData;
+        }
+      } else if (data) {
+        updatedUser = data;
+      }
     }
 
     // Upsert specialized profiles (UserAcademicProfile, UserStudyPreference, UserFinancialProfile)
@@ -1078,8 +1083,8 @@ export class UsersService implements OnModuleInit {
         normalizedDocType.includes('inter') ||
         normalizedDocType.includes('grade')
       ) {
-        const inst = details.institution || details.university || details.college_name || details.institution_name || details.university_name || details.board || details.board_name || details.school_name || details.school || details.college || details.awarding_body;
-        const rawScore = details.percentage || details.score || details.gpa || details.cgpa || details.overall_percentage || details.marks_percentage || details.aggregate_percentage || details.overall_gpa || details.overall_cgpa;
+        const inst = details.institution || details.university || details.college_name || details.institution_name || details.university_name || details.board || details.board_name || details.school_name || details.school || details.college || details.awarding_body || details.board_or_university || details.institute || details.examining_body || details.degree_college;
+        const rawScore = details.percentage || details.score || details.gpa || details.cgpa || details.overall_percentage || details.marks_percentage || details.aggregate_percentage || details.overall_gpa || details.overall_cgpa || details.total_percentage || details.grade || details.marks || details.obtained_marks;
         const secured = details.total_marks_secured || details.marks_secured || details.marks_obtained || details.obtained_marks || details.secured_marks || details.total_marks;
         const max = details.total_marks_maximum || details.maximum_marks || details.max_marks || details.total_max || details.out_of;
 
@@ -1133,7 +1138,19 @@ export class UsersService implements OnModuleInit {
         }
 
         if (academicUpdated) {
-          payload.academic = typeof currentUser.academic === 'string' ? JSON.stringify(academic) : academic;
+          payload.academic = typeof currentUser.academic === 'object' && currentUser.academic !== null ? academic : JSON.stringify(academic);
+
+          // Sync to UserAcademicProfile
+          try {
+            const ugInst = academic.ug?.institute || payload.bachelorsDegree || null;
+            const ugScore = academic.ug?.percentage ? parseFloat(academic.ug.percentage) : null;
+            await this.db.from('UserAcademicProfile').upsert({
+              userId,
+              bachelorsDegree: ugInst,
+              gpa: ugScore,
+              updatedAt: new Date().toISOString()
+            }, { onConflict: 'userId' });
+          } catch (_) {}
         }
       }
 
@@ -1314,21 +1331,18 @@ export class UsersService implements OnModuleInit {
 
     await this.validateApplicationConstraints(userId, bank, country, universityName);
 
+    const courseName = data.courseName || data.programFocus || data.program || data.courseType || null;
     const now = new Date().toISOString();
-
-    // Generate clean sequential application number (VL-APP-2026-XXXXX)
-    const appNum = await this.generateApplicationNumber();
 
     // Calculate estimated completion (14 days from now)
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
-    const courseName = data.courseName || data.programFocus || data.program || data.courseType || null;
-
     const insertPayload: any = {
       id: randomUUID(),
       userId,
-      applicationNumber: appNum,
+      // applicationNumber is intentionally NOT set here.
+      // VL-APP-YYYY-XXXXX will be assigned ONLY when staff submits the application to a bank.
       bank: data.bank,
       loanType: data.loanType,
       amount: data.amount,
@@ -1419,10 +1433,11 @@ export class UsersService implements OnModuleInit {
       }
     }
 
-    // Emit application created event for staff notifications
+    // Emit application created event - AssignmentService listens to this for auto round-robin assignment.
+    // We delay slightly to ensure the DB record is fully committed before AssignmentService queries it.
     try {
       const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
-      this.eventEmitter.emit('application.created', {
+      const eventPayload = {
         applicationId: application.id,
         applicationNumber: application.applicationNumber,
         userId: application.userId,
@@ -1432,7 +1447,13 @@ export class UsersService implements OnModuleInit {
         loanAmount: application.amount,
         loanType: data.loanType,
         createdAt: new Date().toISOString()
-      });
+      };
+      // Fire immediately
+      this.eventEmitter.emit('application.created', eventPayload);
+      // Also fire after 2 seconds as a retry safety net (handles race conditions where DB commit lags)
+      setTimeout(() => {
+        this.eventEmitter.emit('application.created', eventPayload);
+      }, 2000);
     } catch (e) {
       console.error('Failed to emit application.created event in UsersService:', e);
     }
@@ -1523,7 +1544,7 @@ export class UsersService implements OnModuleInit {
     const runQuery = async (withRelation: boolean) => {
       let query: any = this.db.from('LoanApplication');
       if (withRelation) {
-        query = query.select('*, user:User!userId(id, intakeSeason, firstName, lastName, email, phoneNumber, mobile, familyDetails, parents)');
+        query = query.select('*, user:User!userId(id, intakeSeason, firstName, lastName, email, phoneNumber, mobile)');
       } else {
         query = query.select('*');
       }
@@ -2249,47 +2270,52 @@ export class UsersService implements OnModuleInit {
   }
 
   async upsertParentRecord(userId: string, relation: string, data: { name?: string; aadharNumber?: string; panNumber?: string; relation?: string }) {
-    // First try to find an existing record
-    const { data: existing } = await this.db
-      .from('parents')
-      .select('*')
-      .eq('userId', userId)
-      .eq('relation', relation)
-      .maybeSingle();
-
-    const payload: any = {
-      userId,
-      relation,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (existing) {
-      // Merge: only overwrite if new value is provided
-      payload.name = data.name ?? existing.name;
-      payload.aadharNumber = data.aadharNumber ?? existing.aadharNumber;
-      payload.panNumber = data.panNumber ?? existing.panNumber;
-      const { data: updated, error } = await this.db
+    try {
+      const relLower = (relation || '').toLowerCase().trim();
+      const { data: parentsList } = await this.db
         .from('parents')
-        .update(payload)
-        .eq('id', existing.id)
-        .select()
-        .single();
-      if (error) throw error;
-      return updated;
-    } else {
-      // Insert with a proper UUID
-      payload.id = randomUUID();
-      if (data.name !== undefined) payload.name = data.name;
-      if (data.aadharNumber !== undefined) payload.aadharNumber = data.aadharNumber;
-      if (data.panNumber !== undefined) payload.panNumber = data.panNumber;
-      payload.createdAt = new Date().toISOString();
-      const { data: inserted, error } = await this.db
-        .from('parents')
-        .insert(payload)
-        .select()
-        .single();
-      if (error) throw error;
-      return inserted;
+        .select('*')
+        .eq('userId', userId);
+
+      const existing = (parentsList || []).find((p: any) =>
+        (p.relation || '').toLowerCase().trim() === relLower ||
+        (relLower === 'coapplicant' && !['father', 'mother'].includes((p.relation || '').toLowerCase().trim()))
+      );
+
+      const payload: any = {
+        userId,
+        relation: relLower,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (existing) {
+        if (data.name !== undefined) payload.name = data.name;
+        if (data.aadharNumber !== undefined) payload.aadharNumber = data.aadharNumber;
+        if (data.panNumber !== undefined) payload.panNumber = data.panNumber;
+        const { data: updated, error } = await this.db
+          .from('parents')
+          .update(payload)
+          .eq('id', existing.id)
+          .select()
+          .maybeSingle();
+        if (error) console.warn('[UsersService.upsertParentRecord] Update notice:', error.message);
+        return updated || existing;
+      } else {
+        payload.id = randomUUID();
+        if (data.name !== undefined) payload.name = data.name;
+        if (data.aadharNumber !== undefined) payload.aadharNumber = data.aadharNumber;
+        if (data.panNumber !== undefined) payload.panNumber = data.panNumber;
+        payload.createdAt = new Date().toISOString();
+        const { data: inserted, error } = await this.db
+          .from('parents')
+          .insert(payload)
+          .select()
+          .maybeSingle();
+        if (error) console.warn('[UsersService.upsertParentRecord] Insert notice:', error.message);
+        return inserted;
+      }
+    } catch (err: any) {
+      console.warn('[UsersService.upsertParentRecord] Warning:', err?.message || err);
     }
   }
 }

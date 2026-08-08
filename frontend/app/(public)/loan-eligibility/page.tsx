@@ -47,6 +47,16 @@ export default function LoanEligibilityPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (formData.age < 18 || formData.age > 40) {
+            alert("Age must be between 18 and 40 years for loan eligibility.");
+            return;
+        }
+
+        if (formData.credit < 300 || formData.credit > 900) {
+            alert("CIBIL score must be between 300 and 900.");
+            return;
+        }
+
         if (!isAuthenticated) {
             localStorage.setItem("pending_loan_eligibility_data", JSON.stringify(formData));
             alert("To view your eligibility score, rate estimates, and pre-approved offers, please login. You will be redirected to the login page.");
@@ -94,22 +104,46 @@ export default function LoanEligibilityPage() {
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Age</label>
-                                <input name="age" type="number" value={formData.age} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border-gray-100 focus:border-[#6605c7] focus:ring-0 transition-all font-medium text-gray-900 bg-gray-50/50 text-[13px]" />
+                                <input
+                                    name="age"
+                                    type="number"
+                                    min={18}
+                                    max={40}
+                                    value={formData.age}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-3 rounded-xl border-gray-100 focus:border-[#6605c7] focus:ring-0 transition-all font-medium text-gray-900 bg-gray-50/50 text-[13px]"
+                                />
+                                {(formData.age < 18 || formData.age > 40) && (
+                                    <p className="text-[10px] font-bold text-rose-500 flex items-center gap-1 mt-1">
+                                        <span className="material-symbols-outlined text-[13px]">warning</span>
+                                        Age must be between 18 and 40 years for loan eligibility
+                                    </p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">CIBIL Score</label>
-                                <input name="credit" type="number" value={formData.credit} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border-gray-100 focus:border-[#6605c7] focus:ring-0 transition-all font-medium text-gray-900 bg-gray-50/50 text-[13px]" />
-                                {formData.credit <= 700 ? (
+                                <input
+                                    name="credit"
+                                    type="number"
+                                    min={300}
+                                    max={900}
+                                    value={formData.credit}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-3 rounded-xl border-gray-100 focus:border-[#6605c7] focus:ring-0 transition-all font-medium text-gray-900 bg-gray-50/50 text-[13px]"
+                                />
+                                {formData.credit < 300 || formData.credit > 900 ? (
+                                    <p className="text-[10px] font-bold text-rose-500 flex items-center gap-1 mt-1">
+                                        <span className="material-symbols-outlined text-[13px]">warning</span>
+                                        CIBIL score must be between 300 and 900
+                                    </p>
+                                ) : formData.credit <= 700 ? (
                                     <p className="text-[10px] font-bold text-rose-500 flex items-center gap-1 mt-1">
                                         <span className="material-symbols-outlined text-[13px]">warning</span>
                                         CIBIL score must be &gt; 700 for loan eligibility
                                     </p>
-                                ) : (
-                                    <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
-                                        <span className="material-symbols-outlined text-[13px]">check_circle</span>
-                                        CIBIL score meets minimum threshold (&gt; 700)
-                                    </p>
-                                )}
+                                ) : null}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Annual Income (₹)</label>

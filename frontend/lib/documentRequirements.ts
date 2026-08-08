@@ -82,11 +82,13 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
   // Dynamically determine relation and fallback co-applicant name
   const rawRelation = coApplicant.relation || coApplicant.coApplicantRelation || profile.coApplicantRelation || student.coApplicant || "";
   const relation = typeof rawRelation === "string" ? rawRelation : "";
-  const relationLabel = relation ? relation.charAt(0).toUpperCase() + relation.slice(1) : "Co-applicant";
-  const coApplicantName = relationLabel;
-
   const normalizedRel = relation.toLowerCase().trim();
+  const isNoCoApp = normalizedRel === "none" || normalizedRel === "no" || student.hasCoApplicant === false || profile.hasCoApplicant === false;
+
   const coappActualName = typeof coApplicant.name === 'string' ? coApplicant.name : (profile.coApplicantName || "");
+  const relationLabel = relation && !isNoCoApp ? relation.charAt(0).toUpperCase() + relation.slice(1) : "";
+  const coApplicantName = coappActualName || relationLabel;
+
   const isFatherCoApp = normalizedRel === "father" || (fatherName && coappActualName && fatherName.toLowerCase().trim() === coappActualName.toLowerCase().trim());
   const isMotherCoApp = normalizedRel === "mother" || (motherName && coappActualName && motherName.toLowerCase().trim() === coappActualName.toLowerCase().trim());
   const isParentCoApp = isFatherCoApp || isMotherCoApp;
@@ -97,8 +99,8 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
   docs.push(...getPersonDocumentRequirements(family.fatherEmploymentType || profile.fatherEmploymentType || "", fatherName || "Father", "father"));
   docs.push(...getPersonDocumentRequirements(family.motherEmploymentType || profile.motherEmploymentType || "", motherName || "Mother", "mother"));
 
-  // Collect Co-applicant documents ONLY if co-applicant is NOT father or mother (avoids duplicate Aadhaar/PAN requests)
-  if (!isParentCoApp && (hasValue(coApplicantName) || hasValue(coApplicant.employmentType) || hasValue(profile.coApplicantEmploymentType) || hasValue(relation))) {
+  // Collect Co-applicant documents ONLY if co-applicant is present, active, and NOT father or mother (avoids duplicate Aadhaar/PAN requests)
+  if (!isNoCoApp && !isParentCoApp && hasValue(coApplicantName)) {
     docs.push(...getPersonDocumentRequirements(coApplicant.employmentType || profile.coApplicantEmploymentType || "", coApplicantName, "coapplicant"));
   }
 

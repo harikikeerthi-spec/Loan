@@ -17,71 +17,80 @@ export class UniversityInquiryService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    try {
-      await this.prisma.$executeRaw`
-        CREATE TABLE IF NOT EXISTS "UniversityInquiry" (
-          "id" TEXT NOT NULL,
-          "userId" TEXT,
-          "name" TEXT NOT NULL,
-          "email" TEXT NOT NULL,
-          "mobile" TEXT NOT NULL,
-          "universityName" TEXT NOT NULL,
-          "type" TEXT NOT NULL,
-          "status" TEXT NOT NULL DEFAULT 'pending',
-          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT "UniversityInquiry_pkey" PRIMARY KEY ("id")
-        );
-      `;
+    // Run table initialization in the background after module startup to avoid blocking server boot
+    setTimeout(async () => {
+      try {
+        await this.prisma.$executeRaw`
+          CREATE TABLE IF NOT EXISTS "UniversityInquiry" (
+            "id" TEXT NOT NULL,
+            "userId" TEXT,
+            "name" TEXT NOT NULL,
+            "email" TEXT NOT NULL,
+            "mobile" TEXT NOT NULL,
+            "universityName" TEXT NOT NULL,
+            "type" TEXT NOT NULL,
+            "status" TEXT NOT NULL DEFAULT 'pending',
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "UniversityInquiry_pkey" PRIMARY KEY ("id")
+          );
+        `;
+      } catch (_) {}
 
-      await this.prisma.$executeRaw`
-        CREATE TABLE IF NOT EXISTS "FastTrackApplication" (
-          "id" TEXT NOT NULL,
-          "userId" TEXT,
-          "name" TEXT NOT NULL,
-          "email" TEXT NOT NULL,
-          "mobile" TEXT NOT NULL,
-          "universityName" TEXT NOT NULL,
-          "status" TEXT NOT NULL DEFAULT 'pending',
-          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT "FastTrackApplication_pkey" PRIMARY KEY ("id")
-        );
-      `;
+      try {
+        await this.prisma.$executeRaw`
+          CREATE TABLE IF NOT EXISTS "FastTrackApplication" (
+            "id" TEXT NOT NULL,
+            "userId" TEXT,
+            "name" TEXT NOT NULL,
+            "email" TEXT NOT NULL,
+            "mobile" TEXT NOT NULL,
+            "universityName" TEXT NOT NULL,
+            "status" TEXT NOT NULL DEFAULT 'pending',
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "FastTrackApplication_pkey" PRIMARY KEY ("id")
+          );
+        `;
+      } catch (_) {}
 
-      await this.prisma.$executeRaw`
-        CREATE TABLE IF NOT EXISTS "CallbackRequest" (
-          "id" TEXT NOT NULL,
-          "userId" TEXT,
-          "name" TEXT NOT NULL,
-          "email" TEXT NOT NULL,
-          "mobile" TEXT NOT NULL,
-          "universityName" TEXT NOT NULL,
-          "status" TEXT NOT NULL DEFAULT 'pending',
-          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT "CallbackRequest_pkey" PRIMARY KEY ("id")
-        );
-      `;
+      try {
+        await this.prisma.$executeRaw`
+          CREATE TABLE IF NOT EXISTS "CallbackRequest" (
+            "id" TEXT NOT NULL,
+            "userId" TEXT,
+            "name" TEXT NOT NULL,
+            "email" TEXT NOT NULL,
+            "mobile" TEXT NOT NULL,
+            "universityName" TEXT NOT NULL,
+            "status" TEXT NOT NULL DEFAULT 'pending',
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "CallbackRequest_pkey" PRIMARY KEY ("id")
+          );
+        `;
+      } catch (_) {}
 
-      await this.prisma.$executeRaw`
-        CREATE TABLE IF NOT EXISTS "queries" (
-          "id" TEXT NOT NULL,
-          "applicationId" TEXT NOT NULL,
-          "authorId" TEXT NOT NULL,
-          "authorName" TEXT NOT NULL,
-          "content" TEXT NOT NULL,
-          "status" TEXT NOT NULL DEFAULT 'open',
-          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT "queries_pkey" PRIMARY KEY ("id")
-        );
-      `;
+      try {
+        await this.prisma.$executeRaw`
+          CREATE TABLE IF NOT EXISTS "queries" (
+            "id" TEXT NOT NULL,
+            "applicationId" TEXT NOT NULL,
+            "authorId" TEXT NOT NULL,
+            "authorName" TEXT NOT NULL,
+            "content" TEXT NOT NULL,
+            "status" TEXT NOT NULL DEFAULT 'open',
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "queries_pkey" PRIMARY KEY ("id")
+          );
+        `;
+      } catch (_) {}
 
-      await this.prisma.$executeRaw`NOTIFY pgrst, 'reload schema';`;
-    } catch (e) {
-      console.warn('Auto table initialization notice:', e.message);
-    }
+      try {
+        await this.prisma.$executeRaw`NOTIFY pgrst, 'reload schema';`;
+      } catch (_) {}
+    }, 2000);
   }
 
   async createInquiry(data: {

@@ -31,6 +31,39 @@ export class EligibilityService {
   ) {}
 
   async calculateEligibilityScore(data: EligibilityCheckDto): Promise<EligibilityResult> {
+    // Mandatory requirement: Age must be between 18 and 40 years
+    if (data.age < 18 || data.age > 40) {
+      return {
+        score: 20,
+        status: 'unlikely',
+        ratio: 0,
+        rateRange: 'N/A',
+        coverage: 'Not Applicable',
+        summary: `Loan eligibility is not applicable because applicant age (${data.age}) is outside the required range of 18 to 40 years. Applicants must be between 18 and 40 years old for education loan approval.`,
+        recommendations: [
+          'Applicant must be between 18 and 40 years of age to qualify for student loan programs',
+          'If applicant is under 18, apply with a parent/guardian as primary applicant or upon turning 18',
+          'Explore special professional education credit lines if above 40 years'
+        ],
+      };
+    }
+
+    // Mandatory requirement: CIBIL score range validation (300 - 900)
+    if (data.credit < 300 || data.credit > 900) {
+      return {
+        score: 15,
+        status: 'unlikely',
+        ratio: 0,
+        rateRange: 'N/A',
+        coverage: 'Not Applicable',
+        summary: `Invalid CIBIL score (${data.credit}). CIBIL credit scores in India range strictly between 300 and 900.`,
+        recommendations: [
+          'Enter a valid CIBIL score between 300 and 900',
+          'Check your official CIBIL credit report for accurate score details'
+        ],
+      };
+    }
+
     // Mandatory requirement: CIBIL score must be > 700 for loan eligibility to apply
     if (data.credit <= 700) {
       return {

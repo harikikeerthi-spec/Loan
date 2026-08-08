@@ -140,15 +140,15 @@ export default function UserProfileView({
 
     const getAcademicDetails = (doc: any, levelKey?: 'ssc' | 'hsc' | 'ug') => {
         const instKeys = [
-            'institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body', 'name_of_institution', 'awarding_body', 'degree_college', 'college'
+            'institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body', 'name_of_institution', 'awarding_body', 'degree_college', 'college', 'board_or_university', 'institute', 'school', 'name_of_the_board', 'name_of_the_university'
         ];
         const pctKeys = [
-            'score', 'percentage', 'gpa', 'cgpa', 'overall_percentage', 'overall_gpa', 'marks_percentage', 'aggregate_percentage', 'total_marks_secured', 'overall_score', 'cgpa_secured', 'gpa_secured'
+            'score', 'percentage', 'gpa', 'cgpa', 'overall_percentage', 'overall_gpa', 'marks_percentage', 'aggregate_percentage', 'total_marks_secured', 'overall_score', 'cgpa_secured', 'gpa_secured', 'total_percentage', 'grade', 'marks', 'obtained_marks', 'result'
         ];
         const instFromDoc = getExtractedField(doc, instKeys);
         const pctFromDoc = getExtractedField(doc, pctKeys);
 
-        let parsedAcademic: any = data?.academic || data?.user?.academic;
+        let parsedAcademic: any = data?.academic || data?.user?.academic || user?.academic;
         if (typeof parsedAcademic === 'string') {
             try { parsedAcademic = JSON.parse(parsedAcademic); } catch { parsedAcademic = {}; }
         }
@@ -161,10 +161,10 @@ export default function UserProfileView({
             instFallback = parsedAcademic.ssc?.institute || parsedAcademic.grade10?.institute;
             pctFallback = parsedAcademic.ssc?.percentage || parsedAcademic.grade10?.percentage;
         } else if (levelKey === 'hsc') {
-            instFallback = parsedAcademic.hsc?.institute || parsedAcademic.grade12?.institute;
-            pctFallback = parsedAcademic.hsc?.percentage || parsedAcademic.grade12?.percentage;
+            instFallback = parsedAcademic.hsc?.institute || parsedAcademic.grade12?.institute || parsedAcademic.inter?.institute;
+            pctFallback = parsedAcademic.hsc?.percentage || parsedAcademic.grade12?.percentage || parsedAcademic.inter?.percentage;
         } else if (levelKey === 'ug') {
-            instFallback = parsedAcademic.ug?.institute || parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || data?.bachelorsDegree || data?.user?.bachelorsDegree;
+            instFallback = parsedAcademic.ug?.institute || parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || data?.bachelorsDegree || data?.user?.bachelorsDegree || user?.bachelorsDegree;
             pctFallback = parsedAcademic.ug?.percentage || parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score;
         }
 
