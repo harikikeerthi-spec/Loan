@@ -20,6 +20,36 @@ export class AdminApplicationController {
         return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
     }
 
+    @Post('reassign/:loanId')
+    @Post(':loanId/reassign')
+    async reassignLoan(
+        @Param('loanId') loanId: string,
+        @Body() body: { toStaffId: string; reason?: string },
+        @Request() req: any,
+    ) {
+        const assignedBy = req.user?.id || req.user?.uid || 'admin';
+        return await this.assignmentService.reassignLoan(
+            loanId,
+            body.toStaffId,
+            body.reason || 'manual',
+            assignedBy
+        );
+    }
+
+    @Post('bulk-reassign')
+    async bulkReassignLoans(
+        @Body() body: { loanIds: string[]; toStaffId: string; reason?: string },
+        @Request() req: any,
+    ) {
+        const assignedBy = req.user?.id || req.user?.uid || 'admin';
+        return await this.assignmentService.bulkReassignLoans(
+            body.loanIds,
+            body.toStaffId,
+            body.reason || 'bulk_reassign_admin',
+            assignedBy
+        );
+    }
+
     /**
      * POST /admin/applications/:id/remarks
      * Add remark/suggestion to application

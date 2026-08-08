@@ -48,6 +48,7 @@ export class AssignmentController {
   }
 
   @Post('reassign/:loanId')
+  @Post(':loanId/reassign')
   async reassignLoan(
     @Param('loanId') loanId: string,
     @Body() dto: ReassignLoanDto,

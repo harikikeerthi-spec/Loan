@@ -1545,23 +1545,50 @@ export const staffProfileApi = {
 
 // ─── Assignment (Round-Robin Staff Assignment) ────────────────────────
 export const assignmentApi = {
-    // Trigger round-robin assignment for a single loan application
-    assign: (loanId: string) =>
-        apiFetch(`${API_URL}/assignment/assign/${loanId}`, { method: 'POST' }),
+    // Trigger round-robin assignment for a single loan application with fallback paths
+    assign: async (loanId: string) => {
+        try {
+            return await apiFetch(`${API_URL}/assignment/assign/${loanId}`, { method: 'POST' });
+        } catch (e1) {
+            try {
+                return await apiFetch(`${API_URL}/admin/applications/${loanId}/assign`, { method: 'POST' });
+            } catch (e2) {
+                return await apiFetch(`${API_URL}/applications/${loanId}/assign`, { method: 'POST' });
+            }
+        }
+    },
 
-    // Manually reassign to a specific staff member
-    reassign: (loanId: string, toStaffId: string, reason?: string) =>
-        apiFetch(`${API_URL}/assignment/reassign/${loanId}`, {
-            method: 'POST',
-            body: JSON.stringify({ toStaffId, reason: reason || 'manual' }),
-        }),
+    // Manually reassign to a specific staff member with fallback paths
+    reassign: async (loanId: string, toStaffId: string, reason?: string) => {
+        const body = JSON.stringify({ toStaffId, reason: reason || 'manual' });
+        try {
+            return await apiFetch(`${API_URL}/assignment/reassign/${loanId}`, { method: 'POST', body });
+        } catch (e1) {
+            try {
+                return await apiFetch(`${API_URL}/admin/applications/reassign/${loanId}`, { method: 'POST', body });
+            } catch (e2) {
+                try {
+                    return await apiFetch(`${API_URL}/admin/applications/${loanId}/reassign`, { method: 'POST', body });
+                } catch (e3) {
+                    return await apiFetch(`${API_URL}/auth/reassign/${loanId}`, { method: 'POST', body });
+                }
+            }
+        }
+    },
 
-    // Bulk reassign multiple applications to a staff member (or 'auto' / 'round_robin')
-    bulkReassign: (loanIds: string[], toStaffId: string, reason?: string) =>
-        apiFetch(`${API_URL}/assignment/bulk-reassign`, {
-            method: 'POST',
-            body: JSON.stringify({ loanIds, toStaffId, reason: reason || 'bulk_reassign_admin' }),
-        }),
+    // Bulk reassign multiple applications with fallback paths
+    bulkReassign: async (loanIds: string[], toStaffId: string, reason?: string) => {
+        const body = JSON.stringify({ loanIds, toStaffId, reason: reason || 'bulk_reassign_admin' });
+        try {
+            return await apiFetch(`${API_URL}/assignment/bulk-reassign`, { method: 'POST', body });
+        } catch (e1) {
+            try {
+                return await apiFetch(`${API_URL}/admin/applications/bulk-reassign`, { method: 'POST', body });
+            } catch (e2) {
+                return await apiFetch(`${API_URL}/auth/bulk-reassign`, { method: 'POST', body });
+            }
+        }
+    },
 
     // Assign all unassigned applications via round robin with fallback paths
     assignAllUnassigned: async () => {
