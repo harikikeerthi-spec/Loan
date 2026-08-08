@@ -423,6 +423,12 @@ export class AuthController {
     }
   }
 
+  @Post('assign-all-unassigned')
+  async assignAllUnassigned() {
+    await this.usersService.backfillAndAutoAssignApplications();
+    return { success: true, message: 'Triggered auto-assignment for unassigned applications.' };
+  }
+
   /**
    * Get user's loan applications
    * POST /auth/applications

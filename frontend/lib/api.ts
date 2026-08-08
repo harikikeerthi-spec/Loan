@@ -1563,12 +1563,30 @@ export const assignmentApi = {
             body: JSON.stringify({ loanIds, toStaffId, reason: reason || 'bulk_reassign_admin' }),
         }),
 
-    // Assign all unassigned applications via round robin
-    assignAllUnassigned: () =>
-        apiFetch(`${API_URL}/assignment/assign-all-unassigned`, { method: 'POST' }),
+    // Assign all unassigned applications via round robin with fallback paths
+    assignAllUnassigned: async () => {
+        try {
+            return await apiFetch(`${API_URL}/assignment/assign-all-unassigned`, { method: 'POST' });
+        } catch (e1) {
+            try {
+                return await apiFetch(`${API_URL}/admin/applications/assign-all-unassigned`, { method: 'POST' });
+            } catch (e2) {
+                return await apiFetch(`${API_URL}/auth/assign-all-unassigned`, { method: 'POST' });
+            }
+        }
+    },
 
-    autoAssignAllUnassigned: () =>
-        apiFetch(`${API_URL}/assignment/assign-all-unassigned`, { method: 'POST' }),
+    autoAssignAllUnassigned: async () => {
+        try {
+            return await apiFetch(`${API_URL}/assignment/assign-all-unassigned`, { method: 'POST' });
+        } catch (e1) {
+            try {
+                return await apiFetch(`${API_URL}/admin/applications/assign-all-unassigned`, { method: 'POST' });
+            } catch (e2) {
+                return await apiFetch(`${API_URL}/auth/assign-all-unassigned`, { method: 'POST' });
+            }
+        }
+    },
 
 
     // Get all applications assigned to the current (or specified) staff member (optionally including unassigned)
