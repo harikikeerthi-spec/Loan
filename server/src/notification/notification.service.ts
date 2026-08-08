@@ -392,21 +392,42 @@ export class NotificationService {
   @OnEvent('document.rejected')
   async handleDocumentRejected(payload: any) {
     try {
-      const docName = payload.documentName || payload.documentType;
+      const docName = payload.documentName || payload.documentType || 'document';
+      const reason = payload.rejectionReason || 'Document quality or format does not meet requirements';
+
       await this.createNotification(
         payload.userId,
         `❌ Document Rejected: ${docName}`,
-        `Your uploaded ${docName} has been rejected. Reason: ${payload.rejectionReason}`,
+        `Your uploaded ${docName} has been rejected. Reason: ${reason}`,
         'document_rejected',
         {
           documentId: payload.documentId,
           documentType: payload.documentType,
           documentName: payload.documentName,
-          rejectionReason: payload.rejectionReason,
+          rejectionReason: reason,
           rejectedAt: payload.rejectedAt,
         }
       );
-    } catch (error) {
+
+      // Fetch student's email and send document rejection notification email
+      if (payload.userId) {
+        const { data: student } = await this.db
+          .from('User')
+          .select('email, firstName, lastName')
+          .eq('id', payload.userId)
+          .maybeSingle();
+
+        if (student?.email) {
+          const studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student';
+          await this.emailService.sendDocumentRejectionEmail(
+            student.email,
+            studentName,
+            docName,
+            reason,
+          );
+        }
+      }
+    } catch (error: any) {
       this.logger.error(`Failed to handle document rejected event: ${error.message}`);
     }
   }

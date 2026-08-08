@@ -1567,11 +1567,7 @@ export const assignmentApi = {
             try {
                 return await apiFetch(`${API_URL}/admin/applications/reassign/${loanId}`, { method: 'POST', body });
             } catch (e2) {
-                try {
-                    return await apiFetch(`${API_URL}/admin/applications/${loanId}/reassign`, { method: 'POST', body });
-                } catch (e3) {
-                    return await apiFetch(`${API_URL}/auth/reassign/${loanId}`, { method: 'POST', body });
-                }
+                return await apiFetch(`${API_URL}/admin/applications/${loanId}/reassign`, { method: 'POST', body });
             }
         }
     },
@@ -1582,11 +1578,7 @@ export const assignmentApi = {
         try {
             return await apiFetch(`${API_URL}/assignment/bulk-reassign`, { method: 'POST', body });
         } catch (e1) {
-            try {
-                return await apiFetch(`${API_URL}/admin/applications/bulk-reassign`, { method: 'POST', body });
-            } catch (e2) {
-                return await apiFetch(`${API_URL}/auth/bulk-reassign`, { method: 'POST', body });
-            }
+            return await apiFetch(`${API_URL}/admin/applications/bulk-reassign`, { method: 'POST', body });
         }
     },
 

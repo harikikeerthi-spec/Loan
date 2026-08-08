@@ -422,18 +422,12 @@ export default function DisbursementTracker() {
                                                                 <button
                                                                     onClick={() => {
                                                                         setSelectedApp(app);
-                                                                        const r = trancheRecords[app.id] || { beneficiary: { name: `${app.firstName} ${app.lastName}`, bank: "HDFC Bank Ltd", account: "50100829104012", ifsc: "HDFC0000240" }, history: [] };
-                                                                        setBeneficiaryName(r.beneficiary.name);
-                                                                        setBeneficiaryBank(r.beneficiary.bank);
-                                                                        setBeneficiaryAcc(r.beneficiary.account);
-                                                                        setBeneficiaryIfsc(r.beneficiary.ifsc);
-                                                                        setTrancheAmount((sa - paid).toString());
                                                                         setShowPanel(true);
                                                                     }}
                                                                     className="px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl ml-auto flex items-center gap-1.5 bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white shadow-md shadow-violet-500/20 hover:shadow-lg hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                                                                 >
-                                                                    <span className="material-symbols-outlined text-xs">payments</span>
-                                                                    {app.status === "disbursed" || app.status === "disbursement_confirmed" ? "View Dossier" : "Release / History"}
+                                                                    <span className="material-symbols-outlined text-xs">history</span>
+                                                                    Disbursement History
                                                                 </button>
                                                             </td>
                                                         </motion.tr>
@@ -448,7 +442,7 @@ export default function DisbursementTracker() {
                     </div>
                 </div>
 
-                {/* Slide-over panel */}
+                {/* Slide-over panel — Disbursement History Only */}
                 <AnimatePresence>
                     {showPanel && selectedApp && (
                         <div className="fixed inset-0 z-50 flex justify-end">
@@ -458,7 +452,7 @@ export default function DisbursementTracker() {
                             <motion.div
                                 initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
                                 transition={{ type: "spring", damping: 30, stiffness: 220 }}
-                                className="relative w-full max-w-[700px] h-screen bg-[#FAFBFF] shadow-2xl z-10 flex flex-col overflow-hidden border-l border-violet-100"
+                                className="relative w-full max-w-[550px] h-screen bg-[#FAFBFF] shadow-2xl z-10 flex flex-col overflow-hidden border-l border-violet-100"
                             >
                                 {/* Panel header */}
                                 <div className="p-6 bg-white border-b border-violet-50 flex items-center justify-between sticky top-0 z-20 shadow-sm">
@@ -468,7 +462,7 @@ export default function DisbursementTracker() {
                                             <span className="text-[8.5px] font-black uppercase tracking-wider text-gray-400 font-mono">LAN: {selectedApp.lanNumber || "PENDING"}</span>
                                         </div>
                                         <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight mt-1">
-                                            Disbursement Dossier: {selectedApp.firstName} {selectedApp.lastName}
+                                            Disbursement History: {selectedApp.firstName} {selectedApp.lastName}
                                         </h2>
                                     </div>
                                     <button onClick={() => setShowPanel(false)}
@@ -479,151 +473,84 @@ export default function DisbursementTracker() {
 
                                 <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
 
-                                    {/* 1. Progress gauge */}
+                                    {/* Summary Banner */}
                                     {(() => {
-                                        const sa   = selectedApp.sanctionAmount || selectedApp.amount || 600000;
-                                        const rec  = trancheRecords[selectedApp.id] || { history: [] };
+                                        const sa = selectedApp.sanctionAmount || selectedApp.amount || 600000;
+                                        const rec = trancheRecords[selectedApp.id] || { history: [] };
                                         const paid = rec.history.reduce((s, t) => s + t.amount, 0);
-                                        const rem  = Math.max(0, sa - paid);
-                                        const pct  = Math.min(100, Math.max(0, Math.round((paid / sa) * 100)));
+                                        const rem = Math.max(0, sa - paid);
                                         return (
-                                            <div className="p-6 bg-white rounded-2xl border border-violet-50 shadow-sm space-y-4">
-                                                <div className="flex justify-between items-center">
+                                            <div className="p-5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-violet-500/20 space-y-3">
+                                                <div className="flex justify-between items-center border-b border-white/15 pb-3">
                                                     <div>
-                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Disbursement Progress Gauge</span>
-                                                        <span className="text-lg font-black text-gray-900 mt-1 block">Released: {pct}% of Sanctioned Principal</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-violet-200 block">Sanctioned Principal</span>
+                                                        <span className="text-xl font-black font-mono">&#8377;{sa.toLocaleString("en-IN")}</span>
                                                     </div>
-                                                    <span className="text-2xl font-black font-mono text-violet-700">&#8377;{paid.toLocaleString()}</span>
+                                                    <div className="text-right">
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-violet-200 block">Total Disbursed</span>
+                                                        <span className="text-xl font-black font-mono text-emerald-300">&#8377;{paid.toLocaleString("en-IN")}</span>
+                                                    </div>
                                                 </div>
-                                                <GaugeBar pct={pct} />
-                                                <div className="grid grid-cols-3 gap-4 pt-2 border-t border-violet-50/50">
-                                                    <div>
-                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Sanction Principal</span>
-                                                        <span className="text-xs font-black text-gray-800">&#8377;{sa.toLocaleString()}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Released Tranches</span>
-                                                        <span className="text-xs font-black text-indigo-700">&#8377;{paid.toLocaleString()}</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Remaining Balance</span>
-                                                        <span className="text-xs font-black text-amber-600">&#8377;{rem.toLocaleString()}</span>
-                                                    </div>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-violet-200 font-medium">Remaining Undisbursed Balance:</span>
+                                                    <span className="font-mono font-black text-amber-200">&#8377;{rem.toLocaleString("en-IN")}</span>
                                                 </div>
                                             </div>
                                         );
                                     })()}
 
-                                    {/* 2. Beneficiary details */}
+                                    {/* Disbursement History Only */}
                                     <div className="p-6 bg-white rounded-2xl border border-violet-50 shadow-sm space-y-4 text-left">
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-violet-50 pb-2 flex items-center gap-1.5">
-                                            <span className="material-symbols-outlined text-xs">account_box</span>
-                                            Registered Beneficiary Details
-                                        </h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {[
-                                                { label: "Account Holder Name", val: beneficiaryName, set: setBeneficiaryName, mono: false },
-                                                { label: "Beneficiary Bank Name", val: beneficiaryBank, set: setBeneficiaryBank, mono: false },
-                                                { label: "Account Number",        val: beneficiaryAcc,  set: setBeneficiaryAcc,  mono: true  },
-                                                { label: "Bank IFSC Code",        val: beneficiaryIfsc, set: setBeneficiaryIfsc, mono: true  },
-                                            ].map(({ label, val, set, mono }) => (
-                                                <div key={label}>
-                                                    <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">{label}</label>
-                                                    <input type="text" value={val} onChange={(e) => set(e.target.value)} className={inp + (mono ? " font-mono" : "")} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* 3. Tranche ledger / Release History */}
-                                    <div className="p-6 bg-white rounded-2xl border border-violet-50 shadow-sm space-y-4 text-left">
-                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] border-b border-violet-50 pb-2 flex items-center gap-1.5">
-                                            <span className="material-symbols-outlined text-xs">history</span>
-                                            Release History
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] border-b border-violet-50 pb-3 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">history</span>
+                                            Disbursement History
                                         </h3>
                                         {(() => {
                                             const rec = trancheRecords[selectedApp.id] || { history: [] };
-                                            if (rec.history.length === 0)
-                                                return <p className="text-[10.5px] text-gray-400 italic py-4 text-center">No tranches released yet on this file.</p>;
+                                            if (rec.history.length === 0) {
+                                                return (
+                                                    <div className="py-12 text-center text-gray-400 space-y-2">
+                                                        <span className="material-symbols-outlined text-3xl text-violet-300">payments</span>
+                                                        <p className="text-xs font-bold text-gray-600">No Disbursement History Recorded</p>
+                                                        <p className="text-[11px] text-gray-400">No disbursement tranches have been released for this file yet.</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            const getTermLabel = (index: number) => {
+                                                const n = index + 1;
+                                                if (n === 1) return "1st Term";
+                                                if (n === 2) return "2nd Term";
+                                                if (n === 3) return "3rd Term";
+                                                return `${n}th Term`;
+                                            };
+
                                             return (
-                                                <div className="overflow-hidden border border-violet-50 rounded-xl">
-                                                    <table className="w-full text-left text-xs border-collapse">
-                                                        <thead>
-                                                            <tr className="bg-slate-50 text-[8.5px] font-black uppercase text-gray-400 tracking-wider border-b border-violet-50">
-                                                                <th className="p-3">Tranche</th>
-                                                                <th className="p-3">Amount Disbursed</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-violet-50/50 font-medium">
-                                                            {rec.history.map((t, i) => (
-                                                                <tr key={t.id} className="hover:bg-violet-50/30 transition-colors">
-                                                                    <td className="p-3 font-bold text-gray-900">Tranche #{String(i + 1).padStart(2, "0")}</td>
-                                                                    <td className="p-3 font-bold text-gray-900 text-sm">&#8377;{t.amount.toLocaleString()}</td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
+                                                <div className="space-y-3">
+                                                    {rec.history.map((t, idx) => (
+                                                        <div key={t.id || idx} className="p-4 bg-slate-50/80 rounded-xl border border-slate-100 hover:border-violet-200 transition-all flex items-center justify-between">
+                                                            <div className="flex items-center gap-3.5">
+                                                                <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 font-black text-xs flex items-center justify-center border border-violet-200 shadow-sm">
+                                                                    {idx + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-xs font-black text-gray-900 block">{getTermLabel(idx)} Disbursement</span>
+                                                                    <span className="text-[10px] text-gray-500 font-medium block mt-0.5">
+                                                                        Released on {t.date ? format(new Date(t.date), "dd MMM yyyy") : "N/A"} {t.mode ? `• ${t.mode}` : ""}
+                                                                    </span>
+                                                                    {t.utr && <span className="text-[9.5px] font-mono text-violet-600 block mt-0.5">UTR: {t.utr}</span>}
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className="text-sm font-black text-emerald-600 font-mono block">&#8377;{t.amount.toLocaleString("en-IN")}</span>
+                                                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mt-0.5">Disbursed</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             );
                                         })()}
                                     </div>
-
-                                    {/* 4. Release form */}
-                                    {(() => {
-                                        const sa   = selectedApp.sanctionAmount || selectedApp.amount || 600000;
-                                        const rec  = trancheRecords[selectedApp.id] || { history: [] };
-                                        const paid = rec.history.reduce((s, t) => s + t.amount, 0);
-                                        const rem  = sa - paid;
-                                        if (rem <= 0) {
-                                            return (
-                                                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-indigo-700 text-xs font-semibold flex items-center gap-2">
-                                                    <span className="material-symbols-outlined text-indigo-600">check_circle</span>
-                                                    <span>This sanctioned credit file is fully released. Ledger payout matches sanctioned parameters.</span>
-                                                </div>
-                                            );
-                                        }
-                                        return (
-                                            <div className="p-6 bg-white rounded-2xl border border-violet-50 shadow-sm space-y-4 text-left">
-                                                <h3 className="text-[10px] font-black uppercase tracking-widest text-[#7C3AED] border-b border-violet-50 pb-2 flex items-center gap-1.5">
-                                                    <span className="material-symbols-outlined text-xs">add_card</span>
-                                                    Release Next Tranche
-                                                </h3>
-                                                <form onSubmit={handleReleaseTranche} className="space-y-4">
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">Payout Amount (&#8377;)</label>
-                                                            <input type="number" required max={rem} value={trancheAmount} onChange={(e) => setTrancheAmount(e.target.value)} className={inp} />
-                                                            <span className="text-[8.5px] text-amber-600 font-semibold block mt-1">Maximum: &#8377;{rem.toLocaleString()}</span>
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">Release Date</label>
-                                                            <input type="date" required value={trancheDate} onChange={(e) => setTrancheDate(e.target.value)} className={inp} />
-                                                        </div>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">Transaction Ref / UTR</label>
-                                                            <input type="text" required placeholder="e.g. UTR-HDFC-990812-X" value={trancheUtr} onChange={(e) => setTrancheUtr(e.target.value)} className={inp + " font-mono"} />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest block mb-1">Settlement Method</label>
-                                                            <select value={trancheMode} onChange={(e) => setTrancheMode(e.target.value)} className={inp}>
-                                                                <option value="NEFT">NEFT Settlement Desk</option>
-                                                                <option value="RTGS">RTGS Realtime</option>
-                                                                <option value="IMPS">IMPS Instant Payout</option>
-                                                                <option value="UPI">UPI Merchant Ledger</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <button type="submit" disabled={confirming}
-                                                        className="w-full py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white shadow-lg shadow-violet-500/20 hover:shadow-xl hover:shadow-violet-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
-                                                        <span className="material-symbols-outlined text-sm">send_money</span>
-                                                        {confirming ? "Processing Payout..." : "Release Tranche Funds"}
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        );
-                                    })()}
                                 </div>
                             </motion.div>
                         </div>

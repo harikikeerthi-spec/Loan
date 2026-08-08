@@ -38,30 +38,54 @@ export class AssignmentController {
    * Useful for backfill on startup or after adding new staff members.
    */
   @Post('assign-all-unassigned')
-  @Post('auto-assign-all-unassigned')
-  @Post('auto-assign')
-  @Post('auto-assign-all')
   async assignAllUnassigned(@Req() req: any) {
     const triggeredBy = req.user?.id || req.user?.uid || 'system';
     const result = await this.assignmentService.assignAllUnassigned(triggeredBy);
     return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
   }
 
+  @Post('auto-assign-all-unassigned')
+  async autoAssignAllUnassigned(@Req() req: any) {
+    const triggeredBy = req.user?.id || req.user?.uid || 'system';
+    const result = await this.assignmentService.assignAllUnassigned(triggeredBy);
+    return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
+  }
+
+  @Post('auto-assign')
+  async autoAssign(@Req() req: any) {
+    const triggeredBy = req.user?.id || req.user?.uid || 'system';
+    const result = await this.assignmentService.assignAllUnassigned(triggeredBy);
+    return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
+  }
+
   @Post('reassign/:loanId')
-  @Post(':loanId/reassign')
-  async reassignLoan(
+  async reassignLoanByPrefix(
     @Param('loanId') loanId: string,
     @Body() dto: ReassignLoanDto,
     @Req() req: any,
   ) {
     const assignedBy = req.user?.id || req.user?.uid || 'manager';
-    const result = await this.assignmentService.reassignLoan(
+    return await this.assignmentService.reassignLoan(
       loanId,
       dto.toStaffId,
       dto.reason || 'manual',
       assignedBy
     );
-    return result;
+  }
+
+  @Post(':loanId/reassign')
+  async reassignLoanBySuffix(
+    @Param('loanId') loanId: string,
+    @Body() dto: ReassignLoanDto,
+    @Req() req: any,
+  ) {
+    const assignedBy = req.user?.id || req.user?.uid || 'manager';
+    return await this.assignmentService.reassignLoan(
+      loanId,
+      dto.toStaffId,
+      dto.reason || 'manual',
+      assignedBy
+    );
   }
 
   @Post('bulk-reassign')

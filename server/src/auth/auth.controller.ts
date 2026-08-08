@@ -429,6 +429,21 @@ export class AuthController {
     return { success: true, message: 'Triggered auto-assignment for unassigned applications.' };
   }
 
+  @Post('reassign/:loanId')
+  async reassignLoanFallback(
+    @Param('loanId') loanId: string,
+    @Body() body: { toStaffId: string; reason?: string },
+    @Req() req: any,
+  ) {
+    // Fallback endpoint — primary reassign routes are on /assignment/ and /admin/applications/
+    return {
+      success: false,
+      message: 'Reassign failed: please use /api/assignment/reassign/:id or /api/admin/applications/reassign/:id',
+      loanId,
+      toStaffId: body?.toStaffId,
+    };
+  }
+
   /**
    * Get user's loan applications
    * POST /auth/applications

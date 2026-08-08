@@ -12,17 +12,43 @@ export class AdminApplicationController {
     ) {}
 
     @Post('assign-all-unassigned')
-    @Post('auto-assign-all-unassigned')
-    @Post('auto-assign')
     async assignAllUnassigned(@Request() req: any) {
         const triggeredBy = req.user?.id || req.user?.uid || 'admin';
         const result = await this.assignmentService.assignAllUnassigned(triggeredBy);
         return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
     }
 
+    @Post('auto-assign-all-unassigned')
+    async autoAssignAllUnassigned(@Request() req: any) {
+        const triggeredBy = req.user?.id || req.user?.uid || 'admin';
+        const result = await this.assignmentService.assignAllUnassigned(triggeredBy);
+        return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
+    }
+
+    @Post('auto-assign')
+    async autoAssign(@Request() req: any) {
+        const triggeredBy = req.user?.id || req.user?.uid || 'admin';
+        const result = await this.assignmentService.assignAllUnassigned(triggeredBy);
+        return { success: true, message: `Auto-assignment completed. Assigned: ${result.assigned}, Skipped: ${result.skipped}, Failed: ${result.failed}`, data: result };
+    }
+
     @Post('reassign/:loanId')
+    async reassignLoanByPrefix(
+        @Param('loanId') loanId: string,
+        @Body() body: { toStaffId: string; reason?: string },
+        @Request() req: any,
+    ) {
+        const assignedBy = req.user?.id || req.user?.uid || 'admin';
+        return await this.assignmentService.reassignLoan(
+            loanId,
+            body.toStaffId,
+            body.reason || 'manual',
+            assignedBy
+        );
+    }
+
     @Post(':loanId/reassign')
-    async reassignLoan(
+    async reassignLoanBySuffix(
         @Param('loanId') loanId: string,
         @Body() body: { toStaffId: string; reason?: string },
         @Request() req: any,

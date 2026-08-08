@@ -19,7 +19,7 @@ export class AssignmentService {
     private readonly supabase: SupabaseService,
     private readonly emailService: EmailService,
     private readonly eventEmitter: EventEmitter2,
-  ) {}
+  ) { }
 
   @OnEvent('application.created')
   async handleApplicationCreated(payload: any) {
@@ -106,7 +106,7 @@ export class AssignmentService {
           this.lastAssignedIndexInMemory = dbIdx;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     if (!lastAssignedStaffId) {
       lastAssignedStaffId = this.lastAssignedStaffIdInMemory;
@@ -203,7 +203,7 @@ export class AssignmentService {
         .from('StaffProfile')
         .update({ currentWorkload: currentWork + 1 })
         .eq('id', selectedStaff.id);
-    } catch (_) {}
+    } catch (_) { }
 
     try {
       await this.db.from('LoanAssignmentHistory').insert({
@@ -214,7 +214,7 @@ export class AssignmentService {
         reason: 'round_robin',
         createdAt: now,
       });
-    } catch (_) {}
+    } catch (_) { }
 
     assignSuccess = true;
 
@@ -302,7 +302,7 @@ export class AssignmentService {
             isResigned: false,
             status: 'active',
             currentWorkload: 0,
-            createdAt: u.createdAt || '1970-01-01T00:00:00.000Z',
+            createdAt: u.createdAt || '1970-01-01T00:00:00',
           });
         }
       }
@@ -468,7 +468,7 @@ export class AssignmentService {
         targetStaffName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email || 'Staff Member';
         targetStaffEmail = targetUser.email || '';
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // STEP 1 — Critical write: assignedStaffId only (guaranteed column)
     const { error: reassignErr } = await this.db
@@ -661,7 +661,7 @@ export class AssignmentService {
       if (staffUser) {
         resolvedIds = Array.from(new Set([...resolvedIds, staffUser.id, staffUser.email].filter(Boolean)));
       }
-    } catch (_) {}
+    } catch (_) { }
 
     try {
       const { data: profile } = await this.db
@@ -673,7 +673,7 @@ export class AssignmentService {
       if (profile) {
         resolvedIds = Array.from(new Set([...resolvedIds, profile.id, profile.linkedUserId, profile.email].filter(Boolean)));
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Build OR filter across all resolved IDs
     const orConditions = resolvedIds.map(id => `assignedStaffId.eq.${id}`);

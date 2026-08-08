@@ -373,6 +373,17 @@ export class StaffProfileService {
 
       syncResult = syncErr ? 'sync_failed' : 'synced';
 
+      if (mappedStatus === 'rejected' && (linkedStudentId || userDoc?.userId)) {
+        this.eventEmitter.emit('document.rejected', {
+          userId: linkedStudentId || userDoc?.userId,
+          documentId: userDoc?.id || docId,
+          documentType: doc.docType,
+          documentName: doc.docName || doc.docType,
+          rejectionReason: body.rejection_reason || 'Document rejected by staff verification',
+          rejectedAt: new Date().toISOString(),
+        });
+      }
+
       // If approved, parse OCR details and store in the 'parents' table
       if (mappedStatus === 'verified') {
         const docType = doc.docType || '';

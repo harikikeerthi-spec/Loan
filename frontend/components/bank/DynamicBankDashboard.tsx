@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { bankApi } from "@/lib/api";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 interface DashboardStats {
   totalApplications: number;

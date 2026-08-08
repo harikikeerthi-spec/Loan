@@ -2387,4 +2387,68 @@ export class EmailService {
       }
     });
   }
+
+  /**
+   * Send an email notification to student when a document is rejected by staff
+   */
+  async sendDocumentRejectionEmail(
+    email: string,
+    studentName: string,
+    documentName: string,
+    rejectionReason: string,
+  ) {
+    const formattedDocName = (documentName || 'Document').replace(/_/g, ' ').toUpperCase();
+    const mailOptions = {
+      from: this.getFromAddress(),
+      to: email,
+      subject: `Action Required: Your ${formattedDocName} Document was Rejected - VidyaLoan`,
+      text: `Hello ${studentName},\n\nYour uploaded document "${formattedDocName}" has been rejected by our verification team.\n\nReason for Rejection:\n${rejectionReason || 'Document quality or format does not meet requirements.'}\n\nPlease log in to your dashboard to re-upload a clear and valid copy.\n\nBest regards,\nVidyaLoan Verification Team`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+          <div style="background: linear-gradient(135deg, #6605c7 0%, #4338ca 100%); padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">VidyaLoan Document Verification</h1>
+          </div>
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+            <div style="display: inline-block; background: #ffe4e6; color: #e11d48; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 15px;">
+              ❌ Action Required: Document Rejected
+            </div>
+            <h2 style="color: #1e293b; margin-top: 0; font-size: 20px;">Verification Update for ${formattedDocName}</h2>
+            <p style="font-size: 15px; color: #475569; line-height: 1.5;">Hello <strong>${studentName || 'Student'}</strong>,</p>
+            <p style="font-size: 15px; color: #475569; line-height: 1.5;">Your uploaded document <strong>"${formattedDocName}"</strong> was reviewed by our verification staff and has been marked as <strong>Rejected</strong>.</p>
+            
+            <div style="background: #fff1f2; border-left: 4px solid #f43f5e; padding: 16px 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #9f1239; letter-spacing: 0.5px;">Rejection Reason</p>
+              <p style="margin: 8px 0 0 0; font-size: 14px; color: #881337; font-weight: 600; line-height: 1.4;">${rejectionReason || 'Document does not meet standard legibility or formatting requirements.'}</p>
+            </div>
+
+            <p style="font-size: 14px; color: #475569; line-height: 1.5;">Please log in to your student dashboard to re-upload a clear and valid copy of this document so we can continue processing your loan application.</p>
+            
+            <div style="text-align: center; margin: 30px 0 20px 0;">
+              <a href="https://developer.vidyaloans.in/login" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">Log In & Re-upload Document</a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 25px 0;" />
+            <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">VidyaLoan Student Verification Desk • This is an automated notification.</p>
+          </div>
+        </div>
+      `,
+    };
+
+    try {
+      console.log(`[EmailService] PREPARING TO SEND DOCUMENT REJECTION EMAIL`);
+      console.log(`[EmailService] Target Email: ${email}`);
+      console.log(`[EmailService] Document Name: ${formattedDocName}`);
+      console.log(`[EmailService] Rejection Reason: ${rejectionReason}`);
+      console.log(`--------------------------------`);
+
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        await this.transporter.sendMail(mailOptions);
+        console.log(`[EmailService] Document rejection email sent successfully to ${email}`);
+      } else {
+        console.log(`[EmailService] Email credentials not configured – document rejection email logged to console`);
+      }
+    } catch (error: any) {
+      console.error(`[EmailService] Failed to send document rejection email to ${email}:`, error?.message || error);
+    }
+  }
 }

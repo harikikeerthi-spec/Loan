@@ -18,12 +18,16 @@ import type { Response } from 'express';
 import { StaffGuard } from '../auth/staff.guard';
 import { BankRbacInterceptor } from './bank-rbac.middleware';
 import { BankService } from './bank.service';
+import { BankWorkflowService } from './bank-workflow.service';
 
 @Controller('bank')
 @UseGuards(StaffGuard)
 @UseInterceptors(BankRbacInterceptor)
 export class BankController {
-  constructor(private readonly bankService: BankService) { }
+  constructor(
+    private readonly bankService: BankService,
+    private readonly bankWorkflowService: BankWorkflowService,
+  ) { }
 
   /**
    * Helper to resolve active bank name from selectedBank header/session or email domain
@@ -95,6 +99,33 @@ export class BankController {
     const zipData = await this.bankService.generateDocumentsZip(applicationId);
     res.setHeader('Content-Disposition', `attachment; filename=${zipData.fileName}`);
     res.status(HttpStatus.OK).send(zipData.buffer);
+  }
+
+  @Post('submit')
+  async submitApplicationToBank(
+    @Body() body: { applicationId: string; bankId: string; bankName: string; submittedBy: string; remarks?: string },
+    @Request() req: any,
+  ) {
+    const submittedBy = body.submittedBy || req.user?.email || 'staff';
+    return await this.bankWorkflowService.submitApplicationToBank(
+      body.applicationId,
+      body.bankId,
+      body.bankName,
+      submittedBy,
+    );
+  }
+
+  @Post('submit-multiple')
+  async submitApplicationToMultipleBanks(
+    @Body() body: { applicationId: string; banks: Array<{ bankId: string; bankName: string }>; submittedBy: string },
+    @Request() req: any,
+  ) {
+    const submittedBy = body.submittedBy || req.user?.email || 'staff';
+    return await this.bankWorkflowService.submitApplicationToMultipleBanks(
+      body.applicationId,
+      body.banks,
+      submittedBy,
+    );
   }
 
   @Post('decisions')

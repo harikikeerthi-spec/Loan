@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { adminApi, apiFetch } from "@/lib/api";
+import { BankWorkflowAPI } from "@/lib/bank-workflow-api";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ShareWithBankModalProps {
@@ -143,16 +144,35 @@ export default function ShareWithBankModal({
         // sets bank, submittedToBankAt, bankWorkflowStatus, status='submitted_to_bank',
         // and generates the VL-APP application number.
         let realSubmissionId = "";
-        const workflowRes: any = await apiFetch("/api/bank/workflow/submit", {
-          method: "POST",
-          body: JSON.stringify({
-            applicationId,
-            bankId: selectedBank,
-            bankName: selectedBankName,
-            submittedBy: staffName,
-            remarks: remarks || `Application routed to ${selectedBankName}`,
-          }),
+        let workflowRes: any;
+        const submitPayload = JSON.stringify({
+          applicationId,
+          bankId: selectedBank,
+          bankName: selectedBankName,
+          submittedBy: staffName,
+          remarks: remarks || `Application routed to ${selectedBankName}`,
         });
+
+        try {
+          workflowRes = await apiFetch("/api/bank/workflow/submit", {
+            method: "POST",
+            body: submitPayload,
+          });
+        } catch (e1) {
+          try {
+            workflowRes = await apiFetch("/api/bank/submit", {
+              method: "POST",
+              body: submitPayload,
+            });
+          } catch (e2) {
+            workflowRes = await BankWorkflowAPI.submitToBank({
+              applicationId,
+              bankId: selectedBank,
+              bankName: selectedBankName,
+              submittedBy: staffName,
+            });
+          }
+        }
 
         if (workflowRes?.data?.id) {
           realSubmissionId = workflowRes.data.id;
