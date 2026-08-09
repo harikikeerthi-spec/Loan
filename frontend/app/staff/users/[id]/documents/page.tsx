@@ -71,6 +71,7 @@ export default function DocumentsTab() {
     // Upload modal state
     const [isUploadOpen, setIsUploadOpen] = useState(false);
     const [uploadDocType, setUploadDocType] = useState("passport");
+    const [uploadCustomType, setUploadCustomType] = useState("");
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploading, setUploading] = useState(false);
@@ -126,10 +127,21 @@ export default function DocumentsTab() {
     // ── Upload handler ──────────────────────────────────────────────────
     const handleUpload = async () => {
         if (!uploadFile) return;
+
+        let finalDocType = uploadDocType;
+        if (uploadDocType === "other") {
+            if (!uploadCustomType.trim()) {
+                setUploadError("Please specify the custom document type name.");
+                return;
+            }
+            const cleanSlug = uploadCustomType.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+            finalDocType = `custom_${cleanSlug}`;
+        }
+
         setUploading(true);
         setUploadError("");
         try {
-            const res = await documentApi.upload(userId, uploadDocType, uploadFile, (pct) => setUploadProgress(pct)) as any;
+            const res = await documentApi.upload(userId, finalDocType, uploadFile, (pct) => setUploadProgress(pct)) as any;
             const docId = res?.data?.id || res?.data?._id;
             if (docId) {
                 // Staff uploads go to verified directly
@@ -137,6 +149,7 @@ export default function DocumentsTab() {
             }
             setIsUploadOpen(false);
             setUploadFile(null);
+            setUploadCustomType("");
             setUploadProgress(0);
             await refreshData();
         } catch (err: any) {
@@ -476,7 +489,12 @@ export default function DocumentsTab() {
                                     <label className="block text-[9px] font-black uppercase tracking-wider text-slate-500 mb-1.5">Document Type</label>
                                     <select
                                         value={uploadDocType}
-                                        onChange={(e) => setUploadDocType(e.target.value)}
+                                        onChange={(e) => {
+                                            setUploadDocType(e.target.value);
+                                            if (e.target.value !== "other") {
+                                                setUploadCustomType("");
+                                            }
+                                        }}
                                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] cursor-pointer transition-all"
                                     >
                                         {DOC_TYPE_OPTIONS.map((opt) => (
@@ -484,6 +502,31 @@ export default function DocumentsTab() {
                                         ))}
                                     </select>
                                 </div>
+
+                                {/* Custom Document Field when 'other' is selected */}
+                                {uploadDocType === "other" && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="mt-3"
+                                    >
+                                        <label className="block text-[9px] font-black uppercase tracking-wider text-[#6605c7] mb-1.5">
+                                            Specify Document Name *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={uploadCustomType}
+                                            onChange={(e) => {
+                                                setUploadCustomType(e.target.value);
+                                                if (uploadError) setUploadError("");
+                                            }}
+                                            placeholder="e.g. Electricity Bill, Property Tax Receipt, Experience Letter..."
+                                            required
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] transition-all placeholder:text-slate-400 placeholder:text-[10px]"
+                                        />
+                                    </motion.div>
+                                )}
 
                                 {/* File Drop Zone */}
                                 <div>

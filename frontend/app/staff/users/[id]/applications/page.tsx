@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatDate, parseUTCDate } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { applicationApi, aiApi } from "@/lib/api";
-import { universities as staticUniversities } from "@/lib/universityData";
-
 
 const banksList = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -78,20 +76,7 @@ export default function ApplicationsTab() {
     const [loadingUniversities, setLoadingUniversities] = useState(false);
     const [showUniversitySuggestions, setShowUniversitySuggestions] = useState(false);
 
-    const getStaticUniversitiesForCountry = (country: string) => {
-        const normalizedCountry = country.trim().toLowerCase();
-        return Object.values(staticUniversities)
-            .filter((uni: any) => uni.country.trim().toLowerCase() === normalizedCountry)
-            .map((uni: any) => ({
-                name: uni.name,
-                loc: uni.location || uni.country,
-                country: uni.country,
-                slug: uni.slug,
-            }))
-            .slice(0, 10);
-    };
-
-    // Fetch popular universities for the selected country using AI or static fallback
+    // Fetch popular universities for the selected country using AI backend
     useEffect(() => {
         const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
         if (!selectedCountry || selectedCountry.trim().length < 2) {
@@ -99,77 +84,35 @@ export default function ApplicationsTab() {
             return;
         }
 
-        const staticSuggestions = getStaticUniversitiesForCountry(selectedCountry);
-        if (!formData.university && staticSuggestions.length > 0) {
-            setSuggestedUniversities(staticSuggestions);
-            return;
-        }
-
-        const fetchUnis = async () => {
+        const delay = formData.university ? 350 : 0;
+        const timer = setTimeout(async () => {
             setLoadingUniversities(true);
             try {
                 const res = await aiApi.aiSearch({
                     type: "university",
-                    query: "",
+                    query: formData.university || "",
                     country: selectedCountry
                 }) as any;
 
                 const universities = res?.universities || res?.results || [];
-                if (universities.length > 0) {
-                    setSuggestedUniversities(universities);
-                } else if (staticSuggestions.length > 0) {
-                    setSuggestedUniversities(staticSuggestions);
-                } else {
-                    setSuggestedUniversities([]);
-                }
+                const formatted = universities.map((u: any) => ({
+                    name: typeof u === "string" ? u : (u?.name || u?.university || ""),
+                    loc: typeof u === "object" ? (u?.loc || u?.location || u?.country || selectedCountry) : selectedCountry,
+                    country: typeof u === "object" ? (u?.country || selectedCountry) : selectedCountry,
+                    slug: typeof u === "object" ? u?.slug : "",
+                })).filter((u: any) => Boolean(u.name));
+
+                setSuggestedUniversities(formatted);
             } catch (err) {
                 console.error("Failed to fetch universities via AI", err);
-                if (staticSuggestions.length > 0) {
-                    setSuggestedUniversities(staticSuggestions);
-                } else {
-                    setSuggestedUniversities([]);
-                }
+                setSuggestedUniversities([]);
             } finally {
                 setLoadingUniversities(false);
             }
-        };
+        }, delay);
 
-        fetchUnis();
+        return () => clearTimeout(timer);
     }, [formData.country, formData.otherCountry, formData.university]);
-
-    // Search universities when typing in the input field
-    useEffect(() => {
-        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
-        if (!selectedCountry || !formData.university || formData.university.trim().length < 2) {
-            return;
-        }
-
-        // Avoid querying if the input matches one of the already suggested universities exactly
-        const matched = suggestedUniversities.some(u => u.name.toLowerCase() === formData.university.toLowerCase());
-        if (matched) return;
-
-        const delayDebounceFn = setTimeout(async () => {
-            setLoadingUniversities(true);
-            try {
-                const res = await aiApi.aiSearch({
-                    type: "university",
-                    query: formData.university,
-                    country: selectedCountry
-                }) as any;
-
-                const universities = res?.universities || res?.results || [];
-                if (universities.length > 0) {
-                    setSuggestedUniversities(universities);
-                }
-            } catch (err) {
-                console.error("Failed to query universities via AI", err);
-            } finally {
-                setLoadingUniversities(false);
-            }
-        }, 400);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [formData.university, formData.country, formData.otherCountry]);
 
     useEffect(() => {
         if (userData && isAddAppOpen) {

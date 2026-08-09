@@ -1735,9 +1735,13 @@ export class BankWorkflowService {
     );
 
     // Trigger F16 notification
+    const targetUserId = (submission.assignedStaffId && submission.assignedStaffId !== 'unassigned' && submission.assignedStaffId !== 'null')
+      ? submission.assignedStaffId
+      : (submission.staffId || 'staff');
+
     const notifData = {
       id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      userId: 'staff',
+      userId: targetUserId,
       title: `⏸️ Application On Hold: App ${submission.applicationId}`,
       body: `Application has been placed on hold by ${changedBy}. Reason: ${reason}`,
       type: 'hold',
@@ -1794,9 +1798,13 @@ export class BankWorkflowService {
     );
 
     // Trigger F16 notification
+    const targetResumeUserId = (submission.assignedStaffId && submission.assignedStaffId !== 'unassigned' && submission.assignedStaffId !== 'null')
+      ? submission.assignedStaffId
+      : (submission.staffId || 'staff');
+
     const notifData = {
       id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      userId: 'staff',
+      userId: targetResumeUserId,
       title: `▶️ Application Resumed: App ${submission.applicationId}`,
       body: `Application hold has been resumed by ${changedBy}.`,
       type: 'hold',

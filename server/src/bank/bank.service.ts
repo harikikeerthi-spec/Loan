@@ -833,9 +833,13 @@ export class BankService {
       }
 
       if (notifTitle) {
+        const targetUserId = application?.assignedStaffId && application.assignedStaffId !== 'unassigned' && application.assignedStaffId !== 'null'
+          ? application.assignedStaffId
+          : 'staff';
+
         const notifData = {
           id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-          userId: 'staff',
+          userId: targetUserId,
           title: notifTitle,
           body: notifBody,
           type: notifType,

@@ -648,12 +648,10 @@ export default function DashboardPage() {
     })();
 
     const quickLinks = [
-        ...(hasApplied ? [] : [{ href: "/apply-loan", icon: "add_circle", label: "Apply for Loan", desc: "Start a new application", color: "from-purple-500 to-indigo-600", comingSoon: false }]),
-        { href: "/document-vault", icon: "folder_shared", label: "Document Vault", desc: "Securely upload docs", color: "from-blue-600 to-indigo-700", comingSoon: false },
-        // { href: "/emi", icon: "calculate", label: "EMI Calculator", desc: "Plan your repayments", color: "from-blue-500 to-cyan-600" },
-        // { href: "/sop-writer", icon: "auto_fix_high", label: "AI SOP Writer", desc: "Draft your statement", color: "from-pink-500 to-rose-600" },
-        // { href: "/compare-loans", icon: "compare", label: "Compare Loans", desc: "Find the best rates", color: "from-amber-500 to-orange-600" },
-        { href: "/community/discussions", icon: "forum", label: "Community", desc: "Ask & share advice", color: "from-emerald-500 to-teal-600", comingSoon: false },
+        ...(hasApplied ? [] : [{ href: "/apply-loan", icon: "add_circle", label: "Apply for Loan", desc: "Start a new application", color: "from-purple-500 to-indigo-600", comingSoon: false, isApp: false }]),
+        { href: "/document-vault", icon: "folder_shared", label: "Document Vault", desc: "Securely upload docs", color: "from-blue-600 to-indigo-700", comingSoon: false, isApp: false },
+        { href: "#download-app", icon: "smartphone", label: "Mobile App", desc: "Real-time updates & tracking", color: "from-[#6605c7] to-[#8b24e5]", comingSoon: false, isApp: true },
+        { href: "/community/discussions", icon: "forum", label: "Community", desc: "Ask & share advice", color: "from-emerald-500 to-teal-600", comingSoon: false, isApp: false },
     ];
 
     if (loading) {
@@ -713,6 +711,49 @@ export default function DashboardPage() {
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
                                 Speak with Counsellor
                             </Link>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile App Download Banner */}
+                <div className="mb-10 relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1A0338] via-[#43088C] to-[#6605c7] p-6 md:p-8 text-white shadow-xl shadow-purple-900/15 border border-white/10">
+                    <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-purple-400/20 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute right-1/3 top-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+                    
+                    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6">
+                        <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                                <span className="material-symbols-outlined text-[32px] md:text-[38px] text-amber-300 animate-pulse">smartphone</span>
+                            </div>
+                            <div>
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-300/30 text-[10px] font-black uppercase tracking-wider mb-1.5">
+                                    <span className="material-symbols-outlined text-[14px]">notifications_active</span>
+                                    Instant Real-Time Updates
+                                </div>
+                                <h2 className="text-base md:text-lg font-black font-display tracking-tight text-white mb-1">
+                                    For Real-Time Updates & Application Tracking, Download Our Mobile App
+                                </h2>
+                                <p className="text-purple-100/90 text-xs font-medium leading-relaxed max-w-2xl">
+                                    Stay instantly informed on your application stage, bank decision alerts, document verification, and live advisor messages right on your phone!
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 shrink-0 w-full lg:w-auto justify-start lg:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    alert("VidyaLoans Mobile App: Download link & instructions have been sent to your registered mobile number and email!");
+                                }}
+                                className="px-5 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-amber-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer border-0 active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-lg">download</span>
+                                Download App
+                            </button>
+                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 px-4 py-2.5 rounded-xl text-xs font-bold text-white">
+                                <span className="material-symbols-outlined text-emerald-400 text-base">verified</span>
+                                <span>Android & iOS</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -943,6 +984,23 @@ export default function DashboardPage() {
                                             </div>
                                             <div className="font-bold text-[13px] text-gray-500">{l.label}</div>
                                             <div className="text-[11px] text-gray-400 mt-1 line-clamp-1">{l.desc}</div>
+                                        </div>
+                                    ) : (l as any).isApp ? (
+                                        <div
+                                            key={l.label + idx}
+                                            onClick={() => {
+                                                alert("VidyaLoans Mobile App: Download link & instructions have been sent to your registered mobile number and email!");
+                                            }}
+                                            className="group p-5 bg-white rounded-xl border border-purple-100 hover:border-[#6605c7]/30 shadow-sm transition-all cursor-pointer"
+                                        >
+                                            <div className={`w-9 h-9 bg-gradient-to-r ${l.color} rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform shadow-md shadow-purple-500/20`}>
+                                                <span className="material-symbols-outlined text-lg">{l.icon}</span>
+                                            </div>
+                                            <div className="font-bold text-[13px] text-gray-900 flex items-center justify-between">
+                                                <span>{l.label}</span>
+                                                <span className="text-[9px] font-black uppercase text-[#6605c7] bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded">App</span>
+                                            </div>
+                                            <div className="text-[11px] text-gray-500 mt-1 line-clamp-1">{l.desc}</div>
                                         </div>
                                     ) : (
                                         <Link key={l.href + idx} href={l.href} className="group p-5 bg-white rounded-xl border border-gray-100 hover:border-[#6605c7]/20 transition-all">

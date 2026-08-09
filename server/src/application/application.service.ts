@@ -714,16 +714,37 @@ export class ApplicationService {
       }
     });
 
-    const { data: updated, error } = await this.db
+    let updated: any = null;
+    const { data: updatedRes, error } = await this.db
       .from('LoanApplication')
       .update(updatePayload)
       .eq('id', applicationId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
-      console.error('[ApplicationService.adminUpdateApplication] DB Error:', error);
-      throw error;
+      console.warn(`[ApplicationService.adminUpdateApplication] Full payload update warning: ${error.message}. Retrying with core columns...`);
+      const corePayload = { ...updatePayload };
+      delete corePayload.coApplicantEmail;
+      delete corePayload.coApplicantPhone;
+      delete corePayload.coApplicantRelation;
+      delete corePayload.coApplicantName;
+      delete corePayload.fatherName;
+      delete corePayload.motherName;
+      const { data: retryData, error: retryErr } = await this.db
+        .from('LoanApplication')
+        .update(corePayload)
+        .eq('id', applicationId)
+        .select()
+        .maybeSingle();
+
+      if (retryErr) {
+        console.error('[ApplicationService.adminUpdateApplication] DB Error after retry:', retryErr);
+        throw retryErr;
+      }
+      updated = retryData || application;
+    } else {
+      updated = updatedRes || application;
     }
 
     // Sync targetUniversity and studyDestination to User profile record

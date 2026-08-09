@@ -639,28 +639,34 @@ export class UsersService implements OnModuleInit {
     if (firstName !== undefined) updatePayload.firstName = firstName;
     if (lastName !== undefined) updatePayload.lastName = lastName;
 
-    // IMMUTABLE FIELD GUARD: Phone Number, DOB, and Email CANNOT be updated once set!
-    const existingPhone = targetUser.phoneNumber || targetUser.mobile;
-    if (phoneNumber !== undefined && !existingPhone) {
+    if (phoneNumber !== undefined && phoneNumber !== "") {
       updatePayload.phoneNumber = phoneNumber;
       updatePayload.mobile = phoneNumber;
     }
 
-    if (dobDate !== null && !targetUser.dateOfBirth) {
+    if (dobDate !== null && dobDate !== undefined) {
       updatePayload.dateOfBirth = dobDate;
     }
 
+    if (fatherName !== undefined) updatePayload.fatherName = fatherName;
+    if (motherName !== undefined) updatePayload.motherName = motherName;
     if (intakeSeason !== undefined) updatePayload.intakeSeason = intakeSeason;
     if (pincode !== undefined) updatePayload.pincode = pincode;
     if (targetUniversity !== undefined) updatePayload.targetUniversity = targetUniversity;
     if (studyDestination !== undefined) updatePayload.studyDestination = studyDestination;
-    // Email is strictly immutable and cannot be updated via updateUserDetails
 
     // Parse and handle academic object
     let parsedAcademic: any = {};
+    if (targetUser.academic) {
+      try {
+        parsedAcademic = typeof targetUser.academic === 'string' ? JSON.parse(targetUser.academic) : targetUser.academic;
+      } catch {}
+    }
+    if (!parsedAcademic || typeof parsedAcademic !== 'object') parsedAcademic = {};
     if (academic) {
       try {
-        parsedAcademic = typeof academic === 'string' ? JSON.parse(academic) : academic;
+        const pAcad = typeof academic === 'string' ? JSON.parse(academic) : academic;
+        parsedAcademic = { ...parsedAcademic, ...pAcad };
       } catch {}
     }
     if (parsedAcademic.gpa !== undefined && !isNaN(parseFloat(parsedAcademic.gpa))) {
@@ -686,12 +692,13 @@ export class UsersService implements OnModuleInit {
         familyObj = typeof targetUser.family === 'string' ? JSON.parse(targetUser.family) : targetUser.family;
       } catch {}
     }
+    if (!familyObj || typeof familyObj !== 'object') familyObj = {};
     if (family) {
       const parsedFam = typeof family === 'string' ? (JSON.parse(family) || {}) : family;
       familyObj = { ...familyObj, ...parsedFam };
     }
-    if (fatherName) familyObj.fatherName = fatherName;
-    if (motherName) familyObj.motherName = motherName;
+    if (fatherName !== undefined) familyObj.fatherName = fatherName;
+    if (motherName !== undefined) familyObj.motherName = motherName;
 
     let coAppObj: any = {};
     if (targetUser.coApplicant) {
@@ -699,6 +706,7 @@ export class UsersService implements OnModuleInit {
         coAppObj = typeof targetUser.coApplicant === 'string' ? JSON.parse(targetUser.coApplicant) : targetUser.coApplicant;
       } catch {}
     }
+    if (!coAppObj || typeof coAppObj !== 'object') coAppObj = {};
     if (coApplicant) {
       const parsedCoApp = typeof coApplicant === 'string' ? (JSON.parse(coApplicant) || {}) : coApplicant;
       coAppObj = { ...coAppObj, ...parsedCoApp };
@@ -709,6 +717,9 @@ export class UsersService implements OnModuleInit {
     }
     if (coApplicant !== undefined) {
       updatePayload.coApplicant = coAppObj;
+    }
+    if (academic !== undefined) {
+      updatePayload.academic = parsedAcademic;
     }
 
     // Sanitize payload to ONLY include valid columns on User table (avoids PGRST204)
@@ -724,13 +735,37 @@ export class UsersService implements OnModuleInit {
         .maybeSingle();
 
       if (error) {
-        console.warn(`[UsersService.updateUserDetails] Full payload update notice: ${error.message}. Retrying with basic columns...`);
-        const basicPayload = { ...safeUserPayload };
-        delete basicPayload.family;
-        delete basicPayload.coApplicant;
-        if (Object.keys(basicPayload).length > 0) {
-          const { data: bData } = await this.db.from('User').update(basicPayload).eq('id', targetUser.id).select().maybeSingle();
-          if (bData) updatedUser = bData;
+        console.warn(`[UsersService.updateUserDetails] Full payload update notice: ${error.message}. Retrying with stringified JSON fields...`);
+        const retryPayload = { ...safeUserPayload };
+        if (retryPayload.family && typeof retryPayload.family === 'object') {
+          retryPayload.family = JSON.stringify(retryPayload.family);
+        }
+        if (retryPayload.coApplicant && typeof retryPayload.coApplicant === 'object') {
+          retryPayload.coApplicant = JSON.stringify(retryPayload.coApplicant);
+        }
+        if (retryPayload.academic && typeof retryPayload.academic === 'object') {
+          retryPayload.academic = JSON.stringify(retryPayload.academic);
+        }
+
+        const { data: retryData, error: retryErr } = await this.db
+          .from('User')
+          .update(retryPayload)
+          .eq('id', targetUser.id)
+          .select()
+          .maybeSingle();
+
+        if (!retryErr && retryData) {
+          updatedUser = retryData;
+        } else {
+          console.warn(`[UsersService.updateUserDetails] Retrying with basic columns...`);
+          const basicPayload = { ...safeUserPayload };
+          delete basicPayload.family;
+          delete basicPayload.coApplicant;
+          delete basicPayload.academic;
+          if (Object.keys(basicPayload).length > 0) {
+            const { data: bData } = await this.db.from('User').update(basicPayload).eq('id', targetUser.id).select().maybeSingle();
+            if (bData) updatedUser = bData;
+          }
         }
       } else if (data) {
         updatedUser = data;
@@ -2027,15 +2062,22 @@ export class UsersService implements OnModuleInit {
       const coappRec = parentsList.find((p: any) => p.relation === 'coapplicant');
 
       if (fatherRec) {
-        if (fatherRec.name) familyObj.fatherName = fatherRec.name;
-        if (fatherRec.aadharNumber) familyObj.fatherAadhar = fatherRec.aadharNumber;
-        if (fatherRec.panNumber) familyObj.fatherPan = fatherRec.panNumber;
+        if (!familyObj.fatherName && fatherRec.name) familyObj.fatherName = fatherRec.name;
+        if (!familyObj.fatherAadhar && fatherRec.aadharNumber) familyObj.fatherAadhar = fatherRec.aadharNumber;
+        if (!familyObj.fatherPan && fatherRec.panNumber) familyObj.fatherPan = fatherRec.panNumber;
       }
 
       if (motherRec) {
-        if (motherRec.name) familyObj.motherName = motherRec.name;
-        if (motherRec.aadharNumber) familyObj.motherAadhar = motherRec.aadharNumber;
-        if (motherRec.panNumber) familyObj.motherPan = motherRec.panNumber;
+        if (!familyObj.motherName && motherRec.name) familyObj.motherName = motherRec.name;
+        if (!familyObj.motherAadhar && motherRec.aadharNumber) familyObj.motherAadhar = motherRec.aadharNumber;
+        if (!familyObj.motherPan && motherRec.panNumber) familyObj.motherPan = motherRec.panNumber;
+      }
+
+      if (userWithActivity?.fatherName && (!familyObj.fatherName || familyObj.fatherName.trim().toLowerCase() === 'father')) {
+        familyObj.fatherName = userWithActivity.fatherName;
+      }
+      if (userWithActivity?.motherName && (!familyObj.motherName || familyObj.motherName.trim().toLowerCase() === 'mother')) {
+        familyObj.motherName = userWithActivity.motherName;
       }
 
       const getDocFieldServer = (types: string[], fields: string[]) => {

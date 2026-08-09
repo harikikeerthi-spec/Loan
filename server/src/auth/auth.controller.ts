@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Get, Param, Delete, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Req, Inject, forwardRef } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { ReferralService } from '../referral/referral.service';
+import { AssignmentService } from '../assignment/assignment.service';
 
 @Controller('auth')
 export class AuthController {
@@ -9,6 +10,7 @@ export class AuthController {
     private authService: AuthService,
     private usersService: UsersService,
     private referralService: ReferralService,
+    @Inject(forwardRef(() => AssignmentService)) private assignmentService: AssignmentService,
   ) { }
 
   /**
@@ -435,13 +437,13 @@ export class AuthController {
     @Body() body: { toStaffId: string; reason?: string },
     @Req() req: any,
   ) {
-    // Fallback endpoint — primary reassign routes are on /assignment/ and /admin/applications/
-    return {
-      success: false,
-      message: 'Reassign failed: please use /api/assignment/reassign/:id or /api/admin/applications/reassign/:id',
+    const assignedBy = req.user?.id || req.user?.uid || 'admin';
+    return await this.assignmentService.reassignLoan(
       loanId,
-      toStaffId: body?.toStaffId,
-    };
+      body?.toStaffId,
+      body?.reason || 'manual_fallback',
+      assignedBy,
+    );
   }
 
   /**

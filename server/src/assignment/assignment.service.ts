@@ -374,14 +374,38 @@ export class AssignmentService {
     reason: string = 'manual',
     assignedBy: string = 'system'
   ): Promise<{ success: boolean; message: string }> {
-    // Guard against reassigning sanctioned / approved applications
-    const { data: currentLoan } = await this.db
-      .from('LoanApplication')
-      .select('assignedStaffId, status')
-      .eq('id', loanId)
-      .maybeSingle();
+    if (!loanId || !toStaffId) {
+      return { success: false, message: 'Loan ID and target staff ID are required' };
+    }
 
-    const currentStatus = (currentLoan?.status || '').toLowerCase();
+    // Resolve loan record by UUID id or applicationNumber string
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(loanId);
+    let targetLoan: any = null;
+    if (isUuid) {
+      const { data: uLoan } = await this.db.from('LoanApplication').select('id, assignedStaffId, status, applicationNumber').eq('id', loanId).maybeSingle();
+      targetLoan = uLoan;
+    } else {
+      const { data: aLoan } = await this.db.from('LoanApplication').select('id, assignedStaffId, status, applicationNumber').eq('applicationNumber', loanId).maybeSingle();
+      targetLoan = aLoan;
+    }
+
+    if (!targetLoan) {
+      const { data: fallbackLoan } = await this.db
+        .from('LoanApplication')
+        .select('id, assignedStaffId, status, applicationNumber')
+        .or(`id.eq.${loanId},applicationNumber.eq.${loanId}`)
+        .maybeSingle();
+      targetLoan = fallbackLoan;
+    }
+
+    if (!targetLoan) {
+      return { success: false, message: `Loan application '${loanId}' not found.` };
+    }
+
+    const actualLoanId = targetLoan.id;
+
+    // Guard against reassigning sanctioned / approved applications
+    const currentStatus = (targetLoan.status || '').toLowerCase();
     const sanctionedStatuses = [
       'sanctioned',
       'conditional_sanction',
@@ -390,7 +414,7 @@ export class AssignmentService {
       'partially_disbursed',
       'approved',
     ];
-    if (currentLoan && sanctionedStatuses.includes(currentStatus)) {
+    if (sanctionedStatuses.includes(currentStatus)) {
       return {
         success: false,
         message: 'Cannot reassign loan application: Application has already been sanctioned/approved and is permanently locked to the assigned staff member.',
@@ -433,7 +457,7 @@ export class AssignmentService {
 
     try {
       const { data: rpcRes, error: rpcErr } = await this.db.rpc('reassign_loan_atomic', {
-        p_loan_id: loanId,
+        p_loan_id: actualLoanId,
         p_new_staff_id: targetStaffUserId,
         p_assigned_by: assignedBy,
         p_reason: reason,
@@ -446,13 +470,7 @@ export class AssignmentService {
       this.logger.warn(`[AssignmentEngine] RPC reassign_loan_atomic failed. Fallback manual update.`);
     }
 
-    const { data: oldLoan } = await this.db
-      .from('LoanApplication')
-      .select('assignedStaffId')
-      .eq('id', loanId)
-      .single();
-
-    const previousStaffId = oldLoan?.assignedStaffId;
+    const previousStaffId = targetLoan.assignedStaffId;
     const now = new Date().toISOString();
 
     let targetStaffName = 'Staff Member';
@@ -474,10 +492,10 @@ export class AssignmentService {
     const { error: reassignErr } = await this.db
       .from('LoanApplication')
       .update({ assignedStaffId: targetStaffUserId })
-      .eq('id', loanId);
+      .eq('id', actualLoanId);
 
     if (reassignErr) {
-      this.logger.error(`[AssignmentEngine] reassignLoan critical write failed for ${loanId}:`, reassignErr);
+      this.logger.error(`[AssignmentEngine] reassignLoan critical write failed for ${actualLoanId}:`, reassignErr);
     }
 
     // STEP 2 — Optional extended metadata write (non-fatal if schema cache stale)
@@ -491,7 +509,7 @@ export class AssignmentService {
           assignmentStatus: 'assigned',
           lastActivityAt: now,
         })
-        .eq('id', loanId);
+        .eq('id', actualLoanId);
     } catch (metaErr: any) {
       this.logger.warn(`[AssignmentEngine] reassignLoan extended metadata write skipped: ${metaErr?.message}`);
     }
@@ -509,7 +527,7 @@ export class AssignmentService {
     }
 
     await this.db.from('LoanAssignmentHistory').insert({
-      applicationId: loanId,
+      applicationId: actualLoanId,
       fromStaffId: previousStaffId || null,
       toStaffId: targetStaffUserId,
       assignedBy,

@@ -1561,13 +1561,25 @@ export const assignmentApi = {
     // Manually reassign to a specific staff member with fallback paths
     reassign: async (loanId: string, toStaffId: string, reason?: string) => {
         const body = JSON.stringify({ toStaffId, reason: reason || 'manual' });
+        const runReq = async (url: string) => {
+            const res: any = await apiFetch(url, { method: 'POST', body });
+            if (res && res.success === false) {
+                throw new Error(res.message || 'Reassignment failed');
+            }
+            return res;
+        };
+
         try {
-            return await apiFetch(`${API_URL}/assignment/reassign/${loanId}`, { method: 'POST', body });
+            return await runReq(`${API_URL}/assignment/reassign/${loanId}`);
         } catch (e1) {
             try {
-                return await apiFetch(`${API_URL}/admin/applications/reassign/${loanId}`, { method: 'POST', body });
+                return await runReq(`${API_URL}/admin/applications/reassign/${loanId}`);
             } catch (e2) {
-                return await apiFetch(`${API_URL}/admin/applications/${loanId}/reassign`, { method: 'POST', body });
+                try {
+                    return await runReq(`${API_URL}/admin/applications/${loanId}/reassign`);
+                } catch (e3) {
+                    return await runReq(`${API_URL}/auth/reassign/${loanId}`);
+                }
             }
         }
     },

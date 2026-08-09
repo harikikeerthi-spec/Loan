@@ -13,6 +13,7 @@ import { AuditLogService } from './audit-log.service';
 
 import { UserGuard } from './user.guard';
 import { ReferralModule } from '../referral/referral.module';
+import { AssignmentModule } from '../assignment/assignment.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { FirebaseAuthService } from './firebase-auth.service';
 
@@ -20,6 +21,7 @@ import { FirebaseAuthService } from './firebase-auth.service';
   imports: [
     EventEmitterModule,
     forwardRef(() => ReferralModule),
+    forwardRef(() => AssignmentModule),
     UsersModule,
     ConfigModule,
     JwtModule.registerAsync({

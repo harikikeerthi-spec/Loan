@@ -243,6 +243,22 @@ const NotificationsPanel = ({
 
     socketRef.current.on("notification_received", (payload: Notification) => {
       console.log("[NotificationsPanel] Received notification:", payload);
+
+      // Filter out notifications targeted specifically to a different user
+      const currentUserId = staffId || (typeof window !== "undefined" ? (localStorage.getItem("staffUserId") || localStorage.getItem("adminUserId") || localStorage.getItem("userId")) : null);
+      const targetUserId = (payload as any)?.userId;
+      if (
+        targetUserId &&
+        targetUserId !== "staff" &&
+        targetUserId !== "all" &&
+        targetUserId !== "system" &&
+        currentUserId &&
+        targetUserId !== currentUserId
+      ) {
+        console.log("[NotificationsPanel] Ignored notification targeted to another user:", targetUserId);
+        return;
+      }
+
       setNotifications((prev) => {
         const updated = [payload, ...prev];
         return updated.slice(0, 50); // Keep last 50 notifications
