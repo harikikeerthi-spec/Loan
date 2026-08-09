@@ -68,6 +68,8 @@ export const HttpApiPaths = {
         presignedUrl: () => `${HTTP_API_PREFIX}/documents/presigned-url`,
         completeUpload: () => `${HTTP_API_PREFIX}/documents/complete-upload`,
         userDocumentsLegacy: (userId: string) => `${HTTP_API_PREFIX}/documents/user/${enc(userId)}`,
+        checkDuplicate: (userId: string, docType: string) =>
+            `${HTTP_API_PREFIX}/documents/check-duplicate${httpApiQuery({ userId, docType })}`,
         byDocId: (docId: string) => `${HTTP_API_PREFIX}/documents/${enc(docId)}`,
         download: () => `${HTTP_API_PREFIX}/documents/download`,
         verifyByDocId: (docId: string) => `${HTTP_API_PREFIX}/documents/${enc(docId)}/verify`,

@@ -66,8 +66,15 @@ export class DocumentController {
     if (!userId || !docType)
       throw new BadRequestException('userId and docType are required');
 
+    // ── Pre-check: Detect if user has already uploaded this specific document ──
+    const existingUserDocs = await this.usersService.getUserDocuments(userId).catch(() => []);
+    const existingDocRecord = existingUserDocs.find(
+      (d: any) => d.docType.toLowerCase() === docType.toLowerCase() && (d.uploaded || d.status === 'uploaded' || d.status === 'verified')
+    );
+    const wasAlreadyUploaded = !!existingDocRecord;
+
     console.log(
-      `[UPLOAD] Processing pre-storage check: userId=${userId}, docType=${docType}, file=${file.originalname} (${file.size} bytes)`,
+      `[UPLOAD] Processing pre-storage check: userId=${userId}, docType=${docType}, file=${file.originalname} (${file.size} bytes), wasAlreadyUploaded=${wasAlreadyUploaded}`,
     );
 
     try {
@@ -207,9 +214,14 @@ export class DocumentController {
       // ── 5. Generate a short-lived presigned URL for preview ───────────────
       return {
         success: true,
-        message: 'Document validated, stored in S3, and registered successfully',
+        wasAlreadyUploaded,
+        isReupload: wasAlreadyUploaded,
+        message: wasAlreadyUploaded
+          ? 'Document was already uploaded previously and has been updated successfully.'
+          : 'Document validated, stored in S3, and registered successfully',
         data: {
           ...document,
+          wasAlreadyUploaded,
           status: 'uploaded',
           previewUrl,
           verification: verificationResult,
@@ -238,6 +250,39 @@ export class DocumentController {
         `Upload failed: ${error.message || 'Processing error'}`,
       );
     }
+  }
+
+  // ─── Check if document is already uploaded for a specific unique user ────
+  @Get('check-duplicate')
+  async checkDuplicate(
+    @Query('userId') userId: string,
+    @Query('docType') docType: string,
+  ) {
+    if (!userId || !docType) {
+      throw new BadRequestException('userId and docType query parameters are required');
+    }
+
+    const docs = await this.usersService.getUserDocuments(userId);
+    const existing = docs.find(
+      (d: any) =>
+        d.docType.toLowerCase() === docType.toLowerCase() &&
+        (d.uploaded || d.status === 'uploaded' || d.status === 'verified')
+    );
+
+    return {
+      alreadyUploaded: !!existing,
+      userId,
+      docType,
+      existingDocument: existing
+        ? {
+            id: existing.id,
+            docType: existing.docType,
+            status: existing.status,
+            uploadedAt: existing.uploadedAt,
+            filePath: existing.filePath,
+          }
+        : null,
+    };
   }
 
   // ─── OCR Re-verify (reads from S3) ──────────────────────────────────────

@@ -16,6 +16,7 @@ import { ReferralModule } from '../referral/referral.module';
 import { AssignmentModule } from '../assignment/assignment.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { FirebaseAuthService } from './firebase-auth.service';
+import { CsrfService } from './csrf.service';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { FirebaseAuthService } from './firebase-auth.service';
 
     UserGuard,
     FirebaseAuthService,
+    CsrfService,
   ],
   exports: [
     AuthService,
@@ -60,6 +62,7 @@ import { FirebaseAuthService } from './firebase-auth.service';
     UserGuard,
     EmailService,
     FirebaseAuthService,
+    CsrfService,
   ],
 })
 export class AuthModule { }

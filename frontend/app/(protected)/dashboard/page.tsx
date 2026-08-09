@@ -650,7 +650,7 @@ export default function DashboardPage() {
     const quickLinks = [
         ...(hasApplied ? [] : [{ href: "/apply-loan", icon: "add_circle", label: "Apply for Loan", desc: "Start a new application", color: "from-purple-500 to-indigo-600", comingSoon: false, isApp: false }]),
         { href: "/document-vault", icon: "folder_shared", label: "Document Vault", desc: "Securely upload docs", color: "from-blue-600 to-indigo-700", comingSoon: false, isApp: false },
-        { href: "#download-app", icon: "smartphone", label: "Mobile App", desc: "Real-time updates & tracking", color: "from-[#6605c7] to-[#8b24e5]", comingSoon: false, isApp: true },
+        // { href: "#download-app", icon: "smartphone", label: "Mobile App", desc: "Real-time updates & tracking", color: "from-[#6605c7] to-[#8b24e5]", comingSoon: false, isApp: true },
         { href: "/community/discussions", icon: "forum", label: "Community", desc: "Ask & share advice", color: "from-emerald-500 to-teal-600", comingSoon: false, isApp: false },
     ];
 
@@ -719,7 +719,7 @@ export default function DashboardPage() {
                 <div className="mb-10 relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1A0338] via-[#43088C] to-[#6605c7] p-6 md:p-8 text-white shadow-xl shadow-purple-900/15 border border-white/10">
                     <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-purple-400/20 rounded-full blur-3xl pointer-events-none" />
                     <div className="absolute right-1/3 top-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
-                    
+
                     <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6">
                         <div className="flex items-center gap-5">
                             <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
@@ -1536,7 +1536,7 @@ export default function DashboardPage() {
                                                         try {
                                                             const raw = localStorage.getItem('recent_application_submitted') || localStorage.getItem('apply_loan_form_data');
                                                             if (raw) localData = JSON.parse(raw);
-                                                        } catch {}
+                                                        } catch { }
                                                     }
                                                     const rawName = selectedAppDetails.coApplicantName || selectedAppDetails.fatherName || selectedAppDetails.motherName || selectedAppDetails.user?.coApplicantName || selectedAppDetails.user?.coApplicant?.name || data.family?.coApplicantName || data.family?.fatherName || data.family?.motherName || data.profile?.coApplicant?.name || localData?.coApplicantName || user?.coApplicantName || "";
                                                     const rawRel = selectedAppDetails.coApplicantRelation || selectedAppDetails.coApplicant || localData?.coApplicantRelation || localData?.coApplicant || user?.coApplicantRelation || "";
@@ -1563,7 +1563,7 @@ export default function DashboardPage() {
                                                         try {
                                                             const raw = localStorage.getItem('recent_application_submitted') || localStorage.getItem('apply_loan_form_data');
                                                             if (raw) localData = JSON.parse(raw);
-                                                        } catch {}
+                                                        } catch { }
                                                     }
                                                     const income = selectedAppDetails.coApplicantIncome || localData?.coApplicantIncome || localData?.income || data.family?.coApplicantIncome || data.profile?.coApplicant?.monthlyIncome || user?.coApplicantIncome;
                                                     return income ? `₹${Number(income).toLocaleString("en-IN")}` : 'Not specified';
@@ -1579,7 +1579,7 @@ export default function DashboardPage() {
                                                         try {
                                                             const raw = localStorage.getItem('recent_application_submitted') || localStorage.getItem('apply_loan_form_data');
                                                             if (raw) localData = JSON.parse(raw);
-                                                        } catch {}
+                                                        } catch { }
                                                     }
                                                     return (
                                                         selectedAppDetails.coApplicantPhone ||
@@ -1616,7 +1616,7 @@ export default function DashboardPage() {
                                                         try {
                                                             const raw = localStorage.getItem('recent_application_submitted') || localStorage.getItem('apply_loan_form_data');
                                                             if (raw) localData = JSON.parse(raw);
-                                                        } catch {}
+                                                        } catch { }
                                                     }
                                                     return (
                                                         selectedAppDetails.coApplicantEmail ||

@@ -26,6 +26,8 @@ interface S3Document {
     rejectionReason?: string;
 }
 
+import { initializeCsrf, getCsrfToken } from './api';
+
 /**
  * Get presigned URL for file upload from backend
  */
@@ -43,11 +45,17 @@ export const getS3PresignedUrl = async (
         ? localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken')
         : null;
 
+    let csrfToken = getCsrfToken();
+    if (!csrfToken) {
+        csrfToken = await initializeCsrf();
+    }
+
     const response = await fetch('/api/documents/presigned-url', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` })
+            ...(token && { Authorization: `Bearer ${token}` }),
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({
             userId,
@@ -128,11 +136,17 @@ export const completeDocumentUpload = async (
         ? localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken')
         : null;
 
+    let csrfToken = getCsrfToken();
+    if (!csrfToken) {
+        csrfToken = await initializeCsrf();
+    }
+
     const response = await fetch('/api/documents/complete-upload', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` })
+            ...(token && { Authorization: `Bearer ${token}` }),
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({
             userId,

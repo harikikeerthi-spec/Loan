@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Get, Param, Delete, Req, Inject, forwardRef } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Req, Res, Inject, forwardRef } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { ReferralService } from '../referral/referral.service';
 import { AssignmentService } from '../assignment/assignment.service';
+import { CsrfService } from './csrf.service';
 
 @Controller('auth')
 export class AuthController {
@@ -10,8 +11,22 @@ export class AuthController {
     private authService: AuthService,
     private usersService: UsersService,
     private referralService: ReferralService,
+    private csrfService: CsrfService,
     @Inject(forwardRef(() => AssignmentService)) private assignmentService: AssignmentService,
   ) { }
+
+  /**
+   * Endpoint to initialize/retrieve Double CSRF Token and set cookie
+   * GET /api/auth/csrf-token
+   */
+  @Get('csrf-token')
+  getCsrfToken(@Req() req: any, @Res({ passthrough: true }) res: any) {
+    const token = this.csrfService.generateCsrfToken(req, res);
+    return {
+      success: true,
+      csrfToken: token,
+    };
+  }
 
   /**
    * Check if a user exists in the system

@@ -26,11 +26,11 @@ export class EmailService {
     if (process.env.EMAIL_USER && process.env.EMAIL_USER.trim()) {
       return `"VidyaLoan" <${process.env.EMAIL_USER.trim()}>`;
     }
-    return '"VidyaLoan" <noreply@vidyaloan.com>';
+    return '"VidyaLoan" <support@vidyaloans.in>';
   }
 
   private getStandardHeaders(replyToEmail?: string) {
-    const sender = process.env.EMAIL_USER || 'support@vidyaloan.com';
+    const sender = process.env.EMAIL_USER || 'support@vidyaloans.in';
     return {
       'X-Mailer': 'VidyaLoan Platform v2.0',
       'X-Auto-Response-Suppress': 'OOF, AutoReply',
@@ -214,10 +214,10 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: fullName ? `"${fullName}" <${email}>` : email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `🎓 Welcome to VidyaLoan, ${name}! Your Education Loan Journey Begins`,
-      text: `Dear ${name},\n\nWelcome to VidyaLoan – India's smartest education loan platform!\n\nYour profile is set up and your dashboard is ready. Here's what you can do now:\n\n🏦 LOAN OFFERINGS\n• Education loans up to ₹1.5 Crore\n• Competitive interest rates from 8.5% p.a.\n• Moratorium period during studies\n• No collateral for loans up to ₹7.5 Lakh\n• Covers tuition, living, travel, and equipment costs\n\n🚀 HOW TO GET YOUR LOAN IN 4 STEPS\n1. Complete Your Profile – Personal & academic details (done!)\n2. Upload Documents via DigiLocker – 100% digital & secure\n3. Choose Your Bank – Compare offers from 20+ lenders\n4. Track in Real Time – Get updates at every step\n\n✨ PLATFORM FEATURES\n• AI-powered bank matching\n• DigiLocker integration for instant document sync\n• Real-time application tracking\n• Dedicated loan counsellors\n• Community forum & expert blogs\n\nGo to your dashboard: ${frontendUrl}\n\nWarm regards,\nThe VidyaLoan Team\nsupport@vidyaloan.com`,
+      text: `Dear ${name},\n\nWelcome to VidyaLoan – India's smartest education loan platform!\n\nYour profile is set up and your dashboard is ready. Here's what you can do now:\n\n🏦 LOAN OFFERINGS\n• Education loans up to ₹1.5 Crore\n• Competitive interest rates from 8.5% p.a.\n• Moratorium period during studies\n• No collateral for loans up to ₹7.5 Lakh\n• Covers tuition, living, travel, and equipment costs\n\n🚀 HOW TO GET YOUR LOAN IN 4 STEPS\n1. Complete Your Profile – Personal & academic details (done!)\n2. Upload Documents via DigiLocker – 100% digital & secure\n3. Choose Your Bank – Compare offers from 20+ lenders\n4. Track in Real Time – Get updates at every step\n\n✨ PLATFORM FEATURES\n• AI-powered bank matching\n• DigiLocker integration for instant document sync\n• Real-time application tracking\n• Dedicated loan counsellors\n• Community forum & expert blogs\n\nGo to your dashboard: ${frontendUrl}\n\nWarm regards,\nThe VidyaLoan Team\nsupport@vidyaloans.in`,
       html: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -361,7 +361,7 @@ export class EmailService {
                                         Our expert financial advisors are available Mon–Sat, 9 AM – 6 PM IST to assist you with applications.
                                     </td>
                                     <td class="footer-col" width="30%" align="right" valign="middle">
-                                        <a href="mailto:support@vidyaloan.com" style="color: #2563eb; text-decoration: none; font-weight: 600; border: 1px solid #2563eb; padding: 8px 16px; border-radius: 4px; display: inline-block;">Contact Support</a>
+                                        <a href="mailto:support@vidyaloans.in" style="color: #2563eb; text-decoration: none; font-weight: 600; border: 1px solid #2563eb; padding: 8px 16px; border-radius: 4px; display: inline-block;">Contact Support</a>
                                     </td>
                                 </tr>
                             </table>
@@ -410,7 +410,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: userName ? `"${userName}" <${email}>` : email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `⚡ VidyaLoan Team is Processing Your Application - #${appNum}`,
       text: `Dear ${userName},\n\nGood news! The VidyaLoan review team has officially received and started processing your loan application (No. #${appNum}) for ${bankName}.\n\nApplication Details:\n- Number: #${appNum}\n- Type: ${loanType}\n- Amount: ${amount}\n\nOur loan specialists are checking your documents to fast-track your approval.\n\nWarm regards,\nThe VidyaLoan Team`,
@@ -693,7 +693,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: userName ? `"${userName}" <${email}>` : email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `📝 Loan Application Submitted Successfully - #${appNum}`,
       text: `Dear ${userName},\n\nYour loan application for ${bankName} has been submitted successfully.\n\nApplication Number: ${appNum}\nLoan Type: ${loanType}\nAmount: ${amount}\nBank Name: ${bankName}\n\nWarm regards,\nThe VidyaLoan Team`,
@@ -836,7 +836,7 @@ export class EmailService {
                     <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 18px;">Our assigned loan counsellors are configured to walk you through documentation guidelines.</p>
                   </td>
                   <td class="footer-col" width="35%" align="right" valign="middle">
-                    <a href="mailto:support@vidyaloan.com" style="color: #0284c7; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid #e2e8f0; background-color: #ffffff; padding: 10px 16px; border-radius: 6px; display: inline-block;">📧 Contact Support</a>
+                    <a href="mailto:support@vidyaloans.in" style="color: #0284c7; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid #e2e8f0; background-color: #ffffff; padding: 10px 16px; border-radius: 6px; display: inline-block;">📧 Contact Support</a>
                   </td>
                 </tr>
               </table>
@@ -891,7 +891,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `📈 Application Progress Tracker - #${appNum}`,
       text: `Dear ${userName},\n\nYour loan application progress tracker is active.\n\nApplication Number: #${appNum}\nBank Partner: ${bankName}\nLoan Type: ${loanType}\nCurrent Stage: Application Submitted\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
@@ -1118,7 +1118,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `📤 Application Shared with ${bankName} - #${appNum}`,
       text: `Dear ${userName},\n\nYour loan application has been reviewed and processed by the VidyaLoan staff and has been successfully sent to ${bankName} for review.\n\nApplication Number: #${appNum}\nBank Partner: ${bankName}\nLoan Type: ${loanType}\nCurrent Stage: Bank Review\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
@@ -1265,7 +1265,7 @@ export class EmailService {
 
     <!-- Footer -->
     <div class="footer" style="background-color: #f8f9fa; padding: 16px; text-align: center; font-size: 12px; color: #6c757d; border-top: 1px solid #e9ecef;">
-      <p style="margin: 0 0 8px;">Need help? Contact support at support@vidyaloan.com</p>
+      <p style="margin: 0 0 8px;">Need help? Contact support at support@vidyaloans.in</p>
       <p style="margin: 0;">&copy; ${year} VidyaLoans Pvt. Ltd. All rights reserved.<br>
       <a href="${frontendUrl}/privacy-policy" style="color: #6c757d; text-decoration: underline;">Privacy Policy</a> &nbsp;·&nbsp;
       <a href="${frontendUrl}/terms-conditions" style="color: #6c757d; text-decoration: underline;">Terms of Service</a></p>
@@ -1306,7 +1306,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: bankEmail,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `📥 New Education Loan Application Submitted for Review - #${appNum}`,
       text: `Dear Partner at ${bankName},\n\nA new education loan application has been forwarded to you for credit review.\n\nApplication Reference: #${appNum}\nStudent Name: ${studentName}\nRequested Amount: ${amount}\nTarget University: ${university}\nCourse: ${course}\n\nPlease log in to the VidyaLoans Bank Partner Portal to review the credit file and documents.\n\nPortal Login: ${frontendUrl}/bank/login\n\nBest regards,\nThe VidyaLoans Team`,
@@ -1363,7 +1363,7 @@ export class EmailService {
       </div>
       
       <p style="margin:0;font-size:13px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:20px;">
-        This is an automated notification. For assistance, contact support@vidyaloan.com.
+        This is an automated notification. For assistance, contact support@vidyaloans.in.
       </p>
     </div>
   </div>
@@ -1546,7 +1546,7 @@ export class EmailService {
 
       <p style="margin:0;font-size:12px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:20px;text-align:center;">
         This is a system-generated application package from VidyaLoan.<br>
-        For support, contact <a href="mailto:support@vidyaloan.com" style="color:#4f46e5;">support@vidyaloan.com</a>
+        For support, contact <a href="mailto:support@vidyaloans.in" style="color:#4f46e5;">support@vidyaloans.in</a>
       </p>
     </div>
   </div>
@@ -1559,7 +1559,7 @@ export class EmailService {
         await this.transporter.sendMail({
           from: this.getFromAddress(),
           to: bankEmail,
-          replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+          replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
           headers: this.getStandardHeaders(),
           subject: `📋 Application Package – ${studentName} | ${appNum} | ${bankName}`,
           html,
@@ -1590,7 +1590,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `🎉 Congratulations! Loan Application Accepted by ${bankName} - #${appNum}`,
       text: `Dear ${userName},\n\nWe have fantastic news! Your loan application for ${bankName} has been accepted and approved by the bank.\n\nApplication Number: #${appNum}\nSanction Amount: ${amount}\nInterest Rate: ${rate}% p.a.\nTenure: ${tenure} months\n\nYou can view and accept the formal sanction letter on your VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
@@ -1747,7 +1747,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `💸 Loan Disbursed Successfully - #${appNum}`,
       text: `Dear ${userName},\n\nGreat news! Your education loan amount of ${amount} has been successfully disbursed by ${bankName}.\n\nApplication Number: #${appNum}\nTransaction Ref (UTR): ${utrNumber}\nDisbursed Amount: ${amount}\nBank Partner: ${bankName}\nTranche: Tranche ${trancheNumber}\nDisbursement Date: ${dateStr}\n\nYou can view full transaction details on your VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
@@ -1936,7 +1936,7 @@ export class EmailService {
 
     <!-- Footer -->
     <div class="footer" style="background-color: #f8f9fa; padding: 16px; text-align: center; font-size: 12px; color: #6c757d; border-top: 1px solid #e9ecef;">
-      <p style="margin: 0 0 8px;">Need help? Contact support at support@vidyaloan.com</p>
+      <p style="margin: 0 0 8px;">Need help? Contact support at support@vidyaloans.in</p>
       <p style="margin: 0;">&copy; ${year} VidyaLoans Pvt. Ltd. All rights reserved.<br>
       <a href="${frontendUrl}/privacy-policy" style="color: #6c757d; text-decoration: underline;">Privacy Policy</a> &nbsp;·&nbsp;
       <a href="${frontendUrl}/terms-conditions" style="color: #6c757d; text-decoration: underline;">Terms of Service</a></p>
@@ -1967,7 +1967,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `⚠️ Application Rejected by VidyaLoan Staff`,
       text: `Dear ${userName},\n\nWe regret to inform you that your loan application has been rejected by VidyaLoan staff.\n\nRejection Reason: ${reason || 'Not specified'}\n\nIf you have any questions or believe this was a mistake, please contact our support desk immediately.\n\nWarm regards,\nThe VidyaLoan Team`,
@@ -2078,7 +2078,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloan.com',
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `⚠️ Update on Your Loan Application - Rejected by ${bankName}`,
       text: `Dear ${userName},\n\nWe regret to inform you that your loan application has been rejected by ${bankName}.\n\nRejection Reason: ${reason || 'Credit score or verification shortfall'}\n\nDon't worry! VidyaLoan is partnered with 20+ other lenders. Our team will automatically match your profile with other suitable bank partners to explore alternate options. Contact our loan counsellors immediately for help.\n\nWarm regards,\nThe VidyaLoan Team`,

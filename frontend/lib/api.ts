@@ -376,21 +376,96 @@ function notifySessionExpired() {
     );
 }
 
+let cachedCsrfToken: string | null = null;
+let csrfFetchPromise: Promise<string | null> | null = null;
+
 /**
- * Enhanced fetch wrapper — refreshes the access token only when a request fails with 401
+ * Synchronize CSRF token with backend Double-Submit Cookie protection
+ */
+export async function initializeCsrf(forceRefresh = false): Promise<string | null> {
+    if (typeof window === "undefined") return null;
+    if (cachedCsrfToken && !forceRefresh) {
+        return cachedCsrfToken;
+    }
+    if (csrfFetchPromise && !forceRefresh) {
+        return csrfFetchPromise;
+    }
+
+    csrfFetchPromise = (async () => {
+        try {
+            const res = await fetch(`${API_URL}/csrf-token`, {
+                method: "GET",
+                credentials: "include",
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (data && data.csrfToken) {
+                cachedCsrfToken = data.csrfToken;
+                return data.csrfToken;
+            }
+            return null;
+        } catch {
+            return null;
+        } finally {
+            csrfFetchPromise = null;
+        }
+    })();
+
+    return csrfFetchPromise;
+}
+
+export function getCsrfToken(): string | null {
+    return cachedCsrfToken;
+}
+
+/**
+ * Enhanced fetch wrapper — automatically handles authorization tokens, CSRF double-cookie headers, and silent refreshes
  */
 export async function apiFetch<T>(
     url: string,
     options: RequestInit = {},
     retried = false
 ): Promise<T> {
+    const method = (options.method || "GET").toUpperCase();
+    const isStateMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+
+    const headersObj: Record<string, string> = {
+        ...(authHeaders(url) as Record<string, string>),
+        ...(options.headers as Record<string, string>),
+    };
+
+    if (isStateMutating) {
+        let token = cachedCsrfToken;
+        if (!token) {
+            token = await initializeCsrf();
+        }
+        if (token) {
+            headersObj["X-CSRF-Token"] = token;
+        }
+    }
+
     const res = await fetch(url, {
         ...options,
-        headers: {
-            ...authHeaders(url),
-            ...options.headers,
-        },
+        credentials: options.credentials || "include",
+        headers: headersObj,
     });
+
+    // Handle 403 CSRF mismatch retry once with a fresh token
+    if (res.status === 403 && isStateMutating && !retried) {
+        const freshToken = await initializeCsrf(true);
+        if (freshToken) {
+            headersObj["X-CSRF-Token"] = freshToken;
+            return apiFetch<T>(
+                url,
+                {
+                    ...options,
+                    credentials: options.credentials || "include",
+                    headers: headersObj,
+                },
+                true
+            );
+        }
+    }
 
     if (res.status === 401 && !retried && !isPublicAuthUrl(url)) {
         const newToken = await tryRefreshAccessToken();
@@ -399,8 +474,9 @@ export async function apiFetch<T>(
                 url,
                 {
                     ...options,
+                    credentials: options.credentials || "include",
                     headers: {
-                        ...options.headers,
+                        ...headersObj,
                         Authorization: `Bearer ${newToken}`,
                         "Content-Type": "application/json",
                     },

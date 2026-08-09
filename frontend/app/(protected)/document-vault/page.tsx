@@ -421,6 +421,27 @@ export default function DocumentVaultPage() {
             }
         }
 
+        // Pre-upload check: Detect if this document is ALREADY uploaded for this specific user
+        const existingDoc = docs.find(
+            d => d.docType.toLowerCase() === docType.toLowerCase() && (d.uploaded === true || d.status === 'uploaded' || d.status === 'verified')
+        );
+        const isAlreadyUploaded = !!existingDoc;
+
+        if (isAlreadyUploaded) {
+            const documentTitle = docName || existingDoc?.docName || existingDoc?.verificationMetadata?.docName || docType.replace(/_/g, ' ').toUpperCase();
+            const currentStatus = existingDoc?.status?.toUpperCase() || 'UPLOADED';
+
+            const confirmOverwrite = window.confirm(
+                `Notice: You have already uploaded a document for "${documentTitle}" (Status: ${currentStatus}).\n\n` +
+                `Re-uploading will replace your previous document file. Do you want to overwrite it?`
+            );
+
+            if (!confirmOverwrite) {
+                e.target.value = "";
+                return;
+            }
+        }
+
         setUploadingDocs(prev => ({ ...prev, [docType]: true }));
         try {
             const objectUrl = URL.createObjectURL(file);
@@ -478,7 +499,16 @@ export default function DocumentVaultPage() {
             const key = `dashboardDataUpdated_${user.id}`;
             localStorage.setItem(key, String(Date.now()));
             window.dispatchEvent(new Event('dashboard-data-changed'));
-            showAlert("Upload Success", "Document uploaded successfully!", "success");
+
+            if (isAlreadyUploaded || result.wasAlreadyUploaded) {
+                showAlert(
+                    "Document Updated",
+                    `Notice: This document was already uploaded by you. Your previous version has been updated successfully!`,
+                    "info"
+                );
+            } else {
+                showAlert("Upload Success", "Document uploaded successfully!", "success");
+            }
 
         } catch (e: any) {
             console.error("Upload error:", e.message || e);

@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const seen = new Set<string>();
 
     await Promise.all(countries.map(async (country) => {
-      const url = `http://universities.hipolabs.com/search?country=${encodeURIComponent(country)}`;
+      const url = `https://universities.hipolabs.com/search?country=${encodeURIComponent(country)}`;
       const res = await fetch(url);
       if (!res.ok) return;
       const data = await res.json();
