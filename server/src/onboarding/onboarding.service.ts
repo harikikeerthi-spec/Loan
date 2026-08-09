@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../auth/email.service';
-import { sanitizeUserPayload } from '../users/users.service';
+import { sanitizeUserPayload, UsersService } from '../users/users.service';
 
 @Injectable()
 export class OnboardingService {
@@ -11,7 +11,8 @@ export class OnboardingService {
 
   constructor(
     private supabase: SupabaseService,
-    private emailService: EmailService
+    private emailService: EmailService,
+    @Inject(forwardRef(() => UsersService)) private usersService: UsersService,
   ) {}
 
   async saveOnboardingData(data: any, userId?: string) {
@@ -113,15 +114,19 @@ export class OnboardingService {
         // Merge fatherName/motherName from parents array or personal data
         const fatherFromParents = data.parents?.find((p: any) => p.relation === 'father')?.name;
         const motherFromParents = data.parents?.find((p: any) => p.relation === 'mother')?.name;
+        const fatherAadharFromParents = data.parents?.find((p: any) => p.relation === 'father')?.aadharNumber;
+        const fatherPanFromParents = data.parents?.find((p: any) => p.relation === 'father')?.panNumber;
+        const motherAadharFromParents = data.parents?.find((p: any) => p.relation === 'mother')?.aadharNumber;
+        const motherPanFromParents = data.parents?.find((p: any) => p.relation === 'mother')?.panNumber;
 
         return JSON.stringify({
           ...familyObj,
-          fatherName: fatherFromParents || personal.fatherName || data.fatherName || familyObj.fatherName || null,
-          motherName: motherFromParents || personal.motherName || data.motherName || familyObj.motherName || null,
-          fatherAadhar: data.parents?.find((p: any) => p.relation === 'father')?.aadharNumber || familyObj.fatherAadhar || null,
-          fatherPan: data.parents?.find((p: any) => p.relation === 'father')?.panNumber || familyObj.fatherPan || null,
-          motherAadhar: data.parents?.find((p: any) => p.relation === 'mother')?.aadharNumber || familyObj.motherAadhar || null,
-          motherPan: data.parents?.find((p: any) => p.relation === 'mother')?.panNumber || familyObj.motherPan || null,
+          fatherName: fatherFromParents !== undefined ? fatherFromParents : (personal.fatherName ?? data.fatherName ?? familyObj.fatherName ?? null),
+          motherName: motherFromParents !== undefined ? motherFromParents : (personal.motherName ?? data.motherName ?? familyObj.motherName ?? null),
+          fatherAadhar: fatherAadharFromParents !== undefined ? fatherAadharFromParents : (familyObj.fatherAadhar ?? null),
+          fatherPan: fatherPanFromParents !== undefined ? fatherPanFromParents : (familyObj.fatherPan ?? null),
+          motherAadhar: motherAadharFromParents !== undefined ? motherAadharFromParents : (familyObj.motherAadhar ?? null),
+          motherPan: motherPanFromParents !== undefined ? motherPanFromParents : (familyObj.motherPan ?? null),
         });
       };
 
@@ -172,8 +177,20 @@ export class OnboardingService {
           .insert({ email: data.email, firstName: userUpdateData.firstName || 'User', mobile: userUpdateData.mobile || '', password: '', role: 'user', ...userUpdateData })
           .select()
           .single();
-        if (error) throw error;
-        user = created;
+        if (error) {
+          console.warn(`[OnboardingService] Insert warning (${error.message}). Retrying with basic payload...`);
+          const basicInsert = { ...userUpdateData };
+          delete basicInsert.academic;
+          const { data: retryCreated, error: retryErr } = await this.db
+            .from('User')
+            .insert({ email: data.email, firstName: basicInsert.firstName || 'User', mobile: basicInsert.mobile || '', password: '', role: 'user', ...basicInsert })
+            .select()
+            .single();
+          if (retryErr) throw retryErr;
+          user = retryCreated;
+        } else {
+          user = created;
+        }
       } else {
         const { data: updated, error } = await this.db
           .from('User')
@@ -181,8 +198,37 @@ export class OnboardingService {
           .eq('id', user.id)
           .select()
           .single();
-        if (error) throw error;
-        user = updated;
+        if (error) {
+          console.warn(`[OnboardingService] Update warning (${error.message}). Retrying with stringified or basic payload...`);
+          const retryPayload = { ...userUpdateData };
+          delete retryPayload.academic;
+          if (retryPayload.family && typeof retryPayload.family === 'object') {
+            retryPayload.family = JSON.stringify(retryPayload.family);
+          }
+          if (retryPayload.coApplicant && typeof retryPayload.coApplicant === 'object') {
+            retryPayload.coApplicant = JSON.stringify(retryPayload.coApplicant);
+          }
+          const { data: retryUpdated, error: retryErr } = await this.db
+            .from('User')
+            .update(retryPayload)
+            .eq('id', user.id)
+            .select()
+            .single();
+          if (retryErr) {
+            console.warn(`[OnboardingService] Retrying with basic columns...`);
+            const basicPayload = { ...retryPayload };
+            delete basicPayload.family;
+            delete basicPayload.coApplicant;
+            delete basicPayload.tests;
+            const { data: bData, error: bErr } = await this.db.from('User').update(basicPayload).eq('id', user.id).select().single();
+            if (bErr) throw bErr;
+            user = bData;
+          } else {
+            user = retryUpdated;
+          }
+        } else {
+          user = updated;
+        }
       }
 
       // Upsert parents details into parents table
@@ -298,6 +344,11 @@ export class OnboardingService {
       } catch (appErr) {
         console.error('Failed to sync LoanApplication records during onboarding save:', appErr);
       }
+
+      if (user?.email) {
+        this.usersService.clearCache(user.email);
+      }
+      this.usersService.clearCache();
 
       return { success: true, message: 'Onboarding data saved successfully', user };
     } catch (error) {

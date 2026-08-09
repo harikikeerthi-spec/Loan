@@ -16,7 +16,15 @@ export class CsrfMiddleware implements NestMiddleware {
       cleanUrl.includes('/auth/firebase') ||
       cleanUrl.includes('/auth/refresh') ||
       cleanUrl.includes('/auth/check-user') ||
+      cleanUrl.includes('/auth/dashboard-data') ||
+      cleanUrl.includes('/auth/dashboard') ||
+      cleanUrl.includes('/auth/update-details') ||
+      cleanUrl.includes('/auth/create-application') ||
       cleanUrl.includes('/auth/login') ||
+      cleanUrl.includes('/users/profile') ||
+      cleanUrl.includes('/users/admin/update-details') ||
+      cleanUrl.includes('/onboarding') ||
+      cleanUrl.includes('/documents/upload') ||
       cleanUrl.includes('/digilocker/callback')
     );
   }

@@ -178,23 +178,26 @@ export default function ApplicationsTab() {
 
         try {
             const bankName = banksList.find(b => b.id === formData.bank)?.name || formData.bank;
-            const rel = formData.coApplicant === "other" ? formData.otherRelation : formData.coApplicant;
-            const capitalizedRelation = rel ? rel.charAt(0).toUpperCase() + rel.slice(1) : "";
+            
+            // Inherit co-applicant details from student's first application if available
+            const firstApp = userApplications?.[0];
+            const coApplicantRel = firstApp?.coApplicantRelation || firstApp?.coApplicant || undefined;
+            const coApplicantInc = firstApp?.coApplicantIncome || firstApp?.income || undefined;
 
             const payload = {
                 ...formData,
-                hasCoApplicant: !!formData.coApplicant && formData.coApplicant !== "none",
-                coApplicantName: capitalizedRelation || null,
-                coApplicantRelation: rel || null,
-                coApplicantIncome: formData.income ? parseFloat(formData.income) : undefined,
-                coApplicant: rel || null,
+                hasCoApplicant: firstApp?.hasCoApplicant ?? (!!coApplicantRel && coApplicantRel !== "none"),
+                coApplicantName: firstApp?.coApplicantName || null,
+                coApplicantRelation: coApplicantRel || null,
+                coApplicantIncome: coApplicantInc || undefined,
+                coApplicant: coApplicantRel || null,
                 country: formData.country === "Other" ? formData.otherCountry : formData.country,
                 userId,
                 bank: bankName,
                 amount: parseFloat(formData.amount) || 0,
                 annualFee: formData.annualFee ? parseFloat(formData.annualFee) : undefined,
                 livingCost: formData.livingCost ? parseFloat(formData.livingCost) : undefined,
-                income: formData.income ? parseFloat(formData.income) : undefined,
+                income: coApplicantInc || undefined,
                 status: "pending",
             };
 
@@ -528,53 +531,6 @@ export default function ApplicationsTab() {
                                                 <option value="confirmed">Confirmed Admission / Letter Received</option>
                                             </select>
                                         </div>
-                                    </div>
-                                </div>
-
-                                {/* SECTION 3: FINANCIAL & CO-APPLICANT DETAILS */}
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] mb-3">3. Co-Applicant & Finance details</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Co-Applicant Relation *</label>
-                                            <select
-                                                required
-                                                value={formData.coApplicant}
-                                                onChange={e => setFormData(prev => ({ ...prev, coApplicant: e.target.value }))}
-                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                            >
-                                                {relations.map(r => (
-                                                    <option key={r} value={r.toLowerCase()}>{r}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        {formData.coApplicant === "other" && (
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Specify Relationship *</label>
-                                                <input
-                                                    required
-                                                    type="text"
-                                                    placeholder="e.g. Aunt"
-                                                    value={formData.otherRelation}
-                                                    onChange={e => setFormData(prev => ({ ...prev, otherRelation: e.target.value }))}
-                                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                                />
-                                            </div>
-                                        )}
-
-                                        {formData.coApplicant !== "none" && (
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Co-Applicant Monthly Income (INR)</label>
-                                                <input
-                                                    type="number"
-                                                    placeholder="e.g. 150000"
-                                                    value={formData.income}
-                                                    onChange={e => setFormData(prev => ({ ...prev, income: e.target.value }))}
-                                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                                />
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
 

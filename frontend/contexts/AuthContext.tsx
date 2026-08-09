@@ -288,37 +288,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const freshUser = data?.user ?? data?.data ?? null;
             if (freshUser && (freshUser as AuthUser).email) {
                 setUser(prev => {
-                    // Merge, but only overwrite with non-empty values from the fresh fetch
-                    // to avoid wiping fields like phoneNumber/dateOfBirth with empty strings
-                    function mergeField<T>(fresh: T, existing: T): T {
-                        if (fresh !== undefined && fresh !== null && fresh !== '') return fresh;
-                        return existing;
+                    function pickVal<T>(fresh: T | undefined | null, existing: T | undefined | null): T | undefined {
+                        if (fresh !== undefined && fresh !== null && fresh !== '') return fresh as T;
+                        return existing ? (existing as T) : undefined;
                     }
                     const updated: AuthUser = {
                         ...(prev as AuthUser),
-                        id: mergeField((freshUser as any).id || (freshUser as any)._id, prev?.id) || localStorage.getItem(keys.userId) || '',
-                        email: mergeField(freshUser.email, prev?.email) || email,
-                        firstName: mergeField(freshUser.firstName, prev?.firstName),
-                        lastName: mergeField(freshUser.lastName, prev?.lastName),
-                        phoneNumber: mergeField(freshUser.phoneNumber, prev?.phoneNumber),
-                        dateOfBirth: mergeField(freshUser.dateOfBirth, prev?.dateOfBirth),
-                        role: mergeField(freshUser.role, prev?.role),
-                        intakeSeason: mergeField((freshUser as any).intakeSeason, prev?.intakeSeason),
-                        studyDestination: mergeField((freshUser as any).studyDestination, prev?.studyDestination),
-                        courseName: mergeField((freshUser as any).courseName, prev?.courseName),
-                        targetUniversity: mergeField((freshUser as any).targetUniversity, prev?.targetUniversity),
-                        family: (freshUser as any).family || prev?.family,
-                        coApplicant: (freshUser as any).coApplicant || prev?.coApplicant,
-                        motherName: mergeField((freshUser as any).motherName, prev?.motherName),
-                        motherAadhar: mergeField((freshUser as any).motherAadhar, (prev as any)?.motherAadhar),
-                        motherPan: mergeField((freshUser as any).motherPan, (prev as any)?.motherPan),
-                        fatherName: mergeField((freshUser as any).fatherName, prev?.fatherName),
-                        fatherAadhar: mergeField((freshUser as any).fatherAadhar, (prev as any)?.fatherAadhar),
-                        fatherPan: mergeField((freshUser as any).fatherPan, (prev as any)?.fatherPan),
-                        coApplicantName: mergeField((freshUser as any).coApplicantName, prev?.coApplicantName),
-                        coApplicantAadhar: mergeField((freshUser as any).coApplicantAadhar, (prev as any)?.coApplicantAadhar),
-                        coApplicantPan: mergeField((freshUser as any).coApplicantPan, (prev as any)?.coApplicantPan),
-                        parents: (freshUser as any).parents || (prev as any)?.parents,
+                        ...(freshUser as AuthUser),
+                        id: (freshUser as any).id || (freshUser as any)._id || prev?.id || localStorage.getItem(keys.userId) || '',
+                        email: freshUser.email || prev?.email || email,
+                        firstName: pickVal(freshUser.firstName, prev?.firstName),
+                        lastName: pickVal(freshUser.lastName, prev?.lastName),
+                        phoneNumber: pickVal(freshUser.phoneNumber, prev?.phoneNumber),
+                        dateOfBirth: pickVal(freshUser.dateOfBirth, prev?.dateOfBirth),
+                        role: pickVal(freshUser.role, prev?.role),
+                        intakeSeason: pickVal((freshUser as any).intakeSeason, prev?.intakeSeason),
+                        studyDestination: pickVal((freshUser as any).studyDestination, prev?.studyDestination),
+                        courseName: pickVal((freshUser as any).courseName, prev?.courseName),
+                        targetUniversity: pickVal((freshUser as any).targetUniversity, prev?.targetUniversity),
+                        family: (freshUser as any).family !== undefined && (freshUser as any).family !== null ? (freshUser as any).family : prev?.family,
+                        coApplicant: (freshUser as any).coApplicant !== undefined && (freshUser as any).coApplicant !== null ? (freshUser as any).coApplicant : prev?.coApplicant,
+                        motherName: pickVal((freshUser as any).motherName, prev?.motherName),
+                        motherAadhar: pickVal((freshUser as any).motherAadhar, (prev as any)?.motherAadhar),
+                        motherPan: pickVal((freshUser as any).motherPan, (prev as any)?.motherPan),
+                        fatherName: pickVal((freshUser as any).fatherName, prev?.fatherName),
+                        fatherAadhar: pickVal((freshUser as any).fatherAadhar, (prev as any)?.fatherAadhar),
+                        fatherPan: pickVal((freshUser as any).fatherPan, (prev as any)?.fatherPan),
+                        coApplicantName: pickVal((freshUser as any).coApplicantName, prev?.coApplicantName),
+                        coApplicantAadhar: pickVal((freshUser as any).coApplicantAadhar, (prev as any)?.coApplicantAadhar),
+                        coApplicantPan: pickVal((freshUser as any).coApplicantPan, (prev as any)?.coApplicantPan),
+                        parents: (freshUser as any).parents !== undefined && (freshUser as any).parents !== null ? (freshUser as any).parents : (prev as any)?.parents,
                     };
                     localStorage.setItem(keys.user, JSON.stringify(updated));
                     if (updated.id) localStorage.setItem(keys.userId, updated.id);

@@ -40,7 +40,6 @@ export const USER_VALID_COLUMNS = new Set([
   'tests',
   'family',
   'coApplicant',
-  'academic'
 ]);
 
 export function sanitizeUserPayload(payload: any): Record<string, any> {
@@ -578,10 +577,10 @@ export class UsersService implements OnModuleInit {
 
   async updateUserDetails(
     email: string,
-    firstName: string,
-    lastName: string,
-    phoneNumber: string,
-    dateOfBirth: string,
+    firstName?: string,
+    lastName?: string,
+    phoneNumber?: string,
+    dateOfBirth?: string,
     intakeSeason?: string,
     profileImage?: string,
     pincode?: string,
@@ -636,10 +635,10 @@ export class UsersService implements OnModuleInit {
 
     // Prepare update payload for User table
     const updatePayload: any = {};
-    if (firstName !== undefined) updatePayload.firstName = firstName;
-    if (lastName !== undefined) updatePayload.lastName = lastName;
+    if (firstName !== undefined && firstName !== null && firstName !== '') updatePayload.firstName = firstName;
+    if (lastName !== undefined && lastName !== null && lastName !== '') updatePayload.lastName = lastName;
 
-    if (phoneNumber !== undefined && phoneNumber !== "") {
+    if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber !== "") {
       updatePayload.phoneNumber = phoneNumber;
       updatePayload.mobile = phoneNumber;
     }
@@ -648,12 +647,12 @@ export class UsersService implements OnModuleInit {
       updatePayload.dateOfBirth = dobDate;
     }
 
-    if (fatherName !== undefined) updatePayload.fatherName = fatherName;
-    if (motherName !== undefined) updatePayload.motherName = motherName;
-    if (intakeSeason !== undefined) updatePayload.intakeSeason = intakeSeason;
-    if (pincode !== undefined) updatePayload.pincode = pincode;
-    if (targetUniversity !== undefined) updatePayload.targetUniversity = targetUniversity;
-    if (studyDestination !== undefined) updatePayload.studyDestination = studyDestination;
+    if (fatherName !== undefined && fatherName !== null && fatherName !== '') updatePayload.fatherName = fatherName;
+    if (motherName !== undefined && motherName !== null && motherName !== '') updatePayload.motherName = motherName;
+    if (intakeSeason !== undefined && intakeSeason !== null && intakeSeason !== '') updatePayload.intakeSeason = intakeSeason;
+    if (pincode !== undefined && pincode !== null && pincode !== '') updatePayload.pincode = pincode;
+    if (targetUniversity !== undefined && targetUniversity !== null && targetUniversity !== '') updatePayload.targetUniversity = targetUniversity;
+    if (studyDestination !== undefined && studyDestination !== null && studyDestination !== '') updatePayload.studyDestination = studyDestination;
 
     // Parse and handle academic object
     let parsedAcademic: any = {};
@@ -898,6 +897,9 @@ export class UsersService implements OnModuleInit {
     }
 
     if (email) this.clearCache(email);
+    if (targetUser?.email) this.clearCache(targetUser.email);
+    if (updatedUser?.email) this.clearCache(updatedUser.email);
+    this.clearCache();
     return {
       ...updatedUser,
       family: familyObj,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { authApi, documentApi, onboardingApi } from "@/lib/api";
+import { authApi, documentApi, onboardingApi, getCsrfToken, initializeCsrf } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import DigilockerConsentModal from "@/components/DigilockerConsentModal";
@@ -462,12 +462,21 @@ export default function DocumentVaultPage() {
             }
 
             const token = localStorage.getItem("accessToken");
+            let csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                csrfToken = await initializeCsrf();
+            }
+
+            const headersObj: Record<string, string> = {};
+            if (token) headersObj["Authorization"] = `Bearer ${token}`;
+            if (csrfToken) headersObj["X-CSRF-Token"] = csrfToken;
 
             console.log("Starting file upload for docType:", docType, "file:", file.name, "size:", file.size);
 
             const response = await fetch(`/api/documents/upload`, {
                 method: 'POST',
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                credentials: 'include',
+                headers: headersObj,
                 body: formData
             });
 

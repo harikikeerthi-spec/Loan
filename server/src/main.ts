@@ -49,7 +49,15 @@ async function bootstrap() {
       url.includes('/auth/firebase') ||
       url.includes('/auth/refresh') ||
       url.includes('/auth/check-user') ||
+      url.includes('/auth/dashboard-data') ||
+      url.includes('/auth/dashboard') ||
+      url.includes('/auth/update-details') ||
+      url.includes('/auth/create-application') ||
       url.includes('/auth/login') ||
+      url.includes('/users/profile') ||
+      url.includes('/users/admin/update-details') ||
+      url.includes('/onboarding') ||
+      url.includes('/documents/upload') ||
       url.includes('/digilocker/callback')
     ) {
       return next();

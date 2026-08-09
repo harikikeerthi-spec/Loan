@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import * as https from 'https';
 import * as dns from 'dns';
 
@@ -84,6 +85,9 @@ export class SupabaseService {
       auth: { persistSession: false },
       global: {
         fetch: customIPv4Fetch as any,
+      },
+      realtime: {
+        transport: WebSocket as any,
       },
     });
   }

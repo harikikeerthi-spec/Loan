@@ -457,6 +457,14 @@ export default function DashboardPage() {
         try {
             await documentApi.updateProfile(user.id, {
                 email: user.email,
+                family: {
+                    fatherName: familyForm.fatherName || null,
+                    fatherAadhar: familyForm.fatherAadhar ? familyForm.fatherAadhar.replace(/\s+/g, '') : null,
+                    fatherPan: familyForm.fatherPan ? familyForm.fatherPan.toUpperCase().replace(/\s+/g, '') : null,
+                    motherName: familyForm.motherName || null,
+                    motherAadhar: familyForm.motherAadhar ? familyForm.motherAadhar.replace(/\s+/g, '') : null,
+                    motherPan: familyForm.motherPan ? familyForm.motherPan.toUpperCase().replace(/\s+/g, '') : null,
+                },
                 parents: [
                     {
                         relation: "father",

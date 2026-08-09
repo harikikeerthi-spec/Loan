@@ -255,6 +255,29 @@ export class AuthController {
     }
   }
 
+  @Get('dashboard-data/:userId')
+  async getDashboardDataByParam(@Param('userId') userId: string) {
+    if (!userId) {
+      return {
+        success: false,
+        message: 'User ID is required',
+      };
+    }
+    try {
+      const data = await this.usersService.getUserDashboardData(userId);
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      console.error('getDashboardData error:', error);
+      return {
+        success: false,
+        message: `Failed to fetch dashboard data: ${error.message}`,
+      };
+    }
+  }
+
   /**
    * Update user details (first name, last name, pincode, target university, etc.)
    * Note: Email, Phone Number, and Date of Birth are IMMUTABLE once set and cannot be overwritten.
@@ -287,10 +310,10 @@ export class AuthController {
     }
     return this.usersService.updateUserDetails(
       body.email,
-      body.firstName || '',
-      body.lastName || '',
-      body.phoneNumber || '',
-      body.dateOfBirth || '',
+      body.firstName,
+      body.lastName,
+      body.phoneNumber,
+      body.dateOfBirth,
       body.intakeSeason,
       body.profileImage,
       body.pincode,
