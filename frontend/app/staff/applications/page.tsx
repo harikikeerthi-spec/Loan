@@ -234,19 +234,27 @@ function ApplicationsPageInner() {
         if (appIdParam) {
             const found = data.find(app => (app.id || app._id) === appIdParam);
             if (found) {
-                setSelectedApp(found);
-            } else if (data.length > 0) {
-                adminApi.getApplication(appIdParam)
-                    .then((res: any) => {
-                        const app = res?.data || res;
-                        if (app && (app.id || app._id)) {
-                            setSelectedApp(app);
-                        }
-                    })
-                    .catch(() => {});
+                const targetUserId = found.userId || found.studentId || found.user?.id || found.user_id || found.applicantId;
+                if (targetUserId) {
+                    router.replace(`/staff/users/${targetUserId}/applications`);
+                    return;
+                }
             }
+            adminApi.getApplication(appIdParam)
+                .then((res: any) => {
+                    const app = res?.data || res;
+                    const targetUserId = app?.userId || app?.studentId || app?.user?.id || app?.user_id || app?.applicantId;
+                    if (targetUserId) {
+                        router.replace(`/staff/users/${targetUserId}/applications`);
+                    } else {
+                        router.replace("/staff/users");
+                    }
+                })
+                .catch(() => {
+                    router.replace("/staff/users");
+                });
         }
-    }, [appIdParam, data]);
+    }, [appIdParam, data, router]);
 
     const filteredData = useMemo(() => {
         const isPureStaff = user?.role === 'staff';
@@ -509,17 +517,6 @@ function ApplicationsPageInner() {
                 recipientEmail={emailModalRecipient}
                 recipientName={emailModalRecipientName}
             />
-
-            {selectedApp && (
-                <ApplicationDetailView
-                    application={selectedApp}
-                    onBack={() => { setSelectedApp(null); if (appIdParam) router.push('/staff/applications'); }}
-                    sidebarOpen={false}
-                    setSidebarOpen={() => { }}
-                    onAadhaarSaved={() => { }}
-                    onApplicationUpdated={async () => { await loadData(); }}
-                />
-            )}
         </div>
     );
 }

@@ -389,7 +389,7 @@ const NotificationsPanel = ({
         return;
       }
 
-      // 2. Loan Sanctioned Notifications -> Active Pipeline (/staff/applications)
+      // 2. Loan Sanctioned Notifications -> Bank Applications tab in User Profile view (/staff/users/[id]/applications)
       const isSanctionNotif =
         notifType.includes('sanction') ||
         notifType === 'application_approved' ||
@@ -401,48 +401,64 @@ const NotificationsPanel = ({
         notifBody.includes('loan sanctioned');
 
       if (isSanctionNotif) {
+        let targetId = metadata?.studentId || metadata?.userId;
         let appId = metadata?.applicationId || metadata?.id;
+
         const appNumRegex = /(?:VL-)?APP-[\w-]+/i;
         const appNumMatch = notification.body?.match(appNumRegex) || notification.title?.match(appNumRegex);
         const appSearchTerm = appId || (appNumMatch ? appNumMatch[0] : null);
 
-        if (!appId && appSearchTerm) {
+        if (!targetId && appSearchTerm) {
           try {
-            console.log(`[NotificationsPanel] Sanction notification clicked. Resolving application ID for search term: ${appSearchTerm}`);
+            console.log(`[NotificationsPanel] Sanction notification clicked. Resolving user ID for search term: ${appSearchTerm}`);
             const appsRes = await adminApi.getApplications({ search: appSearchTerm }) as any;
             if (appsRes && Array.isArray(appsRes.data) && appsRes.data.length > 0) {
               const foundApp = appsRes.data.find((a: any) =>
                 a.id === appId || (appNumMatch && a.applicationNumber?.toLowerCase() === appNumMatch[0].toLowerCase())
               ) || appsRes.data[0];
 
-              appId = foundApp.id || foundApp._id;
+              targetId = foundApp.userId || foundApp.studentId || foundApp.user?.id || foundApp.user_id || foundApp.applicantId;
+              if (!appId) appId = foundApp.id || foundApp._id;
             }
           } catch (e) {
             console.error('[NotificationsPanel] Failed to resolve application for sanction notification:', e);
           }
         }
 
-        if (!appId) {
+        if (!targetId) {
           const email = metadata?.candidateEmail || metadata?.email || notification.body?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0];
           if (email) {
             try {
-              const appsRes = await adminApi.getApplications({ search: email }) as any;
-              if (appsRes && Array.isArray(appsRes.data) && appsRes.data.length > 0) {
-                const sorted = [...appsRes.data].sort((a: any, b: any) =>
-                  new Date(b.updatedAt || b.submittedAt || 0).getTime() - new Date(a.updatedAt || a.submittedAt || 0).getTime()
-                );
-                appId = sorted[0].id || sorted[0]._id;
+              const usersRes = await adminApi.getUsers(20, 0, email) as any;
+              const foundUser = usersRes.items?.find((u: any) =>
+                u.email?.toLowerCase() === email.toLowerCase()
+              ) || usersRes.items?.[0];
+              if (foundUser) {
+                targetId = foundUser.id || foundUser._id;
               }
             } catch (e) {
-              console.error('[NotificationsPanel] Failed to resolve application by email for sanction notification:', e);
+              console.error('[NotificationsPanel] Failed to resolve user by email for sanction notification:', e);
             }
           }
         }
 
-        if (appId) {
+        if (!targetId && appId) {
+          try {
+            const appRes = await adminApi.getApplication(appId) as any;
+            if (appRes && appRes.data) {
+              targetId = appRes.data.userId || appRes.data.studentId || appRes.data.user?.id || appRes.data.user_id;
+            }
+          } catch (e) {
+            console.error('[NotificationsPanel] Failed to fetch application details for sanction notification:', e);
+          }
+        }
+
+        if (targetId) {
+          router.push(`/staff/users/${targetId}/applications`);
+        } else if (appId) {
           router.push(`/staff/applications?id=${appId}`);
         } else {
-          router.push('/staff/applications');
+          router.push('/staff/users');
         }
         return;
       }

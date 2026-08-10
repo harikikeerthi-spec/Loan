@@ -2,6 +2,7 @@
 
 import { use, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { adminApi } from "@/lib/api";
 
 export default function ApplicationDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -9,9 +10,21 @@ export default function ApplicationDetailsPage({ params }: { params: Promise<{ i
 
     useEffect(() => {
         if (id) {
-            router.replace(`/staff/applications?id=${encodeURIComponent(id)}`);
+            adminApi.getApplication(id)
+                .then((res: any) => {
+                    const app = res?.data || res;
+                    const targetUserId = app?.userId || app?.studentId || app?.user?.id || app?.applicantId || app?.user_id;
+                    if (targetUserId) {
+                        router.replace(`/staff/users/${targetUserId}/applications`);
+                    } else {
+                        router.replace("/staff/users");
+                    }
+                })
+                .catch(() => {
+                    router.replace("/staff/users");
+                });
         } else {
-            router.replace("/staff/applications");
+            router.replace("/staff/users");
         }
     }, [id, router]);
 

@@ -62,13 +62,23 @@ export default function StandaloneApplicationView({ id, activeTab = "application
         );
     }
 
+    useEffect(() => {
+        if (application) {
+            const targetUserId = application.userId || application.studentId || application.user?.id || application.user_id || application.applicantId;
+            if (targetUserId) {
+                router.replace(`/staff/users/${targetUserId}/applications`);
+            } else {
+                router.replace("/staff/users");
+            }
+        }
+    }, [application, router]);
+
     return (
-        <ApplicationDetailView
-            application={application}
-            onBack={() => router.push("/staff/incoming-queue")}
-            isStandalone={true}
-            activeSidebarMenu={activeTab}
-            onApplicationUpdated={fetchApplicationDetails}
-        />
+        <div className="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-10 h-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin" />
+                <p className="text-[11px] font-black tracking-widest text-slate-400 uppercase">Redirecting to User Applications...</p>
+            </div>
+        </div>
     );
 }

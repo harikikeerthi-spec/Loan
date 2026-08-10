@@ -848,6 +848,8 @@ export class BankService {
           metadata: {
             applicationId: applicationId,
             applicationNumber: application.applicationNumber || null,
+            studentId: application.userId || application.user_id || application.applicantId || null,
+            userId: application.userId || application.user_id || application.applicantId || null,
             bank: application.bank || null,
             status: targetStatus
           }
