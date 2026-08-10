@@ -105,7 +105,7 @@ export class ApplicationService {
     return null;
   }
 
-  private async validateApplicationConstraints(userId: string, currentAppId: string | null, bank: string, country: string, universityName: string) {
+  private async validateApplicationConstraints(userId: string, currentAppId: string | null, bank: string, country: string, universityName: string, isStaffOrAdmin: boolean = false) {
     const { data: existingApps, error } = await this.db
       .from('LoanApplication')
       .select('id, bank, country, universityName, status')
@@ -115,13 +115,13 @@ export class ApplicationService {
 
     if (error) throw error;
 
-    // Limit to 1 active application per student for new applications
-    if (!currentAppId && existingApps && existingApps.length >= 1) {
+    // Limit to 1 active application per student for self-service student applications (bypassed for Staff/Admin)
+    if (!isStaffOrAdmin && !currentAppId && existingApps && existingApps.length >= 1) {
       throw new BadRequestException('Only 1 active loan application is permitted per student. You already have an application in progress.');
     }
 
     // 2. Check duplicate details for the same bank
-    if (bank && bank !== 'Any Bank' && bank !== 'ANY BANK' && bank !== '—' && bank !== 'Pending Partner') {
+    if (!isStaffOrAdmin && bank && bank !== 'Any Bank' && bank !== 'ANY BANK' && bank !== '—' && bank !== 'Pending Partner') {
       const duplicate = existingApps?.find(app => {
         if (currentAppId && app.id === currentAppId) return false;
 
@@ -147,12 +147,12 @@ export class ApplicationService {
     }
   }
 
-  async createApplication(userId: string, data: any) {
+  async createApplication(userId: string, data: any, isStaffOrAdmin: boolean = false) {
     const targetBank = data.bank;
     const targetCountry = data.country;
     const targetUniversity = data.universityName || data.university;
 
-    await this.validateApplicationConstraints(userId, null, targetBank, targetCountry, targetUniversity);
+    await this.validateApplicationConstraints(userId, null, targetBank, targetCountry, targetUniversity, isStaffOrAdmin);
 
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
@@ -664,7 +664,7 @@ export class ApplicationService {
       ? (data.universityName || data.university || data.targetUniversity)
       : application.universityName;
 
-    await this.validateApplicationConstraints(application.userId, applicationId, targetBank, targetCountry, targetUniversity);
+    await this.validateApplicationConstraints(application.userId, applicationId, targetBank, targetCountry, targetUniversity, true);
 
     const updatePayload: any = { ...data };
 

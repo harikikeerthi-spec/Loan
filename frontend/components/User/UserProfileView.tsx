@@ -631,10 +631,10 @@ export default function UserProfileView({
                                         type="text"
                                         value={personalForm.firstName}
                                         onChange={(e) => {
-                                            const val = e.target.value.replace(/[^A-Za-z]/g, "");
+                                            const val = e.target.value.replace(/[^A-Za-z\s]/g, "");
                                             setPersonalForm(p => ({ ...p, firstName: val }));
                                         }}
-                                        maxLength={30}
+                                        maxLength={50}
                                         className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
                                     />
                                 </div>
@@ -644,10 +644,10 @@ export default function UserProfileView({
                                         type="text"
                                         value={personalForm.lastName}
                                         onChange={(e) => {
-                                            const val = e.target.value.replace(/[^A-Za-z]/g, "");
+                                            const val = e.target.value.replace(/[^A-Za-z\s]/g, "");
                                             setPersonalForm(p => ({ ...p, lastName: val }));
                                         }}
-                                        maxLength={30}
+                                        maxLength={50}
                                         className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
                                     />
                                 </div>

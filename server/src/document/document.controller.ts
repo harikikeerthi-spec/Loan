@@ -67,11 +67,37 @@ export class DocumentController {
       throw new BadRequestException('userId and docType are required');
 
     // ── Pre-check: Detect if user has already uploaded this specific document ──
+    const incomingHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
     const existingUserDocs = await this.usersService.getUserDocuments(userId).catch(() => []);
     const existingDocRecord = existingUserDocs.find(
       (d: any) => d.docType.toLowerCase() === docType.toLowerCase() && (d.uploaded || d.status === 'uploaded' || d.status === 'verified')
     );
     const wasAlreadyUploaded = !!existingDocRecord;
+
+    // ── Pre-check 1: Reject duplicate file upload across different slots ──
+    for (const otherDoc of existingUserDocs) {
+      if (otherDoc.docType.toLowerCase() !== docType.toLowerCase() && (otherDoc.uploaded || otherDoc.status === 'uploaded' || otherDoc.status === 'verified')) {
+        let otherHash = otherDoc.verificationMetadata?.fileHash;
+        if (!otherHash) {
+          try {
+            const localDir = path.join(process.cwd(), 'uploads', userId, otherDoc.docType);
+            const files = await fs.promises.readdir(localDir).catch(() => []);
+            if (files.length > 0) {
+              const buf = await fs.promises.readFile(path.join(localDir, files[0]));
+              otherHash = crypto.createHash('sha256').update(buf).digest('hex');
+            }
+          } catch { }
+        }
+
+        if (otherHash && otherHash === incomingHash) {
+          const otherSlotLabel = otherDoc.verificationMetadata?.docName || otherDoc.docName || otherDoc.docType.replace(/_/g, ' ').toUpperCase();
+          console.warn(`[UPLOAD] Rejecting duplicate file upload. Incoming file hash matches existing document in ${otherDoc.docType}`);
+          throw new BadRequestException(
+            `Duplicate document error: This exact file is already uploaded under "${otherSlotLabel}". Please select and upload the correct document for ${docName || docType.replace(/_/g, ' ').toUpperCase()}.`
+          );
+        }
+      }
+    }
 
     console.log(
       `[UPLOAD] Processing pre-storage check: userId=${userId}, docType=${docType}, file=${file.originalname} (${file.size} bytes), wasAlreadyUploaded=${wasAlreadyUploaded}`,
@@ -142,6 +168,46 @@ export class DocumentController {
         );
       }
 
+      // ── Pre-check 2: Reject duplicate Aadhaar/PAN/Passport number across different slots ──
+      const extData = kycResult.extracted_data || {};
+      const newAadhaar = (extData.aadhar_number || extData.aadhaar_number || extData.id_number || '').toString().replace(/[^0-9]/g, '');
+      const newPan = (extData.pan_number || extData.pan || '').toString().replace(/[^A-Z0-9]/gi, '').toUpperCase();
+      const newPassport = (extData.passport_number || '').toString().replace(/[^A-Z0-9]/gi, '').toUpperCase();
+
+      for (const otherDoc of existingUserDocs) {
+        if (otherDoc.docType.toLowerCase() !== docType.toLowerCase() && (otherDoc.uploaded || otherDoc.status === 'uploaded' || otherDoc.status === 'verified')) {
+          const extMeta = otherDoc.verificationMetadata?.details?.extractedFields || otherDoc.verificationMetadata?.extractedFields || otherDoc.verificationMetadata || {};
+          const existAadhaar = (extMeta.aadhar_number || extMeta.aadhaar_number || extMeta.id_number || '').toString().replace(/[^0-9]/g, '');
+          const existPan = (extMeta.pan_number || extMeta.pan || '').toString().replace(/[^A-Z0-9]/gi, '').toUpperCase();
+          const existPassport = (extMeta.passport_number || '').toString().replace(/[^A-Z0-9]/gi, '').toUpperCase();
+
+          const slotLabel = otherDoc.verificationMetadata?.docName || otherDoc.docName || otherDoc.docType.replace(/_/g, ' ').toUpperCase();
+
+          if (newAadhaar && newAadhaar.length >= 12 && existAadhaar && newAadhaar === existAadhaar) {
+            console.warn(`[UPLOAD] Rejecting duplicate Aadhaar number ${newAadhaar} already uploaded in ${otherDoc.docType}`);
+            const masked = newAadhaar.slice(-4).padStart(newAadhaar.length, 'X').replace(/(\d{4})/g, '$1 ').trim();
+            throw new BadRequestException(
+              `Duplicate document error: This Aadhaar Card (No. ${masked}) is already uploaded under "${slotLabel}". Please upload the correct document for ${docName || docType.replace(/_/g, ' ').toUpperCase()}.`
+            );
+          }
+
+          if (newPan && newPan.length >= 10 && existPan && newPan === existPan) {
+            console.warn(`[UPLOAD] Rejecting duplicate PAN number ${newPan} already uploaded in ${otherDoc.docType}`);
+            const masked = newPan.slice(0, 3) + '*****' + newPan.slice(-2);
+            throw new BadRequestException(
+              `Duplicate document error: This PAN Card (No. ${masked}) is already uploaded under "${slotLabel}". Please upload the correct document for ${docName || docType.replace(/_/g, ' ').toUpperCase()}.`
+            );
+          }
+
+          if (newPassport && newPassport.length >= 6 && existPassport && newPassport === existPassport) {
+            console.warn(`[UPLOAD] Rejecting duplicate Passport number ${newPassport} already uploaded in ${otherDoc.docType}`);
+            throw new BadRequestException(
+              `Duplicate document error: This Passport (No. ${newPassport}) is already uploaded under "${slotLabel}". Please upload the correct document for ${docName || docType.replace(/_/g, ' ').toUpperCase()}.`
+            );
+          }
+        }
+      }
+
       // ── 2. Verified! Save locally & upload to S3 ───────
       const fileExt = path.extname(file.originalname);
       const s3Key = `vault/${userId}/${docType}${fileExt}`;
@@ -179,6 +245,7 @@ export class DocumentController {
         code: 'AI_VERIFIED',
         confidence: kycResult.confidence_score,
         docName: docName || undefined,
+        fileHash: incomingHash,
         details: {
           message: 'Document verified by AI OCR pre-storage.',
           extractedFields: kycResult.extracted_data,

@@ -337,50 +337,61 @@ export class AuthController {
    * @returns { success: boolean, application?: LoanApplication }
    */
   @Post('create-application')
-  async createApplication(@Body() body: {
-    userId: string;
-    bank?: string;
-    loanType?: string;
-    amount: number;
-    courseType?: string;
-    courseName?: string;
-    fieldOfStudy?: string;
-    program?: string;
-    programFocus?: string;
-    country?: string;
-    otherCountry?: string;
-    university?: string;
-    universityName?: string;
-    targetUniversity?: string;
-    annualFee?: string | number;
-    livingCost?: string | number;
-    hasCoApplicant?: boolean;
-    coApplicant?: string;
-    coApplicantName?: string;
-    coApplicantPhone?: string;
-    coApplicantEmail?: string;
-    coApplicantRelation?: string;
-    otherRelation?: string;
-    coApplicantIncome?: string | number;
-    income?: string | number;
-    hasCollateral?: boolean;
-    collateral?: string;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    phone?: string;
-    dateOfBirth?: string;
-    address?: string;
-    notes?: string;
-    pincode?: string;
-    admissionStatus?: string;
-  }) {
+  async createApplication(
+    @Req() req: any,
+    @Body() body: {
+      userId: string;
+      bank?: string;
+      loanType?: string;
+      amount: number;
+      courseType?: string;
+      courseName?: string;
+      fieldOfStudy?: string;
+      program?: string;
+      programFocus?: string;
+      country?: string;
+      otherCountry?: string;
+      university?: string;
+      universityName?: string;
+      targetUniversity?: string;
+      annualFee?: string | number;
+      livingCost?: string | number;
+      hasCoApplicant?: boolean;
+      coApplicant?: string;
+      coApplicantName?: string;
+      coApplicantPhone?: string;
+      coApplicantEmail?: string;
+      coApplicantRelation?: string;
+      otherRelation?: string;
+      coApplicantIncome?: string | number;
+      income?: string | number;
+      hasCollateral?: boolean;
+      collateral?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      dateOfBirth?: string;
+      address?: string;
+      notes?: string;
+      pincode?: string;
+      admissionStatus?: string;
+      isStaff?: boolean;
+      creatorRole?: string;
+    }
+  ) {
     if (!body || !body.userId) {
       return {
         success: false,
         message: 'User ID is required',
       };
     }
+
+    const userRole = (req?.user?.role || body?.creatorRole || '').toLowerCase();
+    const isStaffOrAdmin =
+      ['staff', 'admin', 'super_admin', 'support', 'it', 'agent', 'partner_agent'].includes(userRole) ||
+      userRole.startsWith('bank_') ||
+      body.isStaff === true;
 
     // Safely parse amount to a number
     const amountVal = typeof body.amount === 'string' ? parseFloat(body.amount) : body.amount;
@@ -429,7 +440,7 @@ export class AuthController {
         notes: body.notes,
         pincode: body.pincode,
         admissionStatus: body.admissionStatus,
-      });
+      }, isStaffOrAdmin);
       return {
         success: true,
         application,

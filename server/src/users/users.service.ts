@@ -1305,7 +1305,7 @@ export class UsersService implements OnModuleInit {
     return updatedUser;
   }
 
-  private async validateApplicationConstraints(userId: string, bank: string | null | undefined, country: string | null | undefined, universityName: string | null | undefined) {
+  private async validateApplicationConstraints(userId: string, bank: string | null | undefined, country: string | null | undefined, universityName: string | null | undefined, isStaffOrAdmin: boolean = false) {
     const { data: existingApps, error } = await this.db
       .from('LoanApplication')
       .select('id, bank, country, universityName, status')
@@ -1315,8 +1315,8 @@ export class UsersService implements OnModuleInit {
 
     if (error) throw error;
 
-    // Limit to 1 active application per student
-    if (existingApps && existingApps.length >= 1) {
+    // Limit to 1 active application per student (bypassed for Staff/Admin)
+    if (!isStaffOrAdmin && existingApps && existingApps.length >= 1) {
       throw new BadRequestException('Only 1 active loan application is permitted per student. You already have an application in progress.');
     }
   }
@@ -1361,12 +1361,13 @@ export class UsersService implements OnModuleInit {
       state?: string;
       admissionStatus?: string;
     },
+    isStaffOrAdmin: boolean = false,
   ) {
     const universityName = data.universityName || data.targetUniversity || data.university || null;
     const country = data.country || null;
     const bank = data.bank || null;
 
-    await this.validateApplicationConstraints(userId, bank, country, universityName);
+    await this.validateApplicationConstraints(userId, bank, country, universityName, isStaffOrAdmin);
 
     const courseName = data.courseName || data.programFocus || data.program || data.courseType || null;
     const now = new Date().toISOString();
@@ -1779,6 +1780,7 @@ export class UsersService implements OnModuleInit {
     if (data.verifiedAt !== undefined) payload.verifiedAt = data.verifiedAt?.toISOString();
     if (mergedMetadata !== undefined) payload.verificationMetadata = mergedMetadata;
 
+    let docResult: any;
     if (existing.data) {
       const { data: updated, error } = await this.db
         .from('UserDocument')
@@ -1790,7 +1792,7 @@ export class UsersService implements OnModuleInit {
         console.error(`[UsersService.upsertUserDocument] Update error for ${userId}/${docType}:`, error);
         throw error;
       }
-      return updated;
+      docResult = updated;
     } else {
       // For new records, we need an ID since it doesn't have a default in DB
       const id = `${userId}_${docType}_${Date.now()}`;
@@ -1803,7 +1805,68 @@ export class UsersService implements OnModuleInit {
         console.error(`[UsersService.upsertUserDocument] Insert error for ${userId}/${docType}:`, error);
         throw error;
       }
-      return created;
+      docResult = created;
+    }
+
+    if (data.uploaded) {
+      await this.syncApplicationProgressWithDocuments(userId);
+    }
+    return docResult;
+  }
+
+  async syncApplicationProgressWithDocuments(userId: string) {
+    try {
+      if (!userId) return;
+      const { data: userDocs } = await this.db
+        .from('UserDocument')
+        .select('*')
+        .eq('userId', userId);
+
+      const uploadedDocs = (userDocs || []).filter(
+        (d: any) => d.uploaded || d.status === 'uploaded' || d.status === 'verified'
+      );
+      const uploadedCount = uploadedDocs.length;
+      if (uploadedCount === 0) return;
+
+      const { data: apps } = await this.db
+        .from('LoanApplication')
+        .select('*')
+        .eq('userId', userId);
+
+      if (!apps || apps.length === 0) return;
+
+      // Calculate progress target: 25% baseline + up to 25% for document completeness
+      const targetProgress = uploadedCount >= 3 ? 50 : Math.min(50, 25 + Math.round((uploadedCount / 3) * 25));
+
+      for (const app of apps) {
+        const status = String(app.status || '').toLowerCase();
+
+        // Only auto-advance applications that are still in early stages
+        if (
+          ['submitted', 'application_submitted', 'created', 'application_created', 'pending', 'draft', 'docs_received', 'docs_uploaded', 'under_review'].includes(status) ||
+          (typeof app.progress === 'number' && app.progress < targetProgress)
+        ) {
+          const isFullUpload = uploadedCount >= 3 || targetProgress >= 50;
+          const updatePayload: any = {
+            progress: Math.max(app.progress || 0, targetProgress),
+            updatedAt: new Date().toISOString(),
+          };
+
+          if (isFullUpload) {
+            updatePayload.stage = 'document_verification';
+            if (!['staff_verified', 'submitted_to_bank', 'under_bank_review', 'sanctioned', 'disbursed'].includes(status)) {
+              updatePayload.status = 'documents_verified';
+            }
+          } else if (!app.stage || app.stage === 'application_created' || app.stage === 'application_submitted') {
+            updatePayload.stage = 'document_verification';
+          }
+
+          console.log(`[DOCS SYNC] Updating application ${app.id} progress to ${updatePayload.progress}% (stage: ${updatePayload.stage || app.stage}, status: ${updatePayload.status || app.status})`);
+          await this.db.from('LoanApplication').update(updatePayload).eq('id', app.id);
+        }
+      }
+    } catch (err: any) {
+      console.error('[UsersService.syncApplicationProgressWithDocuments] Error:', err?.message || err);
     }
   }
 
@@ -1919,6 +1982,7 @@ export class UsersService implements OnModuleInit {
   // Get user dashboard data with all applications, documents and full activity feed
   async getUserDashboardData(userId: string) {
     try {
+      await this.syncApplicationProgressWithDocuments(userId);
       const applications = await this.getUserApplications(userId) || [];
       const documents = await this.getUserDocuments(userId) || [];
 

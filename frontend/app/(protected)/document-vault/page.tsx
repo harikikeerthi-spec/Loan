@@ -421,6 +421,23 @@ export default function DocumentVaultPage() {
             }
         }
 
+        // Pre-upload check: Detect if the same file is already uploaded under ANOTHER document slot
+        const duplicateSlotDoc = docs.find(
+            d => d.docType.toLowerCase() !== docType.toLowerCase() &&
+                (d.uploaded === true || d.status === 'uploaded' || d.status === 'verified') &&
+                d.fileName && d.fileName.toLowerCase() === file.name.toLowerCase()
+        );
+        if (duplicateSlotDoc) {
+            const slotTitle = duplicateSlotDoc.docName || duplicateSlotDoc.verificationMetadata?.docName || getDocumentRequirementName(duplicateSlotDoc.docType, duplicateSlotDoc.docType, activeProfile);
+            showAlert(
+                "Duplicate Document Selected",
+                `The file "${file.name}" is already uploaded under "${slotTitle}". Please select the correct document file for ${docName || docType.replace(/_/g, ' ').toUpperCase()}.`,
+                "warning"
+            );
+            e.target.value = "";
+            return;
+        }
+
         // Pre-upload check: Detect if this document is ALREADY uploaded for this specific user
         const existingDoc = docs.find(
             d => d.docType.toLowerCase() === docType.toLowerCase() && (d.uploaded === true || d.status === 'uploaded' || d.status === 'verified')
@@ -1069,7 +1086,12 @@ export default function DocumentVaultPage() {
                         ) : (
                             <>
                                 {renderDocGroup("Student Documents", "person", studentDocs, () => handleAddOtherDocument("student"))}
-                                {renderDocGroup(`Financial Co-Applicant (${activeProfile.coApplicant?.relation ? activeProfile.coApplicant.relation.charAt(0).toUpperCase() + activeProfile.coApplicant.relation.slice(1) : 'Co-applicant'})`, "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
+                                {renderDocGroup(`Financial Co-Applicant (${(() => {
+                                    const r = String(activeProfile.coApplicant?.relation || coappRelation || '').toLowerCase().trim();
+                                    if (r === 'father') return 'Father & Co-applicant';
+                                    if (r === 'mother') return 'Mother & Co-applicant';
+                                    return r ? r.charAt(0).toUpperCase() + r.slice(1) : 'Co-applicant';
+                                })()})`, "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
                                 {renderDocGroup("Father & Mother Documents", "family_restroom", parentDocs, () => handleAddOtherDocument("parent"))}
                                 {staffRequestedDocs.length > 0 && renderDocGroup("Staff Requested Documents", "assignment", staffRequestedDocs)}
                             </>

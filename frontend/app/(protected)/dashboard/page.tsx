@@ -267,7 +267,7 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
     );
 }
 
-const getDynamicProgress = (app: any) => {
+const getDynamicProgress = (app: any, documents: any[] = [], profile?: any) => {
     if (!app) return 10;
     const s = String(app.status || '').toLowerCase();
     if (['disbursed', 'closed'].includes(s)) return 100;
@@ -275,9 +275,29 @@ const getDynamicProgress = (app: any) => {
     if (['under_bank_review', 'query_raised', 'conditional_sanction', 'processing'].includes(s)) return 90;
     if (['submitted_to_bank', 'file_logged'].includes(s)) return 75;
     if (['staff_verified', 'verification', 'documents_verified'].includes(s)) return 50;
-    if (['docs_received', 'docs_uploaded', 'under_review'].includes(s)) return 40;
-    if (['submitted', 'application_submitted'].includes(s)) return 25;
-    return typeof app.progress === 'number' && app.progress > 0 ? app.progress : 10;
+
+    let baseProgress = typeof app.progress === 'number' && app.progress > 0 ? app.progress : 10;
+    if (['docs_received', 'docs_uploaded', 'under_review'].includes(s)) baseProgress = Math.max(baseProgress, 40);
+    if (['submitted', 'application_submitted'].includes(s)) baseProgress = Math.max(baseProgress, 25);
+
+    if (documents && documents.length > 0) {
+        const uploadedCount = documents.filter(d => d.uploaded === true || d.status === 'uploaded' || d.status === 'verified').length;
+        if (uploadedCount > 0) {
+            let requiredCount = 3;
+            try {
+                if (profile) {
+                    const reqs = getProfileDocumentRequirements(profile);
+                    if (reqs && reqs.length > 0) requiredCount = reqs.length;
+                }
+            } catch { }
+
+            const isAllDocsUploaded = uploadedCount >= requiredCount;
+            const docProgress = isAllDocsUploaded ? 50 : Math.min(50, 25 + Math.round((uploadedCount / Math.max(requiredCount, 1)) * 25));
+            return Math.max(baseProgress, docProgress);
+        }
+    }
+
+    return baseProgress;
 };
 
 const getBankDisplayName = (bank?: string) => {
@@ -702,7 +722,7 @@ export default function DashboardPage() {
                             </h1>
                             <p className="text-gray-500 text-sm">
                                 {data.applications?.length
-                                    ? `Your education loan journey is ${getDynamicProgress(data.applications[0])}% complete. ${getDynamicProgress(data.applications[0]) >= 50 ? "You're doing great!" : "Keep going!"}`
+                                    ? `Your education loan journey is ${getDynamicProgress(data.applications[0], data.documents, data.profile)}% complete. ${getDynamicProgress(data.applications[0], data.documents, data.profile) >= 50 ? "You're doing great!" : "Keep going!"}`
                                     : "Start your education loan journey today!"}
                             </p>
                         </div>
@@ -1090,10 +1110,10 @@ export default function DashboardPage() {
                                                         <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                                                             <div
                                                                 className="bg-gradient-to-r from-[#6605c7] to-purple-400 h-1.5 rounded-full transition-all duration-700"
-                                                                style={{ width: `${getDynamicProgress(app)}%` }}
+                                                                style={{ width: `${getDynamicProgress(app, data.documents, data.profile)}%` }}
                                                             />
                                                         </div>
-                                                        <span className="text-[10px] font-bold text-[#6605c7] whitespace-nowrap">{getDynamicProgress(app)}%</span>
+                                                        <span className="text-[10px] font-bold text-[#6605c7] whitespace-nowrap">{getDynamicProgress(app, data.documents, data.profile)}%</span>
                                                     </div>
 
                                                     {/* Overview Staff Details */}

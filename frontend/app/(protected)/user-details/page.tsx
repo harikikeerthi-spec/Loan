@@ -69,7 +69,7 @@ export default function UserDetailsPage() {
             setError("First name must be at least 3 characters");
             return;
         }
-        if (/[^A-Za-z]/.test(form.firstName)) {
+        if (/[^A-Za-z\s]/.test(form.firstName)) {
             setError("First name must not contain numbers or special characters");
             return;
         }
@@ -163,14 +163,14 @@ export default function UserDetailsPage() {
                                         placeholder="John"
                                         value={form.firstName}
                                         onChange={(e) => {
-                                            const val = e.target.value.replace(/[^A-Za-z]/g, "");
+                                            const val = e.target.value.replace(/[^A-Za-z\s]/g, "");
                                             setForm((p) => ({ ...p, firstName: val }));
                                         }}
                                         required
-                                        maxLength={30}
-                                        className={`w-full px-4 py-3 bg-gray-50/50 border ${form.firstName && (form.firstName.length < 3 || /[^A-Za-z]/.test(form.firstName)) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-100 focus:border-[#6605c7]'} rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 transition-all`}
+                                        maxLength={50}
+                                        className={`w-full px-4 py-3 bg-gray-50/50 border ${form.firstName && (form.firstName.length < 3 || /[^A-Za-z\s]/.test(form.firstName)) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-100 focus:border-[#6605c7]'} rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 transition-all`}
                                     />
-                                    {form.firstName && (form.firstName.length < 3 || /[^A-Za-z]/.test(form.firstName)) && (
+                                    {form.firstName && (form.firstName.length < 3 || /[^A-Za-z\s]/.test(form.firstName)) && (
                                         <div className="px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2">
                                             <span className="material-symbols-outlined text-rose-600 text-sm">error</span>
                                             <span className="text-rose-600 text-xs font-medium">
@@ -190,11 +190,11 @@ export default function UserDetailsPage() {
                                         placeholder="Doe"
                                         value={form.lastName}
                                         onChange={(e) => {
-                                            const val = e.target.value.replace(/[^A-Za-z]/g, "");
+                                            const val = e.target.value.replace(/[^A-Za-z\s]/g, "");
                                             setForm((p) => ({ ...p, lastName: val }));
                                         }}
                                         required
-                                        maxLength={30}
+                                        maxLength={50}
                                         className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
                                     />
                                 </div>

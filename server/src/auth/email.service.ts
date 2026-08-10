@@ -689,6 +689,7 @@ export class EmailService {
     const tenure = application.tenure ? `${application.tenure} months` : 'N/A';
     const university = application.universityName || 'N/A';
     const course = application.courseName || 'N/A';
+    const targetCountry = application.country || application.targetCountry || application.countryName || 'N/A';
 
     const mailOptions = {
       from: this.getFromAddress(),
@@ -696,7 +697,7 @@ export class EmailService {
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `📝 Loan Application Submitted Successfully - #${appNum}`,
-      text: `Dear ${userName},\n\nYour loan application for ${bankName} has been submitted successfully.\n\nApplication Number: ${appNum}\nLoan Type: ${loanType}\nAmount: ${amount}\nBank Name: ${bankName}\n\nWarm regards,\nThe VidyaLoan Team`,
+      text: `Dear ${userName},\n\nYour loan application for ${targetCountry} has been submitted successfully.\n\nApplication Number: ${appNum}\nLoan Type: ${loanType}\nAmount: ${amount}\nTarget Country: ${targetCountry}\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -743,7 +744,7 @@ export class EmailService {
                 </p>
               </div>
               <p style="color: #475569; font-size: 15px; line-height: 24px; margin: 0 0 24px 0;">
-                Hello ${userName || 'Applicant'}, Thank you for choosing VidyaLoan to fund your career aspirations. We have safely compiled your credentials for <strong>${bankName}</strong>. Expect a definitive profile eligibility status update within the next <strong>24–48 hours</strong>.
+                Hello ${userName || 'Applicant'}, Thank you for choosing VidyaLoan to fund your career aspirations. We have safely compiled your credentials for study in <strong>${targetCountry}</strong>. Expect a definitive profile eligibility status update within the next <strong>24–48 hours</strong>.
               </p>
             </td>
           </tr>
@@ -757,8 +758,8 @@ export class EmailService {
                   </td>
                 </tr>
                 <tr>
-                  <td width="40%" style="padding: 12px 0 6px 0; font-size: 14px; color: #64748b;">Bank Partner</td>
-                  <td width="60%" style="padding: 12px 0 6px 0; font-size: 14px; color: #0f172a; font-weight: 600; text-align: right;">${bankName}</td>
+                  <td width="40%" style="padding: 12px 0 6px 0; font-size: 14px; color: #64748b;">Target Country</td>
+                  <td width="60%" style="padding: 12px 0 6px 0; font-size: 14px; color: #0f172a; font-weight: 600; text-align: right;">${targetCountry}</td>
                 </tr>
                 <tr>
                   <td style="padding: 6px 0; font-size: 14px; color: #64748b;">Loan Type</td>
@@ -886,6 +887,7 @@ export class EmailService {
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
+    const targetCountry = application.country || application.targetCountry || application.countryName || 'N/A';
     const progress = application.progress || 15;
 
     const mailOptions = {
@@ -894,7 +896,7 @@ export class EmailService {
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `📈 Application Progress Tracker - #${appNum}`,
-      text: `Dear ${userName},\n\nYour loan application progress tracker is active.\n\nApplication Number: #${appNum}\nBank Partner: ${bankName}\nLoan Type: ${loanType}\nCurrent Stage: Application Submitted\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
+      text: `Dear ${userName},\n\nYour loan application progress tracker is active.\n\nApplication Number: #${appNum}\nTarget Country: ${targetCountry}\nLoan Type: ${loanType}\nCurrent Stage: Application Submitted\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -938,7 +940,7 @@ export class EmailService {
                     <tr>
                         <td style="padding: 40px 40px 24px 40px;">
                             <p style="color: #475569; font-size: 15px; line-height: 24px; margin: 0;">
-                                Your loan application for <strong>${bankName}</strong> has been safely registered on the VidyaLoan system. You can closely monitor the real-time pipeline status of your journey from submission through to final fund disbursement.
+                                Your loan application for study in <strong>${targetCountry}</strong> has been safely registered on the VidyaLoan system. You can closely monitor the real-time pipeline status of your journey from submission through to final fund disbursement.
                             </p>
                         </td>
                     </tr>

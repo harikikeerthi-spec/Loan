@@ -45,10 +45,11 @@ export default function ProgressTracker({
         let stageKey = application.stage;
         if (!stageKey || !STAGES_CONFIG[stageKey]) {
             // Infer stage from status
-            if (application.status === 'approved') return 'sanction';
-            if (application.status === 'disbursed') return 'disbursement';
-            if (application.status === 'processing') return 'bank_review';
-            if (documents && documents.length > 0) return 'document_verification';
+            if (['approved', 'sanctioned'].includes(application.status)) return 'sanction';
+            if (['disbursed', 'disbursement_confirmed'].includes(application.status)) return 'disbursement';
+            if (['processing', 'under_bank_review'].includes(application.status)) return 'bank_review';
+            if (['documents_verified', 'docs_uploaded', 'docs_received', 'document_verification'].includes(application.status)) return 'document_verification';
+            if (documents && documents.some((d: any) => d.uploaded || d.status === 'uploaded' || d.status === 'verified')) return 'document_verification';
             return 'application_submitted';
         }
         return stageKey;

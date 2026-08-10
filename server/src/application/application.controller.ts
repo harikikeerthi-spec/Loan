@@ -168,7 +168,23 @@ export class ApplicationController {
     @Post()
     @UseGuards(UserGuard)
     async createApplication(@Request() req, @Body() body: any) {
-        return this.applicationService.createApplication(req.user.id, body);
+        const userRole = (req.user?.role || '').toLowerCase();
+        const isStaffOrAdmin = ['staff', 'admin', 'super_admin', 'support', 'it', 'agent', 'partner_agent'].includes(userRole) || userRole.startsWith('bank_') || body.isStaff === true;
+        const targetUserId = (isStaffOrAdmin && body.userId) ? body.userId : req.user.id;
+        return this.applicationService.createApplication(targetUserId, body, isStaffOrAdmin);
+    }
+
+    /**
+     * Create a new loan application for a student (Staff/Admin)
+     * POST /applications/admin/create-for-user
+     */
+    @Post('admin/create-for-user')
+    @UseGuards(StaffGuard)
+    async createApplicationForUser(@Request() req, @Body() body: any) {
+        if (!body.userId) {
+            throw new BadRequestException('Student userId is required');
+        }
+        return this.applicationService.createApplication(body.userId, body, true);
     }
 
     /**

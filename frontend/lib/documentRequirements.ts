@@ -61,9 +61,18 @@ export function getPersonDocumentRequirements(
   employmentType: string,
   personName: string,
   personType: "father" | "mother" | "coapplicant",
+  isCoApplicant: boolean = false,
 ): DocumentRequirement[] {
   const docs: DocumentRequirement[] = [];
-  const name = personName || (personType === "coapplicant" ? "Co-applicant" : personType[0].toUpperCase() + personType.slice(1));
+  let baseRole = personType === "coapplicant" ? "Co-applicant" : personType[0].toUpperCase() + personType.slice(1);
+  if (isCoApplicant && (personType === "father" || personType === "mother")) {
+    baseRole = `${personType[0].toUpperCase() + personType.slice(1)} & Co-applicant`;
+  }
+
+  const cleanName = String(personName || "").trim();
+  const name = cleanName && !["Father", "Mother", "Co-applicant"].includes(cleanName)
+    ? `${cleanName} (${baseRole})`
+    : baseRole;
 
   docs.push(requirement(`${name}'s Aadhar Card`, `${personType}_aadhar`, true, "identity"));
   docs.push(requirement(`${name}'s PAN Card`, `${personType}_pan`, true, "identity"));
@@ -95,9 +104,9 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
 
   const docs: DocumentRequirement[] = [...getStudentDocumentRequirements(student)];
 
-  // Always collect Father and Mother documents
-  docs.push(...getPersonDocumentRequirements(family.fatherEmploymentType || profile.fatherEmploymentType || "", fatherName || "Father", "father"));
-  docs.push(...getPersonDocumentRequirements(family.motherEmploymentType || profile.motherEmploymentType || "", motherName || "Mother", "mother"));
+  // Always collect Father and Mother documents with Co-applicant designation if applicable
+  docs.push(...getPersonDocumentRequirements(family.fatherEmploymentType || profile.fatherEmploymentType || "", fatherName || "Father", "father", isFatherCoApp));
+  docs.push(...getPersonDocumentRequirements(family.motherEmploymentType || profile.motherEmploymentType || "", motherName || "Mother", "mother", isMotherCoApp));
 
   // Collect Co-applicant documents ONLY if co-applicant is present, active, and NOT father or mother (avoids duplicate Aadhaar/PAN requests)
   if (!isNoCoApp && !isParentCoApp && hasValue(coApplicantName)) {
