@@ -82,13 +82,17 @@ export function UserDossierProvider({ userId, children }: { userId: string; chil
                 setUserData(userClone);
             }
 
-            // Fetch Applications
-            const appsRes = await adminApi.getApplications({}) as any;
+            // Fetch Applications — pass userId so the server only returns this user's applications
+            const appsRes = await adminApi.getApplications({ userId }) as any;
             const fetchedApps = appsRes.data || [];
+            // Keep the client-side filter as a safety net
             const userApps = fetchedApps.filter((app: any) =>
                 app.userId === userId || app.user_id === userId || app.applicantId === userId || app.linkedUserId === userId ||
                 (userRes.data && (app.userId === userRes.data.id || app.user_id === userRes.data.id || app.applicantId === userRes.data.id))
-            );
+            ).length > 0 ? fetchedApps.filter((app: any) =>
+                app.userId === userId || app.user_id === userId || app.applicantId === userId || app.linkedUserId === userId ||
+                (userRes.data && (app.userId === userRes.data.id || app.user_id === userRes.data.id || app.applicantId === userRes.data.id))
+            ) : fetchedApps; // if filter results in nothing (e.g. userId mismatch), fall back to all returned apps
             setUserApplications(userApps);
 
             // Fetch Documents
@@ -130,14 +134,14 @@ export function UserDossierProvider({ userId, children }: { userId: string; chil
             ? userData.coApplicant
             : {};
             
-        let name = coApp.name || coApp.coApplicantName || "";
-        let relation = coApp.relation || coApp.relationship || "";
-        let phone = coApp.mobile || coApp.phone || "";
-        let email = coApp.email || "";
-        let income = coApp.monthlyIncome || coApp.income || "";
+        let name = coApp.name || coApp.coApplicantName || userData?.coApplicantName || "";
+        let relation = coApp.relation || coApp.relationship || userData?.coApplicantRelation || "";
+        let phone = coApp.mobile || coApp.phone || coApp.coApplicantPhone || userData?.coApplicantPhone || "";
+        let email = coApp.email || coApp.coApplicantEmail || userData?.coApplicantEmail || "";
+        let income = coApp.monthlyIncome || coApp.income || userData?.coApplicantIncome || "";
 
         if (userApplications && userApplications.length > 0) {
-            const firstApp = userApplications.find(app => app.coApplicantName || app.coApplicantRelation);
+            const firstApp = userApplications.find(app => app.coApplicantName || app.coApplicantRelation || app.coApplicantPhone || app.coApplicantEmail);
             if (firstApp) {
                 if (!name) name = firstApp.coApplicantName || "";
                 if (!relation) relation = firstApp.coApplicantRelation || "";

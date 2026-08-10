@@ -148,11 +148,15 @@ export default function ProfileTab() {
     };
 
     const coappEntry = parentsList.find((p: any) => p.relation === 'coapplicant') || {};
+    const firstAppWithCoApp = (userApplications || []).find((app: any) => app.coApplicantName || app.coApplicantPhone || app.coApplicantEmail || app.coApplicantRelation);
+
     const coapplicantData: any = {
-        name: (typeof parsedCoAppObj === 'object' ? parsedCoAppObj?.name : "") || parsedFamilyObj?.coappName || userData?.coApplicantName || coappEntry.name,
-        relation: (typeof parsedCoAppObj === 'object' ? parsedCoAppObj?.relation : "") || parsedFamilyObj?.coappRelation || userData?.coApplicantRelation || coappEntry.relation,
-        aadharNumber: (typeof parsedCoAppObj === 'object' ? parsedCoAppObj?.aadharNumber : "") || parsedFamilyObj?.coappAadhar || userData?.coApplicantAadhar || coappEntry.aadharNumber || coappEntry.aadhar,
-        panNumber: (typeof parsedCoAppObj === 'object' ? parsedCoAppObj?.panNumber : "") || parsedFamilyObj?.coappPan || userData?.coApplicantPan || coappEntry.panNumber || coappEntry.pan,
+        name: (typeof parsedCoAppObj === 'object' ? (parsedCoAppObj?.name || parsedCoAppObj?.coApplicantName) : "") || parsedFamilyObj?.coappName || parsedFamilyObj?.coApplicantName || userData?.coApplicantName || coappEntry.name || firstAppWithCoApp?.coApplicantName || "",
+        relation: (typeof parsedCoAppObj === 'object' ? (parsedCoAppObj?.relation || parsedCoAppObj?.relationship || parsedCoAppObj?.coApplicantRelation) : "") || parsedFamilyObj?.coappRelation || parsedFamilyObj?.coApplicantRelation || userData?.coApplicantRelation || coappEntry.relation || firstAppWithCoApp?.coApplicantRelation || "",
+        phone: (typeof parsedCoAppObj === 'object' ? (parsedCoAppObj?.mobile || parsedCoAppObj?.phone || parsedCoAppObj?.coApplicantPhone) : "") || parsedFamilyObj?.coappPhone || parsedFamilyObj?.coApplicantPhone || userData?.coApplicantPhone || coappEntry.phone || coappEntry.mobile || firstAppWithCoApp?.coApplicantPhone || "",
+        email: (typeof parsedCoAppObj === 'object' ? (parsedCoAppObj?.email || parsedCoAppObj?.coApplicantEmail) : "") || parsedFamilyObj?.coappEmail || parsedFamilyObj?.coApplicantEmail || userData?.coApplicantEmail || coappEntry.email || firstAppWithCoApp?.coApplicantEmail || "",
+        aadharNumber: (typeof parsedCoAppObj === 'object' ? (parsedCoAppObj?.aadharNumber || parsedCoAppObj?.aadhar) : "") || parsedFamilyObj?.coappAadhar || parsedFamilyObj?.coApplicantAadhar || userData?.coApplicantAadhar || coappEntry.aadharNumber || coappEntry.aadhar || "",
+        panNumber: (typeof parsedCoAppObj === 'object' ? (parsedCoAppObj?.panNumber || parsedCoAppObj?.pan) : "") || parsedFamilyObj?.coappPan || parsedFamilyObj?.coApplicantPan || userData?.coApplicantPan || coappEntry.panNumber || coappEntry.pan || "",
     };
 
     const getCoApplicantName = (index: 1 | 2 | 3): any => {
@@ -163,13 +167,10 @@ export default function ProfileTab() {
                 if (typeof coApp === 'string') {
                     try { coApp = JSON.parse(coApp); } catch { }
                 }
-                if (typeof coApp === 'object' && coApp?.name) return coApp.name;
+                if (typeof coApp === 'object' && (coApp?.name || coApp?.coApplicantName)) return coApp.name || coApp.coApplicantName;
             }
-            if (userApplications && userApplications.length > 0) {
-                const firstApp = userApplications.find(app => app.coApplicantName);
-                if (firstApp?.coApplicantName) {
-                    return firstApp.coApplicantName;
-                }
+            if (firstAppWithCoApp?.coApplicantName) {
+                return firstAppWithCoApp.coApplicantName;
             }
         }
 
@@ -444,11 +445,11 @@ export default function ProfileTab() {
             motherAadhar: motherData?.aadharNumber || parsedFamily?.motherAadhar || "",
             motherPan: motherData?.panNumber || parsedFamily?.motherPan || "",
 
-            coappName: coapplicantData?.name || parsedCoApp?.name || userData?.coApplicantName || (userApplications && userApplications[0]?.coApplicantName) || "",
-            coappRelation: coapplicantData?.relation || parsedCoApp?.relation || parsedCoApp?.relationship || userData?.coApplicantRelation || (userApplications && userApplications[0]?.coApplicantRelation) || "",
-            coappPhone: coapplicantData?.mobile || coapplicantData?.phone || parsedCoApp?.mobile || parsedCoApp?.phone || parsedCoApp?.coApplicantPhone || userData?.coApplicantPhone || (userApplications && userApplications[0]?.coApplicantPhone) || "",
-            coappEmail: coapplicantData?.email || parsedCoApp?.email || parsedCoApp?.coApplicantEmail || userData?.coApplicantEmail || (userApplications && userApplications[0]?.coApplicantEmail) || "",
-            coappIncome: parsedCoApp?.monthlyIncome || userData?.coApplicantIncome || (userApplications && userApplications[0]?.coApplicantIncome) || "",
+            coappName: coapplicantData?.name || parsedCoApp?.name || userData?.coApplicantName || firstAppWithCoApp?.coApplicantName || "",
+            coappRelation: coapplicantData?.relation || parsedCoApp?.relation || parsedCoApp?.relationship || userData?.coApplicantRelation || firstAppWithCoApp?.coApplicantRelation || "",
+            coappPhone: coapplicantData?.phone || parsedCoApp?.mobile || parsedCoApp?.phone || parsedCoApp?.coApplicantPhone || userData?.coApplicantPhone || firstAppWithCoApp?.coApplicantPhone || "",
+            coappEmail: coapplicantData?.email || parsedCoApp?.email || parsedCoApp?.coApplicantEmail || userData?.coApplicantEmail || firstAppWithCoApp?.coApplicantEmail || "",
+            coappIncome: parsedCoApp?.monthlyIncome || userData?.coApplicantIncome || firstAppWithCoApp?.coApplicantIncome || "",
             coappAadhar: coapplicantData?.aadharNumber || parsedCoApp?.aadharNumber || "",
             coappPan: coapplicantData?.panNumber || parsedCoApp?.panNumber || "",
 
@@ -824,8 +825,8 @@ export default function ProfileTab() {
                                                     <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#7C3AED]">Primary Co-Applicant</td>
                                                     <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#0F172A]">{coApp1Name}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] font-medium">
-                                                        <div className="mb-1 text-[#64748B]">Phone: <span className={(coapplicantData?.mobile || coapplicantData?.phone || userData?.coApplicantPhone || userApplications?.[0]?.coApplicantPhone) ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.mobile || coapplicantData?.phone || userData?.coApplicantPhone || userApplications?.[0]?.coApplicantPhone || "Pending"}</span></div>
-                                                        <div className="mb-1 text-[#64748B]">Email: <span className={(coapplicantData?.email || userData?.coApplicantEmail || userApplications?.[0]?.coApplicantEmail) ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.email || userData?.coApplicantEmail || userApplications?.[0]?.coApplicantEmail || "Pending"}</span></div>
+                                                        <div className="mb-1 text-[#64748B]">Phone: <span className={coapplicantData?.phone ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.phone || "Pending"}</span></div>
+                                                        <div className="mb-1 text-[#64748B]">Email: <span className={coapplicantData?.email ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.email || "Pending"}</span></div>
                                                         <div className="mb-1 text-[#64748B]">Aadhaar: <span className={coapplicantData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.aadharNumber || "Pending"}</span></div>
                                                         <div className="text-[#64748B]">PAN: <span className={coapplicantData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.panNumber || "Pending"}</span></div>
                                                     </td>

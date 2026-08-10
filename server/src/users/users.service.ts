@@ -882,8 +882,10 @@ export class UsersService implements OnModuleInit {
         if (studyDestination !== undefined) appPayload.country = studyDestination;
         if (fatherName || familyObj.fatherName) appPayload.fatherName = fatherName || familyObj.fatherName;
         if (motherName || familyObj.motherName) appPayload.motherName = motherName || familyObj.motherName;
-        if (coAppObj.name || familyObj.coappName) appPayload.coApplicantName = coAppObj.name || familyObj.coappName;
-        if (coAppObj.relation || familyObj.coappRelation) appPayload.coApplicantRelation = coAppObj.relation || familyObj.coappRelation;
+        if (coAppObj.name || familyObj.coappName || familyObj.coApplicantName) appPayload.coApplicantName = coAppObj.name || familyObj.coappName || familyObj.coApplicantName;
+        if (coAppObj.relation || familyObj.coappRelation || familyObj.coApplicantRelation) appPayload.coApplicantRelation = coAppObj.relation || familyObj.coappRelation || familyObj.coApplicantRelation;
+        if (coAppObj.mobile || coAppObj.phone || familyObj.coappPhone || familyObj.coApplicantPhone) appPayload.coApplicantPhone = coAppObj.mobile || coAppObj.phone || familyObj.coappPhone || familyObj.coApplicantPhone;
+        if (coAppObj.email || familyObj.coappEmail || familyObj.coApplicantEmail) appPayload.coApplicantEmail = coAppObj.email || familyObj.coappEmail || familyObj.coApplicantEmail;
 
         if (Object.keys(appPayload).length > 0) {
           await this.db
@@ -1345,6 +1347,7 @@ export class UsersService implements OnModuleInit {
       coApplicantPhone?: string;
       coApplicantEmail?: string;
       coApplicantRelation?: string;
+      coApplicantIncome?: string | number;
       income?: string;
       hasCollateral?: boolean;
       collateral?: string;
@@ -1400,8 +1403,10 @@ export class UsersService implements OnModuleInit {
       state: data.state || null,
       hasCoApplicant: !!data.coApplicant && data.coApplicant !== 'none',
       coApplicantName: data.coApplicantName || null,
-      coApplicantRelation: data.coApplicant !== 'none' ? data.coApplicant : null,
-      coApplicantIncome: data.income ? parseFloat(data.income) : null,
+      coApplicantRelation: data.coApplicantRelation || (data.coApplicant !== 'none' ? data.coApplicant : null),
+      coApplicantPhone: data.coApplicantPhone || null,
+      coApplicantEmail: data.coApplicantEmail || null,
+      coApplicantIncome: data.income ? parseFloat(data.income) : (data.coApplicantIncome ? parseFloat(String(data.coApplicantIncome)) : null),
       hasCollateral: !!data.collateral && data.collateral !== 'no',
       collateralType: data.collateral !== 'no' ? data.collateral : null,
       remarks: data.notes || null,

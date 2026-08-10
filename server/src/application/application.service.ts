@@ -1269,7 +1269,10 @@ export class ApplicationService {
       
       if (filters?.fromDate) query = query.gte('submittedAt', filters.fromDate);
       if (filters?.toDate) query = query.lte('submittedAt', filters.toDate);
-      
+
+      // Filter by specific userId if provided (e.g., staff profile view for a single user)
+      if (filters?.userId) query = query.eq('userId', filters.userId);
+
       const limit = filters?.limit || 1000;
       const offset = filters?.offset || 0;
       query = query.range(offset, offset + limit - 1);

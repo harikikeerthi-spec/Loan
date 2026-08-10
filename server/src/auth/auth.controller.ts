@@ -299,6 +299,10 @@ export class AuthController {
     motherName?: string;
     family?: any;
     coApplicant?: any;
+    coApplicantName?: string;
+    coApplicantPhone?: string;
+    coApplicantEmail?: string;
+    coApplicantRelation?: string;
     academic?: any;
     userId?: string;
   }) {
@@ -308,6 +312,18 @@ export class AuthController {
         message: 'Email or userId is required',
       };
     }
+
+    // Merge separate coApplicant fields (sent from apply-loan page) into the coApplicant JSON blob
+    let coApplicantPayload = body.coApplicant || {};
+    if (typeof coApplicantPayload === 'string') {
+      try { coApplicantPayload = JSON.parse(coApplicantPayload); } catch { coApplicantPayload = {}; }
+    }
+    if (body.coApplicantName) coApplicantPayload.name = coApplicantPayload.name || body.coApplicantName;
+    if (body.coApplicantPhone) coApplicantPayload.mobile = coApplicantPayload.mobile || body.coApplicantPhone;
+    if (body.coApplicantPhone) coApplicantPayload.phone = coApplicantPayload.phone || body.coApplicantPhone;
+    if (body.coApplicantEmail) coApplicantPayload.email = coApplicantPayload.email || body.coApplicantEmail;
+    if (body.coApplicantRelation) coApplicantPayload.relation = coApplicantPayload.relation || body.coApplicantRelation;
+
     return this.usersService.updateUserDetails(
       body.email,
       body.firstName,
@@ -322,7 +338,7 @@ export class AuthController {
       body.fatherName,
       body.motherName,
       body.family,
-      body.coApplicant,
+      Object.keys(coApplicantPayload).length > 0 ? coApplicantPayload : body.coApplicant,
       body.academic,
       body.userId
     );
