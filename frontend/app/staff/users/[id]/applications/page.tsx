@@ -3,8 +3,9 @@
 import { useUserDossier } from "../DossierContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDate, parseUTCDate } from "@/lib/utils";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { applicationApi, aiApi } from "@/lib/api";
+import { getAllCountries } from "@/lib/countriesData";
 
 const banksList = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -38,6 +39,96 @@ function getFileAge(dateString: string | Date | undefined): string {
     } catch {
         return "—";
     }
+}
+
+function SearchableCountrySelect({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (val: string) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const allCountries = useMemo(() => getAllCountries(), []);
+
+    const filteredOptions = useMemo(() => {
+        if (!search.trim()) return allCountries;
+        return allCountries.filter(c => c.toLowerCase().includes(search.toLowerCase()));
+    }, [allCountries, search]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={dropdownRef} className="relative">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Specify Country Name *
+            </label>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 cursor-pointer flex items-center justify-between hover:border-indigo-300 transition-all min-h-[38px]"
+            >
+                <span className={value ? "text-slate-800 font-bold" : "text-slate-400"}>
+                    {value || "Select Country..."}
+                </span>
+                <span className="material-symbols-outlined text-[16px] text-slate-400">
+                    {isOpen ? 'expand_less' : 'expand_more'}
+                </span>
+            </div>
+
+            {isOpen && (
+                <div className="absolute z-[110] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-hidden flex flex-col animate-fade-in">
+                    <div className="p-2 border-b border-slate-100 bg-slate-50 sticky top-0 z-10 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[15px] text-slate-400">search</span>
+                        <input
+                            type="text"
+                            autoFocus
+                            placeholder="Search countries..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full bg-transparent text-xs font-semibold text-slate-800 outline-none placeholder:text-slate-400"
+                        />
+                    </div>
+
+                    <div className="overflow-y-auto max-h-48 py-1 divide-y divide-slate-50">
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map((c) => (
+                                <button
+                                    key={c}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(c);
+                                        setIsOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3.5 py-2 text-xs font-semibold hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center justify-between ${
+                                        value === c ? "bg-indigo-50/70 text-indigo-700 font-bold" : "text-slate-700"
+                                    }`}
+                                >
+                                    <span>{c}</span>
+                                    {value === c && (
+                                        <span className="material-symbols-outlined text-[14px] text-indigo-600">check</span>
+                                    )}
+                                </button>
+                            ))
+                        ) : (
+                            <div className="p-3 text-center text-xs text-slate-400 italic">
+                                No countries found
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }
 
 export default function ApplicationsTab() {
@@ -459,17 +550,10 @@ export default function ApplicationsTab() {
                                         </div>
 
                                         {formData.country === "Other" && (
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Specify Country Name *</label>
-                                                <input
-                                                    required
-                                                    type="text"
-                                                    placeholder="Country"
-                                                    value={formData.otherCountry}
-                                                    onChange={e => setFormData(prev => ({ ...prev, otherCountry: e.target.value }))}
-                                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold"
-                                                />
-                                            </div>
+                                            <SearchableCountrySelect
+                                                value={formData.otherCountry}
+                                                onChange={val => setFormData(prev => ({ ...prev, otherCountry: val }))}
+                                            />
                                         )}
 
                                         <div

@@ -9,6 +9,101 @@ import { getAllCountries } from "@/lib/countriesData";
 
 const popularCountries = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "New Zealand", "Other"];
 
+function SearchableCountrySelectAgent({
+    value,
+    onChange,
+    error,
+}: {
+    value: string;
+    onChange: (val: string) => void;
+    error?: string;
+}) {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [search, setSearch] = React.useState("");
+    const dropdownRef = React.useRef<HTMLDivElement>(null);
+    const allCountries = React.useMemo(() => getAllCountries(), []);
+
+    const filteredOptions = React.useMemo(() => {
+        if (!search.trim()) return allCountries;
+        return allCountries.filter(c => c.toLowerCase().includes(search.toLowerCase()));
+    }, [allCountries, search]);
+
+    React.useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={dropdownRef} className="space-y-1.5 sm:col-span-2 relative">
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                Specify Destination Country *
+            </label>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full px-4 py-3 rounded-xl bg-slate-50/80 border text-xs font-semibold text-slate-900 cursor-pointer flex items-center justify-between transition-all ${
+                    error ? "border-rose-400 ring-2 ring-rose-200" : "border-slate-200 hover:border-[#6605c7]"
+                }`}
+            >
+                <span className={value ? "text-slate-900 font-bold" : "text-slate-400"}>
+                    {value || "Search or select country..."}
+                </span>
+                <span className="material-symbols-outlined text-[18px] text-slate-400">
+                    {isOpen ? 'expand_less' : 'expand_more'}
+                </span>
+            </div>
+
+            {isOpen && (
+                <div className="absolute z-[110] left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-hidden flex flex-col animate-fade-in">
+                    <div className="p-2 border-b border-slate-100 bg-slate-50 sticky top-0 z-10 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[15px] text-slate-400">search</span>
+                        <input
+                            type="text"
+                            autoFocus
+                            placeholder="Search countries..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full bg-transparent text-xs font-semibold text-slate-800 outline-none placeholder:text-slate-400"
+                        />
+                    </div>
+
+                    <div className="overflow-y-auto max-h-48 py-1 divide-y divide-slate-50">
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map((c) => (
+                                <button
+                                    key={c}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(c);
+                                        setIsOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold hover:bg-purple-50 hover:text-[#6605c7] transition-colors flex items-center justify-between ${
+                                        value === c ? "bg-purple-50/70 text-[#6605c7] font-bold" : "text-slate-700"
+                                    }`}
+                                >
+                                    <span>{c}</span>
+                                    {value === c && (
+                                        <span className="material-symbols-outlined text-[14px] text-[#6605c7]">check</span>
+                                    )}
+                                </button>
+                            ))
+                        ) : (
+                            <div className="p-3 text-center text-xs text-slate-400 italic">
+                                No countries found
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            {error && <p className="text-[10px] font-bold text-rose-500 animate-fade-in">{error}</p>}
+        </div>
+    );
+}
+
 export default function AgentLeadSubmission() {
     const router = useRouter();
     const {
@@ -739,21 +834,14 @@ export default function AgentLeadSubmission() {
                                         </div>
 
                                         {leadForm.country === "Other" && (
-                                            <div className="space-y-1.5 sm:col-span-2">
-                                                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">Specify Destination Country *</label>
-                                                <input
-                                                    type="text"
-                                                    value={leadForm.otherCountry || ""}
-                                                    onChange={(e) => {
-                                                        setLeadForm({ ...leadForm, otherCountry: e.target.value });
-                                                        if (errors.otherCountry) setErrors(prev => ({ ...prev, otherCountry: "" }));
-                                                    }}
-                                                    placeholder="Search or enter country name (e.g. Sweden, Netherlands, Japan)"
-                                                    className={`w-full px-4 py-3 rounded-xl bg-slate-50/80 border text-xs font-semibold text-slate-900 focus:outline-none transition-all ${errors.otherCountry ? "border-rose-400 focus:ring-2 focus:ring-rose-200 focus:border-rose-500" : "border-slate-200 focus:ring-2 focus:ring-[#6605c7]/20 focus:bg-white focus:border-[#6605c7]"
-                                                        }`}
-                                                />
-                                                {errors.otherCountry && <p className="text-[10px] font-bold text-rose-500 animate-fade-in">{errors.otherCountry}</p>}
-                                            </div>
+                                            <SearchableCountrySelectAgent
+                                                value={leadForm.otherCountry || ""}
+                                                onChange={(val) => {
+                                                    setLeadForm({ ...leadForm, otherCountry: val });
+                                                    if (errors.otherCountry) setErrors(prev => ({ ...prev, otherCountry: "" }));
+                                                }}
+                                                error={errors.otherCountry}
+                                            />
                                         )}
 
                                         <div className="space-y-1.5 relative sm:col-span-2">
