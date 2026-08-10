@@ -1471,18 +1471,64 @@ export default function ApplicationManagement() {
                                                                 {selectedApp.address ? `${selectedApp.address}${selectedApp.city ? `, ${selectedApp.city}` : ""}${selectedApp.state ? `, ${selectedApp.state}` : ""}${selectedApp.pincode ? ` - ${selectedApp.pincode}` : ""}` : "Not Provided"}
                                                             </span>
                                                         </div>
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
-                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">PAN Card Number</span>
-                                                            <span className="font-mono text-sm font-semibold text-slate-800 uppercase">{selectedApp.panNumber || selectedApp.pan || "N/A"}</span>
-                                                        </div>
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
-                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Aadhaar Number</span>
-                                                            <span className="font-mono text-sm font-semibold text-slate-800">{selectedApp.aadhaarNumber || selectedApp.aadhaar || "N/A"}</span>
-                                                        </div>
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
-                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Passport Number</span>
-                                                            <span className="font-mono text-sm font-semibold text-slate-800 uppercase">{selectedApp.passportNumber || selectedApp.passport || "N/A"}</span>
-                                                        </div>
+                                                        {(() => {
+                                                            const rawDocs: any[] = selectedApp.documents || selectedApp.userDocuments || selectedApp.uploadedDocuments || [];
+                                                            
+                                                            const getNationalId = (
+                                                                typeKeywords: string[],
+                                                                directFields: (string | undefined | null)[]
+                                                            ) => {
+                                                                for (const val of directFields) {
+                                                                    if (val && typeof val === 'string' && val.trim() && val.trim() !== 'N/A' && val.trim() !== 'null') {
+                                                                        return val.trim();
+                                                                    }
+                                                                }
+                                                                for (const doc of rawDocs) {
+                                                                    if (doc.status === "not_uploaded") continue;
+                                                                    const typeStr = (doc.docType || doc.category || doc.title || doc.name || doc.fileName || '').toLowerCase();
+                                                                    if (typeKeywords.some(kw => typeStr.includes(kw))) {
+                                                                        const ext = doc.extractedData || doc.details || doc.metadata || {};
+                                                                        const num =
+                                                                            doc.docNumber ||
+                                                                            doc.documentNumber ||
+                                                                            doc.extractedNumber ||
+                                                                            doc.number ||
+                                                                            ext.pan_number || ext.panNumber || ext.pan_no || ext.pan ||
+                                                                            ext.aadhaar_number || ext.aadhar_number || ext.aadhaarNumber || ext.aadharNumber || ext.id_number || ext.uid ||
+                                                                            ext.passport_number || ext.passportNumber || ext.passport_no || ext.passportNo;
+
+                                                                        if (num && typeof num === 'string' && num.trim() && num.trim() !== 'N/A') {
+                                                                            return num.trim();
+                                                                        }
+                                                                        if (doc.filePath || doc.url || doc.uploaded || doc.status === "uploaded" || doc.status === "verified" || doc.fileName) {
+                                                                            return "Document Uploaded";
+                                                                        }
+                                                                    }
+                                                                }
+                                                                return "N/A";
+                                                            };
+
+                                                            const panVal = getNationalId(['pan'], [selectedApp.panNumber, selectedApp.pan, selectedApp.panCardNumber, selectedApp.user?.panCardNumber, selectedApp.user?.panNumber, selectedApp.user?.pan]);
+                                                            const aadhaarVal = getNationalId(['aadhar', 'aadhaar'], [selectedApp.aadhaarNumber, selectedApp.aadhaar, selectedApp.aadharNumber, selectedApp.aadhar, selectedApp.user?.aadhaarNumber, selectedApp.user?.aadhaar, selectedApp.user?.aadharNumber]);
+                                                            const passportVal = getNationalId(['passport'], [selectedApp.passportNumber, selectedApp.passport, selectedApp.user?.passportNumber, selectedApp.user?.passport]);
+
+                                                            return (
+                                                                <>
+                                                                    <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                                        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">PAN Card Number</span>
+                                                                        <span className={`font-mono text-sm font-semibold uppercase ${panVal === 'Document Uploaded' ? 'text-indigo-600 font-bold' : 'text-slate-800'}`}>{panVal}</span>
+                                                                    </div>
+                                                                    <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                                        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Aadhaar Number</span>
+                                                                        <span className={`font-mono text-sm font-semibold ${aadhaarVal === 'Document Uploaded' ? 'text-indigo-600 font-bold' : 'text-slate-800'}`}>{aadhaarVal}</span>
+                                                                    </div>
+                                                                    <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                                        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Passport Number</span>
+                                                                        <span className={`font-mono text-sm font-semibold uppercase ${passportVal === 'Document Uploaded' ? 'text-indigo-600 font-bold' : 'text-slate-800'}`}>{passportVal}</span>
+                                                                    </div>
+                                                                </>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1503,20 +1549,9 @@ export default function ApplicationManagement() {
                                                             <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block mb-1">Target Foreign University</span>
                                                             <span className="font-extrabold text-slate-900 text-base">{selectedApp.universityName || selectedApp.university || selectedApp.targetUniversity || "Not Specified"}</span>
                                                         </div>
-                                                        <div className="bg-indigo-50/40 p-4 rounded-xl border border-indigo-100">
-                                                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block mb-1">Degree & Course</span>
-                                                            <span className="font-extrabold text-slate-900 text-base">
-                                                                {selectedApp.courseName || selectedApp.course || selectedApp.program || "Course Pending"}
-                                                                {selectedApp.degree ? ` (${selectedApp.degree})` : ""}
-                                                            </span>
-                                                        </div>
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
+                                                        <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0]">
                                                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Destination Country</span>
                                                             <span className="text-sm font-semibold text-slate-800">{selectedApp.country || selectedApp.countryOfStudy || selectedApp.studyDestination || "Not Specified"}</span>
-                                                        </div>
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
-                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Target Intake</span>
-                                                            <span className="text-sm font-semibold text-slate-800">{selectedApp.intakeYear || selectedApp.intake || selectedApp.targetIntake || "Not Specified"}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1526,31 +1561,13 @@ export default function ApplicationManagement() {
                                                         <span className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
                                                             <span className="material-symbols-outlined text-base">analytics</span>
                                                         </span>
-                                                        Standardized Test Scores & Prior Academics
+                                                        Prior Academics
                                                     </h3>
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] text-center">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0]">
                                                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">Academic % / GPA</span>
                                                             <span className="font-extrabold text-slate-900 text-base">
                                                                 {selectedApp.academicPercentage || selectedApp.academicScore || selectedApp.percentage || (selectedApp.sscScore ? `SSC: ${selectedApp.sscScore}%` : null) || "N/A"}
-                                                            </span>
-                                                        </div>
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] text-center">
-                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">GRE Score</span>
-                                                            <span className="font-extrabold text-slate-900 text-base">
-                                                                {selectedApp.greScore || selectedApp.gre || selectedApp.user?.greScore || "N/A"}
-                                                            </span>
-                                                        </div>
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] text-center">
-                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">IELTS Band</span>
-                                                            <span className="font-extrabold text-slate-900 text-base">
-                                                                {selectedApp.ieltsScore || selectedApp.ielts || selectedApp.user?.ieltsScore || "N/A"}
-                                                            </span>
-                                                        </div>
-                                                        <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] text-center">
-                                                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1">TOEFL Score</span>
-                                                            <span className="font-extrabold text-slate-900 text-base">
-                                                                {selectedApp.toeflScore || selectedApp.toefl || selectedApp.user?.toeflScore || "N/A"}
                                                             </span>
                                                         </div>
                                                     </div>
