@@ -131,6 +131,130 @@ function SearchableCountrySelect({
     );
 }
 
+function checkCountryUniversityMatch(
+    selectedCountry: string,
+    universityName: string,
+    selectedUniObj?: any,
+    suggestedUnis?: any[]
+): { isValid: boolean; error?: string } {
+    if (!selectedCountry || !universityName) return { isValid: true };
+
+    const normalizeCountry = (c: string) => {
+        const low = (c || '').toLowerCase().trim();
+        if (low.includes('usa') || low.includes('united states') || low.includes('america')) return 'USA';
+        if (low.includes('uk') || low.includes('united kingdom') || low.includes('britain') || low.includes('england') || low.includes('scotland') || low.includes('wales')) return 'UK';
+        if (low.includes('canada')) return 'Canada';
+        if (low.includes('australia')) return 'Australia';
+        if (low.includes('germany') || low.includes('deutschland')) return 'Germany';
+        if (low.includes('ireland')) return 'Ireland';
+        if (low.includes('new zealand')) return 'New Zealand';
+        if (low.includes('france')) return 'France';
+        if (low.includes('singapore')) return 'Singapore';
+        if (low.includes('india')) return 'India';
+        return c.trim();
+    };
+
+    const normSelectedCountry = normalizeCountry(selectedCountry);
+
+    // Explicit university selection match check
+    if (selectedUniObj && (selectedUniObj.name || '').toLowerCase() === universityName.toLowerCase()) {
+        const uniCountry = selectedUniObj.country || selectedUniObj.loc;
+        if (uniCountry) {
+            const normUniCountry = normalizeCountry(uniCountry);
+            if (normUniCountry && normUniCountry !== normSelectedCountry) {
+                return {
+                    isValid: false,
+                    error: `Validation Error: "${universityName}" is located in ${uniCountry}, which does not match your selected destination country (${selectedCountry}). Please select a university in ${selectedCountry} or change the destination country.`
+                };
+            }
+        }
+    }
+
+    // Check suggestions list
+    const foundInSuggestions = (suggestedUnis || []).find(
+        u => (u.name || '').toLowerCase() === universityName.toLowerCase()
+    );
+    if (foundInSuggestions) {
+        const uniCountry = foundInSuggestions.country || foundInSuggestions.loc;
+        if (uniCountry) {
+            const normUniCountry = normalizeCountry(uniCountry);
+            if (normUniCountry && normUniCountry !== normSelectedCountry) {
+                return {
+                    isValid: false,
+                    error: `Validation Error: "${universityName}" is located in ${uniCountry}, which does not match your selected destination country (${selectedCountry}). Please select a university in ${selectedCountry} or change the destination country.`
+                };
+            }
+        }
+    }
+
+    // Keyword fallback check for popular universities
+    const KNOWN_UNIVERSITIES: { country: string; keywords: string[] }[] = [
+        {
+            country: 'USA',
+            keywords: [
+                'harvard', 'stanford', 'mit', 'massachusetts institute of technology', 'columbia university',
+                'nyu', 'new york university', 'cornell', 'yale', 'princeton', 'ucla', 'uc berkeley',
+                'northeastern university', 'usc', 'university of southern california', 'carnegie mellon',
+                'purdue', 'texas a&m', 'university of texas', 'georgia tech', 'penn state', 'northwestern',
+                'johns hopkins', 'duke', 'chicago', 'arizona state', 'boston university'
+            ],
+        },
+        {
+            country: 'UK',
+            keywords: [
+                'oxford', 'cambridge', 'imperial college', 'ucl', 'university college london',
+                'king\'s college london', 'kcl', 'university of edinburgh', 'university of manchester',
+                'warwick', 'bristol', 'glasgow', 'birmingham', 'leeds', 'sheffield', 'nottingham'
+            ],
+        },
+        {
+            country: 'Canada',
+            keywords: [
+                'university of toronto', 'ubc', 'university of british columbia', 'mcgill',
+                'waterloo', 'mcmaster', 'university of alberta', 'western university', 'simon fraser',
+                'concordia', 'york university'
+            ],
+        },
+        {
+            country: 'Australia',
+            keywords: [
+                'university of melbourne', 'university of sydney', 'unsw', 'university of new south wales',
+                'monash', 'university of queensland', 'anu', 'australian national university',
+                'western australia', 'adelaide'
+            ],
+        },
+        {
+            country: 'Germany',
+            keywords: [
+                'tum', 'technical university of munich', 'lmu munich', 'rwth aachen',
+                'heidelberg university', 'hu berlin', 'humboldt', 'free university of berlin',
+                'university of stuttgart', 'tu darmstadt', 'tu dresden', 'bonn', 'karlsruhe'
+            ],
+        },
+        {
+            country: 'Ireland',
+            keywords: [
+                'trinity college dublin', 'tcd', 'university college dublin', 'ucd',
+                'university of galway', 'university of limerick', 'dcu', 'dublin city university'
+            ],
+        },
+    ];
+
+    const uniLower = universityName.toLowerCase().trim();
+    for (const group of KNOWN_UNIVERSITIES) {
+        if (group.keywords.some(kw => uniLower.includes(kw))) {
+            if (group.country !== normSelectedCountry) {
+                return {
+                    isValid: false,
+                    error: `Validation Error: "${universityName}" is located in ${group.country}, which does not match your selected destination country (${selectedCountry}). Please select a university in ${selectedCountry} or update the destination country.`
+                };
+            }
+        }
+    }
+
+    return { isValid: true };
+}
+
 export default function ApplicationsTab() {
     const { userId, userData, userApplications, refreshData, setRoutingApp, setIsShareModalOpen } = useUserDossier();
     const [isAddAppOpen, setIsAddAppOpen] = useState(false);
@@ -164,6 +288,7 @@ export default function ApplicationsTab() {
     });
 
     const [suggestedUniversities, setSuggestedUniversities] = useState<any[]>([]);
+    const [selectedUniObj, setSelectedUniObj] = useState<any>(null);
     const [loadingUniversities, setLoadingUniversities] = useState(false);
     const [showUniversitySuggestions, setShowUniversitySuggestions] = useState(false);
 
@@ -253,6 +378,15 @@ export default function ApplicationsTab() {
         e.preventDefault();
         setSubmitError("");
 
+        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+        if (selectedCountry && formData.university) {
+            const uniMatch = checkCountryUniversityMatch(selectedCountry, formData.university, selectedUniObj, suggestedUniversities);
+            if (!uniMatch.isValid) {
+                setSubmitError(uniMatch.error || "Country and university mismatch.");
+                return;
+            }
+        }
+
         if (formData.bank !== "Any Bank" && isBankAlreadyApplied(formData.bank)) {
             const selectedBankName = banksList.find(b => b.id === formData.bank)?.name || formData.bank;
             setSubmitError(`This student already has an active application with ${selectedBankName}. Direct duplicates are not allowed.`);
@@ -277,6 +411,8 @@ export default function ApplicationsTab() {
 
             const payload = {
                 ...formData,
+                isStaff: true,
+                creatorRole: "staff",
                 hasCoApplicant: firstApp?.hasCoApplicant ?? (!!coApplicantRel && coApplicantRel !== "none"),
                 coApplicantName: firstApp?.coApplicantName || null,
                 coApplicantRelation: coApplicantRel || null,
@@ -590,6 +726,7 @@ export default function ApplicationsTab() {
                                                             onMouseDown={(e) => e.preventDefault()}
                                                             onClick={() => {
                                                                 setFormData(prev => ({ ...prev, university: uni.name }));
+                                                                setSelectedUniObj(uni);
                                                                 setShowUniversitySuggestions(false);
                                                             }}
                                                             className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:text-[#6605c7] hover:bg-slate-50 transition-all flex flex-col"

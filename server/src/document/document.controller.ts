@@ -13,6 +13,7 @@ import {
   ForbiddenException,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from '../users/users.service';
@@ -264,7 +265,7 @@ export class DocumentController {
       }
 
       // ── 3. Build Verification Metadata & Update User profile ─────────────
-      const maskedExtractedFields = maskSensitiveIds(kycResult.extracted_data || {});
+      const maskedExtractedFields = maskSensitiveIds(kycResult.extracted_data || {}, docType);
 
       const verificationResult = {
         isValid: true,

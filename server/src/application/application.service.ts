@@ -105,6 +105,90 @@ export class ApplicationService {
     return null;
   }
 
+  private isCountryUniversityMismatch(selectedCountry: string | null | undefined, universityName: string | null | undefined): { isMismatch: boolean; detectedCountry?: string } {
+    if (!selectedCountry || !universityName) return { isMismatch: false };
+
+    const normalizeCountry = (c: string) => {
+      const low = (c || '').toLowerCase().trim();
+      if (low.includes('usa') || low.includes('united states') || low.includes('america')) return 'USA';
+      if (low.includes('uk') || low.includes('united kingdom') || low.includes('britain') || low.includes('england') || low.includes('scotland') || low.includes('wales')) return 'UK';
+      if (low.includes('canada')) return 'Canada';
+      if (low.includes('australia')) return 'Australia';
+      if (low.includes('germany') || low.includes('deutschland')) return 'Germany';
+      if (low.includes('ireland')) return 'Ireland';
+      if (low.includes('new zealand')) return 'New Zealand';
+      if (low.includes('france')) return 'France';
+      if (low.includes('singapore')) return 'Singapore';
+      if (low.includes('india')) return 'India';
+      return c.trim();
+    };
+
+    const normTargetCountry = normalizeCountry(selectedCountry);
+    const uni = universityName.toLowerCase().trim();
+
+    const KNOWN_UNIVERSITIES: { country: string; keywords: string[] }[] = [
+      {
+        country: 'USA',
+        keywords: [
+          'harvard', 'stanford', 'mit', 'massachusetts institute of technology', 'columbia university',
+          'nyu', 'new york university', 'cornell', 'yale', 'princeton', 'ucla', 'uc berkeley',
+          'northeastern university', 'usc', 'university of southern california', 'carnegie mellon',
+          'purdue', 'texas a&m', 'university of texas', 'georgia tech', 'penn state', 'northwestern',
+          'johns hopkins', 'duke', 'chicago', 'arizona state', 'boston university'
+        ],
+      },
+      {
+        country: 'UK',
+        keywords: [
+          'oxford', 'cambridge', 'imperial college', 'ucl', 'university college london',
+          'king\'s college london', 'kcl', 'university of edinburgh', 'university of manchester',
+          'warwick', 'bristol', 'glasgow', 'birmingham', 'leeds', 'sheffield', 'nottingham'
+        ],
+      },
+      {
+        country: 'Canada',
+        keywords: [
+          'university of toronto', 'ubc', 'university of british columbia', 'mcgill',
+          'waterloo', 'mcmaster', 'university of alberta', 'western university', 'simon fraser',
+          'concordia', 'york university'
+        ],
+      },
+      {
+        country: 'Australia',
+        keywords: [
+          'university of melbourne', 'university of sydney', 'unsw', 'university of new south wales',
+          'monash', 'university of queensland', 'anu', 'australian national university',
+          'western australia', 'adelaide'
+        ],
+      },
+      {
+        country: 'Germany',
+        keywords: [
+          'tum', 'technical university of munich', 'lmu munich', 'rwth aachen',
+          'heidelberg university', 'hu berlin', 'humboldt', 'free university of berlin',
+          'university of stuttgart', 'tu darmstadt', 'tu dresden', 'bonn', 'karlsruhe'
+        ],
+      },
+      {
+        country: 'Ireland',
+        keywords: [
+          'trinity college dublin', 'tcd', 'university college dublin', 'ucd',
+          'university of galway', 'university of limerick', 'dcu', 'dublin city university'
+        ],
+      },
+    ];
+
+    for (const group of KNOWN_UNIVERSITIES) {
+      if (group.keywords.some(kw => uni.includes(kw))) {
+        if (group.country !== normTargetCountry) {
+          return { isMismatch: true, detectedCountry: group.country };
+        }
+      }
+    }
+
+    return { isMismatch: false };
+  }
+
   private async validateApplicationConstraints(userId: string, currentAppId: string | null, bank: string, country: string, universityName: string, isStaffOrAdmin: boolean = false) {
     const { data: existingApps, error } = await this.db
       .from('LoanApplication')
@@ -118,6 +202,14 @@ export class ApplicationService {
     // Limit to 1 active application per student for self-service student applications (bypassed for Staff/Admin)
     if (!isStaffOrAdmin && !currentAppId && existingApps && existingApps.length >= 1) {
       throw new BadRequestException('Only 1 active loan application is permitted per student. You already have an application in progress.');
+    }
+
+    // Check Country vs. University matching constraint
+    const mismatch = this.isCountryUniversityMismatch(country, universityName);
+    if (mismatch.isMismatch) {
+      throw new BadRequestException(
+        `Validation Error: "${universityName}" is located in ${mismatch.detectedCountry}, which does not match your selected destination country (${country}). Please select a university in ${country} or update the destination country.`
+      );
     }
 
     // 2. Check duplicate details for the same bank

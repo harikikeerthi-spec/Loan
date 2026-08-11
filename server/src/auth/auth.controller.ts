@@ -1,9 +1,10 @@
-import { Controller, Post, Body, Get, Param, Delete, Req, Res, Inject, forwardRef } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Req, Res, Inject, forwardRef, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { ReferralService } from '../referral/referral.service';
 import { AssignmentService } from '../assignment/assignment.service';
 import { CsrfService } from './csrf.service';
+import { UserGuard } from './user.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -353,6 +354,7 @@ export class AuthController {
    * @returns { success: boolean, application?: LoanApplication }
    */
   @Post('create-application')
+  @UseGuards(UserGuard)
   async createApplication(
     @Req() req: any,
     @Body() body: {
@@ -407,7 +409,8 @@ export class AuthController {
     const isStaffOrAdmin =
       ['staff', 'admin', 'super_admin', 'support', 'it', 'agent', 'partner_agent'].includes(userRole) ||
       userRole.startsWith('bank_') ||
-      body.isStaff === true;
+      body.isStaff === true ||
+      body.creatorRole === 'staff';
 
     // Safely parse amount to a number
     const amountVal = typeof body.amount === 'string' ? parseFloat(body.amount) : body.amount;
