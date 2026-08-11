@@ -57,7 +57,6 @@ async function bootstrap() {
       url.includes('/users/profile') ||
       url.includes('/users/admin/update-details') ||
       url.includes('/onboarding') ||
-      url.includes('/documents/upload') ||
       url.includes('/digilocker/callback')
     ) {
       return next();

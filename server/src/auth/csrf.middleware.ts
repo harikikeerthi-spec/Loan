@@ -24,7 +24,6 @@ export class CsrfMiddleware implements NestMiddleware {
       cleanUrl.includes('/users/profile') ||
       cleanUrl.includes('/users/admin/update-details') ||
       cleanUrl.includes('/onboarding') ||
-      cleanUrl.includes('/documents/upload') ||
       cleanUrl.includes('/digilocker/callback')
     );
   }

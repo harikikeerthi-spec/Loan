@@ -11,7 +11,8 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
-  Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from '../users/users.service';
@@ -19,6 +20,8 @@ import { DigilockerService } from '../integration/digilocker.service';
 import { DocumentVerificationService } from '../ai/services/document-verification.service';
 import { KycService } from '../ai/services/kyc.service';
 import { maskSensitiveIds } from '../ai/utils/ocr-fields.util';
+import { validateFileSignature } from '../ai/utils/file-signature.util';
+import { UserGuard } from '../auth/user.guard';
 import { S3Service } from './s3.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { memoryStorage } from 'multer';
@@ -43,6 +46,7 @@ export class DocumentController {
 
   // ─── Upload & store to S3 ────────────────────────────────────────────────
   @Post('upload')
+  @UseGuards(UserGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage,
@@ -61,10 +65,30 @@ export class DocumentController {
     @Body('userId') userId: string,
     @Body('docType') docType: string,
     @Body('docName') docName?: string,
+    @Req() req?: any,
   ) {
     if (!file) throw new BadRequestException('File is required');
     if (!userId || !docType)
       throw new BadRequestException('userId and docType are required');
+
+    // ── 0A. Strict User Ownership Authorization Check ────────────────────────
+    const requester = req?.user;
+    if (requester && requester.id !== 'guest-user') {
+      const isOwner = requester.id === userId || requester.email === userId;
+      const isStaffOrAdmin = ['admin', 'staff', 'superadmin'].includes(requester.role);
+      if (!isOwner && !isStaffOrAdmin) {
+        throw new ForbiddenException('Unauthorized: You can only upload documents for your own account.');
+      }
+    }
+
+    // ── 0B. Magic Number Binary File Signature Inspection ─────────────────────
+    const sigCheck = validateFileSignature(file.buffer, file.mimetype);
+    if (!sigCheck.isValid) {
+      console.warn(`[UPLOAD] Magic number header validation failed for file ${file.originalname}: ${sigCheck.error}`);
+      throw new BadRequestException(
+        `Invalid file signature: The content of "${file.originalname}" does not match authorized PDF, PNG, or JPEG formats. ${sigCheck.error || ''}`
+      );
+    }
 
     // ── Pre-check: Detect if user has already uploaded this specific document ──
     const incomingHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
@@ -240,6 +264,8 @@ export class DocumentController {
       }
 
       // ── 3. Build Verification Metadata & Update User profile ─────────────
+      const maskedExtractedFields = maskSensitiveIds(kycResult.extracted_data || {});
+
       const verificationResult = {
         isValid: true,
         code: 'AI_VERIFIED',
@@ -248,7 +274,7 @@ export class DocumentController {
         fileHash: incomingHash,
         details: {
           message: 'Document verified by AI OCR pre-storage.',
-          extractedFields: kycResult.extracted_data,
+          extractedFields: maskedExtractedFields,
           document_validation: kycResult.document_validation,
           ocr_issues: kycResult.ocr_issues,
         },

@@ -5,11 +5,13 @@ import { S3Service } from './s3.service';
 import { UsersModule } from '../users/users.module';
 import { IntegrationModule } from '../integration/integration.module';
 import { AiModule } from '../ai/ai.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-    imports: [UsersModule, IntegrationModule, forwardRef(() => AiModule)],
+    imports: [UsersModule, IntegrationModule, forwardRef(() => AiModule), forwardRef(() => AuthModule)],
     controllers: [DocumentController],
     providers: [S3Service],
     exports: [S3Service],
 })
 export class DocumentModule { }
+
