@@ -693,6 +693,26 @@ export function canonicalizeOcrFields(
             if (nat.includes('indian') || nat === 'ind') out.issue_country = 'India';
         }
 
+        const father = pickFirst(
+            raw.father_name,
+            raw.fatherName,
+            raw.father_full_name,
+            raw.fatherFullName,
+            raw.guardian_name,
+            raw.legal_guardian_name,
+            raw.name_of_father,
+        );
+        if (father) out.father_name = dedupeOcrFullName(String(father));
+
+        const mother = pickFirst(
+            raw.mother_name,
+            raw.motherName,
+            raw.mother_full_name,
+            raw.motherFullName,
+            raw.name_of_mother,
+        );
+        if (mother) out.mother_name = dedupeOcrFullName(String(mother));
+
         const addr = raw.address ??
             raw.residential_address ??
             raw.residentialAddress ??

@@ -205,10 +205,22 @@ export class ChatService {
           // Bank partners should only see conversations explicitly marked for banks
           query = query.contains('metadata', { type: 'bank' });
           
-          // Priority: explicit bankName > user.bankName > user.firstName
-          // The frontend sends the resolved full bank name (e.g. "IDFC FIRST Bank")
-          const bankName = user.bankName || user.firstName || null;
+          let bankName = user.bankName || user.firstName || null;
           if (bankName) {
+              const lower = String(bankName).toLowerCase().trim();
+              const BANK_NAME_MAP: Record<string, string> = {
+                  auxilo: "Auxilo Finserve",
+                  avanse: "Avanse Financial",
+                  credila: "HDFC Credila",
+                  idfc: "IDFC FIRST Bank",
+                  poonawalla: "Poonawalla Fincorp",
+              };
+              for (const [k, v] of Object.entries(BANK_NAME_MAP)) {
+                  if (lower.includes(k)) {
+                      bankName = v;
+                      break;
+                  }
+              }
               this.logger.debug(`Filtering conversations for bank: ${bankName}`);
               query = query.contains('metadata', { bank: bankName });
           }

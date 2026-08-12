@@ -512,6 +512,8 @@ export class KycService {
                 - passport_number
                 - full_name: full name as on biodata page (given names then surname, single line)
                 - given_names, surname: use when full_name line is split on the card
+                - father_name: father's / legal guardian's full name printed on the passport back page (if visible)
+                - mother_name: mother's full name printed on the passport back page (if visible)
                 - dob (DD/MM/YYYY)
                 - gender: lowercase "male" or "female"
                 - date_of_issue (DD/MM/YYYY)
@@ -1134,6 +1136,40 @@ export class KycService {
                         && !lower.includes('mrz');
                 });
                 if (nameLine) data.full_name = nameLine.replace(/\s+/g, ' ').trim();
+            }
+
+            // Extract Father / Legal Guardian Name from Passport back page text
+            const fatherInlineMatch = clean.match(/(?:name\s*of\s*father(?:\s*\/\s*legal\s*guardian)?|father['’]?s?\s*name|father\s*(?:\/\s*legal\s*guardian)?\s*name)[:\s]+([^\n]{3,60})/i);
+            if (fatherInlineMatch) {
+                const val = fatherInlineMatch[1].trim();
+                if (val && !val.toLowerCase().includes('mother') && !val.toLowerCase().includes('address')) {
+                    data.father_name = val;
+                }
+            } else {
+                const fatherLabelIdx = lines.findIndex(l => /(?:name\s*of\s*father|father\s*\/\s*legal\s*guardian|father['’]?s?\s*name)/i.test(l));
+                if (fatherLabelIdx !== -1 && fatherLabelIdx + 1 < lines.length) {
+                    const nextLine = lines[fatherLabelIdx + 1].trim();
+                    if (nextLine && nextLine.length >= 3 && !/\d/.test(nextLine) && !/mother|address|spouse|passport/i.test(nextLine)) {
+                        data.father_name = nextLine;
+                    }
+                }
+            }
+
+            // Extract Mother Name from Passport back page text
+            const motherInlineMatch = clean.match(/(?:name\s*of\s*mother|mother['’]?s?\s*name|mother\s*name)[:\s]+([^\n]{3,60})/i);
+            if (motherInlineMatch) {
+                const val = motherInlineMatch[1].trim();
+                if (val && !val.toLowerCase().includes('spouse') && !val.toLowerCase().includes('address')) {
+                    data.mother_name = val;
+                }
+            } else {
+                const motherLabelIdx = lines.findIndex(l => /(?:name\s*of\s*mother|mother['’]?s?\s*name|mother\s*name)/i.test(l));
+                if (motherLabelIdx !== -1 && motherLabelIdx + 1 < lines.length) {
+                    const nextLine = lines[motherLabelIdx + 1].trim();
+                    if (nextLine && nextLine.length >= 3 && !/\d/.test(nextLine) && !/spouse|address|passport|father/i.test(nextLine)) {
+                        data.mother_name = nextLine;
+                    }
+                }
             }
 
             const pinMatch = clean.match(/\b\d{6}\b/);

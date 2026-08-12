@@ -251,6 +251,7 @@ export class ChatController {
       displayName,
       bankName,
       {
+        type: 'bank',
         applicationId: body.applicationId || null,
         applicationNumber: appNumber || null,
         studentName: studentName || null,

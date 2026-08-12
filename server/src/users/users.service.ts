@@ -1,10 +1,10 @@
-import { Injectable, BadRequestException, OnModuleInit } from '@nestjs/common';
+import { Injectable, BadRequestException, OnModuleInit, Inject, Optional, forwardRef } from '@nestjs/common';
 import { randomInt, randomUUID } from 'crypto';
 import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-
 import { EmailService } from '../auth/email.service';
+import { AssignmentService } from '../assignment/assignment.service';
 
 export const USER_VALID_COLUMNS = new Set([
   'id',
@@ -63,6 +63,7 @@ export class UsersService implements OnModuleInit {
     private supabase: SupabaseService,
     private eventEmitter: EventEmitter2,
     private emailService: EmailService,
+    @Optional() @Inject(forwardRef(() => AssignmentService)) private assignmentService?: AssignmentService,
   ) { }
 
   async onModuleInit() {
@@ -107,25 +108,33 @@ export class UsersService implements OnModuleInit {
 
   public async backfillAndAutoAssignApplications() {
     try {
-      // NOTE: We intentionally do NOT backfill application numbers here.
-      // VL-APP-YYYY-XXXXX numbers are ONLY generated when staff submits to a bank.
-      // Applications without a number are in 'pending review' state waiting for staff action.
-
-      // Trigger auto-assignment for unassigned loans only
-      const { data: unassignedLoans } = await this.db
+      // Fetch all loan applications to check for unassigned status comprehensively
+      const { data: allLoans } = await this.db
         .from('LoanApplication')
-        .select('id, applicationNumber, assignedStaffId')
-        .or('assignedStaffId.is.null,assignedStaffId.eq.unassigned,assignedStaffId.eq.,assignedStaffId.eq.null');
+        .select('id, applicationNumber, assignedStaffId, loanType');
 
-      if (unassignedLoans && unassignedLoans.length > 0) {
-        console.log(`[UsersService] Found ${unassignedLoans.length} unassigned loan applications. Emitting auto-assignment events...`);
-        for (const loan of unassignedLoans) {
-          this.eventEmitter.emit('application.created', {
-            applicationId: loan.id,
-            applicationNumber: loan.applicationNumber,
-          });
-          // Small delay between events to prevent DB overload
-          await new Promise(resolve => setTimeout(resolve, 100));
+      if (allLoans && allLoans.length > 0) {
+        const unassignedLoans = allLoans.filter((loan: any) => {
+          const id = (loan.assignedStaffId || '').trim().toLowerCase();
+          return !id || id === 'unassigned' || id === 'null' || id === 'undefined';
+        });
+
+        if (unassignedLoans.length > 0) {
+          console.log(`[UsersService] Found ${unassignedLoans.length} unassigned loan applications. Assigning now...`);
+          for (const loan of unassignedLoans) {
+            if (this.assignmentService) {
+              await this.assignmentService.assignLoan(loan.id, 'auto_backfill').catch(err => {
+                console.error(`[UsersService] Auto-assign failed for ${loan.id}:`, err?.message);
+              });
+            } else {
+              this.eventEmitter.emit('application.created', {
+                applicationId: loan.id,
+                applicationNumber: loan.applicationNumber,
+              });
+            }
+            // Small delay between assignments to prevent DB connection spikes
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
         }
       }
     } catch (err) {
@@ -963,19 +972,37 @@ export class UsersService implements OnModuleInit {
         relation = 'coapplicant';
       } else if (normalizedDocType.includes('_aadhar') || normalizedDocType.includes('_aadhaar') || normalizedDocType.includes('_pan')) {
         const parts = normalizedDocType.split('_');
-        if (parts.length >= 2 && parts[0] !== 'student' && parts[0] !== 'other') {
+        if (parts.length >= 2 && !['student', 'other', 'aadhar', 'aadhaar', 'pan', 'passport', 'id'].includes(parts[0])) {
           relation = parts[0];
         }
       }
 
       if (relation) {
-        const extractedName = extractFullNameFromOcrRaw(details, docType) ||
-          details.mother_name || details.motherName || details.mother_full_name || details.motherFullName ||
-          details.father_name || details.fatherName || details.father_full_name || details.fatherFullName ||
-          details.coapplicant_name || details.coApplicantName || details.co_applicant_name ||
-          details.full_name || details.fullName || details.name || details.holder_name || details.printed_name;
+        const isFather = relation === 'father';
+        const isMother = relation === 'mother';
 
-        const nameToSave = extractedName && typeof extractedName === 'string' && extractedName.trim() ? extractedName.trim() : undefined;
+        const extractedName = isMother
+          ? (details.mother_name || details.motherName || details.mother_full_name || details.motherFullName || extractFullNameFromOcrRaw(details, docType) || details.full_name || details.fullName || details.name || details.holder_name || details.printed_name)
+          : isFather
+          ? (details.father_name || details.fatherName || details.father_full_name || details.fatherFullName || extractFullNameFromOcrRaw(details, docType) || details.full_name || details.fullName || details.name || details.holder_name || details.printed_name)
+          : (extractFullNameFromOcrRaw(details, docType) || details.full_name || details.fullName || details.name || details.holder_name || details.printed_name);
+
+        const studentFirstName = (currentUser.firstName || '').trim().toLowerCase();
+        const studentLastName = (currentUser.lastName || '').trim().toLowerCase();
+        const studentFullName = `${studentFirstName} ${studentLastName}`.trim().toLowerCase();
+        const passportOrigName = (currentUser.passportOriginalName || '').trim().toLowerCase();
+
+        const isInvalidName = (n?: string) => {
+          if (!n || !n.trim()) return true;
+          const lower = n.trim().toLowerCase();
+          if (['mother', 'father', 'coapplicant', 'student', 'na', 'n/a', 'none', 'null', 'undefined', 'enter name'].includes(lower)) return true;
+          if (studentFullName && studentFullName.length > 2 && (lower === studentFullName || (lower.includes(studentFullName) && lower.length <= studentFullName.length + 3))) return true;
+          if (passportOrigName && passportOrigName.length > 2 && (lower === passportOrigName || (lower.includes(passportOrigName) && lower.length <= passportOrigName.length + 3))) return true;
+          if (studentFirstName && studentFirstName.length > 2 && lower === studentFirstName) return true;
+          return false;
+        };
+
+        const nameToSave = extractedName && typeof extractedName === 'string' && extractedName.trim() && !isInvalidName(extractedName) ? extractedName.trim() : undefined;
 
         // Clean Aadhar (12 digits) if present
         let aadharNum: string | undefined = undefined;
@@ -1083,6 +1110,65 @@ export class UsersService implements OnModuleInit {
         }
       }
 
+      // Automatically extract and set details from Passport documents (Father Name, Mother Name, Passport Original Name)
+      if (normalizedDocType.includes('passport')) {
+        const extFields = details.extractedFields || details.extracted_fields || details.extracted_data || details;
+        const passportFather = details.father_name || details.fatherName || details.father_full_name || extFields.father_name || extFields.fatherName || extFields.father_full_name;
+        const passportMother = details.mother_name || details.motherName || details.mother_full_name || extFields.mother_name || extFields.motherName || extFields.mother_full_name;
+        const passportFull = details.full_name || details.fullName || extFields.full_name || extFields.fullName || (details.given_names ? `${details.given_names} ${details.surname || ''}`.trim() : extFields.given_names ? `${extFields.given_names} ${extFields.surname || ''}`.trim() : undefined);
+
+        let family = currentUser.family;
+        if (typeof family === 'string') {
+          try { family = JSON.parse(family); } catch { family = {}; }
+        }
+        if (!family || typeof family !== 'object') family = {};
+
+        const studentFirstName = (currentUser.firstName || '').trim().toLowerCase();
+        const studentLastName = (currentUser.lastName || '').trim().toLowerCase();
+        const studentFullName = `${studentFirstName} ${studentLastName}`.trim().toLowerCase();
+        const passportOrigName = (family?.passportOriginalName || currentUser.passportOriginalName || '').trim().toLowerCase();
+
+        const isInvalidName = (n?: string) => {
+          if (!n || !n.trim()) return true;
+          const lower = n.trim().toLowerCase();
+          if (['mother', 'father', 'coapplicant', 'student', 'na', 'n/a', 'none', 'null', 'undefined', 'enter name'].includes(lower)) return true;
+          if (studentFullName && studentFullName.length > 2 && (lower === studentFullName || (lower.includes(studentFullName) && lower.length <= studentFullName.length + 3))) return true;
+          if (passportOrigName && passportOrigName.length > 2 && (lower === passportOrigName || (lower.includes(passportOrigName) && lower.length <= passportOrigName.length + 3))) return true;
+          if (studentFirstName && studentFirstName.length > 2 && lower === studentFirstName) return true;
+          return false;
+        };
+
+        let familyChanged = false;
+        if (passportFather && typeof passportFather === 'string' && passportFather.trim() && !isInvalidName(passportFather)) {
+          const fName = passportFather.trim();
+          family.fatherName = fName;
+          familyChanged = true;
+          this.upsertParentRecord(userId, 'father', { name: fName }).catch(() => {});
+          try {
+            this.db.from('LoanApplication').update({ fatherName: fName }).eq('userId', userId).then(() => {});
+          } catch {}
+        }
+        if (passportMother && typeof passportMother === 'string' && passportMother.trim() && !isInvalidName(passportMother)) {
+          const mName = passportMother.trim();
+          family.motherName = mName;
+          familyChanged = true;
+          this.upsertParentRecord(userId, 'mother', { name: mName }).catch(() => {});
+          try {
+            this.db.from('LoanApplication').update({ motherName: mName }).eq('userId', userId).then(() => {});
+          } catch {}
+        }
+        if (passportFull && typeof passportFull === 'string' && passportFull.trim()) {
+          const origName = passportFull.trim();
+          payload.passportOriginalName = origName;
+          family.passportOriginalName = origName;
+          familyChanged = true;
+        }
+
+        if (familyChanged) {
+          payload.family = typeof currentUser.family === 'object' && currentUser.family !== null ? family : JSON.stringify(family);
+        }
+      }
+
       // Automatically sync gender if present on student's uploaded documents (like Passport)
       if (!relation) {
         const rawGender = details.gender || details.sex;
@@ -1122,7 +1208,10 @@ export class UsersService implements OnModuleInit {
         normalizedDocType.includes('inter') ||
         normalizedDocType.includes('grade')
       ) {
-        const inst = details.institution || details.university || details.college_name || details.institution_name || details.university_name || details.board || details.board_name || details.school_name || details.school || details.college || details.awarding_body || details.board_or_university || details.institute || details.examining_body || details.degree_college;
+        const inst = details.institution || details.university || details.college_name || details.institution_name || details.university_name || details.school_name || details.school || details.college || details.awarding_body || details.board_or_university || details.institute || details.examining_body || details.degree_college;
+        const board = details.board_name || details.board || details.board_or_university || details.examining_body || details.council || details.authority;
+        const year = details.examination_month_year || details.year_of_passing || details.passing_year || details.exam_period || details.end_date || details.year;
+        const rollNum = details.roll_number || details.registration_number || details.hall_ticket_number || details.hall_ticket || details.certificate_number;
         const rawScore = details.percentage || details.score || details.gpa || details.cgpa || details.overall_percentage || details.marks_percentage || details.aggregate_percentage || details.overall_gpa || details.overall_cgpa || details.total_percentage || details.grade || details.marks || details.obtained_marks;
         const secured = details.total_marks_secured || details.marks_secured || details.marks_obtained || details.obtained_marks || details.secured_marks || details.total_marks;
         const max = details.total_marks_maximum || details.maximum_marks || details.max_marks || details.total_max || details.out_of;
@@ -1166,14 +1255,36 @@ export class UsersService implements OnModuleInit {
           if (!academic.ug) academic.ug = {};
           if (inst) { academic.ug.institute = inst; academicUpdated = true; payload.bachelorsDegree = inst; }
           if (score) { academic.ug.percentage = String(score); academicUpdated = true; }
+          if (board) { academic.ug.university = board; academicUpdated = true; }
+          if (year) { academic.ug.passingYear = year; academicUpdated = true; }
+          if (rollNum) { academic.ug.rollNumber = rollNum; academicUpdated = true; }
         } else if (normalizedDocType.includes('10th') || normalizedDocType.includes('ssc') || normalizedDocType.includes('marksheet_10') || normalizedDocType.includes('grade_10') || normalizedDocType.includes('grade10')) {
           if (!academic.ssc) academic.ssc = {};
-          if (inst) { academic.ssc.institute = inst; academicUpdated = true; }
+          if (inst) { academic.ssc.institute = inst; academic.ssc.school = inst; academicUpdated = true; }
           if (score) { academic.ssc.percentage = String(score); academicUpdated = true; }
+          if (board) { academic.ssc.board = board; academicUpdated = true; }
+          if (year) { academic.ssc.passingYear = year; academicUpdated = true; }
+          if (rollNum) { academic.ssc.rollNumber = rollNum; academicUpdated = true; }
+          if (secured) { academic.ssc.totalMarksSecured = String(secured); academicUpdated = true; }
+          if (max) { academic.ssc.totalMarksMaximum = String(max); academicUpdated = true; }
+
+          // Mirror 10th alias keys
+          academic['10th'] = { ...academic.ssc };
+          academic.marksheet_10 = { ...academic.ssc };
         } else if (normalizedDocType.includes('12th') || normalizedDocType.includes('hsc') || normalizedDocType.includes('marksheet_12') || normalizedDocType.includes('intermediate') || normalizedDocType.includes('inter') || normalizedDocType.includes('grade_12') || normalizedDocType.includes('grade12')) {
           if (!academic.hsc) academic.hsc = {};
-          if (inst) { academic.hsc.institute = inst; academicUpdated = true; }
-          if (score) { academic.hsc.percentage = String(score); academicUpdated = true; }
+          if (inst) { academic.hsc.institute = inst; academic.hsc.school = inst; academic.hsc.college = inst; academicUpdated = true; }
+          if (score) { academic.hsc.percentage = String(score); academic.hsc.score = String(score); academicUpdated = true; }
+          if (board) { academic.hsc.board = board; academicUpdated = true; }
+          if (year) { academic.hsc.passingYear = year; academic.hsc.year = year; academicUpdated = true; }
+          if (rollNum) { academic.hsc.rollNumber = rollNum; academic.hsc.hallTicket = rollNum; academicUpdated = true; }
+          if (secured) { academic.hsc.totalMarksSecured = String(secured); academicUpdated = true; }
+          if (max) { academic.hsc.totalMarksMaximum = String(max); academicUpdated = true; }
+
+          // Mirror intermediate/12th alias keys
+          academic.intermediate = { ...academic.hsc };
+          academic['12th'] = { ...academic.hsc };
+          academic.marksheet_12 = { ...academic.hsc };
         }
 
         if (academicUpdated) {
@@ -1183,10 +1294,17 @@ export class UsersService implements OnModuleInit {
           try {
             const ugInst = academic.ug?.institute || payload.bachelorsDegree || null;
             const ugScore = academic.ug?.percentage ? parseFloat(academic.ug.percentage) : null;
+            const interBoard = academic.hsc?.board || academic.intermediate?.board || null;
+            const interInst = academic.hsc?.institute || academic.intermediate?.institute || null;
+            const interScore = academic.hsc?.percentage ? parseFloat(academic.hsc.percentage) : null;
+
             await this.db.from('UserAcademicProfile').upsert({
               userId,
               bachelorsDegree: ugInst,
               gpa: ugScore,
+              twelfthBoard: interBoard,
+              twelfthSchool: interInst,
+              twelfthPercentage: interScore,
               updatedAt: new Date().toISOString()
             }, { onConflict: 'userId' });
           } catch (_) {}
@@ -1568,8 +1686,20 @@ export class UsersService implements OnModuleInit {
       }
     }
 
+    // Immediate Auto-assignment via AssignmentService
+    if (this.assignmentService) {
+      try {
+        const assignRes = await this.assignmentService.assignLoan(application.id, 'mobile_api_auto_assign');
+        console.log(`[UsersService] Direct auto-assignment result for application ${application.id}:`, assignRes);
+        if (assignRes?.assignedStaffId) {
+          application.assignedStaffId = assignRes.assignedStaffId;
+        }
+      } catch (assignErr: any) {
+        console.error(`[UsersService] Direct auto-assignment failed for ${application.id}:`, assignErr?.message);
+      }
+    }
+
     // Emit application created event - AssignmentService listens to this for auto round-robin assignment.
-    // We delay slightly to ensure the DB record is fully committed before AssignmentService queries it.
     try {
       const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
       const eventPayload = {
@@ -1585,7 +1715,7 @@ export class UsersService implements OnModuleInit {
       };
       // Fire immediately
       this.eventEmitter.emit('application.created', eventPayload);
-      // Also fire after 2 seconds as a retry safety net (handles race conditions where DB commit lags)
+      // Also fire after 2 seconds as a retry safety net
       setTimeout(() => {
         this.eventEmitter.emit('application.created', eventPayload);
       }, 2000);
@@ -2219,36 +2349,57 @@ export class UsersService implements OnModuleInit {
       }
       if (!coappObj || typeof coappObj !== 'object') coappObj = {};
 
+      const studentFirstName = (userWithActivity?.firstName || '').trim().toLowerCase();
+      const studentLastName = (userWithActivity?.lastName || '').trim().toLowerCase();
+      const studentFullName = `${studentFirstName} ${studentLastName}`.trim().toLowerCase();
+      const passportOrigName = (familyObj?.passportOriginalName || userWithActivity?.passportOriginalName || '').trim().toLowerCase();
+
+      const isInvalidParentName = (nameVal?: string) => {
+        if (!nameVal || !nameVal.trim()) return true;
+        const lower = nameVal.trim().toLowerCase();
+        if (['mother', 'father', 'coapplicant', 'student', 'na', 'n/a', 'none', 'null', 'undefined', 'enter name'].includes(lower)) return true;
+        if (studentFullName && studentFullName.length > 2 && (lower === studentFullName || (lower.includes(studentFullName) && lower.length <= studentFullName.length + 3))) return true;
+        if (passportOrigName && passportOrigName.length > 2 && (lower === passportOrigName || (lower.includes(passportOrigName) && lower.length <= passportOrigName.length + 3))) return true;
+        if (studentFirstName && studentFirstName.length > 2 && lower === studentFirstName) return true;
+        return false;
+      };
+
       const parentsList = parentsData || [];
       const fatherRec = parentsList.find((p: any) => p.relation === 'father');
       const motherRec = parentsList.find((p: any) => p.relation === 'mother');
       const coappRec = parentsList.find((p: any) => p.relation === 'coapplicant');
 
       if (fatherRec) {
-        if (!familyObj.fatherName && fatherRec.name) familyObj.fatherName = fatherRec.name;
+        if (isInvalidParentName(familyObj.fatherName) && fatherRec.name && !isInvalidParentName(fatherRec.name)) familyObj.fatherName = fatherRec.name;
         if (!familyObj.fatherAadhar && fatherRec.aadharNumber) familyObj.fatherAadhar = fatherRec.aadharNumber;
         if (!familyObj.fatherPan && fatherRec.panNumber) familyObj.fatherPan = fatherRec.panNumber;
       }
 
       if (motherRec) {
-        if (!familyObj.motherName && motherRec.name) familyObj.motherName = motherRec.name;
+        if (isInvalidParentName(familyObj.motherName) && motherRec.name && !isInvalidParentName(motherRec.name)) familyObj.motherName = motherRec.name;
         if (!familyObj.motherAadhar && motherRec.aadharNumber) familyObj.motherAadhar = motherRec.aadharNumber;
         if (!familyObj.motherPan && motherRec.panNumber) familyObj.motherPan = motherRec.panNumber;
       }
 
-      if (userWithActivity?.fatherName && (!familyObj.fatherName || familyObj.fatherName.trim().toLowerCase() === 'father')) {
+      if (userWithActivity?.fatherName && isInvalidParentName(familyObj.fatherName) && !isInvalidParentName(userWithActivity.fatherName)) {
         familyObj.fatherName = userWithActivity.fatherName;
       }
-      if (userWithActivity?.motherName && (!familyObj.motherName || familyObj.motherName.trim().toLowerCase() === 'mother')) {
+      if (userWithActivity?.motherName && isInvalidParentName(familyObj.motherName) && !isInvalidParentName(userWithActivity.motherName)) {
         familyObj.motherName = userWithActivity.motherName;
       }
 
       const getDocFieldServer = (types: string[], fields: string[]) => {
         for (const t of types) {
           const d = (documents || []).find((doc: any) => {
-            const type = (doc.docType || '').toLowerCase();
-            const target = t.toLowerCase();
-            return type === target || type.includes(target) || target.includes(type);
+            const type = (doc.docType || '').toLowerCase().trim();
+            const target = t.toLowerCase().trim();
+            // NEVER match student documents when searching for parent/coapplicant documents
+            if (type.startsWith('student_') || type === 'aadhar' || type === 'aadhaar' || type === 'pan' || type === 'passport') {
+              if (!target.startsWith('student_') && target !== 'aadhar' && target !== 'aadhaar' && target !== 'pan' && target !== 'passport') {
+                return false;
+              }
+            }
+            return type === target || type.startsWith(target + '_');
           });
           if (d) {
             let meta = d.verificationMetadata;
@@ -2270,26 +2421,28 @@ export class UsersService implements OnModuleInit {
         return undefined;
       };
 
-      const docMotherName = getDocFieldServer(['mother_aadhar', 'mother_aadhaar', 'mother_pan', 'coapplicant_aadhar', 'coapplicant_pan'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
-      const docMotherAadhar = getDocFieldServer(['mother_aadhar', 'mother_aadhaar', 'coapplicant_aadhar', 'coapplicant_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
-      const docMotherPan = getDocFieldServer(['mother_pan', 'coapplicant_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
+      const docMotherName = getDocFieldServer(['mother_aadhar', 'mother_aadhaar', 'mother_pan', 'mother_passport'], ['full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name', 'mother_name', 'motherName', 'mother_full_name']) || getDocFieldServer(['passport'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'name_of_mother']);
+      const docMotherAadhar = getDocFieldServer(['mother_aadhar', 'mother_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
+      const docMotherPan = getDocFieldServer(['mother_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
 
-      const docFatherName = getDocFieldServer(['father_aadhar', 'father_aadhaar', 'father_pan', 'coapplicant_aadhar', 'coapplicant_pan'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
-      const docFatherAadhar = getDocFieldServer(['father_aadhar', 'father_aadhaar', 'coapplicant_aadhar', 'coapplicant_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
-      const docFatherPan = getDocFieldServer(['father_pan', 'coapplicant_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
+      const docFatherName = getDocFieldServer(['father_aadhar', 'father_aadhaar', 'father_pan', 'father_passport'], ['full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name', 'father_name', 'fatherName', 'father_full_name']) || getDocFieldServer(['passport'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'name_of_father', 'guardian_name', 'legal_guardian_name']);
+      const docFatherAadhar = getDocFieldServer(['father_aadhar', 'father_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
+      const docFatherPan = getDocFieldServer(['father_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
 
-      const isPlaceholderName = (nameVal?: string) => !nameVal || nameVal.trim().toLowerCase() === 'mother' || nameVal.trim().toLowerCase() === 'father';
+      const docCoappName = getDocFieldServer(['coapplicant_aadhar', 'coapplicant_aadhaar', 'coapplicant_pan', 'co_applicant_aadhar', 'co_applicant_pan'], ['full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
+      const docCoappAadhar = getDocFieldServer(['coapplicant_aadhar', 'coapplicant_aadhaar', 'co_applicant_aadhar', 'co_applicant_aadhaar'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
+      const docCoappPan = getDocFieldServer(['coapplicant_pan', 'co_applicant_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
 
-      if (isPlaceholderName(familyObj.motherName) && docMotherName) familyObj.motherName = docMotherName;
+      if (isInvalidParentName(familyObj.motherName) && docMotherName && !isInvalidParentName(docMotherName)) familyObj.motherName = docMotherName;
       if (!familyObj.motherAadhar && docMotherAadhar) familyObj.motherAadhar = docMotherAadhar;
       if (!familyObj.motherPan && docMotherPan) familyObj.motherPan = docMotherPan;
 
-      if (isPlaceholderName(familyObj.fatherName) && docFatherName) familyObj.fatherName = docFatherName;
+      if (isInvalidParentName(familyObj.fatherName) && docFatherName && !isInvalidParentName(docFatherName)) familyObj.fatherName = docFatherName;
       if (!familyObj.fatherAadhar && docFatherAadhar) familyObj.fatherAadhar = docFatherAadhar;
       if (!familyObj.fatherPan && docFatherPan) familyObj.fatherPan = docFatherPan;
 
       // Auto-upsert into parents table if details exist
-      const finalMotherName = (!isPlaceholderName(familyObj.motherName) ? familyObj.motherName : undefined) || (!isPlaceholderName(motherRec?.name) ? motherRec?.name : undefined) || docMotherName;
+      const finalMotherName = (!isInvalidParentName(familyObj.motherName) ? familyObj.motherName : undefined) || (!isInvalidParentName(motherRec?.name) ? motherRec?.name : undefined) || (!isInvalidParentName(docMotherName) ? docMotherName : undefined);
       const finalMotherAadhar = familyObj.motherAadhar || motherRec?.aadharNumber || docMotherAadhar;
       const finalMotherPan = familyObj.motherPan || motherRec?.panNumber || docMotherPan;
       if (finalMotherName || finalMotherAadhar || finalMotherPan) {
@@ -2300,7 +2453,7 @@ export class UsersService implements OnModuleInit {
         }).catch(() => {});
       }
 
-      const finalFatherName = (!isPlaceholderName(familyObj.fatherName) ? familyObj.fatherName : undefined) || (!isPlaceholderName(fatherRec?.name) ? fatherRec?.name : undefined) || docFatherName;
+      const finalFatherName = (!isInvalidParentName(familyObj.fatherName) ? familyObj.fatherName : undefined) || (!isInvalidParentName(fatherRec?.name) ? fatherRec?.name : undefined) || (!isInvalidParentName(docFatherName) ? docFatherName : undefined);
       const finalFatherAadhar = familyObj.fatherAadhar || fatherRec?.aadharNumber || docFatherAadhar;
       const finalFatherPan = familyObj.fatherPan || fatherRec?.panNumber || docFatherPan;
       if (finalFatherName || finalFatherAadhar || finalFatherPan) {
@@ -2311,13 +2464,23 @@ export class UsersService implements OnModuleInit {
         }).catch(() => {});
       }
 
-      // Sync coapplicant details if coapplicant is Father or Mother
+      // Sync coapplicant details from coapplicant records or explicit coapplicant documents
+      if (coappRec) {
+        if (!coappObj.name && coappRec.name && !isInvalidParentName(coappRec.name)) coappObj.name = coappRec.name;
+        if (!coappObj.aadhar && coappRec.aadharNumber) coappObj.aadhar = coappRec.aadharNumber;
+        if (!coappObj.pan && coappRec.panNumber) coappObj.pan = coappRec.panNumber;
+      }
+      if (docCoappName && !coappObj.name && !isInvalidParentName(docCoappName)) coappObj.name = docCoappName;
+      if (docCoappAadhar && !coappObj.aadhar) coappObj.aadhar = docCoappAadhar;
+      if (docCoappPan && !coappObj.pan) coappObj.pan = docCoappPan;
+
+      // Sync coapplicant details if coapplicant is Father or Mother (only if real father/mother details exist)
       const coappRelation = String(coappObj.relation || userWithActivity?.coApplicantRelation || '').toLowerCase().trim();
       if (coappRelation === 'father') {
-        if (!coappObj.name && finalFatherName) coappObj.name = finalFatherName;
+        if (!coappObj.name && finalFatherName && !isInvalidParentName(finalFatherName)) coappObj.name = finalFatherName;
         if (!coappObj.aadhar && finalFatherAadhar) coappObj.aadhar = finalFatherAadhar;
         if (!coappObj.pan && finalFatherPan) coappObj.pan = finalFatherPan;
-        if (finalFatherName || finalFatherAadhar || finalFatherPan) {
+        if ((finalFatherName && !isInvalidParentName(finalFatherName)) || finalFatherAadhar || finalFatherPan) {
           this.upsertParentRecord(userId, 'coapplicant', {
             name: finalFatherName,
             aadharNumber: finalFatherAadhar,
@@ -2326,10 +2489,10 @@ export class UsersService implements OnModuleInit {
           }).catch(() => {});
         }
       } else if (coappRelation === 'mother') {
-        if (!coappObj.name && finalMotherName) coappObj.name = finalMotherName;
+        if (!coappObj.name && finalMotherName && !isInvalidParentName(finalMotherName)) coappObj.name = finalMotherName;
         if (!coappObj.aadhar && finalMotherAadhar) coappObj.aadhar = finalMotherAadhar;
         if (!coappObj.pan && finalMotherPan) coappObj.pan = finalMotherPan;
-        if (finalMotherName || finalMotherAadhar || finalMotherPan) {
+        if ((finalMotherName && !isInvalidParentName(finalMotherName)) || finalMotherAadhar || finalMotherPan) {
           this.upsertParentRecord(userId, 'coapplicant', {
             name: finalMotherName,
             aadharNumber: finalMotherAadhar,

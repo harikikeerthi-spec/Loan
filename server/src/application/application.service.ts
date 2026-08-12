@@ -14,7 +14,7 @@ import { AssignmentService } from '../assignment/assignment.service';
 
 const APPLICATION_STAGES = {
   application_submitted: { order: 1, label: 'Application Submitted', progress: 10 },
-  document_verification: { order: 2, label: 'Document Verification', progress: 30 },
+  document_verification: { order: 2, label: 'Documents', progress: 30 },
   credit_check: { order: 3, label: 'Credit Check', progress: 50 },
   bank_review: { order: 4, label: 'Bank Review', progress: 70 },
   sanction: { order: 5, label: 'Sanction', progress: 90 },

@@ -169,14 +169,12 @@ export class AssignmentService {
 
     // STEP 1 — Critical write: assignedStaffId (the only field we MUST set for routing)
     // This uses only the base column guaranteed to exist in the DB schema.
-    const { data: updateRes, error: updateErr } = await this.db
+    const { error: updateErr } = await this.db
       .from('LoanApplication')
       .update({ assignedStaffId: staffUserId })
-      .eq('id', loan.id)
-      .select('id, assignedStaffId')
-      .maybeSingle();
+      .eq('id', loan.id);
 
-    if (updateErr || !updateRes) {
+    if (updateErr) {
       this.logger.error(`[AssignmentEngine] Critical assignedStaffId write failed for loan ${loan.id}:`, updateErr);
       return { success: false, message: 'Loan assignment failed: ' + (updateErr?.message || 'unknown error') };
     }

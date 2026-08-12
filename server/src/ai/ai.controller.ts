@@ -450,88 +450,166 @@ export class AiController {
       throw new BadRequestException('University and country are required');
     }
 
-    const uniLower = data.university.trim().toLowerCase();
-    const countryLower = data.country.trim().toLowerCase();
+    const universityName = data.university.trim();
+    const countryName = data.country.trim();
+    const uniLower = universityName.toLowerCase();
+    const countryLower = countryName.toLowerCase();
 
-    // Fast-pass matching for known digital/accredited/international universities & common keywords
-    const knownCountryUniversities: Record<string, string[]> = {
-      germany: [
-        'tomorrow university', 'tomorrow university of applied sciences', 'tou',
-        'iu international', 'iu university', 'srh', 'whu', 'bsbi', 'gisma',
-        'constructor university', 'klu', 'frankfurt school', 'esmt', 'tum',
-        'technical university of munich', 'rwth', 'lmu', 'heidelberg', 'fau',
-        'kit', 'humboldt', 'free university of berlin', 'tu berlin', 'stuttgart',
-        'darmstadt', 'dresden', 'bonn', 'gottingen', 'mannheim', 'cologne',
-        'hamburg', 'leipzig', 'freiburg', 'marburg', 'tubingen', 'wurzburg',
-        'ulm', 'augsburg', 'bremen', 'hannover', 'kiel', 'mainz', 'munster',
-        'paderborn', 'rostock', 'siegen', 'trier', 'kassel', 'koblenz', 'passau',
-        'bayreuth', 'bamberg', 'regensburg', 'hochschule', 'fachhochschule'
-      ],
-      usa: [
-        'mit', 'harvard', 'stanford', 'caltech', 'columbia', 'cmu', 'nyu', 'ucla',
-        'uc berkeley', 'cornell', 'yale', 'princeton', 'upenn', 'northwestern',
-        'snhu', 'wgu', 'minerva'
-      ],
-      uk: [
-        'oxford', 'cambridge', 'imperial', 'ucl', 'kcl', 'edinburgh', 'manchester',
-        'warwick', 'bristol', 'glasgow', 'birmingham', 'leeds', 'sheffield', 'open university'
-      ],
-      canada: [
-        'toronto', 'ubc', 'mcgill', 'waterloo', 'alberta', 'mcmaster', 'western', 'montreal', 'calgary', 'ottawa'
-      ],
-      australia: [
-        'melbourne', 'sydney', 'unsw', 'uq', 'monash', 'uwa', 'adelaide', 'anu', 'uts', 'rmit'
-      ]
-    };
+    // 1. Generic name check (e.g., "university", "college", "school", "academy", "institute", "polytechnic")
+    const genericWords = new Set([
+      'university', 'universities', 'college', 'colleges', 'school', 'schools',
+      'academy', 'academies', 'institute', 'institutes', 'institution', 'institutions',
+      'polytechnic', 'polytechnics', 'hochschule', 'fachhochschule', 'campus',
+      'education', 'educational', 'studies', 'study', 'center', 'centre',
+      'of', 'and', '&', 'the', 'a', 'an', 'in', 'for', 'my', 'your', 'our', 'higher', 'degree'
+    ]);
+
+    const words = uniLower.replace(/[\/\\.,\-_&()]/g, ' ').split(/\s+/).filter(Boolean);
+    const isGeneric = words.length === 0 || words.every(word => genericWords.has(word));
+
+    if (isGeneric) {
+      return {
+        success: true,
+        valid: false,
+        message: `"${universityName}" is a generic term. Please enter a specific university or college name (e.g., Harvard University or Technical University of Munich).`,
+        correctedCountry: null
+      };
+    }
+
+    // 2. Famous university mapping for fast-pass validation and country mismatch detection
+    const FAMOUS_UNIVERSITIES: { country: string; countryKey: string; keywords: string[] }[] = [
+      {
+        country: 'United States',
+        countryKey: 'usa',
+        keywords: [
+          'harvard', 'stanford', 'massachusetts institute of technology', 'mit', 'caltech',
+          'columbia university', 'carnegie mellon', 'cmu', 'nyu', 'new york university',
+          'ucla', 'uc berkeley', 'cornell', 'yale', 'princeton', 'upenn', 'university of pennsylvania',
+          'northwestern university', 'snhu', 'wgu', 'minerva', 'northeastern university',
+          'georgia tech', 'purdue', 'texas a&m', 'university of texas', 'johns hopkins', 'duke',
+          'university of california', 'boston university', 'usc', 'penn state', 'arizona state'
+        ]
+      },
+      {
+        country: 'United Kingdom',
+        countryKey: 'uk',
+        keywords: [
+          'university of oxford', 'oxford university', 'oxford',
+          'university of cambridge', 'cambridge university', 'cambridge',
+          'imperial college london', 'imperial college', 'ucl', 'university college london',
+          'king\'s college london', 'kcl', 'university of edinburgh', 'university of manchester',
+          'warwick', 'bristol', 'glasgow', 'birmingham', 'leeds', 'sheffield', 'open university',
+          'nottingham', 'southampton'
+        ]
+      },
+      {
+        country: 'Germany',
+        countryKey: 'germany',
+        keywords: [
+          'tomorrow university', 'tomorrow university of applied sciences', 'tou',
+          'iu international', 'iu university', 'srh', 'whu', 'bsbi', 'gisma',
+          'constructor university', 'klu', 'frankfurt school', 'esmt', 'tum',
+          'technical university of munich', 'rwth aachen', 'lmu munich', 'heidelberg university',
+          'fau', 'humboldt university', 'free university of berlin', 'tu berlin', 'tu dresden', 'tu darmstadt'
+        ]
+      },
+      {
+        country: 'Canada',
+        countryKey: 'canada',
+        keywords: [
+          'university of toronto', 'ubc', 'university of british columbia', 'mcgill',
+          'university of waterloo', 'mcmaster', 'university of alberta', 'western university',
+          'simon fraser', 'concordia university', 'york university'
+        ]
+      },
+      {
+        country: 'Australia',
+        countryKey: 'australia',
+        keywords: [
+          'university of melbourne', 'university of sydney', 'unsw', 'university of new south wales',
+          'monash university', 'university of queensland', 'anu', 'australian national university',
+          'university of western australia', 'university of adelaide', 'uts', 'rmit'
+        ]
+      },
+      {
+        country: 'India',
+        countryKey: 'india',
+        keywords: [
+          'iit', 'indian institute of technology', 'bits pilani', 'iim', 'delhi university',
+          'anna university', 'vit', 'manipal university', 'srm university', 'iisc'
+        ]
+      }
+    ];
 
     let targetCountryKey = '';
     if (countryLower.includes('germany') || countryLower.includes('deutschland')) targetCountryKey = 'germany';
     else if (countryLower.includes('usa') || countryLower.includes('united states') || countryLower.includes('america')) targetCountryKey = 'usa';
-    else if (countryLower.includes('uk') || countryLower.includes('united kingdom') || countryLower.includes('britain') || countryLower.includes('england')) targetCountryKey = 'uk';
+    else if (countryLower.includes('uk') || countryLower.includes('united kingdom') || countryLower.includes('britain') || countryLower.includes('england') || countryLower.includes('scotland') || countryLower.includes('wales')) targetCountryKey = 'uk';
     else if (countryLower.includes('canada')) targetCountryKey = 'canada';
     else if (countryLower.includes('australia')) targetCountryKey = 'australia';
+    else if (countryLower.includes('india')) targetCountryKey = 'india';
 
-    if (targetCountryKey && knownCountryUniversities[targetCountryKey]) {
-      const isKnownMatch = knownCountryUniversities[targetCountryKey].some(term => uniLower.includes(term));
-      if (isKnownMatch) {
-        return {
-          success: true,
-          valid: true,
-          correctedCountry: null
-        };
+    for (const group of FAMOUS_UNIVERSITIES) {
+      const match = group.keywords.some(kw => {
+        if (kw.length <= 3) {
+          return words.includes(kw);
+        }
+        return uniLower.includes(kw);
+      });
+
+      if (match) {
+        if (targetCountryKey && group.countryKey === targetCountryKey) {
+          return {
+            success: true,
+            valid: true,
+            correctedCountry: null
+          };
+        } else if (targetCountryKey && group.countryKey !== targetCountryKey) {
+          return {
+            success: true,
+            valid: false,
+            message: `"${universityName}" is located in ${group.country}, not ${countryName}.`,
+            correctedCountry: group.country
+          };
+        }
       }
     }
 
+    // 3. AI Verification Prompt for other institutions
     const prompt = `You are an expert global higher education verification system.
-    Task: Verify if the university "${data.university}" is located in, has a campus in, is accredited in, or operates in "${data.country}".
-    
-    CRITICAL REAL-WORLD EDUCATION FACTS & RULES:
-    1. "Tomorrow University of Applied Sciences" (Tomorrow University / ToU) is a state-recognized, accredited higher education institution in GERMANY (headquartered in Frankfurt am Main, Germany).
-    2. Recognise state-accredited, digital, online, private, and international universities (e.g., IU International University, SRH, WHU, BSBI, GISMA, Constructor University, Frankfurt School, ESMT in Germany; WGU, SNHU, Minerva in USA; Open University in UK).
-    3. Accept common variations, abbreviations, native names, or nicknames (e.g. "MIT", "TUM", "UCL", "ETH", "NUS", "IIT", "TU Munich", "RWTH", "Imperial").
-    4. If the university operates in, is registered in, or has degree-granting authority/campuses in "${data.country}", return: { "valid": true }
-    5. DO NOT falsely reject real universities. If the input name appears to be a real higher education institution or contains standard academic terms (e.g., "University", "College", "Institute", "Hochschule", "Fachhochschule", "School of", "Academy", "Polytechnic") in "${data.country}", err on the side of VALIDITY and return: { "valid": true }
-    6. ONLY return valid = false if you are 100% CERTAIN that the university is exclusively located in another country (e.g. "Harvard University" in "Germany") or if the input is purely random nonsense gibberish (e.g. "qwerty12345").
-    
-    Respond strictly with valid JSON:
-    {
-      "valid": boolean,
-      "correctedCountry": string
-    }`;
+Task: Evaluate if "${universityName}" is a real, accredited higher education institution located in, accredited in, or operating in "${countryName}".
+
+STRICT EVALUATION RULES:
+1. GENERIC CHECK: If "${universityName}" is purely a generic term or list of generic terms (e.g. "university", "college", "school", "academy", "institute", "university/college/school/academy/institute"), return: { "valid": false, "correctedCountry": null }
+2. COUNTRY VERIFICATION: Verify if "${universityName}" actually belongs to "${countryName}".
+   - If "${universityName}" is a real university located in a DIFFERENT country, return: { "valid": false, "correctedCountry": "Actual Country Name" }
+   - If "${universityName}" is NOT a real accredited university in "${countryName}", return: { "valid": false, "correctedCountry": null }
+3. VALID MATCH: If "${universityName}" is a real, accredited, state-recognized, digital, online, or private higher education institution operating in "${countryName}", return: { "valid": true, "correctedCountry": null }
+
+Respond strictly in valid JSON format:
+{
+  "valid": boolean,
+  "correctedCountry": string | null
+}`;
 
     try {
       const result = await this.openRouterService.getJson<{ valid: boolean; correctedCountry?: string }>(prompt);
-      
-      const finalValid = result.valid ?? true;
+      const finalValid = Boolean(result && result.valid);
 
       return {
         success: true,
         valid: finalValid,
-        correctedCountry: finalValid ? null : (result.correctedCountry || null)
+        message: finalValid ? null : `"${universityName}" is not a recognized university in ${countryName}.`,
+        correctedCountry: finalValid ? null : (result?.correctedCountry || null)
       };
     } catch (error) {
       console.error('AI University Country Check Failed:', error);
-      return { success: true, valid: true, correctedCountry: null };
+      return {
+        success: true,
+        valid: false,
+        message: `Unable to verify "${universityName}" for ${countryName}. Please check the university name and country.`,
+        correctedCountry: null
+      };
     }
   }
 
