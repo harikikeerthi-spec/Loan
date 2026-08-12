@@ -34,6 +34,63 @@ export default function DocumentVaultPage() {
         type: "info",
     });
 
+    const [passportModalData, setPassportModalData] = useState<{
+        isOpen: boolean;
+        extracted?: {
+            fatherName?: string;
+            motherName?: string;
+            fullName?: string;
+            dob?: string;
+            passportNo?: string;
+            gender?: string;
+            address?: string;
+            raw?: any;
+        };
+    }>({ isOpen: false });
+
+    const [parentDiscrepancyModalData, setParentDiscrepancyModalData] = useState<{
+        isOpen: boolean;
+        parentType?: 'father' | 'mother';
+        docType?: string;
+        extractedName?: string;
+        existingName?: string;
+        rawExtracted?: any;
+    }>({ isOpen: false });
+
+    const areNamesMatching = (name1?: string, name2?: string): boolean => {
+        if (!name1 || !name2) return true;
+        const clean1 = name1.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+        const clean2 = name2.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+        if (!clean1 || !clean2) return true;
+        if (clean1 === clean2) return true;
+
+        const words1 = clean1.split(/\s+/).filter(Boolean);
+        const words2 = clean2.split(/\s+/).filter(Boolean);
+
+        const firstName1 = words1[0];
+        const firstName2 = words2[0];
+        if (firstName1 && firstName2 && firstName1.length > 1 && firstName2.length > 1 && firstName1 !== firstName2) {
+            if (!firstName1.includes(firstName2) && !firstName2.includes(firstName1)) {
+                return false;
+            }
+        }
+
+        const set1 = new Set(words1.filter(w => w.length > 1));
+        const set2 = new Set(words2.filter(w => w.length > 1));
+        if (set1.size === 0 || set2.size === 0) return true;
+
+        let matches = 0;
+        set1.forEach(w => { if (set2.has(w)) matches++; });
+
+        const minSize = Math.min(set1.size, set2.size);
+        return matches >= Math.ceil(minSize * 0.7);
+    };
+
+    // Sequential Upload Requirement: Passport must be uploaded first
+    const isPassportUploaded = docs.some(
+        d => d.docType === 'passport' && (d.uploaded === true || d.status === 'uploaded' || d.status === 'verified')
+    );
+
     // Parallel Bulk Upload State
     const [bulkQueue, setBulkQueue] = useState<Array<{
         id: string;
@@ -93,6 +150,11 @@ export default function DocumentVaultPage() {
     };
 
     const handleParallelUpload = async () => {
+        if (!isPassportUploaded) {
+            showAlert("Passport Required First", "Please upload your Passport first before uploading other documents.", "warning");
+            return;
+        }
+
         const itemsToUpload = bulkQueue.filter(item => item.status === 'idle' || item.status === 'error');
         if (itemsToUpload.length === 0) return;
 
@@ -123,11 +185,20 @@ export default function DocumentVaultPage() {
                     formData.append('docName', docName);
                 }
 
-                await new Promise<void>((resolve, reject) => {
+                await new Promise<void>(async (resolve, reject) => {
+                    let csrfToken = getCsrfToken();
+                    if (!csrfToken) {
+                        csrfToken = await initializeCsrf();
+                    }
+
                     const xhr = new XMLHttpRequest();
+                    xhr.withCredentials = true;
                     xhr.open('POST', '/api/documents/upload', true);
                     if (token) {
                         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                    }
+                    if (csrfToken) {
+                        xhr.setRequestHeader('X-CSRF-Token', csrfToken);
                     }
 
                     xhr.upload.onprogress = (event) => {
@@ -369,12 +440,143 @@ export default function DocumentVaultPage() {
         return "description";
     };
 
+    const handleConfirmPassportDetails = async () => {
+        if (!passportModalData?.extracted || !user?.id) return;
+        const { fatherName, motherName, fullName, dob, gender, address } = passportModalData.extracted;
+
+        const baseProfile = profile || user || {};
+        let family = baseProfile.family || baseProfile.familyDetails || {};
+        if (typeof family === 'string') {
+            try { family = JSON.parse(family); } catch { family = {}; }
+        }
+        if (!family || typeof family !== 'object') family = {};
+
+        let coapp = baseProfile.coApplicant || {};
+        if (typeof coapp === 'string') {
+            try { coapp = JSON.parse(coapp); } catch { coapp = {}; }
+        }
+        if (!coapp || typeof coapp !== 'object') coapp = {};
+
+        const updatedFamily = {
+            ...family,
+            ...(fatherName ? { fatherName } : {}),
+            ...(motherName ? { motherName } : {}),
+            ...(fullName ? { passportOriginalName: fullName } : {}),
+        };
+
+        const rel = (coapp.relation || coappRelation || '').toLowerCase().trim();
+        let updatedCoapp = { ...coapp };
+        if (rel === 'father' && fatherName) {
+            updatedCoapp.name = fatherName;
+        } else if (rel === 'mother' && motherName) {
+            updatedCoapp.name = motherName;
+        }
+
+        let parsedFirstName: string | undefined = undefined;
+        let parsedLastName: string | undefined = undefined;
+        if (fullName) {
+            const parts = fullName.trim().split(/\s+/);
+            if (parts.length === 1) {
+                parsedFirstName = parts[0];
+                parsedLastName = "";
+            } else if (parts.length > 1) {
+                parsedFirstName = parts.slice(0, -1).join(" ");
+                parsedLastName = parts[parts.length - 1];
+            }
+        }
+
+        const updatedProfile = {
+            ...baseProfile,
+            ...(parsedFirstName ? { firstName: parsedFirstName } : {}),
+            ...(parsedLastName !== undefined ? { lastName: parsedLastName } : {}),
+            ...(fullName ? { passportOriginalName: fullName, nameAsInPassport: fullName } : {}),
+            ...(dob ? { dob, dateOfBirth: dob } : {}),
+            ...(gender ? { gender } : {}),
+            ...(address ? { address } : {}),
+            family: updatedFamily,
+            coApplicant: updatedCoapp
+        };
+
+        setProfile(updatedProfile);
+        setPassportModalData(prev => ({ ...prev, isOpen: false }));
+
+        try {
+            await onboardingApi.submit(updatedProfile);
+            const key = `dashboardDataUpdated_${user.id}`;
+            localStorage.setItem(key, String(Date.now()));
+            window.dispatchEvent(new Event('dashboard-data-changed'));
+            showAlert("Profile Updated", "Your profile and family details have been updated from your Passport!", "success");
+            await loadDocs(true);
+        } catch (err: any) {
+            console.error("Failed to update profile from passport details:", err);
+            showAlert("Update Notice", "Saved Passport to vault, but profile autofill update encountered an issue.", "info");
+        }
+    };
+
+    const handleOverwriteParentDetails = async () => {
+        if (!parentDiscrepancyModalData?.extractedName || !user?.id) return;
+        const { parentType, extractedName } = parentDiscrepancyModalData;
+
+        const baseProfile = profile || user || {};
+        let family = baseProfile.family || baseProfile.familyDetails || {};
+        if (typeof family === 'string') {
+            try { family = JSON.parse(family); } catch { family = {}; }
+        }
+        if (!family || typeof family !== 'object') family = {};
+
+        let coapp = baseProfile.coApplicant || {};
+        if (typeof coapp === 'string') {
+            try { coapp = JSON.parse(coapp); } catch { coapp = {}; }
+        }
+        if (!coapp || typeof coapp !== 'object') coapp = {};
+
+        const updatedFamily = {
+            ...family,
+            ...(parentType === 'father' ? { fatherName: extractedName } : { motherName: extractedName }),
+        };
+
+        const rel = (coapp.relation || coappRelation || '').toLowerCase().trim();
+        let updatedCoapp = { ...coapp };
+        if (rel === parentType) {
+            updatedCoapp.name = extractedName;
+        }
+
+        const updatedProfile = {
+            ...baseProfile,
+            family: updatedFamily,
+            coApplicant: updatedCoapp
+        };
+
+        setProfile(updatedProfile);
+        setParentDiscrepancyModalData(prev => ({ ...prev, isOpen: false }));
+
+        try {
+            await onboardingApi.submit(updatedProfile);
+            const key = `dashboardDataUpdated_${user.id}`;
+            localStorage.setItem(key, String(Date.now()));
+            window.dispatchEvent(new Event('dashboard-data-changed'));
+            showAlert("Parent Details Updated", `${parentType === 'father' ? 'Father' : 'Mother'} name updated to "${extractedName}" in your profile.`, "success");
+            await loadDocs(true);
+        } catch (err: any) {
+            console.error("Failed to update parent details:", err);
+            showAlert("Update Notice", "Saved document to vault, but profile overwrite encountered an issue.", "info");
+        }
+    };
+
     const triggerFileInput = (docType: string) => {
+        if (docType.toLowerCase() !== 'passport' && !isPassportUploaded) {
+            showAlert("Passport Required First", "Please upload your Passport first to unlock all other document upload slots.", "warning");
+            return;
+        }
         const input = document.getElementById(`file-input-${docType}`) as HTMLInputElement;
         if (input) input.click();
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docType: string, docName?: string) => {
+        if (docType.toLowerCase() !== 'passport' && !isPassportUploaded) {
+            showAlert("Passport Required First", "Please upload your Passport first before uploading other documents.", "warning");
+            return;
+        }
         const file = e.target.files?.[0];
         if (!file || !user?.id) {
             showAlert("Information Missing", "File or user information is missing.", "warning");
@@ -526,6 +728,61 @@ export default function DocumentVaultPage() {
             localStorage.setItem(key, String(Date.now()));
             window.dispatchEvent(new Event('dashboard-data-changed'));
 
+            const extracted = result.data?.ocrResult?.extractedFields || result.data?.verification?.details?.extractedFields || {};
+
+            if (docType.toLowerCase() === 'passport') {
+                const fatherName = extracted.father_name || extracted.fatherName || extracted.father_full_name;
+                const motherName = extracted.mother_name || extracted.motherName || extracted.mother_full_name;
+                const fullName = extracted.full_name || extracted.fullName || (extracted.given_names ? `${extracted.given_names} ${extracted.surname || ''}`.trim() : undefined);
+                const dob = extracted.dob || extracted.date_of_birth;
+                const passportNo = extracted.passport_number || extracted.passportNo;
+                const gender = extracted.gender;
+                const address = typeof extracted.address === 'string' ? extracted.address : (extracted.address?.address1 ? `${extracted.address.address1}, ${extracted.address.city || ''}` : undefined);
+
+                if (fatherName || motherName || fullName || dob || passportNo) {
+                    setPassportModalData({
+                        isOpen: true,
+                        extracted: {
+                            fatherName,
+                            motherName,
+                            fullName,
+                            dob,
+                            passportNo,
+                            gender,
+                            address,
+                            raw: extracted
+                        }
+                    });
+                }
+            }
+
+            const docTypeLower = docType.toLowerCase();
+            const isFatherDoc = docTypeLower.includes('father');
+            const isMotherDoc = docTypeLower.includes('mother');
+
+            if (isFatherDoc || isMotherDoc) {
+                const parentType = isFatherDoc ? 'father' : 'mother';
+                const extractedParentName = isFatherDoc
+                    ? (extracted.father_name || extracted.fatherName || extracted.father_full_name || extracted.full_name || extracted.fullName || extracted.person_name || extracted.holder_name || extracted.name || extracted.printed_name)
+                    : (extracted.mother_name || extracted.motherName || extracted.mother_full_name || extracted.full_name || extracted.fullName || extracted.person_name || extracted.holder_name || extracted.name || extracted.printed_name);
+
+                const activeProf = getActiveProfile();
+                const existingParentName = parentType === 'father'
+                    ? (activeProf.family?.fatherName || activeProf.fatherName || "")
+                    : (activeProf.family?.motherName || activeProf.motherName || "");
+
+                if (extractedParentName && existingParentName && !areNamesMatching(extractedParentName, existingParentName)) {
+                    setParentDiscrepancyModalData({
+                        isOpen: true,
+                        parentType,
+                        docType,
+                        extractedName: extractedParentName,
+                        existingName: existingParentName,
+                        rawExtracted: extracted
+                    });
+                }
+            }
+
             if (isAlreadyUploaded || result.wasAlreadyUploaded) {
                 showAlert(
                     "Document Updated",
@@ -545,6 +802,10 @@ export default function DocumentVaultPage() {
     };
 
     const handleDigilockerVerify = async (docType: string) => {
+        if (docType.toLowerCase() !== 'passport' && !isPassportUploaded) {
+            showAlert("Passport Required First", "Please upload your Passport first before using DigiLocker verification.", "warning");
+            return;
+        }
         if (!user?.id) {
             showAlert("User Identity Missing", "User identity not found. Please refresh the page.", "error");
             refreshUser();
@@ -554,6 +815,10 @@ export default function DocumentVaultPage() {
     };
 
     const handleSyncFromDigilocker = async (docType: string) => {
+        if (docType.toLowerCase() !== 'passport' && !isPassportUploaded) {
+            showAlert("Passport Required First", "Please upload your Passport first before syncing other documents.", "warning");
+            return;
+        }
         if (!user?.id) return;
         setUploadingDocs(prev => ({ ...prev, [docType]: true }));
         try {
@@ -604,6 +869,10 @@ export default function DocumentVaultPage() {
     };
 
     const handleAddOtherDocument = async (category: "student" | "coapplicant" | "parent") => {
+        if (!isPassportUploaded) {
+            showAlert("Passport Required First", "Please upload your Passport first before adding other document slots.", "warning");
+            return;
+        }
         const docName = prompt("Enter the name of the document you want to add:");
         if (!docName || !docName.trim()) return;
 
@@ -613,28 +882,8 @@ export default function DocumentVaultPage() {
 
         setUploadingDocs(prev => ({ ...prev, adding_requirement: true }));
         try {
-            const token = localStorage.getItem("accessToken");
-            const response = await fetch('/api/documents/requirement', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {})
-                },
-                body: JSON.stringify({
-                    userId: user?.id,
-                    docType: docType,
-                    docName: docName.trim()
-                })
-            });
-
-            if (!response.ok) {
-                let errorMessage = `Server error: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorData.error || errorMessage;
-                } catch { }
-                throw new Error(errorMessage);
-            }
+            if (!user?.id) throw new Error("User session expired. Please refresh.");
+            await documentApi.addRequirement(user.id, docType, docName.trim());
 
             showAlert("Added Success", `Placeholder for ${docName.trim()} created successfully!`, "success");
             await loadDocs(true);
@@ -895,6 +1144,15 @@ export default function DocumentVaultPage() {
                                                 Sync to Vault
                                             </button>
                                         </div>
+                                    ) : !isPassportUploaded && req.type !== 'passport' ? (
+                                        <button
+                                            disabled
+                                            className="w-full py-2.5 bg-gray-100 text-gray-400 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 border border-gray-200 cursor-not-allowed"
+                                            title="Please upload your Passport first to unlock this document slot"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">lock</span>
+                                            Locked (Passport First)
+                                        </button>
                                     ) : (
                                         <>
                                             <button
@@ -985,6 +1243,34 @@ export default function DocumentVaultPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {!isPassportUploaded && (
+                            <div className="mb-10 p-6 bg-gradient-to-r from-purple-900/10 via-purple-500/10 to-indigo-500/10 border-2 border-dashed border-[#6605c7]/40 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl shadow-purple-500/5 animate-fade-in relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-[#6605c7]/10 rounded-full blur-2xl" />
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div className="w-14 h-14 rounded-2xl bg-[#6605c7] text-white flex items-center justify-center shrink-0 shadow-xl shadow-purple-500/30 animate-pulse">
+                                        <span className="material-symbols-outlined text-[28px]">travel_explore</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
+                                            Step 1 Mandatory Requirement: Upload Passport First
+                                            <span className="px-2.5 py-0.5 bg-[#6605c7] text-white text-[10px] font-black rounded-full uppercase tracking-widest shadow-sm">Required Step 1</span>
+                                        </h3>
+                                        <p className="text-xs text-gray-600 font-medium mt-1 leading-relaxed max-w-2xl">
+                                            To ensure identity verification and automatic detail extraction, you must upload your <strong>Passport</strong> first. All other document slots will unlock automatically once your Passport is uploaded.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => triggerFileInput("passport")}
+                                    disabled={!!uploadingDocs["passport"]}
+                                    className="px-6 py-3 bg-[#6605c7] hover:bg-[#5504a6] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-500/30 shrink-0 flex items-center justify-center gap-2 active:scale-95 relative z-10"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">upload</span>
+                                    Upload Passport Now
+                                </button>
+                            </div>
+                        )}
 
                         {/* <div className="mb-12">
                     <div className="bg-gradient-to-br from-[#004791] to-[#0b84ff] rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-500/20">
@@ -1135,6 +1421,137 @@ export default function DocumentVaultPage() {
                     onClose={() => setShowConsentModal(false)}
                 />
             )}
+
+            {passportModalData.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-purple-100 relative overflow-hidden animate-scale-up">
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
+
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-[#6605c7] text-white flex items-center justify-center shadow-lg shadow-purple-500/30">
+                                <span className="material-symbols-outlined text-[24px]">travel_explore</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-gray-900 tracking-tight">Passport Details Extracted</h3>
+                                <p className="text-xs text-gray-500 font-medium">Verify information extracted from your uploaded Passport</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-purple-50/50 rounded-2xl p-5 border border-purple-100/60 mb-6 space-y-3">
+                            {passportModalData.extracted?.fullName && (
+                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Student Name</span>
+                                    <span className="text-xs font-black text-gray-900">{passportModalData.extracted.fullName}</span>
+                                </div>
+                            )}
+                            {passportModalData.extracted?.fatherName && (
+                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Father's Name</span>
+                                    <span className="text-xs font-black text-[#6605c7]">{passportModalData.extracted.fatherName}</span>
+                                </div>
+                            )}
+                            {passportModalData.extracted?.motherName && (
+                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Mother's Name</span>
+                                    <span className="text-xs font-black text-[#6605c7]">{passportModalData.extracted.motherName}</span>
+                                </div>
+                            )}
+                            {passportModalData.extracted?.passportNo && (
+                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Passport Number</span>
+                                    <span className="text-xs font-black text-gray-900">{passportModalData.extracted.passportNo}</span>
+                                </div>
+                            )}
+                            {passportModalData.extracted?.dob && (
+                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date of Birth</span>
+                                    <span className="text-xs font-black text-gray-900">{passportModalData.extracted.dob}</span>
+                                </div>
+                            )}
+                            {passportModalData.extracted?.gender && (
+                                <div className="flex justify-between items-center py-1">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Gender</span>
+                                    <span className="text-xs font-black text-gray-900 capitalize">{passportModalData.extracted.gender}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <p className="text-xs text-gray-600 mb-6 leading-relaxed font-medium">
+                            Would you like to automatically update your profile and loan application details with these verified Passport records?
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setPassportModalData(prev => ({ ...prev, isOpen: false }))}
+                                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-all"
+                            >
+                                Skip for Now
+                            </button>
+                            <button
+                                onClick={handleConfirmPassportDetails}
+                                className="flex-1 py-3 bg-[#6605c7] hover:bg-[#5504a6] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                Confirm & Update Profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {parentDiscrepancyModalData.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-amber-100 relative overflow-hidden animate-scale-up">
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl" />
+
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/30">
+                                <span className="material-symbols-outlined text-[24px]">published_with_changes</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-gray-900 tracking-tight">Parent Details Discrepancy</h3>
+                                <p className="text-xs text-amber-700 font-bold uppercase tracking-wider">Permission Required to Update</p>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-gray-600 mb-5 font-medium leading-relaxed">
+                            The {parentDiscrepancyModalData.parentType === 'father' ? "Father's" : "Mother's"} name on the newly uploaded document does not match your existing Passport/profile record.
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Existing Passport Record</div>
+                                <div className="text-xs font-black text-gray-800 break-words">{parentDiscrepancyModalData.existingName || "Not set"}</div>
+                            </div>
+                            <div className="bg-purple-50 p-4 rounded-2xl border border-purple-200">
+                                <div className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest mb-1">New Document Record</div>
+                                <div className="text-xs font-black text-[#6605c7] break-words">{parentDiscrepancyModalData.extractedName}</div>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-gray-700 mb-6 font-semibold">
+                            Can we overwrite the previous {parentDiscrepancyModalData.parentType === 'father' ? "Father" : "Mother"} details in your profile with the details from this document?
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setParentDiscrepancyModalData(prev => ({ ...prev, isOpen: false }))}
+                                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-all"
+                            >
+                                No, Keep Previous Details
+                            </button>
+                            <button
+                                onClick={handleOverwriteParentDetails}
+                                className="flex-1 py-3 bg-[#6605c7] hover:bg-[#5504a6] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">sync_saved_loc</span>
+                                Yes, Overwrite Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <AlertModal
                 isOpen={alertState.isOpen}
                 onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}

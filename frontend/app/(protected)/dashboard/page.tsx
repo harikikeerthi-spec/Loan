@@ -14,6 +14,8 @@ import { getProfileDocumentRequirements } from "@/lib/documentRequirements";
 import DatePicker from "@/components/DatePicker";
 import SupportTicketModal from "@/components/SupportTicketModal";
 import UserSupportTicketsView from "@/components/UserSupportTicketsView";
+import MultiPartyChatInterface from "@/components/Chat/MultiPartyChatInterface";
+import ChatInterface from "@/components/Chat/ChatInterface";
 import { formatPhone, isPhoneValid } from "@/lib/validation";
 
 interface DashboardData {
@@ -316,6 +318,7 @@ export default function DashboardPage() {
     const [data, setData] = useState<DashboardData>({});
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
+    const [selectedChatApp, setSelectedChatApp] = useState<any>(null);
     const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
     const [selectedAppDetails, setSelectedAppDetails] = useState<any>(null);
     const [connectingSupport, setConnectingSupport] = useState(false);
@@ -703,13 +706,13 @@ export default function DashboardPage() {
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div>
                             <div className="flex flex-wrap items-center gap-2 mb-4">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider">
+                                {/* <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider">
                                     <span className="relative flex h-2 w-2">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                                     </span>
                                     Active Account
-                                </div>
+                                </div> */}
                                 {user?.id && (
                                     <div className="inline-flex items-center gap-1.5 px-3 py-3 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider border border-[#6605c7]/10 shadow-sm">
                                         <span className="material-symbols-outlined text-[30px] text-[#6605c7]">fingerprint</span>
@@ -975,7 +978,7 @@ export default function DashboardPage() {
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-8 overflow-x-auto no-scrollbar border-b border-slate-200/60 relative">
-                    {["overview", "applications", "documents", "profile"].map((tab) => (
+                    {["overview", "applications", "messages", "documents", "profile"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -1352,7 +1355,7 @@ export default function DashboardPage() {
                                             </div>
 
                                             {/* Action Footer for detailed progress toggle */}
-                                            <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between gap-4 select-none">
+                                            <div className="mt-4 pt-3 border-t border-gray-50 flex flex-wrap items-center justify-between gap-4 select-none">
                                                 <button
                                                     onClick={() => toggleAppProgress(app.id)}
                                                     className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase text-[#6605c7] hover:text-[#5504a8] transition-colors"
@@ -1363,11 +1366,19 @@ export default function DashboardPage() {
                                                     {expandedApps[app.id] ? 'Hide Progress Details' : 'View Progress Details'}
                                                 </button>
 
-                                                {app.id && (
-                                                    <span className="text-[9px] font-black uppercase text-gray-300 tracking-wider">
-                                                        Track Progress
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedChatApp(app);
+                                                            setActiveTab("messages");
+                                                        }}
+                                                        className="px-4 py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-purple-600/20 flex items-center gap-2 active:scale-95 cursor-pointer"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[16px]">forum</span>
+                                                        Chat with Bank
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* Expanded Stepper timeline */}
@@ -1396,6 +1407,17 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 )} */}
+
+                {/* Messages Tab */}
+                {activeTab === "messages" && (
+                    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 min-h-[720px] animate-fade-in overflow-hidden">
+                        <ChatInterface
+                            role="staff"
+                            initialBank={selectedChatApp ? { bankName: selectedChatApp.bank, applicationId: selectedChatApp.id, applicationNumber: selectedChatApp.applicationNumber } : undefined}
+                            className="flex h-[720px] border-0 rounded-none overflow-hidden bg-white shadow-none mt-0 text-gray-900"
+                        />
+                    </div>
+                )}
 
                 {/* Profile Tab */}
                 {activeTab === "profile" && (

@@ -310,7 +310,16 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data: Conversation[] = await res.json();
-            if (Array.isArray(data)) setConversations(data);
+            if (Array.isArray(data)) {
+                setConversations(prev => {
+                    const map = new Map<string, Conversation>();
+                    data.forEach(c => map.set(c.id, c));
+                    prev.forEach(c => {
+                        if (!map.has(c.id)) map.set(c.id, c);
+                    });
+                    return Array.from(map.values());
+                });
+            }
         } catch (e) {
             console.error("Failed to load conversations", e);
         }
@@ -856,15 +865,19 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                 body: JSON.stringify(bankInfo)
             });
             const data = await res.json();
-            if (data.success) {
+            if (data.success && data.conversation) {
                 setSidebarTab('chats');
                 setChatTypeFilter('bank');
                 setConversations(prev => {
-                    if (prev.find(c => c.id === data.conversation.id)) return prev;
+                    const idx = prev.findIndex(c => c.id === data.conversation.id);
+                    if (idx >= 0) {
+                        const copy = [...prev];
+                        copy[idx] = data.conversation;
+                        return copy;
+                    }
                     return [data.conversation, ...prev];
                 });
                 setActiveConversation(data.conversation.id);
-                fetchConversations();
             }
         } catch (e) {
             console.error("Failed to start bank chat", e);
@@ -883,7 +896,18 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
         if (initialBank && token && role !== 'agent') {
             startBankChat(initialBank);
         }
-    }, [initialBank, token, role]);
+    }, [initialBank?.applicationId, initialBank?.bankName, token, role]);
+
+    // Auto-select conversation matching applicationId
+    useEffect(() => {
+        const appId = initialBank?.applicationId || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('applicationId') : null);
+        if (!appId || conversations.length === 0) return;
+
+        const match = conversations.find(c => c.metadata?.applicationId === appId);
+        if (match && activeConversation !== match.id) {
+            setActiveConversation(match.id);
+        }
+    }, [conversations, initialBank?.applicationId, activeConversation]);
 
     // Fetch student documents for the active conversation
     const openStudentDocuments = async () => {
@@ -1101,10 +1125,9 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
         const matchesSearch = (c.customerName || c.customerPhone || '').toLowerCase().includes(searchQuery.toLowerCase());
         if (!matchesSearch) return false;
         if (role === 'bank') {
-            // Extra client-side safety: only show bank-type conversations matching this bank
+            // Extra client-side safety: show bank-type conversations matching this bank
             if (c.metadata?.type !== 'bank') return false;
             if (resolvedBankName && c.metadata?.bank && c.metadata.bank !== resolvedBankName) return false;
-            if (initialBank?.applicationId && c.metadata?.applicationId !== initialBank.applicationId) return false;
             return true;
         }
         if (role === 'agent') {

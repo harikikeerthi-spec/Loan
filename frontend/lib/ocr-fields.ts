@@ -431,6 +431,25 @@ export function normalizeOcrFieldsForAutofill(
         const gender = normalizeGenderForForm(pick(raw.gender as string, raw.sex as string));
         if (gender) out.gender = gender;
 
+        const father = pick(
+            raw.father_name as string,
+            raw.fatherName as string,
+            raw.father_full_name as string,
+            raw.fatherFullName as string,
+            raw.guardian_name as string,
+            raw.name_of_father as string,
+        );
+        if (father) out.father_name = dedupeOcrFullName(father);
+
+        const mother = pick(
+            raw.mother_name as string,
+            raw.motherName as string,
+            raw.mother_full_name as string,
+            raw.motherFullName as string,
+            raw.name_of_mother as string,
+        );
+        if (mother) out.mother_name = dedupeOcrFullName(mother);
+
         const addr = raw.address ??
             raw.residential_address ??
             raw.residentialAddress ??

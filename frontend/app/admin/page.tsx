@@ -36,7 +36,7 @@ const getApplicationStageLabel = (app: any, progress: number): string => {
     if (status === "rejected") return "Rejected";
     if (progress <= 15) return "Created";
     if (progress <= 25) return "Submitted";
-    if (progress <= 40) return "Doc Verification";
+    if (progress <= 40) return "Documents";
     if (progress <= 55) return "Submit to Bank";
     if (progress <= 75) return "Credit & Eligibility";
     if (progress <= 90) return "Bank Underwriting";

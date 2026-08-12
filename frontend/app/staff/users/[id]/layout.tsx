@@ -47,16 +47,18 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
 
     // Determine current active tab based on pathname
     let activeTab = "profile";
-    if (pathname.endsWith("/applications")) {
-        activeTab = "applications";
+    if (pathname.endsWith("/documents")) {
+        activeTab = "documents";
     } else if (pathname.endsWith("/evv")) {
         activeTab = "evv";
+    } else if (pathname.endsWith("/credit-report") || pathname.endsWith("/credit-analysis")) {
+        activeTab = "credit-report";
+    } else if (pathname.endsWith("/applications")) {
+        activeTab = "applications";
     } else if (pathname.endsWith("/follow-ups")) {
         activeTab = "follow-ups";
     } else if (pathname.endsWith("/notes")) {
         activeTab = "notes";
-    } else if (pathname.endsWith("/documents")) {
-        activeTab = "documents";
     }
 
     if (loading) {
@@ -97,15 +99,40 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
         );
     }
 
-    const activeBankAppsCount = (userApplications || []).filter((app: any) => app.status !== "submitted" && app.status !== "draft").length;
+    const isApplicationSentToBank = (app: any): boolean => {
+        if (!app) return false;
+        if (app.submittedToBankAt || app.bankSubmittedAt || app.routedToBankAt || app.fileLoggedAt || app.sentToBank || app.sharedWithBank) {
+            return true;
+        }
+        const status = (app.status || '').toLowerCase().trim();
+        const preBankStatuses = ['draft', 'submitted', 'pending', 'staff_review', 'staff_verified', 'under_review', 'in_progress', 'new', 'waiting', 'received'];
+        const bankWorkflowStatuses = [
+            'submitted_to_bank', 'submitting_to_bank', 'file_logged', 'under_bank_review',
+            'in_bank_review', 'bank_review', 'query_raised', 'bank_approved', 'approved_by_bank',
+            'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'disbursed',
+            'bank_rejected', 'rejected_by_bank'
+        ];
+        if (bankWorkflowStatuses.includes(status)) {
+            return true;
+        }
+        const bankName = (app.bank || '').toLowerCase().trim();
+        const isGenericBank = !bankName || bankName === 'any bank' || bankName === '—' || bankName === 'pending partner' || bankName === 'none';
+        if (!preBankStatuses.includes(status) && !isGenericBank) {
+            return true;
+        }
+        return false;
+    };
+
+    const activeBankAppsCount = (userApplications || []).filter(isApplicationSentToBank).length;
 
     const navigationTabs = [
         { id: "profile", label: "Profile Details", path: `/staff/users/${userId}`, icon: "badge" },
+        { id: "documents", label: "Documents", path: `/staff/users/${userId}/documents`, icon: "folder" },
+        { id: "evv", label: "EVV", path: `/staff/users/${userId}/evv`, icon: "payments" },
+        { id: "credit-report", label: "Credit Analysis Report", path: `/staff/users/${userId}/credit-report`, icon: "analytics" },
         { id: "applications", label: "Bank Applications", path: `/staff/users/${userId}/applications`, icon: "article", badge: activeBankAppsCount > 0 ? activeBankAppsCount : undefined },
-        { id: "evv", label: "EVV Analysis", path: `/staff/users/${userId}/evv`, icon: "payments" },
-        { id: "follow-ups", label: "Follow-ups", path: `/staff/users/${userId}/follow-ups`, icon: "assignment_turned_in" },
-        { id: "notes", label: "Internal Notes", path: `/staff/users/${userId}/notes`, icon: "sticky_note_2" },
-        { id: "documents", label: "Documents", path: `/staff/users/${userId}/documents`, icon: "folder" }
+        { id: "follow-ups", label: "Follow Ups", path: `/staff/users/${userId}/follow-ups`, icon: "assignment_turned_in" },
+        { id: "notes", label: "Internal Notes", path: `/staff/users/${userId}/notes`, icon: "sticky_note_2" }
     ];
 
     return (

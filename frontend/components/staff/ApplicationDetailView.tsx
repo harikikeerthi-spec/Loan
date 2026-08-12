@@ -193,7 +193,7 @@ const resolveIntake = (app: any): string => {
 const formatStepLabel = (label: string) => {
   if (label === "APPLICATION CREATED") return "Application\nCreated";
   if (label === "APPLICATION SUBMITTED") return "Application\nSubmitted";
-  if (label === "DOCUMENTS VERIFICATION") return "Docs\nVerification";
+  if (label === "DOCUMENTS" || label === "DOCUMENTS VERIFICATION") return "Documents";
   if (label === "SUBMIT TO BANK") return "Submit\nTo Bank";
   if (label === "CREDIT CHECK") return "Credit\nCheck";
   if (label === "BANK REJECTED") return "Bank\nRejected";
@@ -1247,7 +1247,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const stages = [
     { label: "APPLICATION CREATED", icon: "bolt", date: getStepStatus(progress >= 10), completed: progress >= 10, timestamp: getStageTimestamp(0, progress >= 10) },
     { label: "APPLICATION SUBMITTED", icon: "send", date: getStepStatus(progress >= 25), completed: progress >= 25, timestamp: getStageTimestamp(1, progress >= 25) },
-    { label: "DOCUMENTS VERIFICATION", icon: "verified", date: getStepStatus(progress >= 40), completed: progress >= 40, timestamp: getStageTimestamp(2, progress >= 40) },
+    { label: "DOCUMENTS", icon: "upload_file", date: getStepStatus(progress >= 40), completed: progress >= 40, timestamp: getStageTimestamp(2, progress >= 40) },
     { label: "SUBMIT TO BANK", icon: "account_balance", date: getStepStatus(progress >= 50), completed: progress >= 50, timestamp: getStageTimestamp(3, progress >= 50) },
     { label: "CREDIT CHECK", icon: "credit_score", date: getStepStatus(progress >= 75), completed: progress >= 75, timestamp: getStageTimestamp(4, progress >= 75) },
     { label: getBankStepLabel(), icon: "rate_review", date: getStepStatus(progress >= 90, progress >= 75 && progress < 90), completed: progress >= 90, active: progress >= 75 && progress < 90, timestamp: getStageTimestamp(5, progress >= 90, progress >= 75 && progress < 90) },

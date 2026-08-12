@@ -913,12 +913,23 @@ export default function BankDashboard() {
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-4 text-right">
-                                                            <button
-                                                                onClick={() => router.push(`/bank/applications?id=${app.id}`)}
-                                                                className="px-3.5 py-1.5 bg-[#6605c7]/5 hover:bg-[#6605c7] hover:text-white text-[#6605c7] text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
-                                                            >
-                                                                Review
-                                                            </button>
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => router.push(`/bank/chat?applicationId=${app.id}&applicationNumber=${app.applicationNumber || ''}`)}
+                                                                    className="px-3 py-1.5 bg-purple-50 hover:bg-[#6605c7] hover:text-white text-[#6605c7] text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                                                                    title="Chat with Staff for this application"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[13px]">forum</span>
+                                                                    Chat
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => router.push(`/bank/applications?id=${app.id}`)}
+                                                                    className="px-3.5 py-1.5 bg-[#6605c7]/5 hover:bg-[#6605c7] hover:text-white text-[#6605c7] text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
+                                                                >
+                                                                    Review
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 );

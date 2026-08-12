@@ -18,21 +18,17 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     };
 
     if (normStatus === "pending" || normStatus === "submitted" || normStatus === "submitted to bank") {
-        styleObj.backgroundColor = "#E0F2FE";
-        styleObj.color = "#0369A1";
-        dotColor = "bg-[#0369A1]";
-    } else if (normStatus === "under bank review" || normStatus === "under_bank_review" || normStatus === "file logged" || normStatus === "file_logged") {
         styleObj.backgroundColor = "#FEF3C7";
         styleObj.color = "#B45309";
         dotColor = "bg-[#B45309]";
-    } else if (normStatus === "processing" || normStatus === "under review" || normStatus === "query raised" || normStatus === "query_raised") {
-        styleObj.backgroundColor = "#E0E7FF";
-        styleObj.color = "#4F46E5";
-        dotColor = "bg-[#4F46E5] animate-pulse";
+    } else if (normStatus === "under bank review" || normStatus === "under_bank_review" || normStatus === "file logged" || normStatus === "file_logged" || normStatus === "under review" || normStatus === "processing" || normStatus === "query raised" || normStatus === "query_raised") {
+        styleObj.backgroundColor = "#FEF3C7";
+        styleObj.color = "#B45309";
+        dotColor = "bg-[#B45309] animate-pulse";
     } else if (normStatus === "approved" || normStatus === "sanctioned" || normStatus === "verified") {
-        styleObj.backgroundColor = "#D1FAE5";
-        styleObj.color = "#065F46";
-        dotColor = "bg-[#065F46]";
+        styleObj.backgroundColor = "#DCFCE7";
+        styleObj.color = "#15803D";
+        dotColor = "bg-[#15803D]";
     } else if (normStatus === "rejected" || normStatus === "cancelled") {
         styleObj.backgroundColor = "#FEE2E2";
         styleObj.color = "#991B1B";

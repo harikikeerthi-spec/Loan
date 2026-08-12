@@ -139,6 +139,21 @@ function checkCountryUniversityMatch(
 ): { isValid: boolean; error?: string } {
     if (!selectedCountry || !universityName) return { isValid: true };
 
+    const genericWords = new Set([
+        'university', 'universities', 'college', 'colleges', 'school', 'schools',
+        'academy', 'academies', 'institute', 'institutes', 'institution', 'institutions',
+        'polytechnic', 'polytechnics', 'hochschule', 'fachhochschule', 'campus',
+        'education', 'educational', 'studies', 'study', 'center', 'centre',
+        'of', 'and', '&', 'the', 'a', 'an', 'in', 'for', 'my', 'your', 'our', 'higher', 'degree'
+    ]);
+    const words = (universityName || '').toLowerCase().replace(/[\/\\.,\-_&()]/g, ' ').split(/\s+/).filter(Boolean);
+    if (words.length > 0 && words.every(w => genericWords.has(w))) {
+        return {
+            isValid: false,
+            error: `Validation Error: "${universityName}" is a generic term. Please specify a full university name.`
+        };
+    }
+
     const normalizeCountry = (c: string) => {
         const low = (c || '').toLowerCase().trim();
         if (low.includes('usa') || low.includes('united states') || low.includes('america')) return 'USA';
@@ -494,7 +509,32 @@ export default function ApplicationsTab() {
         }
     };
 
-    const activeBankApps = (userApplications || []).filter((app: any) => app.status !== "submitted" && app.status !== "draft");
+    const isApplicationSentToBank = (app: any): boolean => {
+        if (!app) return false;
+        if (app.submittedToBankAt || app.bankSubmittedAt || app.routedToBankAt || app.fileLoggedAt || app.sentToBank || app.sharedWithBank) {
+            return true;
+        }
+        const status = (app.status || '').toLowerCase().trim();
+        const preBankStatuses = ['draft', 'submitted', 'pending', 'staff_review', 'staff_verified', 'under_review', 'in_progress', 'new', 'waiting', 'received'];
+        const bankWorkflowStatuses = [
+            'submitted_to_bank', 'submitting_to_bank', 'file_logged', 'under_bank_review',
+            'in_bank_review', 'bank_review', 'query_raised', 'bank_approved', 'approved_by_bank',
+            'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'disbursed',
+            'bank_rejected', 'rejected_by_bank'
+        ];
+        if (bankWorkflowStatuses.includes(status)) {
+            return true;
+        }
+        const bankName = (app.bank || '').toLowerCase().trim();
+        const isGenericBank = !bankName || bankName === 'any bank' || bankName === '—' || bankName === 'pending partner' || bankName === 'none';
+        if (!preBankStatuses.includes(status) && !isGenericBank) {
+            return true;
+        }
+        return false;
+    };
+
+    const activeBankApps = (userApplications || []).filter(isApplicationSentToBank);
+    const pendingRoutingApps = (userApplications || []).filter((app: any) => !isApplicationSentToBank(app));
 
     return (
         <motion.div
@@ -517,6 +557,62 @@ export default function ApplicationsTab() {
                     Add Loan Application
                 </button>
             </div>
+
+            {/* Applications Pending Bank Submission Card */}
+            {pendingRoutingApps.length > 0 && (
+                <div className="bg-amber-500/5 border border-amber-500/20 backdrop-blur-xl rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-amber-600 text-xl">pending_actions</span>
+                            <div>
+                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Initiated Applications (Pending Bank Submission)</h4>
+                                <p className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                                    {pendingRoutingApps.length} application{pendingRoutingApps.length > 1 ? 's' : ''} recorded in system but not yet submitted to a partner bank
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {pendingRoutingApps.map((app: any, idx: number) => (
+                            <div key={idx} className="bg-white p-4 rounded-xl border border-amber-200/60 shadow-sm flex flex-col justify-between gap-3">
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-mono font-bold text-[#6605c7]">
+                                            {app.applicationNumber || `APP-${app.id?.slice?.(-6)?.toUpperCase() || 'NEW'}`}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                                            {app.status || 'Pending Bank Submission'}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm font-extrabold text-slate-900 mb-1">
+                                        ₹{app.amount ? Number(app.amount).toLocaleString('en-IN') : '0'}
+                                    </div>
+                                    <div className="text-xs font-semibold text-slate-600 truncate">
+                                        🎓 {app.universityName || app.university || app.targetUniversity || 'Target University Not Set'}
+                                    </div>
+                                    {app.loanType && (
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                                            {app.loanType} • {app.country || 'Destination Country Not Set'}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={() => {
+                                        setRoutingApp(app);
+                                        setIsShareModalOpen(true);
+                                    }}
+                                    className="w-full py-2.5 bg-gradient-to-r from-[#0F766E] to-[#115E59] hover:from-[#115E59] hover:to-[#0F766E] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined text-[15px]">send</span>
+                                    Apply / Route to Bank
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Applications Table Card */}
             <div className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden">
@@ -598,8 +694,9 @@ export default function ApplicationsTab() {
                     </div>
                 ) : (
                     <div className="p-12 text-center">
-                        <span className="material-symbols-outlined text-4xl text-gray-300 mb-3">description</span>
-                        <p className="text-sm font-semibold text-gray-500">No applications initiated yet</p>
+                        <span className="material-symbols-outlined text-4xl text-gray-300 mb-3">account_balance</span>
+                        <p className="text-sm font-semibold text-gray-500">No applications submitted to bank yet</p>
+                        <p className="text-xs text-gray-400 mt-1 font-medium">Applications will appear here once routed to a partner bank.</p>
                     </div>
                 )}
             </div>

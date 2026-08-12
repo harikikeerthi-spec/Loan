@@ -40,7 +40,7 @@ const getApplicationStageLabel = (app: any, progress: number): string => {
     if (status === "disbursed" || status === "disbursement_confirmed" || status === "closed" || (app.bankWorkflowStatus || "").toUpperCase() === "DISBURSED") return "Disbursed";
     if (progress <= 12) return "Application Created";
     if (progress <= 25) return "Application Submitted";
-    if (progress <= 40) return "Docs Verification";
+    if (progress <= 40) return "Documents";
     if (progress <= 50) return "Submit to Bank";
     if (progress <= 75) return "Credit Check";
     if (progress <= 90) return "Bank Review";

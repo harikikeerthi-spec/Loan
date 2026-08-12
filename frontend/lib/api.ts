@@ -839,6 +839,15 @@ export const applicationApi = {
         apiFetch(HttpApiPaths.auth.applicationById(id), {
             method: "DELETE",
         }),
+
+    uploadBankStatement: (applicationId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return apiFetch(`${API_URL}/applications/${applicationId}/upload-statement`, {
+            method: 'POST',
+            body: formData,
+        });
+    },
 };
 
 // ─── AI Tools ─────────────────────────────────────────────────────────
@@ -1288,6 +1297,7 @@ export const documentApi = {
             }
 
             const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
             const form = new FormData();
             form.append('file', file);
             form.append('userId', userId);
@@ -1307,7 +1317,13 @@ export const documentApi = {
                         resolve(xhr.responseText);
                     }
                 } else {
-                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                    let errorMsg = `Upload failed with status ${xhr.status}`;
+                    try {
+                        const parsed = JSON.parse(xhr.responseText);
+                        if (parsed.message) errorMsg = parsed.message;
+                        else if (parsed.error) errorMsg = parsed.error;
+                    } catch {}
+                    reject(new Error(errorMsg));
                 }
             });
 
@@ -1447,13 +1463,19 @@ export const staffProfileApi = {
 
     // Staff manually uploads a document and attaches it
     uploadDocument: (profileId: string, file: File, docType: string, onProgress?: (progress: number) => void, description?: string) => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const token = (() => {
                 if (typeof window === 'undefined') return null;
                 return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken');
             })();
 
+            let csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                csrfToken = await initializeCsrf();
+            }
+
             const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
             const form = new FormData();
             form.append('file', file);
             form.append('doc_type', docType);
@@ -1481,6 +1503,7 @@ export const staffProfileApi = {
 
             xhr.open('POST', HttpApiPaths.staffProfiles.documents(profileId));
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            if (csrfToken) xhr.setRequestHeader('X-CSRF-Token', csrfToken);
             xhr.send(form);
         });
     },

@@ -7,7 +7,7 @@ import { type EVVResult } from "@/lib/evv-parser";
 import { adminApi } from "@/lib/api";
 
 export default function EvvTab() {
-    const { userApplications, refreshData } = useUserDossier();
+    const { userId, userApplications, userDocuments, refreshData } = useUserDossier();
     
     // Bind it to the first active application
     const activeApp = userApplications && userApplications.length > 0 ? userApplications[0] : null;
@@ -43,10 +43,12 @@ export default function EvvTab() {
             className="space-y-6"
         >
             {activeApp ? (
-                // EVV Test Agent - Quick local processing
+                // EVV Test Agent - S3 Vault & AI Processing
                 <EVVTestAgent
+                    userId={userId}
                     applicationId={activeApp?.id || activeApp?._id}
                     application={activeApp}
+                    userDocuments={userDocuments}
                     onComplete={handleEVVComplete}
                 />
             ) : (

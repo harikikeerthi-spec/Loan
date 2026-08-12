@@ -148,7 +148,7 @@ const getApplicationStageLabel = (app: any, progress: number): string => {
 
     if (progress <= 12) return "Application Created";
     if (progress <= 25) return "Application Submitted";
-    if (progress <= 40) return "Docs Verification";
+    if (progress <= 40) return "Documents";
     if (progress <= 50) return "Submit to Bank";
     if (progress <= 75) return "Credit Check";
     if (progress <= 90) return "Bank Review";
@@ -1006,7 +1006,13 @@ function IncomingQueuePageInner() {
                                                                 : 'bg-amber-50 text-amber-600 border border-amber-200'
                                                     }`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${statusKey === 'rejected' ? 'bg-rose-500' : ['approved', 'verified'].includes(statusKey) ? 'bg-emerald-500' : 'bg-blue-500'}`} />
-                                                    {item.status ? item.status.replace('_', ' ') : 'SUBMITTED'}
+                                                    {(() => {
+                                                        const rawStatus = (item.status || 'SUBMITTED').replace(/_/g, ' ').toUpperCase();
+                                                        if (rawStatus.includes('DOCUMENTS VERIFIED') || rawStatus.includes('DOCS VERIFIED') || rawStatus.includes('DOCUMENTS UPLOADED') || rawStatus.includes('DOCS UPLOADED') || rawStatus.includes('DOCUMENT VERIFICATION')) {
+                                                            return 'DOCUMENTS';
+                                                        }
+                                                        return rawStatus;
+                                                    })()}
                                                 </span>
                                             </td>
 

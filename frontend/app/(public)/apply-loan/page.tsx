@@ -359,6 +359,24 @@ export default function ApplyLoanPage() {
         update("amount", formatted);
     };
 
+    const isGenericUniversityInput = (university: string): boolean => {
+        const normalized = (university || "").toLowerCase().trim();
+        if (!normalized) return true;
+
+        const genericWords = new Set([
+            'university', 'universities', 'college', 'colleges', 'school', 'schools',
+            'academy', 'academies', 'institute', 'institutes', 'institution', 'institutions',
+            'polytechnic', 'polytechnics', 'hochschule', 'fachhochschule', 'campus',
+            'education', 'educational', 'studies', 'study', 'center', 'centre',
+            'of', 'and', '&', 'the', 'a', 'an', 'in', 'for', 'my', 'your', 'our', 'higher', 'degree'
+        ]);
+
+        const words = normalized.replace(/[\/\\.,\-_&()]/g, ' ').split(/\s+/).filter(Boolean);
+        if (words.length === 0) return true;
+
+        return words.every(word => genericWords.has(word));
+    };
+
     const validateStep1 = async (): Promise<boolean> => {
         const errors: Record<string, string> = {};
         if (!formData.loanType) errors.loanType = "Please select a loan type";
@@ -369,6 +387,8 @@ export default function ApplyLoanPage() {
         }
         if (!formData.university.trim()) {
             errors.university = "Please enter your university";
+        } else if (isGenericUniversityInput(formData.university)) {
+            errors.university = "Please enter a specific university name (e.g. Harvard University or Technical University of Munich), not generic words like 'university' or 'college'.";
         } else if (/\d/.test(formData.university)) {
             errors.university = "University name cannot contain numbers";
         }
@@ -385,9 +405,9 @@ export default function ApplyLoanPage() {
             try {
                 const res = await aiApi.validateUniversityCountry(formData.university, selectedCountry) as any;
                 if (res && res.success && !res.valid) {
-                    let errMsg = `This university does not seem to be located in ${selectedCountry}.`;
+                    let errMsg = res.message || `This university does not seem to be located in ${selectedCountry}.`;
                     if (res.correctedCountry) {
-                        errMsg += ` It appears to be in ${res.correctedCountry}.`;
+                        errMsg = `This university (${formData.university}) is located in ${res.correctedCountry}, not ${selectedCountry}. Please select a university in ${selectedCountry} or update your destination country.`;
                     }
                     errors.university = errMsg;
                 }

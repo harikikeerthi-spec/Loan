@@ -263,14 +263,32 @@ export default function UserProfileView({
         setEditingCard("personal");
     };
 
+    const studentFullName = `${activeProfile?.firstName || ''} ${activeProfile?.lastName || ''}`.trim().toLowerCase();
+    const isStudentName = (n?: string) => {
+        if (!n || !n.trim()) return true;
+        const lower = n.trim().toLowerCase();
+        if (['mother', 'father', 'coapplicant', 'student', 'na', 'n/a', 'none', 'null', 'undefined', '—', 'enter name'].includes(lower)) return true;
+        if (studentFullName && studentFullName.length > 2 && (lower === studentFullName || (lower.includes(studentFullName) && lower.length <= studentFullName.length + 3))) return true;
+        if (activeProfile?.firstName && activeProfile.firstName.length > 2 && lower === activeProfile.firstName.trim().toLowerCase()) return true;
+        return false;
+    };
+
     const loadFamilyFormState = () => {
+        const rawFather = fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName;
+        const passportFather = getDocExtractedField(['passport'], ['father_name', 'fatherName', 'father_full_name']);
+        const validFather = (!isStudentName(rawFather) ? rawFather : undefined) || (!isStudentName(passportFather) ? passportFather : undefined) || "";
+
+        const rawMother = motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName;
+        const passportMother = getDocExtractedField(['passport'], ['mother_name', 'motherName', 'mother_full_name', 'name_of_mother']);
+        const validMother = (!isStudentName(rawMother) ? rawMother : undefined) || (!isStudentName(passportMother) ? passportMother : undefined) || "";
+
         return {
-            fatherName: fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName || "",
-            fatherAadhar: fatherData?.aadharNumber || "",
-            fatherPan: fatherData?.panNumber || "",
-            motherName: motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName || "",
-            motherAadhar: motherData?.aadharNumber || "",
-            motherPan: motherData?.panNumber || "",
+            fatherName: validFather,
+            fatherAadhar: fatherData?.aadharNumber || activeProfile?.family?.fatherAadhar || "",
+            fatherPan: fatherData?.panNumber || activeProfile?.family?.fatherPan || "",
+            motherName: validMother,
+            motherAadhar: motherData?.aadharNumber || activeProfile?.family?.motherAadhar || "",
+            motherPan: motherData?.panNumber || activeProfile?.family?.motherPan || "",
             coApplicantName: coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName || "",
             coApplicantRelation: firstApp?.coApplicantRelation || activeProfile?.coApplicant?.relation || activeProfile?.coApplicant?.relationship || activeProfile?.coApplicantRelation || "",
             coApplicantPhone: firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicant?.phone || activeProfile?.coApplicantPhone || "",
@@ -706,6 +724,26 @@ export default function UserProfileView({
                         </div>
                     ) : (
                         <div className="space-y-6">
+                            {(() => {
+                                const passportOrigName = activeProfile?.passportOriginalName || activeProfile?.nameAsInPassport || activeProfile?.family?.passportOriginalName || getDocExtractedField(['passport'], ['full_name', 'fullName', 'name', 'printed_name', 'holder_name']);
+                                if (!passportOrigName) return null;
+                                return (
+                                    <div className="p-3.5 bg-purple-50/70 border border-purple-100/80 rounded-2xl flex flex-wrap items-center justify-between gap-3 mb-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-xl bg-[#6605c7] text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/20">
+                                                <i className="ph ph-passport text-lg" />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] font-black uppercase tracking-widest text-[#6605c7]">Original Name in Passport</span>
+                                                <span className="text-xs font-black text-slate-800">{passportOrigName}</span>
+                                            </div>
+                                        </div>
+                                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
+                                            <i className="ph ph-check-circle text-xs text-emerald-600" /> Passport Verified
+                                        </span>
+                                    </div>
+                                );
+                            })()}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {renderBentoField("Email Address", activeProfile?.email, startPersonalEdit)}
                                 {renderBentoField("Phone Number", activeProfile?.phoneNumber, startPersonalEdit)}
@@ -1066,9 +1104,21 @@ export default function UserProfileView({
                                             <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
                                                 {(() => {
                                                     const rawName = fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName;
-                                                    const isPlaceholder = !rawName || rawName.trim().toLowerCase() === 'father';
-                                                    const docName = getDocExtractedField(['father_aadhar', 'father_aadhaar', 'father_pan'], ['father_name', 'fatherName', 'father_full_name', 'fatherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
-                                                    return (!isPlaceholder ? rawName : docName) || "—";
+                                                    const passportFather = getDocExtractedField(['passport'], ['father_name', 'fatherName', 'father_full_name']);
+                                                    const fatherDocName = getDocExtractedField(['father_aadhar', 'father_aadhaar', 'father_pan'], ['full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'father_name', 'fatherName']);
+                                                    const finalName = (!isStudentName(rawName) ? rawName : undefined) || (!isStudentName(passportFather) ? passportFather : undefined) || (!isStudentName(fatherDocName) ? fatherDocName : undefined) || "—";
+                                                    const isFromPassport = !!passportFather && !isStudentName(passportFather) && finalName === passportFather;
+
+                                                    return (
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{finalName}</span>
+                                                            {isFromPassport && (
+                                                                <span className="px-1.5 py-0.5 bg-purple-50 text-[#6605c7] border border-purple-100 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                                                    <i className="ph ph-passport text-xs" /> Passport
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
                                                 })()}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
@@ -1082,9 +1132,21 @@ export default function UserProfileView({
                                             <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">
                                                 {(() => {
                                                     const rawName = motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName;
-                                                    const isPlaceholder = !rawName || rawName.trim().toLowerCase() === 'mother';
-                                                    const docName = getDocExtractedField(['mother_aadhar', 'mother_aadhaar', 'mother_pan'], ['mother_name', 'motherName', 'mother_full_name', 'motherFullName', 'full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'applicant_name']);
-                                                    return (!isPlaceholder ? rawName : docName) || "—";
+                                                    const passportMother = getDocExtractedField(['passport'], ['mother_name', 'motherName', 'mother_full_name', 'name_of_mother']);
+                                                    const motherDocName = getDocExtractedField(['mother_aadhar', 'mother_aadhaar', 'mother_pan'], ['full_name', 'fullName', 'name', 'holder_name', 'printed_name', 'mother_name', 'motherName']);
+                                                    const finalName = (!isStudentName(rawName) ? rawName : undefined) || (!isStudentName(passportMother) ? passportMother : undefined) || (!isStudentName(motherDocName) ? motherDocName : undefined) || "—";
+                                                    const isFromPassport = !!passportMother && !isStudentName(passportMother) && finalName === passportMother;
+
+                                                    return (
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{finalName}</span>
+                                                            {isFromPassport && (
+                                                                <span className="px-1.5 py-0.5 bg-purple-50 text-[#6605c7] border border-purple-100 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                                                    <i className="ph ph-passport text-xs" /> Passport
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
                                                 })()}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] space-y-1.5">
