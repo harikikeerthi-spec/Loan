@@ -79,16 +79,21 @@ const StatCard = ({ label, value, icon, color, trend, loading }: any) => (
     </div>
 );
 
-const NavItem = ({ section, active, icon, label, badge, onClick }: any) => (
+const NavItem = ({ section, active, icon, label, badge, onClick, expanded }: any) => (
     <button
         onClick={() => onClick(section)}
-        className={`w-full text-left px-3 py-1.5 rounded flex items-center gap-3 transition-colors text-xs font-medium ${active === section ? "bg-indigo-500/10 text-indigo-400" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"}`}
+        title={label}
+        className={`w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 transition-colors text-xs font-medium ${active === section ? "bg-indigo-500/10 text-indigo-400 font-bold" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"}`}
     >
-        <span className={`material-symbols-outlined text-[16px] ${active === section ? "text-indigo-400" : "text-slate-500"}`}>{icon}</span>
-        <span className="flex-1">{label}</span>
+        <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+            <span className={`material-symbols-outlined text-[18px] ${active === section ? "text-indigo-400" : "text-slate-500"}`}>{icon}</span>
+        </div>
+        <span className={`flex-1 transition-all duration-200 whitespace-nowrap truncate ${expanded ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+            {label}
+        </span>
         {badge > 0 && (
-            <span className={`px-1.5 py-0.5 rounded-sm text-[9px] font-medium ${active === section ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'}`}>
-                {badge}
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 transition-opacity duration-200 ${active === section ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'} ${expanded ? 'inline-flex' : 'hidden group-hover/sidebar:inline-flex'}`}>
+                {badge > 99 ? '99+' : badge}
             </span>
         )}
     </button>
@@ -1192,37 +1197,50 @@ export default function AdminDashboardPage() {
             )}
 
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 z-50 w-[240px] bg-[#0f172a] text-slate-300 transform transition-transform duration-200 lg:translate-x-0 border-r border-slate-800 flex flex-col shadow-xl ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-                <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0">
-                    <div className="flex items-center gap-2.5">
-                        <img
-                            src="/images/vidyaloans-logo-transparent.png"
-                            alt="VidyaLoans Logo"
-                            className="w-7 h-7 object-contain"
-                        />
-                        <span className="font-semibold text-[13px] text-white tracking-wide">VidyaLoans<span className="text-indigo-400"> Admin</span></span>
-                    </div>
+            <aside className={`fixed inset-y-0 left-0 z-50 bg-[#0f172a] text-slate-300 flex flex-col py-0 px-0
+                shadow-xl border-r border-slate-800 group/sidebar
+                transition-all duration-300 ease-in-out overflow-hidden
+                ${sidebarOpen
+                    ? 'w-[240px] translate-x-0'
+                    : 'w-[68px] lg:translate-x-0 -translate-x-full hover:w-[240px]'
+                }`}>
+                <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0 gap-2.5">
+                    <img
+                        src="/images/vidyaloans-logo-transparent.png"
+                        alt="VidyaLoans Logo"
+                        className="w-7 h-7 object-contain flex-shrink-0"
+                    />
+                    <span className={`font-semibold text-[13px] text-white tracking-wide whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+                        VidyaLoans<span className="text-indigo-400"> Admin</span>
+                    </span>
                 </div>
 
                 <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto custom-scrollbar">
-                    <div className="px-3 mb-2 mt-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none">Menu</div>
+                    <div className={`px-3 mb-2 mt-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>Menu</div>
                     {navItems.map(item => (
-                        <NavItem key={item.section} {...item} active={activeSection} onClick={setActiveSection} />
+                        <NavItem key={item.section} {...item} active={activeSection} onClick={setActiveSection} expanded={sidebarOpen} />
                     ))}
 
                     {/* ── Marketing & Email Campaigns ── */}
-                    <div className="px-2 mt-4 mb-1">
+                    <div className="px-1 mt-4 mb-1">
                         <div className="border-t border-slate-800 pt-3" />
                         <button
                             onClick={() => { setMarketingExpanded(e => !e); if (!marketingExpanded) setActiveSection('campaigns_dashboard'); }}
-                            className={`w-full text-left px-3 py-1.5 rounded flex items-center gap-3 transition-colors text-xs font-medium ${activeSection.startsWith('campaigns_') ? 'bg-indigo-500/10 text-indigo-400' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                            title="Email Campaigns"
+                            className={`w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 transition-colors text-xs font-medium ${activeSection.startsWith('campaigns_') ? 'bg-indigo-500/10 text-indigo-400 font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
                         >
-                            <span className={`material-symbols-outlined text-[16px] ${activeSection.startsWith('campaigns_') ? 'text-indigo-400' : 'text-slate-500'}`}>campaign</span>
-                            <span className="flex-1">Email Campaigns</span>
-                            <span className="material-symbols-outlined text-[14px] opacity-50">{marketingExpanded || activeSection.startsWith('campaigns_') ? 'expand_less' : 'expand_more'}</span>
+                            <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                                <span className={`material-symbols-outlined text-[18px] ${activeSection.startsWith('campaigns_') ? 'text-indigo-400' : 'text-slate-500'}`}>campaign</span>
+                            </div>
+                            <span className={`flex-1 transition-all duration-200 whitespace-nowrap truncate ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+                                Email Campaigns
+                            </span>
+                            <span className={`material-symbols-outlined text-[14px] opacity-50 transition-opacity duration-200 ${sidebarOpen ? 'inline-block' : 'hidden group-hover/sidebar:inline-block'}`}>
+                                {marketingExpanded || activeSection.startsWith('campaigns_') ? 'expand_less' : 'expand_more'}
+                            </span>
                         </button>
                         {(marketingExpanded || activeSection.startsWith('campaigns_')) && (
-                            <div className="ml-3 mt-0.5 space-y-0.5 border-l border-slate-700/50 pl-2">
+                            <div className={`ml-3 mt-0.5 space-y-0.5 border-l border-slate-700/50 pl-2 transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
                                 {marketingNavItems.map(item => (
                                     <button
                                         key={item.section}
@@ -1242,21 +1260,21 @@ export default function AdminDashboardPage() {
 
                 <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex-shrink-0">
                     <div className="flex items-center gap-3 mb-3 p-1">
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="Avatar" className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 object-cover" />
-                        <div className="min-w-0">
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="Avatar" className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 object-cover flex-shrink-0" />
+                        <div className={`min-w-0 flex-1 transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
                             <p className="text-[12px] font-medium text-slate-200 truncate">{user?.firstName || 'Admin'}</p>
                             <p className="text-[10px] text-slate-500 capitalize truncate">{user?.role?.replace('_', ' ')}</p>
                         </div>
                     </div>
-                    <button onClick={logout} className="w-full px-3 py-2 rounded bg-slate-800 hover:bg-rose-500/10 hover:text-rose-400 text-slate-300 border border-slate-700 hover:border-rose-500/30 transition-all text-[11px] font-semibold flex items-center justify-center gap-2">
+                    <button onClick={logout} className={`w-full px-3 py-2 rounded bg-slate-800 hover:bg-rose-500/10 hover:text-rose-400 text-slate-300 border border-slate-700 hover:border-rose-500/30 transition-all text-[11px] font-semibold flex items-center justify-center gap-2 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>
                         <span className="material-symbols-outlined text-[14px]">logout</span>
-                        Sign Out
+                        <span className={`whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'inline' : 'hidden group-hover/sidebar:inline'}`}>Sign Out</span>
                     </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden lg:ml-[240px] bg-slate-50 rounded-tl-xl border-l border-t border-slate-200/60 shadow-inner mt-2 lg:mt-0 lg:rounded-none lg:border-none lg:shadow-none">
+            <main className={`flex-1 flex flex-col min-w-0 h-screen overflow-hidden transition-all duration-300 bg-slate-50 rounded-tl-xl border-l border-t border-slate-200/60 shadow-inner mt-2 lg:mt-0 lg:rounded-none lg:border-none lg:shadow-none ${sidebarOpen ? 'lg:pl-[240px]' : 'lg:pl-[68px]'}`}>
                 {/* Header */}
                 <header className="h-14 bg-white border-b border-slate-200 px-5 flex justify-between items-center sticky top-0 z-40 flex-shrink-0 shadow-sm">
                     <div className="flex items-center gap-3">

@@ -65,6 +65,7 @@ export default function ActivityLogWidget({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timestampIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -226,19 +227,20 @@ export default function ActivityLogWidget({
             >
               <span className="material-symbols-outlined text-[16px] text-slate-500">refresh</span>
             </button>
-            {onViewAll && (
-              <>
-                <div className="h-4 w-px bg-slate-200 mx-1" />
-                <button
-                  onClick={onViewAll}
-                  className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
-                  title="View full activity log"
-                >
-                  View All
-                  <span className="material-symbols-outlined text-[12px]">arrow_forward_ios</span>
-                </button>
-              </>
-            )}
+            <button
+              onClick={() => {
+                if (onViewAll) {
+                  onViewAll();
+                } else {
+                  setIsModalOpen(true);
+                }
+              }}
+              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1 cursor-pointer"
+              title="View full activity log"
+            >
+              View All
+              <span className="material-symbols-outlined text-[12px]">arrow_forward_ios</span>
+            </button>
           </div>
         </div>
 
@@ -379,6 +381,73 @@ export default function ActivityLogWidget({
           </p>
         </div>
       )}
+
+      {/* Full Activity Log Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden border border-slate-100 flex flex-col"
+            >
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                    <span className="material-symbols-outlined text-indigo-600">history</span>
+                    Recent Activity History Log
+                  </h3>
+                  <p className="text-xs text-slate-500">All recent activities grouped chronologically by date</p>
+                </div>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition-colors"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {activities.length > 0 ? (
+                  <div className="space-y-4">
+                    {activities.map((act) => (
+                      <div key={act.id} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 flex items-start gap-4 hover:bg-white transition-all">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${act.color || 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
+                          <span className="material-symbols-outlined text-[20px]">{act.icon || 'history'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <p className="text-[14px] font-bold text-slate-900 leading-snug">{act.msg}</p>
+                            <span className="px-2.5 py-1 rounded-md bg-indigo-50 border border-indigo-100 text-[11px] font-bold text-indigo-700 font-mono shrink-0">
+                              {formatOriginalTime(act.createdAt)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-wider">
+                              {act.type}
+                            </span>
+                            {act.actorName && (
+                              <span className="text-[11px] font-medium text-slate-500">
+                                by {act.actorName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-16 text-center text-slate-400">
+                    <span className="material-symbols-outlined text-4xl mb-2">manage_search</span>
+                    <p className="text-sm font-bold">No activity records available</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

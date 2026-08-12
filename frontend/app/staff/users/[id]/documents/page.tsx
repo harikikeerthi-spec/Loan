@@ -3,7 +3,7 @@
 import { useUserDossier } from "../DossierContext";
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { documentApi } from "@/lib/api";
+import { documentApi, staffProfileApi } from "@/lib/api";
 
 const DOC_TYPE_LABELS: Record<string, string> = {
     passport: "Passport",
@@ -62,7 +62,7 @@ function statusConfig(status: string) {
 }
 
 export default function DocumentsTab() {
-    const { userId, userDocuments, setUserDocuments, refreshData } = useUserDossier();
+    const { userId, userData, userDocuments, setUserDocuments, refreshData } = useUserDossier();
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -147,6 +147,16 @@ export default function DocumentsTab() {
                 // Staff uploads go to verified directly
                 await documentApi.accept(docId);
             }
+
+            // Log activity in DB
+            const studentName = userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() : 'student';
+            staffProfileApi.logActivity({
+                type: 'upload',
+                msg: `Uploaded ${getDocLabel({ docType: finalDocType })} for ${studentName}`,
+                icon: 'upload_file',
+                color: 'bg-purple-50 text-purple-700 border-purple-100'
+            }).catch(console.error);
+
             setIsUploadOpen(false);
             setUploadFile(null);
             setUploadCustomType("");
@@ -172,6 +182,16 @@ export default function DocumentsTab() {
                     (d.id || d._id) === docId ? { ...d, status: "verified" } : d
                 )
             );
+
+            // Log activity in DB
+            const studentName = userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() : 'student';
+            staffProfileApi.logActivity({
+                type: 'approved',
+                msg: `Verified ${getDocLabel(doc)} for ${studentName}`,
+                icon: 'verified',
+                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
+            }).catch(console.error);
+
             await refreshData();
         } catch (err) {
             console.error("Failed to approve document:", err);
@@ -193,6 +213,16 @@ export default function DocumentsTab() {
                     (d.id || d._id) === docId ? { ...d, status: "rejected", rejectionReason: rejectReason } : d
                 )
             );
+
+            // Log activity in DB
+            const studentName = userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() : 'student';
+            staffProfileApi.logActivity({
+                type: 'rejected',
+                msg: `Rejected ${getDocLabel(rejectDoc)} for ${studentName}${rejectReason ? `: "${rejectReason}"` : ''}`,
+                icon: 'block',
+                color: 'bg-rose-50 text-rose-700 border-rose-100'
+            }).catch(console.error);
+
             setRejectDoc(null);
             setRejectReason("");
             await refreshData();

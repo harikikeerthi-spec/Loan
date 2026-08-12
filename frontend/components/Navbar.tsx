@@ -390,11 +390,10 @@ function ProfileDropItem({ href, icon, label, iconClass, comingSoon }: {
         <Link
             href={comingSoon ? "#" : href}
             onClick={(e) => { if (comingSoon) e.preventDefault(); }}
-            className={`flex items-center justify-between px-4 py-2.5 text-[13px] transition-colors ${
-                comingSoon
+            className={`flex items-center justify-between px-4 py-2.5 text-[13px] transition-colors ${comingSoon
                     ? "text-gray-400 bg-gray-50/50 cursor-not-allowed select-none"
                     : "text-gray-700 hover:bg-gray-50"
-            }`}
+                }`}
             title={comingSoon ? "Locked — Feature Coming Soon" : undefined}
         >
             <div className="flex items-center gap-3">

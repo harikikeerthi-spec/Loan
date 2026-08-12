@@ -55,17 +55,19 @@ const NavItem = ({ section, icon, label, badge, active, expanded }: any) => {
         <Link
             href={path}
             title={label}
-            className={`w-full text-left px-3.5 py-2 rounded-xl flex items-center gap-3 transition-colors text-sm font-semibold ${isActive
+            className={`w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 transition-colors text-sm font-semibold ${isActive
                 ? 'bg-indigo-500/10 text-indigo-400 font-bold'
                 : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                 }`}
         >
-            <span className={`material-symbols-outlined text-[19px] flex-shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-400'}`}>{icon}</span>
-            <span className={`flex-1 transition-all duration-200 ${expanded ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+            <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                <span className={`material-symbols-outlined text-[18px] ${isActive ? 'text-indigo-400' : 'text-slate-400'}`}>{icon}</span>
+            </div>
+            <span className={`flex-1 transition-all duration-200 whitespace-nowrap truncate ${expanded ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
                 {label}
             </span>
             {badge > 0 && (
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold transition-opacity duration-200 ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'} ${expanded ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 transition-opacity duration-200 ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'} ${expanded ? 'inline-flex' : 'hidden group-hover/sidebar:inline-flex'}`}>
                     {badge > 99 ? '99+' : badge}
                 </span>
             )}

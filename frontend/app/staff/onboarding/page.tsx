@@ -225,7 +225,7 @@ const NavItem = ({ section, active, icon, label, badge, expanded, onClick }: any
         <button
             onClick={() => onClick(section)}
             title={label}
-            className={`relative w-full flex items-center gap-3 px-4 transition-all duration-150 group/item ${isActive
+            className={`relative w-full flex items-center gap-3 px-3 transition-all duration-150 group/item ${isActive
                 ? 'text-white'
                 : 'text-slate-500 hover:text-slate-200'
                 }`}
@@ -235,18 +235,20 @@ const NavItem = ({ section, active, icon, label, badge, expanded, onClick }: any
                 <span className="absolute inset-x-1 inset-y-1 rounded-lg bg-indigo-600" />
             )}
             {/* Icon — always visible */}
-            <span className={`material-symbols-outlined text-[24px] relative z-10 flex-shrink-0 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover/item:text-slate-200'
-                }`}>{icon}</span>
-            {/* Label — hidden at 56px, fades in when parent sidebar is hovered */}
-            <span className={`relative z-10 text-[16px] font-['Playfair_Display',serif] tracking-wider whitespace-nowrap overflow-hidden transition-all duration-300
+            <div className="w-6 h-6 flex items-center justify-center relative z-10 flex-shrink-0">
+                <span className={`material-symbols-outlined text-[18px] transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover/item:text-slate-200'
+                    }`}>{icon}</span>
+            </div>
+            {/* Label */}
+            <span className={`relative z-10 text-[15px] font-['Playfair_Display',serif] tracking-wider whitespace-nowrap overflow-hidden transition-all duration-300
                 ${expanded ? 'opacity-100 w-auto' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}
                 ${isActive ? 'text-white font-medium' : 'text-slate-300'}`}>
                 {label}
             </span>
             {badge > 0 && (
                 <span className={`relative z-10 ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full
-                    bg-rose-500 text-white transition-opacity duration-300
-                    ${expanded ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>
+                    bg-rose-500 text-white shrink-0 transition-opacity duration-300
+                    ${expanded ? 'inline-flex' : 'hidden group-hover/sidebar:inline-flex'}`}>
                     {badge > 9 ? '9+' : badge}
                 </span>
             )}

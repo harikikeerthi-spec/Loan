@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { adminApi } from "@/lib/api";
+import { adminApi, staffProfileApi } from "@/lib/api";
 
 export default function OutreachCenterPage() {
     const [emailData, setEmailData] = useState({
@@ -32,6 +32,17 @@ export default function OutreachCenterPage() {
                 role: emailData.isBulk ? emailData.role : undefined,
                 isBulk: emailData.isBulk
             });
+
+            // Log staff activity in DB
+            staffProfileApi.logActivity({
+                type: 'share',
+                msg: emailData.isBulk
+                    ? `Dispatched bulk outreach email to ${emailData.role}s: "${emailData.subject}"`
+                    : `Dispatched email to ${emailData.to}: "${emailData.subject}"`,
+                icon: 'mail',
+                color: 'bg-indigo-50 text-indigo-700 border-indigo-100'
+            }).catch(console.error);
+
             alert("Message dispatched successfully");
             setEmailData({ to: "", subject: "", content: "", role: "student", isBulk: false });
         } catch (e: any) {

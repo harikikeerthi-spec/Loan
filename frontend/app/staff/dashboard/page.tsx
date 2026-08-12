@@ -29,12 +29,40 @@ const formatAbsoluteDateTime = (dateStr: string) => {
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
-            second: "2-digit",
             hour12: true,
             timeZone: "Asia/Kolkata"
         });
     } catch {
         return "";
+    }
+};
+
+const getFormattedDateHeader = (dateStr: string): string => {
+    if (!dateStr) return "Earlier Activities";
+    try {
+        const date = convertToIST(dateStr);
+        const now = new Date();
+        
+        const dDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const dNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const diffDays = Math.floor((dNow.getTime() - dDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        const formattedDate = date.toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            timeZone: "Asia/Kolkata"
+        });
+
+        if (diffDays === 0) return `Today — ${formattedDate}`;
+        if (diffDays === 1) return `Yesterday — ${formattedDate}`;
+        if (diffDays > 1 && diffDays < 7) {
+            const dayName = date.toLocaleDateString("en-IN", { weekday: "long", timeZone: "Asia/Kolkata" });
+            return `${dayName} — ${formattedDate}`;
+        }
+        return formattedDate;
+    } catch {
+        return "Earlier Activities";
     }
 };
 
@@ -140,7 +168,19 @@ export default function StaffDashboardPage() {
     const [activitiesSearch, setActivitiesSearch] = useState("");
     const [activitiesStaffId, setActivitiesStaffId] = useState("me");
     const [staffMembersList, setStaffMembersList] = useState<any[]>([]);
-    const activitiesLimit = 15;
+    const [activitiesLimit, setActivitiesLimit] = useState(100);
+
+    const groupedActivities = useMemo(() => {
+        const groups: { [header: string]: any[] } = {};
+        (fullActivities || []).forEach(item => {
+            const header = getFormattedDateHeader(item.createdAt || item.time);
+            if (!groups[header]) {
+                groups[header] = [];
+            }
+            groups[header].push(item);
+        });
+        return groups;
+    }, [fullActivities]);
 
     useEffect(() => {
         staffProfileApi.getStaffMembersList()
@@ -520,57 +560,75 @@ export default function StaffDashboardPage() {
                         </div>
                     </div>
 
-                    {/* Timeline Table/List */}
+                    {/* Timeline Table/List Grouped by Date */}
                     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
                         <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chronological Event Timeline</span>
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-slate-500 text-[18px]">event_note</span>
+                                <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Chronological Recent Activity Log</span>
+                            </div>
                             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">{activitiesTotal} System Records Found</span>
                         </div>
-                        <div className="divide-y divide-slate-100">
+                        <div>
                             {activitiesLoading ? (
                                 <div className="p-24 text-center">
                                     <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
                                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loading secure database logs...</p>
                                 </div>
                             ) : fullActivities.length > 0 ? (
-                                fullActivities.map((a, i) => (
-                                    <div key={a.id || i} className="p-5 hover:bg-slate-50/60 transition-all group flex items-start gap-4">
-                                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-sm ${a.color || 'bg-slate-50 text-slate-600 border-slate-100'}`}>
-                                            <span className="material-symbols-outlined text-[20px]">{a.icon || 'history'}</span>
+                                Object.entries(groupedActivities).map(([dateGroup, items]) => (
+                                    <div key={dateGroup} className="border-b border-slate-200/70 last:border-b-0">
+                                        {/* Date Group Sticky Header */}
+                                        <div className="bg-slate-100/90 backdrop-blur-md px-5 py-2.5 border-y border-slate-200/60 flex items-center justify-between sticky top-0 z-10">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[16px] text-indigo-600">calendar_month</span>
+                                                <span className="text-[11px] font-black text-slate-800 uppercase tracking-wider">{dateGroup}</span>
+                                            </div>
+                                            <span className="px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-[10px] font-extrabold text-indigo-700 shadow-xs">
+                                                {items.length} {items.length === 1 ? 'event' : 'events'}
+                                            </span>
                                         </div>
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between mb-1.5">
-                                                <p className="text-[14px] font-bold text-slate-900 leading-snug tracking-tight">{a.msg}</p>
-                                                <div className="text-right shrink-0 mt-1 md:mt-0">
-                                                    <span className="text-[11px] font-semibold text-slate-400 tabular-nums block">{a.time}</span>
-                                                    {a.createdAt && (
-                                                        <span className="text-[10px] text-slate-300 tabular-nums flex items-center gap-1 justify-end mt-0.5">
-                                                            <span className="material-symbols-outlined text-[10px]">schedule</span>
-                                                            {formatAbsoluteDateTime(a.createdAt)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-wrap items-center gap-3">
-                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[9px] font-black uppercase tracking-wider text-slate-500">
-                                                    TYPE: {a.type}
-                                                </span>
-                                                <span className="w-1 h-1 rounded-full bg-slate-200" />
-
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
-                                                    <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
-                                                        <img
-                                                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${a.actorEmail || a.actorName}`}
-                                                            alt=""
-                                                            className="w-full h-full object-cover"
-                                                        />
+                                        {/* Items in this date group */}
+                                        <div className="divide-y divide-slate-100 bg-white">
+                                            {items.map((a, i) => (
+                                                <div key={a.id || i} className="p-5 hover:bg-slate-50/60 transition-all group flex items-start gap-4">
+                                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-sm ${a.color || 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                                                        <span className="material-symbols-outlined text-[20px]">{a.icon || 'history'}</span>
                                                     </div>
-                                                    <span>Actor: {a.actorName}</span>
-                                                    {a.actorEmail && <span className="text-slate-400 font-medium">({a.actorEmail})</span>}
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-1.5 gap-2">
+                                                            <p className="text-[14px] font-bold text-slate-900 leading-snug tracking-tight">{a.msg}</p>
+                                                            <div className="text-left md:text-right shrink-0">
+                                                                <span className="px-2.5 py-1 rounded-md bg-indigo-50 border border-indigo-100/80 text-[11px] font-black text-indigo-700 font-mono inline-flex items-center gap-1 shadow-2xs">
+                                                                    <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                                                    {a.createdAt ? formatAbsoluteDateTime(a.createdAt) : a.time}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex flex-wrap items-center gap-3 mt-2">
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[9px] font-black uppercase tracking-wider text-slate-600">
+                                                                TYPE: {a.type}
+                                                            </span>
+                                                            <span className="w-1 h-1 rounded-full bg-slate-300" />
+
+                                                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                                                                <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+                                                                    <img
+                                                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${a.actorEmail || a.actorName}`}
+                                                                        alt=""
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                </div>
+                                                                <span>Staff: {a.actorName}</span>
+                                                                {a.actorEmail && <span className="text-slate-400 font-medium">({a.actorEmail})</span>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            ))}
                                         </div>
                                     </div>
                                 ))

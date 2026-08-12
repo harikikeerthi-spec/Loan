@@ -4,7 +4,7 @@ import { useUserDossier } from "../DossierContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDate, parseUTCDate } from "@/lib/utils";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { applicationApi, aiApi } from "@/lib/api";
+import { applicationApi, aiApi, staffProfileApi } from "@/lib/api";
 import { getAllCountries } from "@/lib/countriesData";
 
 const banksList = [
@@ -429,6 +429,16 @@ export default function ApplicationsTab() {
             };
 
             await applicationApi.create(payload);
+
+            // Log staff activity in DB
+            const studentName = userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() : 'student';
+            staffProfileApi.logActivity({
+                type: 'new',
+                msg: `Added new ${formData.loanType || 'Loan'} application for ${studentName}`,
+                icon: 'description',
+                color: 'bg-indigo-50 text-indigo-700 border-indigo-100'
+            }).catch(console.error);
+
             await refreshData();
             setIsAddAppOpen(false);
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { supportApi } from "@/lib/api";
+import { supportApi, staffProfileApi } from "@/lib/api";
 
 interface UserSupportTicketsViewProps {
     userRole?: string;
@@ -134,6 +134,15 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
         setFormError("");
         try {
             await supportApi.addComment(selectedTicket.id, replyText.trim());
+            
+            // Log staff activity in DB
+            staffProfileApi.logActivity({
+                type: 'update',
+                msg: `Replied to Support Ticket #${selectedTicket.ticketNumber || selectedTicket.id?.slice(-6)}`,
+                icon: 'chat',
+                color: 'bg-[#4F46E5]/10 text-[#4F46E5] border-indigo-100'
+            }).catch(console.error);
+
             setReplyText("");
             // Refresh ticket to show the new comment
             const updated = await supportApi.getTicket(selectedTicket.id) as any;
@@ -182,6 +191,14 @@ export default function UserSupportTicketsView({ userRole = "student", userInfo 
                     console.warn("Attachment upload warning:", uploadErr);
                 }
             }
+
+            // Log staff activity in DB
+            staffProfileApi.logActivity({
+                type: 'new',
+                msg: `Created Support Ticket #${ticketNum}: ${subject.trim()}`,
+                icon: 'confirmation_number',
+                color: 'bg-purple-50 text-purple-700 border-purple-100'
+            }).catch(console.error);
 
             setCreatedTicketNum(ticketNum);
 

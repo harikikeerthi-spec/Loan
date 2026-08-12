@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { formatDate } from "@/lib/utils";
 import { checkFollowUpConflict, DEFAULT_TIME_SLOTS, formatSlot12Hr, getTodayDateString } from "@/lib/followUpUtils";
+import { staffProfileApi } from "@/lib/api";
 
 interface FollowUp {
     id: string;
@@ -131,6 +132,14 @@ export default function FollowUpsTab() {
         };
         
         saveFollowUps([...followUps, newFollowUp]);
+
+        // Log staff activity in DB
+        staffProfileApi.logActivity({
+            type: 'update',
+            msg: `Scheduled follow-up for student ${studentName} on ${date} at ${formatSlot12Hr(time) || time}`,
+            icon: 'event',
+            color: 'bg-indigo-50 text-indigo-700 border-indigo-100'
+        }).catch(console.error);
         
         // Reset form
         setDate("");
@@ -140,8 +149,18 @@ export default function FollowUpsTab() {
     };
 
     const updateStatus = (id: string, status: "completed" | "cancelled") => {
+        const target = followUps.find(f => f.id === id);
         const updated = followUps.map(f => f.id === id ? { ...f, status } : f);
         saveFollowUps(updated);
+
+        if (target) {
+            staffProfileApi.logActivity({
+                type: status === 'completed' ? 'approved' : 'rejected',
+                msg: `Marked follow-up for ${target.studentName || 'student'} as ${status}`,
+                icon: status === 'completed' ? 'event_available' : 'event_busy',
+                color: status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-100 text-slate-600 border-slate-200'
+            }).catch(console.error);
+        }
     };
 
     const todayStr = getTodayDateString();
