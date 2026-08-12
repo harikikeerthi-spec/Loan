@@ -23,12 +23,17 @@ async function handler(
   const backendUrl = getBackendUrl(request);
   const url = `${backendUrl}/api/notifications/${id}/mark-read`;
 
+  const csrfHeader = request.headers.get('x-csrf-token') || request.headers.get('X-CSRF-Token') || '';
+  const cookieHeader = request.headers.get('cookie') || '';
+
   try {
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': token } : {}),
+        ...(csrfHeader ? { 'X-CSRF-Token': csrfHeader } : {}),
+        ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
       },
     });
 

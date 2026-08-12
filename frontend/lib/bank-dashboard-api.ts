@@ -1,3 +1,5 @@
+import { getCsrfToken, initializeCsrf } from "./api";
+
 /**
  * Bank Dashboard API Client
  * Handles all API interactions for the dynamic bank dashboard
@@ -22,19 +24,35 @@ class BankDashboardAPI {
     this.bankId = bankId;
   }
 
-  private getHeaders(): Record<string, string> {
-    return {
+  private async getHeaders(method: string = "GET"): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "x-bank-id": this.bankId,
       Authorization: `Bearer ${localStorage.getItem("authToken") || ""}`,
     };
+
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase())) {
+      let csrfToken = getCsrfToken();
+      if (!csrfToken) {
+        csrfToken = await initializeCsrf();
+      }
+      if (csrfToken) {
+        headers["X-CSRF-Token"] = csrfToken;
+      }
+    }
+
+    return headers;
   }
 
   private async request(endpoint: string, options: RequestOptions = {}) {
     const url = `${this.baseURL}${endpoint}`;
+    const method = (options.method || "GET").toUpperCase();
+    const headers = await this.getHeaders(method);
+
     const response = await fetch(url, {
-      method: options.method || "GET",
-      headers: this.getHeaders(),
+      method,
+      headers: { ...headers, ...options.headers },
+      credentials: "include",
       ...(options.body && { body: JSON.stringify(options.body) }),
     });
 

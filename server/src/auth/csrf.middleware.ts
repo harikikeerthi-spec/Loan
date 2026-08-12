@@ -9,21 +9,14 @@ export class CsrfMiddleware implements NestMiddleware {
     return (
       cleanUrl.includes('/webhook') ||
       cleanUrl.includes('/integration/whatsapp') ||
+      cleanUrl.includes('/csrf-token') ||
       cleanUrl.includes('/auth/csrf-token') ||
       cleanUrl.includes('/auth/send-otp') ||
       cleanUrl.includes('/auth/verify-otp') ||
       cleanUrl.includes('/auth/request-otp') ||
       cleanUrl.includes('/auth/firebase') ||
       cleanUrl.includes('/auth/refresh') ||
-      cleanUrl.includes('/auth/check-user') ||
-      cleanUrl.includes('/auth/dashboard-data') ||
-      cleanUrl.includes('/auth/dashboard') ||
-      cleanUrl.includes('/auth/update-details') ||
-      cleanUrl.includes('/auth/create-application') ||
       cleanUrl.includes('/auth/login') ||
-      cleanUrl.includes('/users/profile') ||
-      cleanUrl.includes('/users/admin/update-details') ||
-      cleanUrl.includes('/onboarding') ||
       cleanUrl.includes('/digilocker/callback')
     );
   }

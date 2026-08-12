@@ -27,8 +27,12 @@ async function handleProxy(
   const url = `${backendUrl}/api/chat/${path.join('/')}${queryStr ? `?${queryStr}` : ''}`;
 
   const method = request.method;
+  const csrfHeader = request.headers.get('x-csrf-token') || request.headers.get('X-CSRF-Token') || '';
+  const cookieHeader = request.headers.get('cookie') || '';
   const headers: Record<string, string> = {
     ...(token ? { 'Authorization': token } : {}),
+    ...(csrfHeader ? { 'X-CSRF-Token': csrfHeader } : {}),
+    ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
   };
 
   let body: any = undefined;

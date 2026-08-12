@@ -1076,16 +1076,14 @@ export const adminApi = {
     getBlogs: (params?: Record<string, string>) =>
         apiFetch(HttpApiPaths.admin.blogsAll(params)),
     bulkUpdateBlogStatus: (blogIds: string[], isPublished: boolean) =>
-        fetch(HttpApiPaths.admin.blogsBulkStatus(), {
+        apiFetch(HttpApiPaths.admin.blogsBulkStatus(), {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ blogIds, isPublished }),
-        }).then(handleResponse),
+        }),
     deleteBlog: (id: string) =>
-        fetch(HttpApiPaths.admin.blogById(id), {
+        apiFetch(HttpApiPaths.admin.blogById(id), {
             method: "DELETE",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
     createBlog: (data: any) =>
         apiFetch(HttpApiPaths.admin.blogsCreate(), {
             method: "POST",
@@ -1272,18 +1270,22 @@ export const documentApi = {
         }),
 
     syncFromDigilocker: (userId: string, docType: string) =>
-        fetch(HttpApiPaths.documents.digilockerSync(), {
+        apiFetch(HttpApiPaths.documents.digilockerSync(), {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ userId, docType }),
-        }).then(handleResponse),
+        }),
 
     upload: (userId: string, docType: string, file: File, onProgress?: (progress: number) => void) => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const token = (() => {
                 if (typeof window === 'undefined') return null;
                 return localStorage.getItem('agentAccessToken') || localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
             })();
+
+            let csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                csrfToken = await initializeCsrf();
+            }
 
             const xhr = new XMLHttpRequest();
             const form = new FormData();
@@ -1313,6 +1315,7 @@ export const documentApi = {
 
             xhr.open('POST', HttpApiPaths.documents.upload());
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            if (csrfToken) xhr.setRequestHeader('X-CSRF-Token', csrfToken);
             xhr.send(form);
         });
     },
@@ -1367,11 +1370,10 @@ export const connectedApi = {
         gapYear?: boolean;
         message?: string;
     }) =>
-        fetch(`${API_URL}/connected/apply`, {
+        apiFetch(`${API_URL}/connected/apply`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ...data, source: "connectED" }),
-        }).then(handleResponse),
+        }),
 };
 
 // ─── University ───────────────────────────────────────────────────────
@@ -1384,42 +1386,33 @@ export const universityApi = {
         universityName: string;
         type: 'callback' | 'fasttrack';
     }) =>
-        fetch(`${API_URL}/university-inquiry`, {
+        apiFetch(`${API_URL}/university-inquiry`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     checkInquiry: (email: string, universityName: string, type: string): Promise<{ exists: boolean }> =>
-        fetch(`${API_URL}/university-inquiry/check?email=${encodeURIComponent(email)}&universityName=${encodeURIComponent(universityName)}&type=${type}`, {
-            headers: authHeaders(),
-        }).then(res => handleResponse<{ exists: boolean }>(res)),
+        apiFetch(`${API_URL}/university-inquiry/check?email=${encodeURIComponent(email)}&universityName=${encodeURIComponent(universityName)}&type=${type}`),
 };
 
 // ─── Chat ─────────────────────────────────────────────────────────────
 export const chatApi = {
     connect: () =>
-        fetch(HttpApiPaths.chat.connect(), {
+        apiFetch(HttpApiPaths.chat.connect(), {
             method: "POST",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 
     getConversations: () =>
-        fetch(HttpApiPaths.chat.conversations(), {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(HttpApiPaths.chat.conversations()),
 
     getMessages: (conversationId: string) =>
-        fetch(HttpApiPaths.chat.messages(conversationId), {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(HttpApiPaths.chat.messages(conversationId)),
 
     staffStart: (customerPhone: string, email: string, name?: string) =>
-        fetch(HttpApiPaths.chat.staffStart(), {
+        apiFetch(HttpApiPaths.chat.staffStart(), {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ customerPhone, email, name }),
-        }).then(handleResponse),
+        }),
 };
 // ─── Staff Profile (Intermediary Flow) ───────────────────────────────
 export const staffProfileApi = {

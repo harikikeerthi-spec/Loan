@@ -8,7 +8,7 @@ import React, {
     useCallback,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { authApi, subscribeToTokenChange, notifyTokenChange } from "@/lib/api";
+import { authApi, subscribeToTokenChange, notifyTokenChange, initializeCsrf } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -221,6 +221,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const portal = getPortalFromPathname(pathname);
+
+    // Initialize CSRF token and double submit cookie on application load
+    useEffect(() => {
+        initializeCsrf().catch(() => {});
+    }, []);
 
     // Subscribe to token updates from apiFetch (silent refreshes)
     useEffect(() => {

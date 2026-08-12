@@ -42,21 +42,14 @@ async function bootstrap() {
       ['GET', 'HEAD', 'OPTIONS'].includes(req.method.toUpperCase()) ||
       url.includes('/webhook') ||
       url.includes('/integration/whatsapp') ||
+      url.includes('/csrf-token') ||
       url.includes('/auth/csrf-token') ||
       url.includes('/auth/send-otp') ||
       url.includes('/auth/verify-otp') ||
       url.includes('/auth/request-otp') ||
       url.includes('/auth/firebase') ||
       url.includes('/auth/refresh') ||
-      url.includes('/auth/check-user') ||
-      url.includes('/auth/dashboard-data') ||
-      url.includes('/auth/dashboard') ||
-      url.includes('/auth/update-details') ||
-      url.includes('/auth/create-application') ||
       url.includes('/auth/login') ||
-      url.includes('/users/profile') ||
-      url.includes('/users/admin/update-details') ||
-      url.includes('/onboarding') ||
       url.includes('/digilocker/callback')
     ) {
       return next();
