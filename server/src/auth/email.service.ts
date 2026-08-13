@@ -8,35 +8,43 @@ export class EmailService {
 
   constructor() {
     // Configure SMTP transporter using environment variables
+    const port = parseInt(process.env.EMAIL_PORT || '587');
+    const isSecure = port === 465;
+
     this.transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: false, // true for 465, false for other ports
+      port: port,
+      secure: isSecure, // true for 465, false for 587 STARTTLS
+      requireTLS: !isSecure,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
       },
     });
   }
 
   private getFromAddress(): string {
-    if (process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim()) {
-      return process.env.EMAIL_FROM.trim();
+    const emailUser = (process.env.EMAIL_USER || '').trim();
+    const emailFrom = (process.env.EMAIL_FROM || '').trim();
+
+    if (emailFrom && emailFrom.includes('@')) {
+      if (emailFrom.includes('<')) return emailFrom;
+      return `"VidyaLoans Support" <${emailFrom}>`;
     }
-    if (process.env.EMAIL_USER && process.env.EMAIL_USER.trim()) {
-      return `"VidyaLoan" <${process.env.EMAIL_USER.trim()}>`;
+
+    if (emailUser) {
+      return `"VidyaLoans Support" <${emailUser}>`;
     }
-    return '"VidyaLoan" <support@vidyaloans.in>';
+
+    return '"VidyaLoans Support" <support@vidyaloans.in>';
   }
 
-  private getStandardHeaders(replyToEmail?: string) {
-    const sender = process.env.EMAIL_USER || 'support@vidyaloans.in';
+  private getStandardHeaders() {
     return {
-      'X-Mailer': 'VidyaLoan Platform v2.0',
       'X-Auto-Response-Suppress': 'OOF, AutoReply',
-      'X-Report-Abuse': `Please report spam to ${sender}`,
-      'List-Unsubscribe': `<mailto:${replyToEmail || sender}?subject=unsubscribe>`,
-      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     };
   }
 
@@ -216,7 +224,7 @@ export class EmailService {
       to: fullName ? `"${fullName}" <${email}>` : email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `🎓 Welcome to VidyaLoan, ${name}! Your Education Loan Journey Begins`,
+      subject: `Welcome to VidyaLoans, ${name}! Your Education Loan Journey Begins`,
       text: `Dear ${name},\n\nWelcome to VidyaLoan – India's smartest education loan platform!\n\nYour profile is set up and your dashboard is ready. Here's what you can do now:\n\n🏦 LOAN OFFERINGS\n• Education loans up to ₹1.5 Crore\n• Competitive interest rates from 8.5% p.a.\n• Moratorium period during studies\n• No collateral for loans up to ₹7.5 Lakh\n• Covers tuition, living, travel, and equipment costs\n\n🚀 HOW TO GET YOUR LOAN IN 4 STEPS\n1. Complete Your Profile – Personal & academic details (done!)\n2. Upload Documents via DigiLocker – 100% digital & secure\n3. Choose Your Bank – Compare offers from 20+ lenders\n4. Track in Real Time – Get updates at every step\n\n✨ PLATFORM FEATURES\n• AI-powered bank matching\n• DigiLocker integration for instant document sync\n• Real-time application tracking\n• Dedicated loan counsellors\n• Community forum & expert blogs\n\nGo to your dashboard: ${frontendUrl}\n\nWarm regards,\nThe VidyaLoan Team\nsupport@vidyaloans.in`,
       html: `<!DOCTYPE html>
 <html lang="en">
@@ -412,7 +420,7 @@ export class EmailService {
       to: userName ? `"${userName}" <${email}>` : email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `⚡ VidyaLoan Team is Processing Your Application - #${appNum}`,
+      subject: `VidyaLoans: Processing Your Loan Application #${appNum}`,
       text: `Dear ${userName},\n\nGood news! The VidyaLoan review team has officially received and started processing your loan application (No. #${appNum}) for ${bankName}.\n\nApplication Details:\n- Number: #${appNum}\n- Type: ${loanType}\n- Amount: ${amount}\n\nOur loan specialists are checking your documents to fast-track your approval.\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
@@ -694,7 +702,7 @@ export class EmailService {
       to: userName ? `"${userName}" <${email}>` : email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `📝 Loan Application Submitted Successfully - #${appNum}`,
+      subject: `Confirmation: Loan Application Submitted (#${appNum})`,
       text: `Dear ${userName},\n\nYour loan application for ${targetCountry} has been submitted successfully.\n\nApplication Number: ${appNum}\nLoan Type: ${loanType}\nAmount: ${amount}\nTarget Country: ${targetCountry}\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
@@ -889,7 +897,7 @@ export class EmailService {
       to: email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `📈 Application Progress Tracker - #${appNum}`,
+      subject: `Application Progress Tracker (#${appNum})`,
       text: `Dear ${userName},\n\nYour loan application progress tracker is active.\n\nApplication Number: #${appNum}\nTarget Country: ${targetCountry}\nLoan Type: ${loanType}\nCurrent Stage: Application Submitted\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
@@ -1119,7 +1127,7 @@ export class EmailService {
       to: email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `📤 Application Shared with ${bankName} - #${appNum}`,
+      subject: `Application Status: Submitted to ${bankName} (#${appNum})`,
       text: `Dear ${userName},\n\nYour loan application has been reviewed and processed by the VidyaLoan staff and has been successfully sent to ${bankName} for review.\n\nApplication Number: #${appNum}\nBank Partner: ${bankName}\nLoan Type: ${loanType}\nRequested Amount: ${amount}\nTarget Country: ${targetCountry}\nInstitution: ${university}\nCurrent Stage: Bank Review\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
@@ -1611,7 +1619,7 @@ export class EmailService {
       to: email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `🎉 Congratulations! Loan Application Accepted by ${bankName} - #${appNum}`,
+      subject: `Application Approved: Loan Sanctioned by ${bankName} (#${appNum})`,
       text: `Dear ${userName},\n\nWe have fantastic news! Your loan application for ${bankName} has been accepted and approved by the bank.\n\nApplication Number: #${appNum}\nSanction Amount: ${amount}\nInterest Rate: ${rate}% p.a.\nTenure: ${tenure} months\n\nYou can view and accept the formal sanction letter on your VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
@@ -1768,7 +1776,7 @@ export class EmailService {
       to: email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `💸 Loan Disbursed Successfully - #${appNum}`,
+      subject: `Notification: Loan Disbursed Successfully (#${appNum})`,
       text: `Dear ${userName},\n\nGreat news! Your education loan amount of ${amount} has been successfully disbursed by ${bankName}.\n\nApplication Number: #${appNum}\nTransaction Ref (UTR): ${utrNumber}\nDisbursed Amount: ${amount}\nBank Partner: ${bankName}\nTranche: Tranche ${trancheNumber}\nDisbursement Date: ${dateStr}\n\nYou can view full transaction details on your VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
@@ -1988,7 +1996,7 @@ export class EmailService {
       to: email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `⚠️ Application Rejected by VidyaLoan Staff`,
+      subject: `Application Status Update: VidyaLoans Staff Review`,
       text: `Dear ${userName},\n\nWe regret to inform you that your loan application has been rejected by VidyaLoan staff.\n\nRejection Reason: ${reason || 'Not specified'}\n\nIf you have any questions or believe this was a mistake, please contact our support desk immediately.\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
@@ -2099,7 +2107,7 @@ export class EmailService {
       to: email,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `⚠️ Update on Your Loan Application - Rejected by ${bankName}`,
+      subject: `Application Status Update: ${bankName} Review`,
       text: `Dear ${userName},\n\nWe regret to inform you that your loan application has been rejected by ${bankName}.\n\nRejection Reason: ${reason || 'Credit score or verification shortfall'}\n\nDon't worry! VidyaLoan is partnered with 20+ other lenders. Our team will automatically match your profile with other suitable bank partners to explore alternate options. Contact our loan counsellors immediately for help.\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
