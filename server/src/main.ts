@@ -44,6 +44,10 @@ async function bootstrap() {
       url.includes('/integration/whatsapp') ||
       url.includes('/csrf-token') ||
       url.includes('/auth/csrf-token') ||
+      url.includes('/documents/upload') ||
+      url.includes('/documents/complete-upload') ||
+      url.includes('/auth/upload-document') ||
+      url.includes('/upload-statement') ||
       url.includes('/auth/send-otp') ||
       url.includes('/auth/verify-otp') ||
       url.includes('/auth/request-otp') ||

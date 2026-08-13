@@ -60,31 +60,56 @@ export default function DocumentVaultPage() {
 
     const areNamesMatching = (name1?: string, name2?: string): boolean => {
         if (!name1 || !name2) return true;
-        const clean1 = name1.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-        const clean2 = name2.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+
+        const cleanStr = (s: string) =>
+            s.toLowerCase()
+                .replace(/[^a-z0-9\s]/g, '')
+                .replace(/\b(mr|mrs|ms|dr|prof|shri|smt|shree|kumar|kumari)\b/g, '')
+                .trim();
+
+        const clean1 = cleanStr(name1);
+        const clean2 = cleanStr(name2);
+
         if (!clean1 || !clean2) return true;
         if (clean1 === clean2) return true;
 
         const words1 = clean1.split(/\s+/).filter(Boolean);
         const words2 = clean2.split(/\s+/).filter(Boolean);
 
-        const firstName1 = words1[0];
-        const firstName2 = words2[0];
-        if (firstName1 && firstName2 && firstName1.length > 1 && firstName2.length > 1 && firstName1 !== firstName2) {
-            if (!firstName1.includes(firstName2) && !firstName2.includes(firstName1)) {
-                return false;
-            }
-        }
+        // 1. Exact sorted token match (handles "BAPAIAH NAIDU CHEBROLU" vs "CHEBROLU BAPAIAH NAIDU")
+        const sorted1 = [...words1].sort().join(' ');
+        const sorted2 = [...words2].sort().join(' ');
+        if (sorted1 === sorted2) return true;
 
-        const set1 = new Set(words1.filter(w => w.length > 1));
-        const set2 = new Set(words2.filter(w => w.length > 1));
-        if (set1.size === 0 || set2.size === 0) return true;
+        // 2. Token overlap check for names with initials or missing middle names
+        const significant1 = words1.filter(w => w.length > 1);
+        const significant2 = words2.filter(w => w.length > 1);
+
+        if (significant1.length === 0 || significant2.length === 0) return true;
+
+        const set1 = new Set(significant1);
+        const set2 = new Set(significant2);
 
         let matches = 0;
-        set1.forEach(w => { if (set2.has(w)) matches++; });
+        set1.forEach(w => {
+            if (set2.has(w)) {
+                matches++;
+            } else {
+                for (const w2 of set2) {
+                    if (w.length >= 4 && w2.length >= 4 && (w.includes(w2) || w2.includes(w))) {
+                        matches++;
+                        break;
+                    }
+                }
+            }
+        });
 
+        // If all significant words of either name exist in the other name, consider it a match
         const minSize = Math.min(set1.size, set2.size);
-        return matches >= Math.ceil(minSize * 0.7);
+        if (matches >= minSize) return true;
+
+        const matchRatio = matches / minSize;
+        return matchRatio >= 0.6;
     };
 
     // Sequential Upload Requirement: Passport must be uploaded first
@@ -701,12 +726,26 @@ export default function DocumentVaultPage() {
 
             console.log("Starting file upload for docType:", docType, "file:", file.name, "size:", file.size);
 
-            const response = await fetch(`/api/documents/upload`, {
+            let response = await fetch(`/api/documents/upload`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: headersObj,
                 body: formData
             });
+
+            // Handle 403 CSRF mismatch retry once with a fresh token
+            if (response.status === 403) {
+                const freshCsrf = await initializeCsrf(true);
+                if (freshCsrf) {
+                    headersObj["X-CSRF-Token"] = freshCsrf;
+                    response = await fetch(`/api/documents/upload`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: headersObj,
+                        body: formData
+                    });
+                }
+            }
 
             console.log("Upload response status:", response.status, response.statusText);
 

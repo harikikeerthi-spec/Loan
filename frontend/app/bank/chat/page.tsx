@@ -12,10 +12,11 @@ export default function BankChatPage() {
     
     const applicationId = searchParams.get("applicationId");
     const applicationNumber = searchParams.get("applicationNumber");
+    const bankParam = searchParams.get("bank");
 
-    let bankNameKey = "idfc";
+    let bankNameKey = bankParam || "idfc";
     if (typeof window !== "undefined") {
-        bankNameKey = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank") || user?.bankName || user?.firstName || "idfc";
+        bankNameKey = bankParam || sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank") || user?.bankName || user?.firstName || "idfc";
     }
 
     const initialBank = useMemo(() => {

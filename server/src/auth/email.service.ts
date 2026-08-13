@@ -884,13 +884,32 @@ export class EmailService {
     }
   }
 
+  private calculateProgress(application: any, defaultFallback: number = 25): number {
+    if (!application) return defaultFallback;
+    const s = String(application.status || '').toLowerCase();
+    const stage = String(application.stage || '').toLowerCase();
+
+    if (['disbursed', 'closed'].includes(s) || ['disbursed', 'disbursement'].includes(stage)) return 100;
+    if (['sanctioned', 'approved', 'sanction'].includes(s) || ['sanction'].includes(stage)) return 95;
+    if (['under_bank_review', 'query_raised', 'conditional_sanction', 'processing'].includes(s) || ['bank_review', 'review'].includes(stage)) return 90;
+    if (['submitted_to_bank', 'file_logged'].includes(s) || ['submit_to_bank'].includes(stage)) return 75;
+    if (['staff_verified', 'verification', 'documents_verified'].includes(s) || ['credit_check'].includes(stage)) return 50;
+    if (['docs_received', 'docs_uploaded', 'under_review'].includes(s) || ['document_verification'].includes(stage)) return Math.max(typeof application.progress === 'number' && application.progress > 0 ? application.progress : 0, 40);
+    if (['submitted', 'application_submitted'].includes(s) || ['application_submitted'].includes(stage)) return Math.max(typeof application.progress === 'number' && application.progress > 0 ? application.progress : 0, 25);
+
+    if (typeof application.progress === 'number' && application.progress > 0) {
+      return application.progress;
+    }
+    return defaultFallback;
+  }
+
   async sendLoanTrackingEmail(email: string, userName: string, bankName: string, application: any) {
     const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
     const targetCountry = application.country || application.targetCountry || application.countryName || 'N/A';
-    const progress = application.progress || 15;
+    const progress = this.calculateProgress(application, 25);
 
     const mailOptions = {
       from: this.getFromAddress(),
@@ -1120,7 +1139,7 @@ export class EmailService {
     const amount = application.amount ? `₹${Number(application.amount).toLocaleString('en-IN')}` : 'N/A';
     const university = application.universityName || application.targetUniversity || 'N/A';
     const targetCountry = application.country || application.targetCountry || application.countryName || 'N/A';
-    const progress = 50;
+    const progress = this.calculateProgress(application, 75);
 
     const mailOptions = {
       from: this.getFromAddress(),
@@ -1606,7 +1625,7 @@ export class EmailService {
     const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
-    const progress = 85;
+    const progress = this.calculateProgress(application, 95);
 
     // Parse sanction amounts and rates
     const rawAmt = details?.sanctionAmount || application.sanctionAmount || application.amount;

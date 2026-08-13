@@ -1291,12 +1291,33 @@ export const documentApi = {
                 }
             });
 
-            xhr.addEventListener('load', () => {
+            xhr.addEventListener('load', async () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         resolve(JSON.parse(xhr.responseText));
                     } catch (e) {
                         resolve(xhr.responseText);
+                    }
+                } else if (xhr.status === 403) {
+                    // Retry once with fresh CSRF token
+                    try {
+                        const freshToken = await initializeCsrf(true);
+                        const retryXhr = new XMLHttpRequest();
+                        retryXhr.withCredentials = true;
+                        retryXhr.addEventListener('load', () => {
+                            if (retryXhr.status >= 200 && retryXhr.status < 300) {
+                                try { resolve(JSON.parse(retryXhr.responseText)); } catch { resolve(retryXhr.responseText); }
+                            } else {
+                                reject(new Error(`Upload failed with status ${retryXhr.status}`));
+                            }
+                        });
+                        retryXhr.addEventListener('error', () => reject(new Error('Network error')));
+                        retryXhr.open('POST', HttpApiPaths.documents.upload());
+                        if (token) retryXhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                        if (freshToken) retryXhr.setRequestHeader('X-CSRF-Token', freshToken);
+                        retryXhr.send(form);
+                    } catch {
+                        reject(new Error("CSRF token refresh failed"));
                     }
                 } else {
                     let errorMsg = `Upload failed with status ${xhr.status}`;

@@ -1441,15 +1441,57 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   let crossDocNameDetail = "";
   let discrepantDocs: { doc1: OcrSummaryDoc, doc2: OcrSummaryDoc } | null = null;
 
-  if (panName && passportName && getComparableValue(panName) !== getComparableValue(passportName)) {
+  const isSamePersonName = (n1?: any, n2?: any): boolean => {
+    if (!n1 || !n2) return true;
+    const cleanStr = (val: any) =>
+      typeof val !== 'string'
+        ? ''
+        : val.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\b(mr|mrs|ms|dr|prof|shri|smt|shree|kumar|kumari)\b/g, '').trim();
+    const c1 = cleanStr(n1);
+    const c2 = cleanStr(n2);
+    if (!c1 || !c2) return true;
+    if (c1 === c2) return true;
+
+    const w1 = c1.split(/\s+/).filter(Boolean);
+    const w2 = c2.split(/\s+/).filter(Boolean);
+
+    const s1 = [...w1].sort().join(' ');
+    const s2 = [...w2].sort().join(' ');
+    if (s1 === s2) return true;
+
+    const sig1 = w1.filter(w => w.length > 1);
+    const sig2 = w2.filter(w => w.length > 1);
+    if (sig1.length === 0 || sig2.length === 0) return true;
+
+    const set1 = new Set(sig1);
+    const set2 = new Set(sig2);
+    let matches = 0;
+    set1.forEach(w => {
+      if (set2.has(w)) matches++;
+      else {
+        for (const w2 of set2) {
+          if (w.length >= 4 && w2.length >= 4 && (w.includes(w2) || w2.includes(w))) {
+            matches++;
+            break;
+          }
+        }
+      }
+    });
+
+    const minSize = Math.min(set1.size, set2.size);
+    if (matches >= minSize) return true;
+    return (matches / minSize) >= 0.6;
+  };
+
+  if (panName && passportName && !isSamePersonName(panName, passportName)) {
     crossDocNameMismatch = true;
     crossDocNameDetail = `PAN Name ("${panName}") mismatches Passport Name ("${passportName}").`;
     if (panDoc && passportDoc) discrepantDocs = { doc1: panDoc, doc2: passportDoc };
-  } else if (panName && aadhaarName && getComparableValue(panName) !== getComparableValue(aadhaarName)) {
+  } else if (panName && aadhaarName && !isSamePersonName(panName, aadhaarName)) {
     crossDocNameMismatch = true;
     crossDocNameDetail = `PAN Name ("${panName}") mismatches Aadhaar Name ("${aadhaarName}").`;
     if (panDoc && aadhaarDoc) discrepantDocs = { doc1: panDoc, doc2: aadhaarDoc };
-  } else if (passportName && aadhaarName && getComparableValue(passportName) !== getComparableValue(aadhaarName)) {
+  } else if (passportName && aadhaarName && !isSamePersonName(passportName, aadhaarName)) {
     crossDocNameMismatch = true;
     crossDocNameDetail = `Passport Name ("${passportName}") mismatches Aadhaar Name ("${aadhaarName}").`;
     if (passportDoc && aadhaarDoc) discrepantDocs = { doc1: passportDoc, doc2: aadhaarDoc };

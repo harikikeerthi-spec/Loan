@@ -903,8 +903,10 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
         const appId = initialBank?.applicationId || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('applicationId') : null);
         if (!appId || conversations.length === 0) return;
 
-        const match = conversations.find(c => c.metadata?.applicationId === appId);
+        const match = conversations.find(c => c.metadata?.applicationId === appId || c.id === appId);
         if (match && activeConversation !== match.id) {
+            setSidebarTab('chats');
+            if (match.metadata?.type === 'bank') setChatTypeFilter('bank');
             setActiveConversation(match.id);
         }
     }, [conversations, initialBank?.applicationId, activeConversation]);

@@ -87,13 +87,35 @@ export default function UserProfileView({
         return null;
     };
 
+    const isDocTypeMatchExact = (docType: string, targetType: string): boolean => {
+        const type = (docType || '').toLowerCase().trim();
+        const target = (targetType || '').toLowerCase().trim();
+        if (!type || !target) return false;
+
+        // Exact match
+        if (type === target) return true;
+
+        const relations = ['father', 'mother', 'coapplicant', 'co_applicant', 'coapp', 'brother', 'sister', 'spouse', 'guarantor'];
+        const targetRelation = relations.find(r => target.includes(r));
+        const typeRelation = relations.find(r => type.includes(r));
+
+        if (targetRelation) {
+            // Target is for a family member/coapplicant. The document MUST also have a matching relation prefix!
+            if (!typeRelation) return false;
+            return typeRelation === targetRelation || target.includes(typeRelation) || type.includes(targetRelation);
+        }
+
+        if (typeRelation) {
+            // Document belongs to a family member (e.g. 'father_pan'), so it must NOT match student target 'pan'!
+            return false;
+        }
+
+        return type.includes(target) || target.includes(type);
+    };
+
     const getDocExtractedField = (docTypes: string[], fieldNames: string[]): string | undefined => {
         for (const dt of docTypes) {
-            const doc = userDocs.find((d: any) => {
-                const type = (d.docType || '').toLowerCase();
-                const target = dt.toLowerCase();
-                return type === target || type.includes(target) || target.includes(type);
-            });
+            const doc = userDocs.find((d: any) => isDocTypeMatchExact(d.docType, dt));
             if (doc) {
                 const val = getExtractedField(doc, fieldNames);
                 if (val) return val;
@@ -195,6 +217,9 @@ export default function UserProfileView({
     const passportBirthCity = parsedPassportObj.birthCity || parsedPassportObj.placeOfBirth || parsedPassportObj.birth_city || activeProfile?.birthCity || getDocExtractedField(['passport'], ['place_of_birth', 'birth_place', 'birth_city']);
     const passportFullName = parsedPassportObj.fullName || parsedPassportObj.full_name || activeProfile?.passportOriginalName || activeProfile?.nameAsInPassport || activeProfile?.family?.passportOriginalName || getDocExtractedField(['passport'], ['full_name', 'fullName', 'name', 'printed_name', 'holder_name']);
 
+    const studentAadhaar = activeProfile?.aadharNumber || activeProfile?.aadhar || activeProfile?.aadhaarNumber || activeProfile?.aadhaar || getDocExtractedField(['aadhar', 'aadhaar', 'student_aadhar', 'student_aadhaar', 'national_id'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
+    const studentPan = activeProfile?.panNumber || activeProfile?.pan || activeProfile?.panNo || getDocExtractedField(['pan', 'pancard', 'pan_card', 'student_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
+
     const displayUserId = user?.id || "";
 
     const profileCompleteness = (() => {
@@ -242,7 +267,6 @@ export default function UserProfileView({
     // States
     const [editingCard, setEditingCard] = useState<string | null>(null);
     const [savingProfile, setSavingProfile] = useState(false);
-    const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
 
     const [personalForm, setPersonalForm] = useState({
         firstName: "",
@@ -251,6 +275,8 @@ export default function UserProfileView({
         dateOfBirth: "",
         passportNumber: "",
         passportExpiryDate: "",
+        aadharNumber: "",
+        panNumber: "",
     });
 
     const [familyForm, setFamilyForm] = useState({
@@ -276,6 +302,8 @@ export default function UserProfileView({
             dateOfBirth: formatDateToDdMmYyyy(activeProfile?.dateOfBirth),
             passportNumber: passportNumber || "",
             passportExpiryDate: passportExpiryDate || "",
+            aadharNumber: studentAadhaar || "",
+            panNumber: studentPan || "",
         });
         setEditingCard("personal");
     };
@@ -330,9 +358,7 @@ export default function UserProfileView({
         setEditingCard("coapplicant");
     };
 
-    const toggleSecretVisibility = (key: string) => {
-        setVisibleSecrets(prev => ({ ...prev, [key]: !prev[key] }));
-    };
+
 
     const handleSavePersonal = async () => {
         if (!user?.email) return;
@@ -374,6 +400,8 @@ export default function UserProfileView({
                     },
                     passportNumber: personalForm.passportNumber,
                     passportExpiry: personalForm.passportExpiryDate,
+                    aadharNumber: personalForm.aadharNumber,
+                    panNumber: personalForm.panNumber,
                 });
             }
             await refreshUser();
@@ -440,34 +468,34 @@ export default function UserProfileView({
         }
     };
 
-    const formatAadhar = (val?: string, _visible?: boolean) => {
+    const formatAadhar = (val?: string) => {
         if (!val || val === "—") return null;
         return val;
     };
 
-    const formatPan = (val?: string, _visible?: boolean) => {
+    const formatPan = (val?: string) => {
         if (!val || val === "—") return null;
-        return val;
+        return val.toUpperCase();
     };
 
-    const renderTableAadhar = (val?: string, _secretKey?: string) => {
+    const renderTableAadhar = (val?: string, _key?: string) => {
         const isEmpty = !val || val === "—" || val === "";
         if (isEmpty) return <div className="text-black-900 italic text-[13px]">Aadhaar: Not provided</div>;
         return (
             <div className="flex items-center gap-1.5 text-[14px]">
                 <span className="text-[#64748B]">Aadhaar:</span>
-                <span className="font-mono font-medium text-black-800">{val}</span>
+                <span className="font-mono font-bold text-slate-800 tracking-wider">{val}</span>
             </div>
         );
     };
 
-    const renderTablePan = (val?: string, _secretKey?: string) => {
+    const renderTablePan = (val?: string, _key?: string) => {
         const isEmpty = !val || val === "—" || val === "";
         if (isEmpty) return <div className="text-black-900 italic text-[13px]">PAN: Not provided</div>;
         return (
             <div className="flex items-center gap-1.5 text-[14px]">
                 <span className="text-[#64748B]">PAN:</span>
-                <span className="font-mono font-medium text-black-800">{val}</span>
+                <span className="font-mono font-bold text-slate-800 uppercase tracking-wider">{val}</span>
             </div>
         );
     };
@@ -477,10 +505,10 @@ export default function UserProfileView({
         val: any,
         onEditClick: () => void,
         type: "text" | "aadhar" | "pan" = "text",
-        secretKey?: string
+        _key?: string
     ) => {
         const isEmpty = !val || val === "—" || val === "";
-        const displayVal = isEmpty ? "Click to add info" : val;
+        const displayVal = isEmpty ? "Not provided" : val;
 
         if (type === "aadhar" || type === "pan") {
             if (isEmpty) {
@@ -497,25 +525,12 @@ export default function UserProfileView({
                     </div>
                 );
             }
-            const isVisible = secretKey ? !!visibleSecrets[secretKey] : false;
-            const formatted = type === "aadhar" ? formatAadhar(val, isVisible) : formatPan(val, isVisible);
+            const formatted = type === "aadhar" ? formatAadhar(val) : formatPan(val);
             return (
                 <div className="mb-4 group/field relative">
                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</span>
                     <div className="flex items-center justify-between py-1 min-h-[28px]">
-                        <div className="flex items-center gap-2">
-                            <span className="text-[15px] font-medium text-slate-800 font-mono">{formatted}</span>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (secretKey) toggleSecretVisibility(secretKey);
-                                }}
-                                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 transition-colors border-0 bg-transparent flex items-center"
-                            >
-                                <i className={`ph ${isVisible ? 'ph-eye-slash' : 'ph-eye'} text-sm`} />
-                            </button>
-                        </div>
+                        <span className="text-[15px] font-bold text-slate-800 font-mono tracking-wider">{formatted}</span>
                         <button
                             type="button"
                             onClick={onEditClick}
@@ -724,6 +739,58 @@ export default function UserProfileView({
                                         className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all ${user?.phoneNumber || user?.mobile ? 'bg-slate-100/80 text-slate-500 cursor-not-allowed border-slate-200' : 'bg-slate-50/50 text-slate-700 border-slate-200'}`}
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Passport Number</label>
+                                    <input
+                                        type="text"
+                                        value={personalForm.passportNumber}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                            setPersonalForm(p => ({ ...p, passportNumber: val }));
+                                        }}
+                                        maxLength={12}
+                                        placeholder="e.g. Z1234567"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50 uppercase font-mono font-bold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Passport Expiry Date</label>
+                                    <input
+                                        type="text"
+                                        value={personalForm.passportExpiryDate}
+                                        onChange={(e) => setPersonalForm(p => ({ ...p, passportExpiryDate: e.target.value }))}
+                                        placeholder="e.g. YYYY-MM-DD or DD/MM/YYYY"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Student Aadhaar Number</label>
+                                    <input
+                                        type="text"
+                                        value={personalForm.aadharNumber}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, "").slice(0, 12);
+                                            setPersonalForm(p => ({ ...p, aadharNumber: val }));
+                                        }}
+                                        maxLength={12}
+                                        placeholder="12-digit Aadhaar Number"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50 font-mono font-bold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Student PAN Number</label>
+                                    <input
+                                        type="text"
+                                        value={personalForm.panNumber}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+                                            setPersonalForm(p => ({ ...p, panNumber: val }));
+                                        }}
+                                        maxLength={10}
+                                        placeholder="10-character PAN Number"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50 uppercase font-mono font-bold"
+                                    />
+                                </div>
                             </div>
                             <div className="flex justify-end gap-3 pt-3">
                                 <button
@@ -766,14 +833,23 @@ export default function UserProfileView({
                                             </span>
                                         </div>
                                     </div>
-                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1 border ${
-                                        passportDoc?.uploaded || passportNumber
-                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                                            : "bg-amber-50 text-amber-700 border-amber-200/60"
-                                    }`}>
-                                        <i className={`ph ${passportDoc?.uploaded || passportNumber ? "ph-check-circle text-emerald-600" : "ph-clock text-amber-600"} text-xs`} />
-                                        {passportDoc?.uploaded ? "Passport Verified" : passportNumber ? "Details Available" : "Pending Upload"}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1 border ${
+                                            passportDoc?.uploaded || passportNumber
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                                                : "bg-amber-50 text-amber-700 border-amber-200/60"
+                                        }`}>
+                                            <i className={`ph ${passportDoc?.uploaded || passportNumber ? "ph-check-circle text-emerald-600" : "ph-clock text-amber-600"} text-xs`} />
+                                            {passportDoc?.uploaded ? "Passport Verified" : passportNumber ? "Details Available" : "Pending Upload"}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={startPersonalEdit}
+                                            className="px-2.5 py-1 rounded-lg bg-white border border-purple-200 text-[#6605c7] hover:bg-purple-100/50 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <i className="ph ph-pencil-simple text-xs" /> Edit
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-purple-100/60 text-xs">
                                     <div>
@@ -797,6 +873,10 @@ export default function UserProfileView({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {renderBentoField("Email Address", activeProfile?.email, startPersonalEdit)}
                                 {renderBentoField("Phone Number", activeProfile?.phoneNumber, startPersonalEdit)}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {renderBentoField("Aadhaar Number", studentAadhaar, startPersonalEdit, "aadhar")}
+                                {renderBentoField("PAN Number", studentPan, startPersonalEdit, "pan")}
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {renderBentoField("Date of Birth", formatDob(activeProfile?.dateOfBirth), startPersonalEdit)}

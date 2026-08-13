@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { getProfileDocumentRequirements } from "@/lib/documentRequirements";
 
 interface Stage {
     order: number;
@@ -10,12 +11,14 @@ interface Stage {
 }
 
 const STAGES_CONFIG: Record<string, Stage> = {
-    application_submitted: { order: 1, label: 'Submitted', icon: 'description', progress: 10 },
-    document_verification: { order: 2, label: 'Documents', icon: 'upload_file', progress: 30 },
-    credit_check: { order: 3, label: 'Credit Check', icon: 'analytics', progress: 50 },
-    bank_review: { order: 4, label: 'Review', icon: 'rate_review', progress: 70 },
-    sanction: { order: 5, label: 'Sanction', icon: 'verified', progress: 90 },
-    disbursement: { order: 6, label: 'Disbursed', icon: 'payments', progress: 100 },
+    application_created: { order: 1, label: 'Created', icon: 'bolt', progress: 10 },
+    application_submitted: { order: 2, label: 'Submitted', icon: 'send', progress: 25 },
+    document_verification: { order: 3, label: 'Documents', icon: 'verified', progress: 40 },
+    submit_to_bank: { order: 4, label: 'Submit to Bank', icon: 'account_balance', progress: 50 },
+    credit_check: { order: 5, label: 'Credit Check', icon: 'credit_score', progress: 75 },
+    bank_review: { order: 6, label: 'Review', icon: 'rate_review', progress: 90 },
+    sanction: { order: 7, label: 'Sanction', icon: 'assignment_turned_in', progress: 95 },
+    disbursement: { order: 8, label: 'Disbursed', icon: 'payments', progress: 100 },
 };
 
 const STAGES_LIST = Object.entries(STAGES_CONFIG)
@@ -28,32 +31,83 @@ interface Application {
     bank: string;
     date?: string;
     stage?: string;
+    progress?: number;
     applicationNumber?: string;
 }
 
+const getDynamicProgress = (app: any, documents: any[] = [], profile?: any) => {
+    if (!app) return 10;
+    const s = String(app.status || '').toLowerCase();
+    if (['disbursed', 'closed'].includes(s)) return 100;
+    if (['sanctioned', 'approved', 'sanction'].includes(s)) return 95;
+    if (['under_bank_review', 'query_raised', 'conditional_sanction', 'processing'].includes(s)) return 90;
+    if (['submitted_to_bank', 'file_logged'].includes(s)) return 75;
+    if (['staff_verified', 'verification', 'documents_verified'].includes(s)) return 50;
+
+    let baseProgress = typeof app.progress === 'number' && app.progress > 0 ? app.progress : 10;
+    if (['docs_received', 'docs_uploaded', 'under_review'].includes(s)) baseProgress = Math.max(baseProgress, 40);
+    if (['submitted', 'application_submitted'].includes(s)) baseProgress = Math.max(baseProgress, 25);
+
+    if (documents && documents.length > 0) {
+        const uploadedCount = documents.filter(d => d.uploaded === true || d.status === 'uploaded' || d.status === 'verified').length;
+        if (uploadedCount > 0) {
+            let requiredCount = 3;
+            try {
+                if (profile) {
+                    const reqs = getProfileDocumentRequirements(profile);
+                    if (reqs && reqs.length > 0) requiredCount = reqs.length;
+                }
+            } catch { }
+
+            const isAllDocsUploaded = uploadedCount >= requiredCount;
+            const docProgress = isAllDocsUploaded ? 50 : Math.min(50, 25 + Math.round((uploadedCount / Math.max(requiredCount, 1)) * 25));
+            return Math.max(baseProgress, docProgress);
+        }
+    }
+
+    return baseProgress;
+};
+
 export default function ProgressTracker({
     application,
-    documents = []
+    documents = [],
+    profile
 }: {
     application?: Application;
     documents?: any[];
+    profile?: any;
 }) {
+    const calculatedProgress = useMemo(() => {
+        return getDynamicProgress(application, documents, profile);
+    }, [application, documents, profile]);
+
     const currentStageKey = useMemo(() => {
         if (!application) return null;
         if (application.status === 'rejected' || application.status === 'cancelled') return null;
 
         let stageKey = application.stage;
         if (!stageKey || !STAGES_CONFIG[stageKey]) {
-            // Infer stage from status
-            if (['approved', 'sanctioned'].includes(application.status)) return 'sanction';
-            if (['disbursed', 'disbursement_confirmed'].includes(application.status)) return 'disbursement';
-            if (['processing', 'under_bank_review'].includes(application.status)) return 'bank_review';
-            if (['documents_verified', 'docs_uploaded', 'docs_received', 'document_verification'].includes(application.status)) return 'document_verification';
-            if (documents && documents.some((d: any) => d.uploaded || d.status === 'uploaded' || d.status === 'verified')) return 'document_verification';
-            return 'application_submitted';
+            const status = application.status?.toLowerCase() || '';
+            if (status.includes('approve') || status.includes('sanction')) return 'sanction';
+            if (status.includes('disburse')) return 'disbursement';
+            if (status.includes('process') || status.includes('review')) return 'bank_review';
+            if (status.includes('submit_to_bank') || status.includes('submitted_to_bank')) return 'submit_to_bank';
+            if (status === 'submitted') return 'application_submitted';
+            if (status.includes('document')) return 'document_verification';
+            if (status.includes('credit')) return 'credit_check';
+
+            if (calculatedProgress >= 100) return 'disbursement';
+            if (calculatedProgress >= 95) return 'sanction';
+            if (calculatedProgress >= 90) return 'bank_review';
+            if (calculatedProgress >= 75) return 'credit_check';
+            if (calculatedProgress >= 50) return 'submit_to_bank';
+            if (calculatedProgress >= 40) return 'document_verification';
+            if (calculatedProgress >= 25) return 'application_submitted';
+
+            return 'application_created';
         }
         return stageKey;
-    }, [application, documents]);
+    }, [application, calculatedProgress]);
 
     const isRejected = application?.status === 'rejected' || application?.status === 'cancelled';
     const currentStage = currentStageKey ? STAGES_CONFIG[currentStageKey] : null;
@@ -99,7 +153,7 @@ export default function ProgressTracker({
                     Application Progress
                 </h3>
                 <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                    {currentStage?.progress || 0}% Complete
+                    {calculatedProgress}% Complete
                 </div>
             </div>
 
@@ -111,7 +165,7 @@ export default function ProgressTracker({
                 {/* Active Progress Line */}
                 <div
                     className="absolute top-5 left-0 h-[3px] bg-[#6605c7] rounded-full mx-6 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(102,5,199,0.3)]"
-                    style={{ width: `calc(${currentStage?.progress || 0}% - 48px)` }}
+                    style={{ width: `calc(${calculatedProgress}% - 48px)` }}
                 />
 
                 <div className="relative flex justify-between">

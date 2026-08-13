@@ -681,7 +681,7 @@ export default function ApplicationManagement() {
                                                         type="button"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            router.push(`/bank/chat?applicationId=${row.id}&applicationNumber=${row.applicationNumber || ''}`);
+                                                            router.push(`/bank/chat?applicationId=${row.id}&applicationNumber=${row.applicationNumber || ''}&bank=${encodeURIComponent(row.bank || '')}`);
                                                         }}
                                                         className="px-3 py-1.5 bg-purple-50 hover:bg-[#6605c7] hover:text-white text-[#6605c7] text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1 cursor-pointer"
                                                         title="Chat with Staff for this application"
@@ -1043,7 +1043,7 @@ export default function ApplicationManagement() {
                                             type="button"
                                             whileHover={{ scale: 1.03 }}
                                             whileTap={{ scale: 0.97 }}
-                                            onClick={() => router.push(`/bank/chat?applicationId=${selectedApp.id}&applicationNumber=${selectedApp.applicationNumber || ''}`)}
+                                            onClick={() => router.push(`/bank/chat?applicationId=${selectedApp.id}&applicationNumber=${selectedApp.applicationNumber || ''}&bank=${encodeURIComponent(selectedApp.bank || '')}`)}
                                             className="px-5 py-2.5 bg-white hover:bg-[#F8FAFC] hover:border-[#94A3B8] text-[#475569] border border-[#CBD5E1] font-semibold text-sm rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-2"
                                         >
                                             <span className="material-symbols-outlined text-base">forum</span>

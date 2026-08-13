@@ -202,8 +202,18 @@ const NotificationsPanel = ({
     try {
       const data = await apiFetch<any>("/api/notifications");
       if (data && data.success && Array.isArray(data.items)) {
-        setNotifications(data.items.slice(0, 50));
-        const unread = data.items.filter((n: any) => !n.isRead).length;
+        const seen = new Set<string>();
+        const unique = data.items.filter((n: any) => {
+          const appId = n.metadata?.applicationId || n.metadata?.loanId || '';
+          const appNum = n.metadata?.applicationNumber || '';
+          const titleClean = (n.title || '').replace(/^📋\s*/, '').replace(/^🚀\s*/, '').trim().toLowerCase();
+          const key = n.id ? String(n.id) : (appId || appNum ? `${appId || appNum}-${titleClean.slice(0, 15)}` : `${n.title}-${n.timestamp}`);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setNotifications(unique.slice(0, 50));
+        const unread = unique.filter((n: any) => !n.isRead).length;
         setUnreadCount(unread);
       }
     } catch (err) {
@@ -260,6 +270,20 @@ const NotificationsPanel = ({
       }
 
       setNotifications((prev) => {
+        const payloadAppId = (payload as any)?.metadata?.applicationId || (payload as any)?.metadata?.loanId || (payload as any)?.metadata?.applicationNumber;
+        const payloadTitleClean = ((payload as any)?.title || '').replace(/^📋\s*/, '').replace(/^🚀\s*/, '').trim().toLowerCase();
+        
+        const exists = prev.some((n: any) => {
+          if (n.id && payload.id && String(n.id) === String(payload.id)) return true;
+          const nAppId = n.metadata?.applicationId || n.metadata?.loanId || n.metadata?.applicationNumber;
+          const nTitleClean = (n.title || '').replace(/^📋\s*/, '').replace(/^🚀\s*/, '').trim().toLowerCase();
+          if (payloadAppId && nAppId && String(payloadAppId) === String(nAppId) && payloadTitleClean === nTitleClean) {
+            return true;
+          }
+          return false;
+        });
+
+        if (exists) return prev;
         const updated = [payload, ...prev];
         return updated.slice(0, 50); // Keep last 50 notifications
       });

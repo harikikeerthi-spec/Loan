@@ -1725,10 +1725,6 @@ export class UsersService implements OnModuleInit {
       };
       // Fire immediately
       this.eventEmitter.emit('application.created', eventPayload);
-      // Also fire after 2 seconds as a retry safety net
-      setTimeout(() => {
-        this.eventEmitter.emit('application.created', eventPayload);
-      }, 2000);
     } catch (e) {
       console.error('Failed to emit application.created event in UsersService:', e);
     }

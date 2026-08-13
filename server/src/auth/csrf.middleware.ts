@@ -11,6 +11,10 @@ export class CsrfMiddleware implements NestMiddleware {
       cleanUrl.includes('/integration/whatsapp') ||
       cleanUrl.includes('/csrf-token') ||
       cleanUrl.includes('/auth/csrf-token') ||
+      cleanUrl.includes('/documents/upload') ||
+      cleanUrl.includes('/documents/complete-upload') ||
+      cleanUrl.includes('/auth/upload-document') ||
+      cleanUrl.includes('/upload-statement') ||
       cleanUrl.includes('/auth/send-otp') ||
       cleanUrl.includes('/auth/verify-otp') ||
       cleanUrl.includes('/auth/request-otp') ||

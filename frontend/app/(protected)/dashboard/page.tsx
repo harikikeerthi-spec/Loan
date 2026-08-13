@@ -526,15 +526,56 @@ export default function DashboardPage() {
         }
     };
 
-    useEffect(() => {
-        loadData();
-        // Set tab from hash if present
-        if (typeof window !== "undefined" && window.location.hash) {
-            const hashTab = window.location.hash.replace("#", "");
-            if (["overview", "applications", "documents", "support_tickets", "profile"].includes(hashTab)) {
-                setActiveTab(hashTab);
+    const handleTabChange = useCallback((newTab: string, replace = false) => {
+        const validTabs = ["overview", "applications", "documents", "support_tickets", "profile"];
+        if (!validTabs.includes(newTab)) return;
+
+        setActiveTab(newTab);
+
+        if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", newTab);
+            url.hash = newTab;
+
+            if (replace) {
+                window.history.replaceState({}, "", url.toString());
+            } else {
+                window.history.pushState({}, "", url.toString());
             }
         }
+    }, []);
+
+    useEffect(() => {
+        loadData();
+
+        // Sync activeTab with URL search params or hash on initial load & popstate/hashchange
+        const syncTabFromUrl = () => {
+            if (typeof window !== "undefined") {
+                const params = new URLSearchParams(window.location.search);
+                const queryTab = params.get("tab");
+                const hashTab = window.location.hash.replace("#", "");
+                const validTabs = ["overview", "applications", "documents", "support_tickets", "profile"];
+
+                if (queryTab && validTabs.includes(queryTab)) {
+                    setActiveTab(queryTab);
+                } else if (hashTab && validTabs.includes(hashTab)) {
+                    setActiveTab(hashTab);
+                }
+            }
+        };
+
+        syncTabFromUrl();
+
+        const handleUrlChange = () => {
+            syncTabFromUrl();
+        };
+
+        window.addEventListener("popstate", handleUrlChange);
+        window.addEventListener("hashchange", handleUrlChange);
+        return () => {
+            window.removeEventListener("popstate", handleUrlChange);
+            window.removeEventListener("hashchange", handleUrlChange);
+        };
     }, [loadData]);
 
     // Listen for dashboard updates from other pages/tabs
@@ -981,7 +1022,7 @@ export default function DashboardPage() {
                     {["overview", "applications", "documents", "profile"].map((tab) => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab)}
+                            onClick={() => handleTabChange(tab)}
                             className={`group relative px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === tab
                                 ? "text-[#0F172A] font-extrabold"
                                 : "text-slate-400 hover:text-slate-700"
@@ -1050,7 +1091,7 @@ export default function DashboardPage() {
                                 <div className="flex items-center justify-between mb-4">
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Active Applications</h2>
                                     {(data.applications?.length || 0) > 0 && (
-                                        <button onClick={() => setActiveTab("applications")} className="text-[10px] font-bold uppercase tracking-wider text-[#6605c7] hover:underline flex items-center gap-1">
+                                        <button onClick={() => handleTabChange("applications")} className="text-[10px] font-bold uppercase tracking-wider text-[#6605c7] hover:underline flex items-center gap-1">
                                             View All <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
                                         </button>
                                     )}
@@ -1293,12 +1334,12 @@ export default function DashboardPage() {
                                                                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                                                                         {app.stage?.replace(/_/g, ' ') || 'application submitted'}
                                                                     </span>
-                                                                    <span className="text-[10px] font-bold text-[#6605c7]">{getDynamicProgress(app)}%</span>
+                                                                    <span className="text-[10px] font-bold text-[#6605c7]">{getDynamicProgress(app, data.documents, data.profile)}%</span>
                                                                 </div>
                                                                 <div className="w-full bg-gray-100 rounded-full h-1.5">
                                                                     <div
                                                                         className="bg-gradient-to-r from-[#6605c7] to-purple-400 h-1.5 rounded-full transition-all duration-500"
-                                                                        style={{ width: `${getDynamicProgress(app)}%` }}
+                                                                        style={{ width: `${getDynamicProgress(app, data.documents, data.profile)}%` }}
                                                                     />
                                                                 </div>
                                                             </div>

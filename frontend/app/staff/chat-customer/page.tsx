@@ -13,9 +13,9 @@ export default function SupportChatPage() {
     const firstName = searchParams.get("firstName");
     const lastName = searchParams.get("lastName");
     const phone = searchParams.get("phone") || searchParams.get("phoneNumber");
-    const applicationId = searchParams.get("applicationId");
-    const applicationNumber = searchParams.get("applicationNumber");
-    const bankName = searchParams.get("bankName");
+    const applicationId = searchParams.get("applicationId") || searchParams.get("appId");
+    const applicationNumber = searchParams.get("applicationNumber") || searchParams.get("appNo");
+    const bankName = searchParams.get("bankName") || searchParams.get("bank");
 
     const [resolvedUser, setResolvedUser] = useState<any>(null);
     const [loading, setLoading] = useState(!!userId && !phone);
@@ -81,8 +81,8 @@ export default function SupportChatPage() {
         }
     }, [userId, phone, email, firstName, lastName, applicationId, applicationNumber]);
 
-    const initialBank = bankName ? {
-        bankName: bankName,
+    const initialBank = (bankName || applicationId) ? {
+        bankName: bankName || "Partner Bank",
         applicationId: applicationId || undefined,
         applicationNumber: applicationNumber || undefined
     } : null;

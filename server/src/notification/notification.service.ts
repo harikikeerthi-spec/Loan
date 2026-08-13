@@ -30,6 +30,40 @@ export class NotificationService {
   ) {
     this.logger.log(`Creating notification of type ${type} for User ID ${userId}: ${title}`);
 
+    // Deduplication safety check: Prevent inserting duplicate notifications within a 15-second window
+    try {
+      const appId = metadata?.applicationId || metadata?.loanId;
+      const fifteenSecsAgo = new Date(Date.now() - 15000).toISOString();
+
+      let dupQuery = this.db
+        .from('Notification')
+        .select('*')
+        .eq('userId', userId)
+        .gte('timestamp', fifteenSecsAgo);
+
+      const { data: recentNotifs } = await dupQuery;
+      if (recentNotifs && recentNotifs.length > 0) {
+        const duplicate = recentNotifs.find((n: any) => {
+          const nAppId = n.metadata?.applicationId || n.metadata?.loanId;
+          // Exact match on application ID + user OR exact title match
+          if (appId && nAppId && String(appId).toLowerCase() === String(nAppId).toLowerCase()) {
+            return true;
+          }
+          if (n.title && title && n.title.trim().toLowerCase() === title.trim().toLowerCase()) {
+            return true;
+          }
+          return false;
+        });
+
+        if (duplicate) {
+          this.logger.warn(`[NotificationService] Duplicate notification suppressed for User ID ${userId}: "${title}"`);
+          return duplicate;
+        }
+      }
+    } catch (dedupErr: any) {
+      this.logger.warn(`[NotificationService] Deduplication check skipped: ${dedupErr?.message}`);
+    }
+
     const newNotif = {
       id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       userId,
@@ -63,9 +97,6 @@ export class NotificationService {
     return payload;
   }
 
-  /**
-   * Fetch paginated & filterable notifications for the logged-in user.
-   */
   /**
    * Fetch paginated & filterable notifications for the logged-in user.
    */
@@ -111,9 +142,32 @@ export class NotificationService {
       return { items: [], total: 0 };
     }
 
+    const rawItems = data || [];
+    const uniqueItems: any[] = [];
+    const seenKeys = new Set<string>();
+
+    for (const item of rawItems) {
+      const appId = item.metadata?.applicationId || item.metadata?.loanId || '';
+      const appNum = item.metadata?.applicationNumber || '';
+      const titleClean = (item.title || '').replace(/^📋\s*/, '').replace(/^🚀\s*/, '').trim().toLowerCase();
+      
+      let key = item.id;
+      if (appId || appNum) {
+        key = `${item.userId}-${appId || appNum}-${titleClean.slice(0, 20)}`;
+      } else {
+        const timeBucket = item.timestamp ? item.timestamp.slice(0, 16) : '';
+        key = `${item.userId}-${titleClean}-${timeBucket}`;
+      }
+
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueItems.push(item);
+      }
+    }
+
     return {
-      items: data || [],
-      total: count || (data || []).length,
+      items: uniqueItems,
+      total: uniqueItems.length,
     };
   }
 
