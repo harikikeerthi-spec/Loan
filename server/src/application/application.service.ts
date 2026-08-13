@@ -1573,6 +1573,20 @@ export class ApplicationService {
             }
           } else if (data.status === 'submitted_to_bank') {
             await this.emailService.sendApplicationSentToBankEmail(email, userName, bankName, latestApp);
+            try {
+              const bankIdStr = (latestApp.bank || bankName).toLowerCase().replace(/[^a-z0-9]/g, '');
+              const fallbackEmails: Record<string, string> = {
+                avanse: 'avansebank01@gmail.com',
+                auxilo: 'auxilobank01@gmail.com',
+                idfc: 'idfcbank01@gmail.com',
+                poonawalla: 'poonawallabank01@gmail.com',
+                credila: 'credilabank01@gmail.com',
+              };
+              const targetBankEmail = fallbackEmails[bankIdStr] || `${bankIdStr}bank01@gmail.com`;
+              await this.emailService.sendNewApplicationNotificationToBank(targetBankEmail, bankName, latestApp, userName);
+            } catch (bErr) {
+              console.error('[ApplicationService] Failed to send bank notification email:', bErr);
+            }
           } else if (data.status === 'disbursed' || data.status === 'disbursement_confirmed') {
             const extraData = data as any;
             await this.emailService.sendLoanDisbursedEmail(email, userName, bankName, latestApp, extraData);

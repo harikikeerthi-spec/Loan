@@ -856,15 +856,29 @@ export default function DecisionsHub() {
             return;
         }
 
+        const targetStatus = activeDecisionTab === "sanction" ? "sanctioned"
+            : activeDecisionTab === "reject" ? "rejected"
+            : activeDecisionTab === "conditional" ? "conditional_sanction"
+            : "counter_offer";
+
+        const optimisticApp = {
+            ...selectedApp,
+            status: targetStatus,
+            sanctionAmount: activeDecisionTab === "sanction" ? (parseFloat(sanctionAmount) || selectedApp.amount) : selectedApp.sanctionAmount,
+        };
+
+        // ⚡ INSTANT OPTIMISTIC UI UPDATE
+        setShowWorkspace(false);
+        setApplications((prev: any[]) => prev.map((a: any) => (a.id === selectedApp.id || a._id === selectedApp.id) ? optimisticApp : a));
+
         setSubmitting(true);
         try {
             let res: any;
             const appId = selectedApp.id || selectedApp._id;
-            const updatedRemarks = `${selectedApp.remarks || ""}\n[Appraisal - ${format(new Date(), "MMM dd, HH:mm")}]: Type: ${activeDecisionTab.toUpperCase()} | ROI: ${interestRate}% (${roiType}) | Processing Fee: ₹${totalFeeValue}`;
 
-            // Save officer remarks as an internal note if filled
+            // Save officer remarks asynchronously
             if (officerRemarks.trim()) {
-                await adminApi.addRemark(appId, {
+                adminApi.addRemark(appId, {
                     type: 'remark',
                     content: `[Underwriting Verdict Comments]: ${officerRemarks.trim()}`
                 }).catch(err => console.error("Error saving verdict comments:", err));
@@ -873,15 +887,6 @@ export default function DecisionsHub() {
             if (activeDecisionTab === "sanction") {
                 const sanctionVal = parseFloat(sanctionAmount) || selectedApp.amount;
 
-                // 1. Set ROI
-                await bankApi.setRoi(appId, {
-                    roiType: roiType,
-                    roiBase: parseFloat(interestRate),
-                    roiEffective: hasSubsidy ? (parseFloat(interestRate) - parseFloat(subsidyPercentage)) : parseFloat(interestRate),
-                    roiSubsidy: hasSubsidy ? parseFloat(subsidyPercentage) : 0
-                }).catch(err => console.error("Error setting ROI:", err));
-
-                // 2. Set Processing Fee
                 const feePayload = {
                     feeAmount: parseFloat(feeAmount),
                     gstAmount: gstValue,
@@ -890,11 +895,21 @@ export default function DecisionsHub() {
                     paymentMode: feePaymentMode,
                     waiverReason: hasWaiver ? waiverReason : null
                 };
-                await bankApi.setProcessingFee(appId, feePayload).catch(async () => {
-                    await bankApi.updateProcessingFee(appId, feePayload).catch(err => console.error("Error updating fee:", err));
-                });
 
-                // 3. Submit Decision
+                // Run ROI and fee setting concurrently
+                await Promise.all([
+                    bankApi.setRoi(appId, {
+                        roiType: roiType,
+                        roiBase: parseFloat(interestRate),
+                        roiEffective: hasSubsidy ? (parseFloat(interestRate) - parseFloat(subsidyPercentage)) : parseFloat(interestRate),
+                        roiSubsidy: hasSubsidy ? parseFloat(subsidyPercentage) : 0
+                    }).catch(err => console.error("Error setting ROI:", err)),
+                    bankApi.setProcessingFee(appId, feePayload).catch(async () => {
+                        await bankApi.updateProcessingFee(appId, feePayload).catch(err => console.error("Error updating fee:", err));
+                    })
+                ]);
+
+                // Submit Decision
                 res = await bankApi.submitDecision({
                     applicationId: appId,
                     decisionType: "sanction",
@@ -937,14 +952,12 @@ export default function DecisionsHub() {
                 });
             }
 
-            if (res && res.success) {
-                setShowWorkspace(false);
-                setSelectedApp(null);
-                fetchApplications(currentBankId);
-            }
+            setSelectedApp(null);
+            fetchApplications(currentBankId);
         } catch (err: any) {
             console.error("Failed to log underwriting decision:", err);
             alert(`Error logging underwriting decision: ${err.message || err}`);
+            fetchApplications(currentBankId);
         } finally {
             setSubmitting(false);
         }

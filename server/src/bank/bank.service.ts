@@ -759,37 +759,6 @@ export class BankService {
       updatedApp = retryApp || { ...application, status: targetStatus, stage: updatedStage, progress: updatedProgress };
     }
 
-    // Fetch latest app with user relation to get the registered email and send bank decision email
-    try {
-      const { data: latestApp } = await this.db
-        .from('LoanApplication')
-        .select('*')
-        .eq('id', applicationId)
-        .maybeSingle();
-
-      if (latestApp) {
-        let userEmail = latestApp.email;
-        let userName = `${latestApp.firstName || ''} ${latestApp.lastName || ''}`.trim();
-        if (latestApp.userId) {
-          const { data: usr } = await this.db.from('User').select('email, firstName, lastName').eq('id', latestApp.userId).maybeSingle();
-          if (usr?.email) userEmail = usr.email;
-          if (usr?.firstName) userName = `${usr.firstName} ${usr.lastName || ''}`.trim();
-        }
-
-        if (userEmail) {
-          const bankName = latestApp.bank || application.bank || 'our partner bank';
-
-          if (targetStatus === 'sanctioned') {
-            await this.emailService.sendApplicationAcceptedByBankEmail(userEmail, userName || 'Student', bankName, latestApp, detailsObj);
-          } else if (targetStatus === 'rejected') {
-            await this.emailService.sendApplicationRejectedByBankEmail(userEmail, userName || 'Student', bankName, detailsObj.reason || detailsObj.remarks || '');
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[BankService.registerDecision] Failed to send bank decision email:', err);
-    }
-
     // Log status history transition
     try {
       await this.db.from('ApplicationStatusHistory').insert({
@@ -880,31 +849,62 @@ export class BankService {
       console.warn(`[BankService] ApplicationNote insert note: ${noteErr?.message || noteErr}`);
     }
 
-    // Trigger Integrations safely
-    const studentName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || 'Student';
-    try {
-      await this.slack.publishDecisionNotification(
-        application.bank,
-        studentName,
-        application.applicationNumber,
-        decisionType,
-        detailsObj
-      );
-    } catch (slackErr: any) {
-      console.warn(`[BankService] Slack notification note: ${slackErr?.message || slackErr}`);
-    }
+    // Asynchronously dispatch external notifications (email, Slack, Salesforce) in background without blocking response
+    setImmediate(async () => {
+      try {
+        const { data: latestApp } = await this.db
+          .from('LoanApplication')
+          .select('*')
+          .eq('id', applicationId)
+          .maybeSingle();
 
-    try {
-      await this.salesforce.syncLeadOrOpportunity(
-        applicationId,
-        studentName,
-        application.amount,
-        targetStatus,
-        application.applicationNumber
-      );
-    } catch (sfErr: any) {
-      console.warn(`[BankService] Salesforce sync note: ${sfErr?.message || sfErr}`);
-    }
+        if (latestApp) {
+          let userEmail = latestApp.email;
+          let userName = `${latestApp.firstName || ''} ${latestApp.lastName || ''}`.trim();
+          if (latestApp.userId) {
+            const { data: usr } = await this.db.from('User').select('email, firstName, lastName').eq('id', latestApp.userId).maybeSingle();
+            if (usr?.email) userEmail = usr.email;
+            if (usr?.firstName) userName = `${usr.firstName} ${usr.lastName || ''}`.trim();
+          }
+
+          if (userEmail) {
+            const bankName = latestApp.bank || application.bank || 'our partner bank';
+            if (targetStatus === 'sanctioned') {
+              await this.emailService.sendApplicationAcceptedByBankEmail(userEmail, userName || 'Student', bankName, latestApp, detailsObj);
+            } else if (targetStatus === 'rejected') {
+              await this.emailService.sendApplicationRejectedByBankEmail(userEmail, userName || 'Student', bankName, detailsObj.reason || detailsObj.remarks || '');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[BankService.registerDecision] Failed to send bank decision email:', err);
+      }
+
+      const studentName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || 'Student';
+      try {
+        await this.slack.publishDecisionNotification(
+          application.bank,
+          studentName,
+          application.applicationNumber,
+          decisionType,
+          detailsObj
+        );
+      } catch (slackErr: any) {
+        console.warn(`[BankService] Slack notification note: ${slackErr?.message || slackErr}`);
+      }
+
+      try {
+        await this.salesforce.syncLeadOrOpportunity(
+          applicationId,
+          studentName,
+          application.amount,
+          targetStatus,
+          application.applicationNumber
+        );
+      } catch (sfErr: any) {
+        console.warn(`[BankService] Salesforce sync note: ${sfErr?.message || sfErr}`);
+      }
+    });
 
     return {
       success: true,

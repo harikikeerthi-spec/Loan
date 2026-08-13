@@ -197,19 +197,24 @@ export class BankWorkflowService {
     // Record in workflow history
     await this.recordWorkflowHistory(submission.id, applicationId, null, 'SUBMITTED_TO_BANK', submittedBy, 'Application shared with bank');
 
-    // Fetch student's profile name
-    let studentName = 'Student';
+    // Fetch student's profile name and registered email
+    let studentName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || 'Student';
+    let studentEmail = application.email || '';
     try {
-      const { data: student } = await this.db.client
-        .from('User')
-        .select('firstName, lastName')
-        .eq('id', application.userId)
-        .single();
-      if (student) {
-        studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student';
+      if (application.userId) {
+        const { data: student } = await this.db.client
+          .from('User')
+          .select('email, firstName, lastName')
+          .eq('id', application.userId)
+          .single();
+        if (student) {
+          if (student.email) studentEmail = student.email;
+          const name = `${student.firstName || ''} ${student.lastName || ''}`.trim();
+          if (name) studentName = name;
+        }
       }
     } catch (e: any) {
-      console.warn('[BankWorkflowService] Failed to load student name for email:', e.message);
+      console.warn('[BankWorkflowService] Failed to load student details for email:', e.message);
     }
 
     // Fetch bank registered email from Bank table
@@ -236,8 +241,17 @@ export class BankWorkflowService {
     };
     const targetEmail = bankEmail || fallbackEmails[bankId] || `${bankId}bank01@gmail.com`;
 
-    // Send email alert to bank
-    await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, application, studentName);
+    // 1. Send email alert to bank
+    await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, application, studentName).catch(err => {
+      console.error('[BankWorkflowService] Failed to send bank notification email:', err);
+    });
+
+    // 2. Send email alert to student registered mail ID
+    if (studentEmail) {
+      await this.emailService.sendApplicationSentToBankEmail(studentEmail, studentName, bankName, application).catch(err => {
+        console.error('[BankWorkflowService] Failed to send student application email:', err);
+      });
+    }
 
     // Emit event
     this.eventEmitter.emit('bank.submission.created', {
@@ -2587,19 +2601,24 @@ export class BankWorkflowService {
 
     const createdSubmissions: any[] = [];
 
-    // Fetch student's profile name
-    let studentName = 'Student';
+    // Fetch student's profile name and registered email
+    let studentName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || 'Student';
+    let studentEmail = application.email || '';
     try {
-      const { data: student } = await this.db.client
-        .from('User')
-        .select('firstName, lastName')
-        .eq('id', application.userId)
-        .single();
-      if (student) {
-        studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student';
+      if (application.userId) {
+        const { data: student } = await this.db.client
+          .from('User')
+          .select('email, firstName, lastName')
+          .eq('id', application.userId)
+          .single();
+        if (student) {
+          if (student.email) studentEmail = student.email;
+          const name = `${student.firstName || ''} ${student.lastName || ''}`.trim();
+          if (name) studentName = name;
+        }
       }
     } catch (e: any) {
-      console.warn('[BankWorkflowService] Failed to load student name for email:', e.message);
+      console.warn('[BankWorkflowService] Failed to load student details for email:', e.message);
     }
 
     for (const bank of banks) {
@@ -2671,8 +2690,10 @@ export class BankWorkflowService {
       };
       const targetEmail = bankEmail || fallbackEmails[bankId] || `${bankId}bank01@gmail.com`;
 
-      // Send email alert to bank
-      await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, application, studentName);
+      // 1. Send email alert to bank
+      await this.emailService.sendNewApplicationNotificationToBank(targetEmail, bankName, application, studentName).catch(err => {
+        console.error('[BankWorkflowService] Failed to send bank notification email:', err);
+      });
 
       // Emit event
       this.eventEmitter.emit('bank.submission.created', {
@@ -2683,6 +2704,14 @@ export class BankWorkflowService {
       });
 
       createdSubmissions.push(submission);
+    }
+
+    // 2. Send email alert to student registered mail ID
+    if (studentEmail && createdSubmissions.length > 0) {
+      const bankNamesStr = banks.map(b => b.bankName).join(', ');
+      await this.emailService.sendApplicationSentToBankEmail(studentEmail, studentName, bankNamesStr, application).catch(err => {
+        console.error('[BankWorkflowService] Failed to send student application email for multi-bank:', err);
+      });
     }
 
     // Update LoanApplication status to ROUTED_MULTIPARTY and bank to targeted list — preserve existing VTU-APP applicationNumber, or generate new VTU-APP sequential one if it's missing/not bank format.

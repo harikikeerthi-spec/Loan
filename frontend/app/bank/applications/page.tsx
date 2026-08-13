@@ -336,24 +336,61 @@ export default function ApplicationManagement() {
         e.preventDefault();
         if (!selectedApp) return;
 
+        // Calculate optimistic target status
+        const targetStatus = decisionType === "sanctioned" ? "approved"
+            : decisionType === "rejected" ? "rejected"
+            : decisionType === "conditional" ? "conditional_sanction"
+            : "counter_offer";
+
+        const optimisticApp = {
+            ...selectedApp,
+            status: targetStatus,
+            sanctionAmount: decisionType === "sanctioned" ? (parseFloat(sanctionAmount) || selectedApp.amount) : selectedApp.sanctionAmount,
+            interestRate: decisionType === "sanctioned" ? (parseFloat(roiEffective) || parseFloat(roiBase) || 9.5) : selectedApp.interestRate,
+            rejectionReason: decisionType === "rejected" ? rejectionReason.trim() : selectedApp.rejectionReason,
+        };
+
+        // ⚡ INSTANT OPTIMISTIC UI UPDATE: Close modal & update list/drawer immediately
+        setShowDecisionModal(false);
+        setSelectedApp(optimisticApp);
+        setApplications(prev => prev.map(a => (a.id === selectedApp.id || a._id === selectedApp.id) ? optimisticApp : a));
+
+        // Save field values before resetting state
+        const currentSanctionAmount = sanctionAmount;
+        const currentRoiBase = roiBase;
+        const currentRoiEffective = roiEffective;
+        const currentRoiSubsidy = roiSubsidy;
+        const currentSanctionedInterestRate = sanctionedInterestRate;
+        const currentProcessingFee = processingFee;
+        const currentSanctionLetterUrl = sanctionLetterUrl;
+        const currentConditions = conditions;
+        const currentRejectionReason = rejectionReason;
+        const currentCounterAmount = counterAmount;
+        const currentCounterRate = counterRate;
+        const currentCounterTenure = counterTenure;
+
+        // Clear form fields
+        setSanctionAmount("");
+        setSanctionedInterestRate("");
+        setRoiBase("");
+        setRoiEffective("");
+        setProcessingFee("");
+        setSanctionLetterUrl("");
+        setConditions("");
+        setRejectionReason("");
+        setCounterAmount("");
+        setCounterRate("");
+        setCounterTenure("");
+
         try {
             let res: any;
             if (decisionType === "sanctioned") {
-                const sanctionVal = parseFloat(sanctionAmount) || selectedApp.amount;
-                const roiBaseVal = parseFloat(roiBase) || parseFloat(sanctionedInterestRate) || 9.5;
-                const roiEffectiveVal = parseFloat(roiEffective) || roiBaseVal;
-                const roiSubsidyVal = parseFloat(roiSubsidy) || 0;
+                const sanctionVal = parseFloat(currentSanctionAmount) || selectedApp.amount;
+                const roiBaseVal = parseFloat(currentRoiBase) || parseFloat(currentSanctionedInterestRate) || 9.5;
+                const roiEffectiveVal = parseFloat(currentRoiEffective) || roiBaseVal;
+                const roiSubsidyVal = parseFloat(currentRoiSubsidy) || 0;
 
-                // 1. Set ROI
-                await bankApi.setRoi(selectedApp.id, {
-                    roiType: roiType,
-                    roiBase: roiBaseVal,
-                    roiEffective: roiEffectiveVal,
-                    roiSubsidy: roiSubsidyVal
-                }).catch(err => console.error("Error setting ROI:", err));
-
-                // 2. Set Processing Fee
-                const feeAmt = parseFloat(processingFee) || 0;
+                const feeAmt = parseFloat(currentProcessingFee) || 0;
                 const gst = Math.round(feeAmt * 0.18);
                 const totalFee = feeAmt + gst;
                 const feePayload = {
@@ -364,16 +401,26 @@ export default function ApplicationManagement() {
                     paymentMode: 'UPFRONT',
                     waiverReason: null
                 };
-                await bankApi.setProcessingFee(selectedApp.id, feePayload).catch(async () => {
-                    await bankApi.updateProcessingFee(selectedApp.id, feePayload).catch(err => console.error("Error updating fee:", err));
-                });
 
-                // 3. Upload Sanction Letter if provided
-                if (sanctionLetterUrl.trim()) {
-                    await bankApi.uploadSanctionLetter(selectedApp.id, sanctionLetterUrl.trim()).catch(err => console.error("Error uploading sanction letter:", err));
+                // Run auxiliary setRoi, setProcessingFee, uploadSanctionLetter concurrently
+                const auxPromises: Promise<any>[] = [
+                    bankApi.setRoi(selectedApp.id, {
+                        roiType: roiType,
+                        roiBase: roiBaseVal,
+                        roiEffective: roiEffectiveVal,
+                        roiSubsidy: roiSubsidyVal
+                    }).catch(err => console.error("Error setting ROI:", err)),
+                    bankApi.setProcessingFee(selectedApp.id, feePayload).catch(async () => {
+                        await bankApi.updateProcessingFee(selectedApp.id, feePayload).catch(err => console.error("Error updating fee:", err));
+                    })
+                ];
+                if (currentSanctionLetterUrl.trim()) {
+                    auxPromises.push(bankApi.uploadSanctionLetter(selectedApp.id, currentSanctionLetterUrl.trim()).catch(err => console.error("Error uploading sanction letter:", err)));
                 }
 
-                // 4. Submit Decision
+                await Promise.all(auxPromises);
+
+                // Submit Decision
                 res = await bankApi.submitDecision({
                     applicationId: selectedApp.id,
                     decisionType: "sanction",
@@ -390,48 +437,34 @@ export default function ApplicationManagement() {
                     applicationId: selectedApp.id,
                     decisionType: "reject",
                     details: {
-                        reason: rejectionReason.trim() || "Does not meet standard credit score criteria",
+                        reason: currentRejectionReason.trim() || "Does not meet standard credit score criteria",
                         rejectionCategory: "POLICY",
-                        remarks: rejectionReason.trim()
+                        remarks: currentRejectionReason.trim()
                     }
                 });
             } else if (decisionType === "conditional") {
                 res = await bankApi.conditionalSanction({
                     applicationId: selectedApp.id,
-                    conditions: [conditions],
+                    conditions: [currentConditions],
                     deadline: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-                    remarks: `Conditional Sanction: ${conditions}`
+                    remarks: `Conditional Sanction: ${currentConditions}`
                 });
             } else if (decisionType === "counter") {
                 res = await bankApi.counterOffer({
                     applicationId: selectedApp.id,
-                    offeredAmount: parseFloat(counterAmount),
-                    offeredRate: parseFloat(counterRate),
-                    offeredTenure: parseInt(counterTenure),
-                    remarks: `Counter Offer proposed: Amount ₹${counterAmount}, Rate ${counterRate}%, Tenure ${counterTenure} months`
+                    offeredAmount: parseFloat(currentCounterAmount),
+                    offeredRate: parseFloat(currentCounterRate),
+                    offeredTenure: parseInt(currentCounterTenure),
+                    remarks: `Counter Offer proposed: Amount ₹${currentCounterAmount}, Rate ${currentCounterRate}%, Tenure ${currentCounterTenure} months`
                 });
             }
 
-            if (res && res.success) {
-                setShowDecisionModal(false);
-                // Clear form fields
-                setSanctionAmount("");
-                setSanctionedInterestRate("");
-                setRoiBase("");
-                setRoiEffective("");
-                setProcessingFee("");
-                setSanctionLetterUrl("");
-                setConditions("");
-                setRejectionReason("");
-                setCounterAmount("");
-                setCounterRate("");
-                setCounterTenure("");
-
-                handleRefresh();
-            }
+            // Sync with DB
+            handleRefresh();
         } catch (err: any) {
             console.error("Error submitting decision:", err);
             alert(`Failed to submit decision: ${err.message || err}`);
+            handleRefresh();
         }
     };
 

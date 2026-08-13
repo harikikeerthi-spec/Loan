@@ -686,9 +686,7 @@ export class EmailService {
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
     const amount = application.amount ? `₹${Number(application.amount).toLocaleString('en-IN')}` : 'N/A';
-    const tenure = application.tenure ? `${application.tenure} months` : 'N/A';
-    const university = application.universityName || 'N/A';
-    const course = application.courseName || 'N/A';
+    const university = application.universityName || application.targetUniversity || 'N/A';
     const targetCountry = application.country || application.targetCountry || application.countryName || 'N/A';
 
     const mailOptions = {
@@ -770,12 +768,8 @@ export class EmailService {
                   <td style="padding: 6px 0; font-size: 14px; color: #10b981; font-weight: 700; text-align: right;">${amount}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 0; font-size: 14px; color: #64748b;">Institution</td>
-                  <td style="padding: 6px 0; font-size: 14px; color: #0f172a; font-weight: 600; text-align: right;">${university}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 0 4px 0; font-size: 14px; color: #64748b;">Target Degree</td>
-                  <td style="padding: 6px 0 4px 0; font-size: 14px; color: #0f172a; font-weight: 600; text-align: right;">${course}</td>
+                  <td style="padding: 6px 0 4px 0; font-size: 14px; color: #64748b;">Institution</td>
+                  <td style="padding: 6px 0 4px 0; font-size: 14px; color: #0f172a; font-weight: 600; text-align: right;">${university}</td>
                 </tr>
               </table>
             </td>
@@ -1115,6 +1109,9 @@ export class EmailService {
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
+    const amount = application.amount ? `₹${Number(application.amount).toLocaleString('en-IN')}` : 'N/A';
+    const university = application.universityName || application.targetUniversity || 'N/A';
+    const targetCountry = application.country || application.targetCountry || application.countryName || 'N/A';
     const progress = 50;
 
     const mailOptions = {
@@ -1123,7 +1120,7 @@ export class EmailService {
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
       subject: `📤 Application Shared with ${bankName} - #${appNum}`,
-      text: `Dear ${userName},\n\nYour loan application has been reviewed and processed by the VidyaLoan staff and has been successfully sent to ${bankName} for review.\n\nApplication Number: #${appNum}\nBank Partner: ${bankName}\nLoan Type: ${loanType}\nCurrent Stage: Bank Review\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
+      text: `Dear ${userName},\n\nYour loan application has been reviewed and processed by the VidyaLoan staff and has been successfully sent to ${bankName} for review.\n\nApplication Number: #${appNum}\nBank Partner: ${bankName}\nLoan Type: ${loanType}\nRequested Amount: ${amount}\nTarget Country: ${targetCountry}\nInstitution: ${university}\nCurrent Stage: Bank Review\nProgress: ${progress}%\n\nYou can track the progress of your application on the VidyaLoan dashboard: ${frontendUrl}/dashboard\n\nWarm regards,\nThe VidyaLoan Team`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -1251,6 +1248,22 @@ export class EmailService {
             <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${bankName}</td>
           </tr>
           <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Loan Type:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${loanType}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Requested Amount:</td>
+            <td class="value" style="font-weight: 600; color: #10b981; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${amount}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Target Country:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${targetCountry}</td>
+          </tr>
+          <tr class="details-row">
+            <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: left;">Institution:</td>
+            <td class="value" style="font-weight: 600; color: #212529; font-size: 14px; padding: 8px 0; border-bottom: 1px dashed #dee2e6; text-align: right;">${university}</td>
+          </tr>
+          <tr class="details-row">
             <td class="label" style="color: #6c757d; font-size: 14px; padding: 8px 0; text-align: left;">Status:</td>
             <td class="value" style="font-weight: 600; color: #2e7d32; font-size: 14px; padding: 8px 0; text-align: right;">Under Bank Review</td>
           </tr>
@@ -1298,74 +1311,78 @@ export class EmailService {
     application: any,
     studentName: string,
   ) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     const appNum = application.applicationNumber || 'N/A';
     const loanType = application.loanType || 'Education Loan';
     const amount = application.amount ? `₹${Number(application.amount).toLocaleString('en-IN')}` : 'N/A';
-    const university = application.universityName || 'N/A';
-    const course = application.courseType || 'N/A';
+    const university = application.universityName || application.targetUniversity || 'N/A';
 
     const mailOptions = {
       from: this.getFromAddress(),
       to: bankEmail,
       replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
       headers: this.getStandardHeaders(),
-      subject: `📥 New Education Loan Application Submitted for Review - #${appNum}`,
-      text: `Dear Partner at ${bankName},\n\nA new education loan application has been forwarded to you for credit review.\n\nApplication Reference: #${appNum}\nStudent Name: ${studentName}\nRequested Amount: ${amount}\nTarget University: ${university}\nCourse: ${course}\n\nPlease log in to the VidyaLoans Bank Partner Portal to review the credit file and documents.\n\nPortal Login: ${frontendUrl}/bank/login\n\nBest regards,\nThe VidyaLoans Team`,
+      subject: `📥 Loan Application #${appNum} Submitted to ${bankName} for Credit Review`,
+      text: `Dear Partner at ${bankName},\n\nA new verified student education loan application (#${appNum}) has been submitted to ${bankName} through the VidyaLoan Staff Portal for credit evaluation and underwriting.\n\nApplication Reference: #${appNum}\nStudent Name: ${studentName}\nRequested Amount: ${amount}\nTarget University: ${university}\nLoan Type: ${loanType}\n\nPlease log in to the VidyaLoans Bank Partner Portal to review the credit file and documents.\n\nPortal Login: ${frontendUrl}/bank/login\n\nBest regards,\nThe VidyaLoans Team`,
       html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>New Loan Application Routed - VidyaLoan</title>
+  <title>Loan Application Submitted to Bank - VidyaLoan</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f8fafc;font-family:'Segoe UI',Arial,sans-serif;color:#334155;">
   <div style="max-width:600px;margin:30px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-    <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:30px;text-align:center;color:#ffffff;">
+    <div style="background:linear-gradient(135deg,#0d47a1,#1565c0);padding:30px;text-align:center;color:#ffffff;">
       <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
-      <p style="margin:5px 0 0;font-size:12px;opacity:0.9;text-transform:uppercase;letter-spacing:1px;">Bank Partner Portal</p>
+      <p style="margin:5px 0 0;font-size:12px;opacity:0.9;text-transform:uppercase;letter-spacing:1px;">Bank Partner Underwriting Portal</p>
     </div>
     <div style="padding:30px;line-height:1.6;">
-      <h2 style="margin:0 0 15px;font-size:18px;color:#1e293b;font-weight:700;">New Loan Application for Review</h2>
+      <div style="background-color:#e3f2fd;border-left:4px solid #1565c0;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:20px;">
+        <p style="margin:0;font-size:14px;color:#0d47a1;font-weight:700;">
+          📥 New Application Submitted to ${bankName}
+        </p>
+      </div>
+      <h2 style="margin:0 0 15px;font-size:18px;color:#1e293b;font-weight:700;">Loan Application Submitted for Underwriting</h2>
       <p style="margin:0 0 20px;">Dear Partner at <strong>${bankName}</strong>,</p>
-      <p style="margin:0 0 25px;">A new verified student education loan application has been routed to your branch for review. Below are the primary file details:</p>
+      <p style="margin:0 0 25px;">A new verified student education loan application has been submitted to your bank through the VidyaLoan Staff Portal for credit evaluation. Below are the primary file details:</p>
       
-      <div style="background-color:#f1f5f9;border-radius:12px;padding:20px;margin:0 0 25px;">
+      <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:0 0 25px;">
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size:14px;">
           <tr>
-            <td style="padding:6px 0;color:#64748b;font-weight:600;width:150px;">Application No.</td>
-            <td style="padding:6px 0;color:#0f172a;font-weight:700;">#${appNum}</td>
+            <td style="padding:8px 0;color:#64748b;font-weight:600;width:150px;border-bottom:1px dashed #cbd5e1;">Application No.</td>
+            <td style="padding:8px 0;color:#0f172a;font-weight:700;border-bottom:1px dashed #cbd5e1;">#${appNum}</td>
           </tr>
           <tr>
-            <td style="padding:6px 0;color:#64748b;font-weight:600;">Student Name</td>
-            <td style="padding:6px 0;color:#0f172a;font-weight:600;">${studentName}</td>
+            <td style="padding:8px 0;color:#64748b;font-weight:600;border-bottom:1px dashed #cbd5e1;">Student Name</td>
+            <td style="padding:8px 0;color:#0f172a;font-weight:600;border-bottom:1px dashed #cbd5e1;">${studentName}</td>
           </tr>
           <tr>
-            <td style="padding:6px 0;color:#64748b;font-weight:600;">Loan Amount</td>
-            <td style="padding:6px 0;color:#0f172a;font-weight:600;">${amount}</td>
+            <td style="padding:8px 0;color:#64748b;font-weight:600;border-bottom:1px dashed #cbd5e1;">Loan Amount</td>
+            <td style="padding:8px 0;color:#10b981;font-weight:700;border-bottom:1px dashed #cbd5e1;">${amount}</td>
           </tr>
           <tr>
-            <td style="padding:6px 0;color:#64748b;font-weight:600;">University</td>
-            <td style="padding:6px 0;color:#0f172a;font-weight:600;">${university}</td>
+            <td style="padding:8px 0;color:#64748b;font-weight:600;border-bottom:1px dashed #cbd5e1;">Target University</td>
+            <td style="padding:8px 0;color:#0f172a;font-weight:600;border-bottom:1px dashed #cbd5e1;">${university}</td>
           </tr>
           <tr>
-            <td style="padding:6px 0;color:#64748b;font-weight:600;">Course</td>
-            <td style="padding:6px 0;color:#0f172a;font-weight:600;">${course}</td>
+            <td style="padding:8px 0;color:#64748b;font-weight:600;">Loan Type</td>
+            <td style="padding:8px 0;color:#0f172a;font-weight:600;">${loanType}</td>
           </tr>
         </table>
       </div>
       
-      <p style="margin:0 0 30px;">All applicant documents, co-applicant profiles, and KYC logs have been verified and are available on the bank dashboard.</p>
+      <p style="margin:0 0 30px;">All applicant documents, co-applicant financial profiles, and staff verification logs have been uploaded and are ready for credit evaluation on your portal.</p>
       
       <div style="text-align:center;margin-bottom:30px;">
-        <a href="${frontendUrl}/bank/login" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:8px;font-weight:700;font-size:14px;box-shadow:0 4px 10px rgba(79,70,229,0.2);">
-          Open Partner Portal
+        <a href="${frontendUrl}/bank/login" style="display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:8px;font-weight:700;font-size:14px;box-shadow:0 4px 10px rgba(37,99,235,0.25);">
+          🚀 Access Bank Underwriting Portal
         </a>
       </div>
       
       <p style="margin:0;font-size:13px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:20px;">
-        This is an automated notification. For assistance, contact support@vidyaloans.in.
+        Need help or have questions regarding this file? Contact support at support@vidyaloans.in.
       </p>
     </div>
   </div>
