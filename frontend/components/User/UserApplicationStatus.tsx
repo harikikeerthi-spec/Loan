@@ -8,6 +8,7 @@
 
 import React from "react";
 import { format, formatDistanceToNow } from "date-fns";
+import { getToken } from "@/lib/api";
 
 interface UserApplicationStatusProps {
     application: {
@@ -33,7 +34,7 @@ const UserApplicationStatus = ({ application, onViewDetails }: UserApplicationSt
     const handleDownloadReceipt = async () => {
         try {
             setIsDownloading(true);
-            const token = localStorage.getItem("accessToken") || localStorage.getItem("staffAccessToken") || localStorage.getItem("adminAccessToken");
+            const token = getToken();
             const response = await fetch(`/api/applications/${application.id}/disbursement-receipt`, {
                 headers: {
                     ...(token && { Authorization: `Bearer ${token}` }),

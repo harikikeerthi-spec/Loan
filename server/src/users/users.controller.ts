@@ -355,7 +355,8 @@ export class UsersController {
                 body.family,
                 body.coApplicant,
                 body.academic,
-                body.userId
+                body.userId,
+                body.passport
             );
             return { success: true, message: 'User updated successfully', user: updated };
         } catch (error: any) {

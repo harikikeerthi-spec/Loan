@@ -134,14 +134,19 @@ export class AuthService {
       payload.bankName = bankName;
     }
 
-    const standardAccessExpStr = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '24h';
-    const standardRefreshExpStr = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION') || '24h';
+    const isStaff = user.role === 'staff' || user.role === 'staff_admin';
+    const standardAccessExpStr = isStaff
+      ? '2h'
+      : (this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '24h');
+    const standardRefreshExpStr = isStaff
+      ? '2h'
+      : (this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION') || '24h');
 
     let accessExpiresIn: string | number = standardAccessExpStr;
     let refreshExpiresIn: string | number = standardRefreshExpStr;
 
     if (originalLoginAt) {
-      const maxAgeMs = 24 * 60 * 60 * 1000; // 24 hours
+      const maxAgeMs = isStaff ? (2 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
       const elapsedMs = Date.now() - originalLoginAt;
       const remainingMs = maxAgeMs - elapsedMs;
 
@@ -152,7 +157,7 @@ export class AuthService {
       const remainingSec = Math.floor(remainingMs / 1000);
 
       // Parse standard access expiration to seconds
-      let standardAccessSec = 1800; // default 30m
+      let standardAccessSec = isStaff ? 7200 : 1800; // default 2h for staff, 30m for users
       if (standardAccessExpStr.endsWith('m')) {
         standardAccessSec = parseInt(standardAccessExpStr) * 60;
       } else if (standardAccessExpStr.endsWith('h')) {

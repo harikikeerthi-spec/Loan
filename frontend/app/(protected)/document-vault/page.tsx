@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import DigilockerConsentModal from "@/components/DigilockerConsentModal";
 import AlertModal from "@/components/AlertModal";
+import Swal from "sweetalert2";
 import { getDocumentRequirementName, getProfileDocumentRequirements } from "@/lib/documentRequirements";
 
 export default function DocumentVaultPage() {
@@ -241,11 +242,19 @@ export default function DocumentVaultPage() {
     };
 
     const showAlert = (title: string, message: string, type: "success" | "error" | "info" | "warning" = "info") => {
-        setAlertState({
-            isOpen: true,
-            title,
-            message,
-            type,
+        Swal.fire({
+            title: title,
+            text: message,
+            icon: type,
+            confirmButtonColor: "#6605c7",
+            timer: type === "success" ? 3500 : undefined,
+            timerProgressBar: type === "success",
+            customClass: {
+                popup: "rounded-3xl shadow-2xl border border-purple-100 font-sans p-6",
+                title: "text-lg font-black text-gray-900",
+                htmlContainer: "text-xs font-medium text-gray-600",
+                confirmButton: "px-6 py-2.5 bg-[#6605c7] hover:bg-[#5504a6] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md shadow-purple-600/20 active:scale-95 cursor-pointer border-0",
+            }
         });
     };
 
@@ -740,31 +749,69 @@ export default function DocumentVaultPage() {
                 const address = typeof extracted.address === 'string' ? extracted.address : (extracted.address?.address1 ? `${extracted.address.address1}, ${extracted.address.city || ''}` : undefined);
 
                 if (fatherName || motherName || fullName || dob || passportNo) {
-                    setPassportModalData({
-                        isOpen: true,
-                        extracted: {
-                            fatherName,
-                            motherName,
-                            fullName,
-                            dob,
-                            passportNo,
-                            gender,
-                            address,
-                            raw: extracted
+                    try {
+                        const baseProfile = profile || user || {};
+                        let family = baseProfile.family || baseProfile.familyDetails || {};
+                        if (typeof family === 'string') { try { family = JSON.parse(family); } catch { family = {}; } }
+                        if (!family || typeof family !== 'object') family = {};
+
+                        const updatedFamily = {
+                            ...family,
+                            ...(fatherName ? { fatherName } : {}),
+                            ...(motherName ? { motherName } : {}),
+                            ...(fullName ? { passportOriginalName: fullName } : {}),
+                        };
+
+                        let parsedFirstName: string | undefined = undefined;
+                        let parsedLastName: string | undefined = undefined;
+                        if (fullName) {
+                            const parts = fullName.trim().split(/\s+/);
+                            if (parts.length === 1) {
+                                parsedFirstName = parts[0];
+                                parsedLastName = "";
+                            } else if (parts.length > 1) {
+                                parsedFirstName = parts.slice(0, -1).join(" ");
+                                parsedLastName = parts[parts.length - 1];
+                            }
                         }
-                    });
+
+                        const updatedProfile = {
+                            ...baseProfile,
+                            ...(parsedFirstName ? { firstName: parsedFirstName } : {}),
+                            ...(parsedLastName !== undefined ? { lastName: parsedLastName } : {}),
+                            ...(fullName ? { passportOriginalName: fullName, nameAsInPassport: fullName } : {}),
+                            ...(dob ? { dob, dateOfBirth: dob } : {}),
+                            ...(gender ? { gender } : {}),
+                            ...(address ? { address } : {}),
+                            family: updatedFamily
+                        };
+                        setProfile(updatedProfile);
+                        await onboardingApi.submit(updatedProfile);
+                        if (user?.email && parsedFirstName) {
+                            await authApi.updateDetails(user.email, {
+                                firstName: parsedFirstName,
+                                lastName: parsedLastName || "",
+                                phoneNumber: user.phoneNumber || "",
+                                dateOfBirth: user.dateOfBirth || ""
+                            });
+                        }
+                        if (refreshUser) await refreshUser();
+                    } catch (err) {
+                        console.error("Auto passport profile update error:", err);
+                    }
                 }
             }
 
             const docTypeLower = docType.toLowerCase();
             const isFatherDoc = docTypeLower.includes('father');
             const isMotherDoc = docTypeLower.includes('mother');
+            const isStudentDoc = !isFatherDoc && !isMotherDoc;
 
             if (isFatherDoc || isMotherDoc) {
                 const parentType = isFatherDoc ? 'father' : 'mother';
                 const extractedParentName = isFatherDoc
-                    ? (extracted.father_name || extracted.fatherName || extracted.father_full_name || extracted.full_name || extracted.fullName || extracted.person_name || extracted.holder_name || extracted.name || extracted.printed_name)
-                    : (extracted.mother_name || extracted.motherName || extracted.mother_full_name || extracted.full_name || extracted.fullName || extracted.person_name || extracted.holder_name || extracted.name || extracted.printed_name);
+                    ? (extracted.full_name || extracted.fullName || extracted.person_name || extracted.holder_name || extracted.name || extracted.printed_name || extracted.applicant_name)
+                    : (extracted.full_name || extracted.fullName || extracted.person_name || extracted.holder_name || extracted.name || extracted.printed_name || extracted.applicant_name || extracted.mother_name || extracted.motherName);
 
                 const activeProf = getActiveProfile();
                 const existingParentName = parentType === 'father'
@@ -772,14 +819,127 @@ export default function DocumentVaultPage() {
                     : (activeProf.family?.motherName || activeProf.motherName || "");
 
                 if (extractedParentName && existingParentName && !areNamesMatching(extractedParentName, existingParentName)) {
-                    setParentDiscrepancyModalData({
-                        isOpen: true,
-                        parentType,
-                        docType,
-                        extractedName: extractedParentName,
-                        existingName: existingParentName,
-                        rawExtracted: extracted
+                    const promptRes = await Swal.fire({
+                        title: "Name Discrepancy Detected",
+                        html: `<div class="text-left text-xs space-y-3 font-sans">
+                            <p class="text-gray-600 font-medium">Your uploaded document <strong>(${docType.replace(/_/g, ' ').toUpperCase()})</strong> contains a different ${parentType}'s name than your existing record.</p>
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                <span class="block text-[10px] font-bold text-slate-400 uppercase">Existing Record (Passport / Profile)</span>
+                                <span class="font-extrabold text-slate-800">${existingParentName}</span>
+                            </div>
+                            <div class="p-3 bg-purple-50 rounded-xl border border-purple-200">
+                                <span class="block text-[10px] font-bold text-[#6605c7] uppercase">Newly Uploaded Document Data</span>
+                                <span class="font-extrabold text-[#6605c7]">${extractedParentName}</span>
+                            </div>
+                            <p class="text-slate-700 font-bold pt-1">Would you like to keep the old data or add the new data in place of the old data?</p>
+                        </div>`,
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonText: "ADD NEW DATA",
+                        cancelButtonText: "KEEP OLD DATA",
+                        confirmButtonColor: "#6605c7",
+                        cancelButtonColor: "#475569",
+                        customClass: {
+                            popup: "rounded-3xl shadow-2xl border border-purple-100 font-sans p-6",
+                            title: "text-lg font-black text-gray-900",
+                            confirmButton: "px-5 py-2.5 bg-[#6605c7] hover:bg-[#5504a6] text-white font-black text-xs uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-md",
+                            cancelButton: "px-5 py-2.5 bg-slate-600 hover:bg-slate-700 text-white font-black text-xs uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-md"
+                        }
                     });
+
+                    const baseProfile = profile || user || {};
+                    let family = baseProfile.family || baseProfile.familyDetails || {};
+                    if (typeof family === 'string') { try { family = JSON.parse(family); } catch { family = {}; } }
+                    if (!family || typeof family !== 'object') family = {};
+
+                    let coapp = baseProfile.coApplicant || {};
+                    if (typeof coapp === 'string') { try { coapp = JSON.parse(coapp); } catch { coapp = {}; } }
+                    if (!coapp || typeof coapp !== 'object') coapp = {};
+
+                    const rel = (coapp.relation || coappRelation || '').toLowerCase().trim();
+
+                    if (promptRes.isConfirmed) {
+                        const updatedFamily = {
+                            ...family,
+                            ...(parentType === 'father' ? { fatherName: extractedParentName } : { motherName: extractedParentName }),
+                        };
+                        let updatedCoapp = { ...coapp };
+                        if (rel === parentType) {
+                            updatedCoapp.name = extractedParentName;
+                        }
+                        const updatedProfile = {
+                            ...baseProfile,
+                            family: updatedFamily,
+                            coApplicant: updatedCoapp,
+                            ...(parentType === 'father' ? { fatherName: extractedParentName } : { motherName: extractedParentName })
+                        };
+                        setProfile(updatedProfile);
+                        await onboardingApi.submit(updatedProfile);
+                        if (refreshUser) await refreshUser();
+                        await loadDocs(true);
+                        showAlert("Details Updated", `Added new ${parentType}'s name "${extractedParentName}" in place of old data.`, "success");
+                    } else {
+                        const updatedFamily = {
+                            ...family,
+                            ...(parentType === 'father' ? { fatherName: existingParentName } : { motherName: existingParentName }),
+                        };
+                        let updatedCoapp = { ...coapp };
+                        if (rel === parentType) {
+                            updatedCoapp.name = existingParentName;
+                        }
+                        const updatedProfile = {
+                            ...baseProfile,
+                            family: updatedFamily,
+                            coApplicant: updatedCoapp,
+                            ...(parentType === 'father' ? { fatherName: existingParentName } : { motherName: existingParentName })
+                        };
+                        setProfile(updatedProfile);
+                        await onboardingApi.submit(updatedProfile);
+                        if (refreshUser) await refreshUser();
+                        await loadDocs(true);
+                        showAlert("Record Retained", `Kept existing ${parentType}'s name "${existingParentName}".`, "info");
+                    }
+                }
+            } else if (isStudentDoc && docType.toLowerCase() !== 'passport') {
+                const extractedStudentName = extracted.full_name || extracted.fullName || (extracted.given_names ? `${extracted.given_names} ${extracted.surname || ''}`.trim() : undefined) || extracted.person_name || extracted.holder_name || extracted.name;
+                const activeProf = getActiveProfile();
+                const existingStudentName = activeProf.passportOriginalName || activeProf.nameAsInPassport || (activeProf.firstName ? `${activeProf.firstName} ${activeProf.lastName || ''}`.trim() : "");
+
+                if (extractedStudentName && existingStudentName && !areNamesMatching(extractedStudentName, existingStudentName)) {
+                    // Reject upload & delete file from server!
+                    try {
+                        await documentApi.deleteFile(user.id, docType);
+                        await loadDocs(true);
+                    } catch (delErr) {
+                        console.error("Failed to delete rejected student document:", delErr);
+                    }
+
+                    await Swal.fire({
+                        title: "Upload Rejected - Name Mismatch",
+                        html: `<div class="text-left text-xs space-y-3 font-sans">
+                            <p class="text-rose-600 font-bold">The student name on this document does not match your registered profile record.</p>
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                <span class="block text-[10px] font-bold text-slate-400 uppercase">Registered Record Name</span>
+                                <span class="font-extrabold text-slate-800">${existingStudentName}</span>
+                            </div>
+                            <div class="p-3 bg-rose-50 rounded-xl border border-rose-200">
+                                <span class="block text-[10px] font-bold text-rose-600 uppercase">Document Extracted Name</span>
+                                <span class="font-extrabold text-rose-900">${extractedStudentName}</span>
+                            </div>
+                            <p class="text-slate-600 font-medium pt-1">For security & verification, student documents must match your registered name. This upload has been cancelled.</p>
+                        </div>`,
+                        icon: "error",
+                        confirmButtonText: "OK, UNDERSTOOD",
+                        confirmButtonColor: "#E11D48",
+                        customClass: {
+                            popup: "rounded-3xl shadow-2xl border border-rose-100 font-sans p-6",
+                            title: "text-lg font-black text-rose-900",
+                            confirmButton: "px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-md"
+                        }
+                    });
+
+                    e.target.value = "";
+                    return;
                 }
             }
 
@@ -1422,143 +1582,6 @@ export default function DocumentVaultPage() {
                 />
             )}
 
-            {passportModalData.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-                    <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-purple-100 relative overflow-hidden animate-scale-up">
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
-
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-12 h-12 rounded-2xl bg-[#6605c7] text-white flex items-center justify-center shadow-lg shadow-purple-500/30">
-                                <span className="material-symbols-outlined text-[24px]">travel_explore</span>
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black text-gray-900 tracking-tight">Passport Details Extracted</h3>
-                                <p className="text-xs text-gray-500 font-medium">Verify information extracted from your uploaded Passport</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-purple-50/50 rounded-2xl p-5 border border-purple-100/60 mb-6 space-y-3">
-                            {passportModalData.extracted?.fullName && (
-                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Student Name</span>
-                                    <span className="text-xs font-black text-gray-900">{passportModalData.extracted.fullName}</span>
-                                </div>
-                            )}
-                            {passportModalData.extracted?.fatherName && (
-                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Father's Name</span>
-                                    <span className="text-xs font-black text-[#6605c7]">{passportModalData.extracted.fatherName}</span>
-                                </div>
-                            )}
-                            {passportModalData.extracted?.motherName && (
-                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Mother's Name</span>
-                                    <span className="text-xs font-black text-[#6605c7]">{passportModalData.extracted.motherName}</span>
-                                </div>
-                            )}
-                            {passportModalData.extracted?.passportNo && (
-                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Passport Number</span>
-                                    <span className="text-xs font-black text-gray-900">{passportModalData.extracted.passportNo}</span>
-                                </div>
-                            )}
-                            {passportModalData.extracted?.dob && (
-                                <div className="flex justify-between items-center py-1 border-b border-purple-100/40">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date of Birth</span>
-                                    <span className="text-xs font-black text-gray-900">{passportModalData.extracted.dob}</span>
-                                </div>
-                            )}
-                            {passportModalData.extracted?.gender && (
-                                <div className="flex justify-between items-center py-1">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Gender</span>
-                                    <span className="text-xs font-black text-gray-900 capitalize">{passportModalData.extracted.gender}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <p className="text-xs text-gray-600 mb-6 leading-relaxed font-medium">
-                            Would you like to automatically update your profile and loan application details with these verified Passport records?
-                        </p>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setPassportModalData(prev => ({ ...prev, isOpen: false }))}
-                                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-all"
-                            >
-                                Skip for Now
-                            </button>
-                            <button
-                                onClick={handleConfirmPassportDetails}
-                                className="flex-1 py-3 bg-[#6605c7] hover:bg-[#5504a6] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 active:scale-95"
-                            >
-                                <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                                Confirm & Update Profile
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {parentDiscrepancyModalData.isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-                    <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-amber-100 relative overflow-hidden animate-scale-up">
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl" />
-
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/30">
-                                <span className="material-symbols-outlined text-[24px]">published_with_changes</span>
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black text-gray-900 tracking-tight">Parent Details Discrepancy</h3>
-                                <p className="text-xs text-amber-700 font-bold uppercase tracking-wider">Permission Required to Update</p>
-                            </div>
-                        </div>
-
-                        <p className="text-xs text-gray-600 mb-5 font-medium leading-relaxed">
-                            The {parentDiscrepancyModalData.parentType === 'father' ? "Father's" : "Mother's"} name on the newly uploaded document does not match your existing Passport/profile record.
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Existing Passport Record</div>
-                                <div className="text-xs font-black text-gray-800 break-words">{parentDiscrepancyModalData.existingName || "Not set"}</div>
-                            </div>
-                            <div className="bg-purple-50 p-4 rounded-2xl border border-purple-200">
-                                <div className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest mb-1">New Document Record</div>
-                                <div className="text-xs font-black text-[#6605c7] break-words">{parentDiscrepancyModalData.extractedName}</div>
-                            </div>
-                        </div>
-
-                        <p className="text-xs text-gray-700 mb-6 font-semibold">
-                            Can we overwrite the previous {parentDiscrepancyModalData.parentType === 'father' ? "Father" : "Mother"} details in your profile with the details from this document?
-                        </p>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setParentDiscrepancyModalData(prev => ({ ...prev, isOpen: false }))}
-                                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-all"
-                            >
-                                No, Keep Previous Details
-                            </button>
-                            <button
-                                onClick={handleOverwriteParentDetails}
-                                className="flex-1 py-3 bg-[#6605c7] hover:bg-[#5504a6] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 active:scale-95"
-                            >
-                                <span className="material-symbols-outlined text-[18px]">sync_saved_loc</span>
-                                Yes, Overwrite Details
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <AlertModal
-                isOpen={alertState.isOpen}
-                onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
-                title={alertState.title}
-                message={alertState.message}
-                type={alertState.type}
-            />
         </div>
     );
 }

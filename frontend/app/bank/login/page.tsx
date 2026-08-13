@@ -230,7 +230,7 @@ function BankLoginContent() {
             setError(
                 <span>
                     It looks like you are an administrator. Please use the{" "}
-                    <Link href={`/admin/login?email=${encodeURIComponent(email.trim())}`} className="underline font-bold text-[#6605c7] hover:text-[#5203a4]">
+                    <Link href="/admin/login" className="underline font-bold text-[#6605c7] hover:text-[#5203a4]">
                         Admin Login Page
                     </Link>{" "}
                     to access the portal.
@@ -305,7 +305,7 @@ function BankLoginContent() {
                 setError(
                     <span>
                         You have administrator privileges. Please use the{" "}
-                        <Link href={`/admin/login?email=${encodeURIComponent(email.trim())}`} className="underline font-bold text-[#6605c7] hover:text-[#5203a4]">
+                        <Link href="/admin/login" className="underline font-bold text-[#6605c7] hover:text-[#5203a4]">
                             Admin Login Page
                         </Link>{" "}
                         to access the portal.

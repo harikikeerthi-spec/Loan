@@ -60,6 +60,9 @@ interface AuthUser {
     family?: any;
     coApplicant?: any;
     parents?: any[];
+    passportOriginalName?: string;
+    nameAsInPassport?: string;
+    passport?: any;
 }
 
 interface AuthContextType {
@@ -160,13 +163,7 @@ function getStoredUser(portal: Portal): AuthUser | null {
     if (typeof window === "undefined") return null;
     try {
         const keys = getStorageKeys(portal);
-        let raw = localStorage.getItem(keys.user);
-        
-        if (!raw) raw = localStorage.getItem("adminAuthUser");
-        if (!raw) raw = localStorage.getItem("itAuthUser");
-        if (!raw) raw = localStorage.getItem("staffAuthUser");
-        if (!raw) raw = localStorage.getItem("authUser");
-        
+        const raw = localStorage.getItem(keys.user);
         return raw ? (JSON.parse(raw) as AuthUser) : null;
     } catch {
         return null;
@@ -177,39 +174,22 @@ function getStoredToken(portal: Portal): string | null {
     if (typeof window === "undefined") return null;
     const keys = getStorageKeys(portal);
     const token = localStorage.getItem(keys.token);
-    
     if (token) return token;
-
-    // Fallbacks for multi-portal access (e.g. admin using staff portal)
-    const adminToken = localStorage.getItem("adminAccessToken");
-    if (adminToken) return adminToken;
-
-    const itToken = localStorage.getItem("itAccessToken");
-    if (itToken) return itToken;
-
-    const staffToken = localStorage.getItem("staffAccessToken");
-    if (staffToken) return staffToken;
-    
-    return localStorage.getItem("accessToken");
+    if (portal === "student") {
+        return localStorage.getItem("accessToken") || localStorage.getItem("token") || localStorage.getItem("userToken") || null;
+    }
+    return null;
 }
 
 function getStoredRefreshToken(portal: Portal): string | null {
     if (typeof window === "undefined") return null;
     const keys = getStorageKeys(portal);
     const token = localStorage.getItem(keys.refreshToken);
-    
     if (token) return token;
-
-    const adminRefresh = localStorage.getItem("adminRefreshToken");
-    if (adminRefresh) return adminRefresh;
-
-    const itRefresh = localStorage.getItem("itRefreshToken");
-    if (itRefresh) return itRefresh;
-
-    const staffRefresh = localStorage.getItem("staffRefreshToken");
-    if (staffRefresh) return staffRefresh;
-    
-    return localStorage.getItem("refreshToken");
+    if (portal === "student") {
+        return localStorage.getItem("refreshToken") || null;
+    }
+    return null;
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -258,7 +238,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(storedUser);
             setToken(storedToken);
             if (typeof window !== "undefined") {
-                document.cookie = `${keys.token}=${storedToken}; path=/; max-age=2592000; SameSite=Lax`;
+                if (portal === "staff") {
+                    // Session-only cookie for staff
+                    document.cookie = `${keys.token}=${storedToken}; path=/; SameSite=Lax`;
+                } else {
+                    document.cookie = `${keys.token}=${storedToken}; path=/; max-age=2592000; SameSite=Lax`;
+                }
             }
         } else if (storedToken && !storedUser) {
             const email = localStorage.getItem(keys.email);
@@ -323,6 +308,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         coApplicantAadhar: pickVal((freshUser as any).coApplicantAadhar, (prev as any)?.coApplicantAadhar),
                         coApplicantPan: pickVal((freshUser as any).coApplicantPan, (prev as any)?.coApplicantPan),
                         parents: (freshUser as any).parents !== undefined && (freshUser as any).parents !== null ? (freshUser as any).parents : (prev as any)?.parents,
+                        passportOriginalName: pickVal((freshUser as any).passportOriginalName, prev?.passportOriginalName),
+                        nameAsInPassport: pickVal((freshUser as any).nameAsInPassport, prev?.nameAsInPassport),
+                        passport: (freshUser as any).passport !== undefined && (freshUser as any).passport !== null ? (freshUser as any).passport : prev?.passport,
                     };
                     localStorage.setItem(keys.user, JSON.stringify(updated));
                     if (updated.id) localStorage.setItem(keys.userId, updated.id);
@@ -359,21 +347,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (newUser.id) localStorage.setItem(keys.userId, newUser.id);
             localStorage.setItem(keys.user, JSON.stringify(newUser));
 
-            if (['admin', 'super_admin', 'staff_admin', 'staff', 'it'].includes(newUser.role || '')) {
-                localStorage.setItem("staffAccessToken", accessToken);
-                localStorage.setItem("staffAuthUser", JSON.stringify(newUser));
-                localStorage.setItem("adminAccessToken", accessToken);
-                localStorage.setItem("adminAuthUser", JSON.stringify(newUser));
-                if (userData?.refresh_token) {
-                    localStorage.setItem("staffRefreshToken", userData.refresh_token);
-                    localStorage.setItem("adminRefreshToken", userData.refresh_token);
-                }
-            }
-
             if (typeof window !== "undefined") {
-                document.cookie = `${keys.token}=${accessToken}; path=/; max-age=2592000; SameSite=Lax`;
-                document.cookie = `staffAccessToken=${accessToken}; path=/; max-age=2592000; SameSite=Lax`;
-                document.cookie = `adminAccessToken=${accessToken}; path=/; max-age=2592000; SameSite=Lax`;
+                if (portal === "staff") {
+                    // Session-only cookie for staff (expires when browser closes)
+                    document.cookie = `${keys.token}=${accessToken}; path=/; SameSite=Lax`;
+                } else {
+                    document.cookie = `${keys.token}=${accessToken}; path=/; max-age=2592000; SameSite=Lax`;
+                }
             }
 
             notifyTokenChange(accessToken);

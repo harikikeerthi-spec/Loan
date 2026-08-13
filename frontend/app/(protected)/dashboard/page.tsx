@@ -721,7 +721,7 @@ export default function DashboardPage() {
                                 )}
                             </div>
                             <h1 className="text-2xl md:text-3xl font-bold font-display text-gray-900 mb-2">
-                                Welcome back, {user?.firstName ? (user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName) : user?.email?.split("@")[0]}! 👋
+                                Welcome back, {data.profile?.passportOriginalName || data.profile?.nameAsInPassport || user?.passportOriginalName || user?.nameAsInPassport || (user?.firstName ? (user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName) : user?.email?.split("@")[0])}! 👋
                             </h1>
                             <p className="text-gray-500 text-sm">
                                 {data.applications?.length
@@ -978,7 +978,7 @@ export default function DashboardPage() {
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-8 overflow-x-auto no-scrollbar border-b border-slate-200/60 relative">
-                    {["overview", "applications", "messages", "documents", "profile"].map((tab) => (
+                    {["overview", "applications", "documents", "profile"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -1366,19 +1366,7 @@ export default function DashboardPage() {
                                                     {expandedApps[app.id] ? 'Hide Progress Details' : 'View Progress Details'}
                                                 </button>
 
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setSelectedChatApp(app);
-                                                            setActiveTab("messages");
-                                                        }}
-                                                        className="px-4 py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[11px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md shadow-purple-600/20 flex items-center gap-2 active:scale-95 cursor-pointer"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[16px]">forum</span>
-                                                        Chat with Bank
-                                                    </button>
-                                                </div>
+
                                             </div>
 
                                             {/* Expanded Stepper timeline */}
@@ -1408,16 +1396,7 @@ export default function DashboardPage() {
                     </div>
                 )} */}
 
-                {/* Messages Tab */}
-                {activeTab === "messages" && (
-                    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 min-h-[720px] animate-fade-in overflow-hidden">
-                        <ChatInterface
-                            role="staff"
-                            initialBank={selectedChatApp ? { bankName: selectedChatApp.bank, applicationId: selectedChatApp.id, applicationNumber: selectedChatApp.applicationNumber } : undefined}
-                            className="flex h-[720px] border-0 rounded-none overflow-hidden bg-white shadow-none mt-0 text-gray-900"
-                        />
-                    </div>
-                )}
+
 
                 {/* Profile Tab */}
                 {activeTab === "profile" && (

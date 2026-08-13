@@ -75,9 +75,9 @@ export default function Navbar() {
     };
 
     const displayName = user
-        ? user.firstName && user.lastName
+        ? user.passportOriginalName || user.nameAsInPassport || (user.firstName && user.lastName
             ? `${user.firstName} ${user.lastName}`
-            : user.email
+            : user.firstName || user.email)
         : "";
 
     return (

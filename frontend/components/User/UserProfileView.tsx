@@ -65,6 +65,7 @@ export default function UserProfileView({
     const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
     const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'inter', 'grade_12', 'grade12']));
     const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_']));
+    const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['passport']));
 
     const getExtractedField = (doc: any, fieldNames: string | string[]) => {
         if (!doc) return null;
@@ -182,6 +183,18 @@ export default function UserProfileView({
     const hscDetails = getAcademicDetails(hscDoc, 'hsc');
     const ugDetails = getAcademicDetails(ugDoc, 'ug');
 
+    let parsedPassportObj: any = activeProfile?.passport;
+    if (typeof parsedPassportObj === 'string') {
+        try { parsedPassportObj = JSON.parse(parsedPassportObj); } catch {}
+    }
+    if (!parsedPassportObj || typeof parsedPassportObj !== 'object') parsedPassportObj = {};
+
+    const passportNumber = parsedPassportObj.number || parsedPassportObj.passportNumber || parsedPassportObj.passport_number || parsedPassportObj.passportNo || activeProfile?.passportNumber || activeProfile?.passportNo || getDocExtractedField(['passport'], ['passport_number', 'passportNumber', 'passport_no', 'passportNo', 'document_number']);
+    const passportExpiryDate = parsedPassportObj.expiryDate || parsedPassportObj.passportExpiry || parsedPassportObj.expiry_date || parsedPassportObj.dateOfExpiry || activeProfile?.passportExpiry || getDocExtractedField(['passport'], ['date_of_expiry', 'expiry_date', 'expiration_date', 'passport_expiry']);
+    const passportIssueCountry = parsedPassportObj.issueCountry || parsedPassportObj.passportIssueCountry || parsedPassportObj.issue_country || activeProfile?.passportIssueCountry || getDocExtractedField(['passport'], ['issue_country', 'country_of_issue', 'issuing_country']) || "India";
+    const passportBirthCity = parsedPassportObj.birthCity || parsedPassportObj.placeOfBirth || parsedPassportObj.birth_city || activeProfile?.birthCity || getDocExtractedField(['passport'], ['place_of_birth', 'birth_place', 'birth_city']);
+    const passportFullName = parsedPassportObj.fullName || parsedPassportObj.full_name || activeProfile?.passportOriginalName || activeProfile?.nameAsInPassport || activeProfile?.family?.passportOriginalName || getDocExtractedField(['passport'], ['full_name', 'fullName', 'name', 'printed_name', 'holder_name']);
+
     const displayUserId = user?.id || "";
 
     const profileCompleteness = (() => {
@@ -236,6 +249,8 @@ export default function UserProfileView({
         lastName: "",
         phoneNumber: "",
         dateOfBirth: "",
+        passportNumber: "",
+        passportExpiryDate: "",
     });
 
     const [familyForm, setFamilyForm] = useState({
@@ -259,6 +274,8 @@ export default function UserProfileView({
             lastName: activeProfile?.lastName || "",
             phoneNumber: activeProfile?.phoneNumber || "",
             dateOfBirth: formatDateToDdMmYyyy(activeProfile?.dateOfBirth),
+            passportNumber: passportNumber || "",
+            passportExpiryDate: passportExpiryDate || "",
         });
         setEditingCard("personal");
     };
@@ -348,6 +365,17 @@ export default function UserProfileView({
                 phoneNumber: personalForm.phoneNumber,
                 dateOfBirth: personalForm.dateOfBirth,
             });
+            if (user?.id) {
+                await documentApi.updateProfile(user.id, {
+                    passport: {
+                        ...(parsedPassportObj || {}),
+                        number: personalForm.passportNumber,
+                        expiryDate: personalForm.passportExpiryDate,
+                    },
+                    passportNumber: personalForm.passportNumber,
+                    passportExpiry: personalForm.passportExpiryDate,
+                });
+            }
             await refreshUser();
             await loadData();
             setEditingCard(null);
@@ -584,9 +612,9 @@ export default function UserProfileView({
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1.5">
                                 <h2 className="text-xl font-bold text-[#0F172A] tracking-tight">
-                                    {activeProfile?.firstName && activeProfile?.lastName
+                                    {passportFullName || activeProfile?.passportOriginalName || activeProfile?.nameAsInPassport || (activeProfile?.firstName && activeProfile?.lastName
                                         ? `${activeProfile.firstName} ${activeProfile.lastName}`
-                                        : activeProfile?.email?.split("@")[0]}
+                                        : activeProfile?.firstName || activeProfile?.email?.split("@")[0])}
                                 </h2>
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100/70 text-emerald-700 text-[10px] font-black tracking-wider uppercase">
                                     <i className="ph ph-shield-check text-xs text-emerald-600" />
@@ -724,26 +752,48 @@ export default function UserProfileView({
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            {(() => {
-                                const passportOrigName = activeProfile?.passportOriginalName || activeProfile?.nameAsInPassport || activeProfile?.family?.passportOriginalName || getDocExtractedField(['passport'], ['full_name', 'fullName', 'name', 'printed_name', 'holder_name']);
-                                if (!passportOrigName) return null;
-                                return (
-                                    <div className="p-3.5 bg-purple-50/70 border border-purple-100/80 rounded-2xl flex flex-wrap items-center justify-between gap-3 mb-2">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-xl bg-[#6605c7] text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/20">
-                                                <i className="ph ph-passport text-lg" />
-                                            </div>
-                                            <div>
-                                                <span className="block text-[10px] font-black uppercase tracking-widest text-[#6605c7]">Original Name in Passport</span>
-                                                <span className="text-xs font-black text-slate-800">{passportOrigName}</span>
-                                            </div>
+                            {/* Passport Details Card Banner */}
+                            <div className="p-4 bg-purple-50/60 border border-purple-100 rounded-2xl space-y-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-[#6605c7] text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/20">
+                                            <i className="ph ph-passport text-lg" />
                                         </div>
-                                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
-                                            <i className="ph ph-check-circle text-xs text-emerald-600" /> Passport Verified
-                                        </span>
+                                        <div>
+                                            <span className="block text-[10px] font-black uppercase tracking-widest text-[#6605c7]">Passport Information</span>
+                                            <span className="text-xs font-bold text-slate-800">
+                                                {passportFullName || (activeProfile?.firstName ? `${activeProfile.firstName} ${activeProfile.lastName || ''}`.trim() : 'Passport Details')}
+                                            </span>
+                                        </div>
                                     </div>
-                                );
-                            })()}
+                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1 border ${
+                                        passportDoc?.uploaded || passportNumber
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                                            : "bg-amber-50 text-amber-700 border-amber-200/60"
+                                    }`}>
+                                        <i className={`ph ${passportDoc?.uploaded || passportNumber ? "ph-check-circle text-emerald-600" : "ph-clock text-amber-600"} text-xs`} />
+                                        {passportDoc?.uploaded ? "Passport Verified" : passportNumber ? "Details Available" : "Pending Upload"}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-purple-100/60 text-xs">
+                                    <div>
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Passport Number</span>
+                                        <span className="font-mono font-bold text-slate-800">{passportNumber || "—"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Expiry Date</span>
+                                        <span className="font-semibold text-slate-800">{passportExpiryDate || "—"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Issue Country</span>
+                                        <span className="font-semibold text-slate-800">{passportIssueCountry || "India"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Place of Birth</span>
+                                        <span className="font-semibold text-slate-800">{passportBirthCity || "—"}</span>
+                                    </div>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {renderBentoField("Email Address", activeProfile?.email, startPersonalEdit)}
                                 {renderBentoField("Phone Number", activeProfile?.phoneNumber, startPersonalEdit)}

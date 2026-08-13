@@ -151,9 +151,8 @@ const EVVGradientAreaChart: React.FC<{ metrics: MonthlyMetric[] }> = ({ metrics 
                 cx={pt.x}
                 cy={pt.y}
                 r="10"
-                className={`fill-violet-400/20 stroke-none transition-all duration-200 ${
-                  hoveredIdx === idx ? "scale-100 opacity-100" : "scale-50 opacity-0"
-                }`}
+                className={`fill-violet-400/20 stroke-none transition-all duration-200 ${hoveredIdx === idx ? "scale-100 opacity-100" : "scale-50 opacity-0"
+                  }`}
               />
               <circle
                 cx={pt.x}
@@ -171,9 +170,8 @@ const EVVGradientAreaChart: React.FC<{ metrics: MonthlyMetric[] }> = ({ metrics 
               x={pt.x}
               y={height - paddingBottom + 18}
               textAnchor="middle"
-              className={`font-black text-[9px] uppercase tracking-wider transition-all duration-200 ${
-                hoveredIdx === idx ? "fill-violet-700" : "fill-slate-500"
-              }`}
+              className={`font-black text-[9px] uppercase tracking-wider transition-all duration-200 ${hoveredIdx === idx ? "fill-violet-700" : "fill-slate-500"
+                }`}
             >
               {pt.metric.label}
             </text>
@@ -248,7 +246,7 @@ export const EVVTestAgent: React.FC<{
         // evvOverall = Rupee Average Monthly Balance (e.g. 250000) or score
         const rawScore = Number(application.evvScore);
         const rawOverall = Number(application.evvOverall);
-        
+
         let calculatedScore = 82;
         if (!isNaN(rawScore) && rawScore > 0 && rawScore <= 100) {
           calculatedScore = rawScore;
@@ -456,7 +454,7 @@ export const EVVTestAgent: React.FC<{
       }
 
       const { transactions } = parseTransactions(text);
-      
+
       let computedResult: EVVResult;
       if (transactions && transactions.length > 0) {
         computedResult = calculateEVV(transactions, Math.max(1, intervalDays || 5));
@@ -602,11 +600,10 @@ export const EVVTestAgent: React.FC<{
         <button
           onClick={handleAnalyze}
           disabled={uploading}
-          className={`px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider text-white flex items-center gap-2 transition-all duration-300 ${
-            uploading
+          className={`px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider text-white flex items-center gap-2 transition-all duration-300 ${uploading
               ? "bg-slate-400 cursor-not-allowed"
               : "bg-gradient-to-r from-violet-600 to-indigo-700 hover:shadow-lg hover:shadow-violet-600/20 active:scale-98 cursor-pointer"
-          }`}
+            }`}
         >
           <span className="material-symbols-outlined text-[18px]">{uploading ? "sync" : "bolt"}</span>
           {uploading ? "Processing PDF & AI..." : "Verify EVV (AI Engine)"}
@@ -622,15 +619,7 @@ export const EVVTestAgent: React.FC<{
             <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
               Upload a customer bank statement PDF above and click <span className="font-bold text-slate-600">Verify EVV (AI Engine)</span> to calculate the Estimated Verified Value score and store the document in AWS S3.
             </p>
-            <div className="pt-2">
-              <button
-                onClick={loadDemo}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer inline-flex items-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[14px]">science</span>
-                Load Sample Demo Data (Testing)
-              </button>
-            </div>
+
           </div>
         </div>
       ) : (
@@ -658,16 +647,14 @@ export const EVVTestAgent: React.FC<{
 
                 <div className="flex flex-col items-center bg-violet-50/60 border border-violet-100/60 px-5 py-3 rounded-2xl min-w-[110px]">
                   <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Risk Profile</span>
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mt-2 border ${
-                    evvResult.overallRisk === "Low"
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mt-2 border ${evvResult.overallRisk === "Low"
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                       : evvResult.overallRisk === "Medium"
-                      ? "border-amber-200 bg-amber-50 text-amber-700"
-                      : "border-rose-200 bg-rose-50 text-rose-700"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-                      evvResult.overallRisk === "Low" ? "bg-emerald-500" : evvResult.overallRisk === "Medium" ? "bg-amber-500" : "bg-rose-500"
-                    }`} />
+                        ? "border-amber-200 bg-amber-50 text-amber-700"
+                        : "border-rose-200 bg-rose-50 text-rose-700"
+                    }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${evvResult.overallRisk === "Low" ? "bg-emerald-500" : evvResult.overallRisk === "Medium" ? "bg-amber-500" : "bg-rose-500"
+                      }`} />
                     {evvResult.overallRisk} Risk
                   </span>
                 </div>

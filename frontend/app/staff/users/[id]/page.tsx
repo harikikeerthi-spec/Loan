@@ -57,6 +57,53 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
     );
 }
 
+interface Stage {
+    order: number;
+    label: string;
+    icon: string;
+    progress: number;
+}
+
+const STAGES_CONFIG: Record<string, Stage> = {
+    application_created: { order: 1, label: 'Created', icon: 'bolt', progress: 10 },
+    application_submitted: { order: 2, label: 'Submitted', icon: 'send', progress: 25 },
+    document_verification: { order: 3, label: 'Documents', icon: 'verified', progress: 40 },
+    submit_to_bank: { order: 4, label: 'Submit to Bank', icon: 'account_balance', progress: 50 },
+    credit_check: { order: 5, label: 'Credit Check', icon: 'credit_score', progress: 75 },
+    bank_review: { order: 6, label: 'Bank Review', icon: 'rate_review', progress: 90 },
+    sanction: { order: 7, label: 'Sanction', icon: 'assignment_turned_in', progress: 95 },
+    disbursement: { order: 8, label: 'Disbursed', icon: 'payments', progress: 100 },
+};
+
+const getStageKeyForApp = (app: any) => {
+    if (!app) return 'application_created';
+    if (app.status?.toLowerCase() === 'rejected' || app.status?.toLowerCase() === 'cancelled') return 'application_created';
+
+    let stageKey = app.stage;
+    if (!stageKey || !STAGES_CONFIG[stageKey]) {
+        const status = (app.status || '').toLowerCase();
+        if (status.includes('approve') || status.includes('sanction')) return 'sanction';
+        if (status.includes('disburse')) return 'disbursement';
+        if (status.includes('process') || status.includes('review')) return 'bank_review';
+        if (status.includes('submit_to_bank') || status.includes('submitted_to_bank')) return 'submit_to_bank';
+        if (status === 'submitted') return 'application_submitted';
+        if (status.includes('document')) return 'document_verification';
+        if (status.includes('credit')) return 'credit_check';
+
+        const p = app.progress !== undefined && app.progress !== null ? app.progress : 0;
+        if (p >= 100) return 'disbursement';
+        if (p >= 95) return 'sanction';
+        if (p >= 90) return 'bank_review';
+        if (p >= 75) return 'credit_check';
+        if (p >= 50) return 'submit_to_bank';
+        if (p >= 40) return 'document_verification';
+        if (p >= 25) return 'application_submitted';
+
+        return 'application_created';
+    }
+    return stageKey;
+};
+
 export default function ProfileTab() {
     const { userData, setUserData, userApplications, setUserApplications, userDocuments, refreshData } = useUserDossier();
     const router = useRouter();
@@ -64,7 +111,7 @@ export default function ProfileTab() {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
-    const [activeEditTab, setActiveEditTab] = useState<'student' | 'parents' | 'coapplicant' | 'academic'>('student');
+    const [activeEditTab, setActiveEditTab] = useState<'student' | 'passport' | 'parents' | 'coapplicant' | 'academic'>('student');
     const [evvPeriod, setEvvPeriod] = useState<3 | 6 | 12>(6);
     const [editForm, setEditForm] = useState({
         firstName: "",
@@ -75,6 +122,12 @@ export default function ProfileTab() {
         nationality: "",
         studyDestination: "",
         targetUniversity: "",
+        passportNumber: "",
+        passportFullName: "",
+        passportIssueDate: "",
+        passportExpiryDate: "",
+        passportIssueCountry: "India",
+        passportBirthCity: "",
         fatherName: "",
         fatherAadhar: "",
         fatherPan: "",
@@ -204,6 +257,7 @@ export default function ProfileTab() {
     const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
     const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'grade_12', 'grade12']));
     const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_']));
+    const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['passport']));
 
     const getExtractedField = (doc: any, fieldNames: string | string[]) => {
         if (!doc) return null;
@@ -299,6 +353,19 @@ export default function ProfileTab() {
     const sscDetails = getAcademicDetails(sscDoc, 'ssc');
     const hscDetails = getAcademicDetails(hscDoc, 'hsc');
     const ugDetails = getAcademicDetails(ugDoc, 'ug');
+
+    let parsedPassportObj: any = userData?.passport;
+    if (typeof parsedPassportObj === 'string') {
+        try { parsedPassportObj = JSON.parse(parsedPassportObj); } catch { }
+    }
+    if (!parsedPassportObj || typeof parsedPassportObj !== 'object') parsedPassportObj = {};
+
+    const passportNumber = parsedPassportObj.number || parsedPassportObj.passportNumber || parsedPassportObj.passport_number || parsedPassportObj.passportNo || userData?.passportNumber || userData?.passportNo || getExtractedField(passportDoc, ['passport_number', 'passportNumber', 'passport_no', 'passportNo', 'document_number']);
+    const passportIssueDate = parsedPassportObj.issueDate || parsedPassportObj.passportIssueDate || parsedPassportObj.issue_date || userData?.passportIssueDate || getExtractedField(passportDoc, ['issue_date', 'date_of_issue', 'passport_issue_date']);
+    const passportExpiryDate = parsedPassportObj.expiryDate || parsedPassportObj.passportExpiry || parsedPassportObj.expiry_date || parsedPassportObj.dateOfExpiry || userData?.passportExpiry || getExtractedField(passportDoc, ['date_of_expiry', 'expiry_date', 'expiration_date', 'passport_expiry']);
+    const passportIssueCountry = parsedPassportObj.issueCountry || parsedPassportObj.passportIssueCountry || parsedPassportObj.issue_country || userData?.passportIssueCountry || getExtractedField(passportDoc, ['issue_country', 'country_of_issue', 'issuing_country']) || "India";
+    const passportBirthCity = parsedPassportObj.birthCity || parsedPassportObj.placeOfBirth || parsedPassportObj.birth_city || userData?.birthCity || getExtractedField(passportDoc, ['place_of_birth', 'birth_place', 'birth_city']);
+    const passportFullName = parsedPassportObj.fullName || parsedPassportObj.full_name || userData?.passportOriginalName || userData?.nameAsInPassport || getExtractedField(passportDoc, ['full_name', 'fullName', 'name', 'printed_name', 'holder_name']);
 
     const activeApp = userApplications && userApplications.length > 0 ? userApplications[0] : null;
 
@@ -437,6 +504,13 @@ export default function ProfileTab() {
             studyDestination: userData?.studyDestination || userData?.countryOfEducation || userData?.country || (userApplications && userApplications[0]?.country) || (userApplications && userApplications[0]?.studyDestination) || "",
             targetUniversity: userData?.targetUniversity || userData?.universityName || userData?.university || (userApplications && userApplications[0]?.universityName) || (userApplications && userApplications[0]?.university) || (userApplications && userApplications[0]?.targetUniversity) || "",
 
+            passportNumber: passportNumber || "",
+            passportFullName: passportFullName || (userData?.firstName ? `${userData.firstName} ${userData.lastName || ''}`.trim() : ""),
+            passportIssueDate: passportIssueDate || "",
+            passportExpiryDate: passportExpiryDate || "",
+            passportIssueCountry: passportIssueCountry || "India",
+            passportBirthCity: passportBirthCity || "",
+
             fatherName: fatherData?.name || parsedFamily?.fatherName || userData?.fatherName || "",
             fatherAadhar: fatherData?.aadharNumber || parsedFamily?.fatherAadhar || "",
             fatherPan: fatherData?.panNumber || parsedFamily?.fatherPan || "",
@@ -498,6 +572,21 @@ export default function ProfileTab() {
                 targetUniversity: editForm.targetUniversity,
                 universityName: editForm.targetUniversity,
                 university: editForm.targetUniversity,
+
+                passport: {
+                    fullName: editForm.passportFullName,
+                    full_name: editForm.passportFullName,
+                    number: editForm.passportNumber,
+                    issueDate: editForm.passportIssueDate,
+                    expiryDate: editForm.passportExpiryDate,
+                    issueCountry: editForm.passportIssueCountry,
+                    birthCity: editForm.passportBirthCity,
+                },
+                passportOriginalName: editForm.passportFullName,
+                nameAsInPassport: editForm.passportFullName,
+                passportNumber: editForm.passportNumber,
+                passportExpiry: editForm.passportExpiryDate,
+                passportIssueCountry: editForm.passportIssueCountry,
 
                 personal: {
                     firstName: editForm.firstName,
@@ -574,6 +663,7 @@ export default function ProfileTab() {
                     family: updates.family,
                     coApplicant: updates.coApplicant,
                     academic: updates.academic,
+                    passport: updates.passport,
                 }),
                 authApi.updateDetails(userData.email || editForm.email, {
                     firstName: editForm.firstName,
@@ -667,239 +757,297 @@ export default function ProfileTab() {
             exit={{ opacity: 0, y: -15 }}
             className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-slate-800"
         >
-            {/* Personal Information Glass-Card */}
+            {/* Personal Information & Passport Details Column */}
             <div className="lg:col-span-2 space-y-6">
-                <div className="bg-[#FFFFFF] rounded-2xl border border-[#E2E8F0] p-8 shadow-sm space-y-6">
-                    <div className="flex justify-between items-center gap-4">
-                        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[#7C3AED]">person</span>
-                            Student Profile - Personal & Academic Details
-                        </h2>
+                {/* Personal Details Card */}
+                <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm p-6 space-y-6 font-sans">
+                    <div className="border-b border-[#E2E8F0] pb-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
+                                <span className="material-symbols-outlined text-[16px]">person</span>
+                            </div>
+                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Personal Details</h3>
+                        </div>
                         <button
                             onClick={handleOpenEdit}
                             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-[#FFFFFF] rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-md hover:shadow-[#7C3AED]/10 active:scale-95 border-0"
                         >
                             <span className="material-symbols-outlined text-[16px]">edit</span>
-                            Edit
+                            Edit Profile
                         </button>
                     </div>
 
-                    <div className="space-y-6">
-                        <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm p-6 space-y-6 font-sans">
-                            <div className="border-b border-[#E2E8F0] pb-4 flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
-                                    <span className="material-symbols-outlined text-[16px]">person</span>
+                    {/* Row 1: Email, Phone, and Target University */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-2">
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Email Address</span>
+                            <span className="text-sm font-semibold text-slate-800 lowercase break-all">{getDisplayValue(userData.email)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Phone Number</span>
+                            <span className="text-sm font-semibold text-slate-800">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Target University</span>
+                            <span className="text-sm font-semibold text-slate-800">
+                                {getDisplayValue(
+                                    userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.universityName ||
+                                    userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.university ||
+                                    userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.targetUniversity ||
+                                    userData?.targetUniversity ||
+                                    userData?.universityName ||
+                                    userData?.university ||
+                                    userData?.academic?.universityName ||
+                                    userData?.academic?.targetUniversity,
+                                    "Pending"
+                                )}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Row 2: DOB, Nationality, Destination Country */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Date of Birth</span>
+                            <span className="text-sm font-semibold text-slate-800">
+                                {(() => {
+                                    const raw = (userData as any).dateOfBirth;
+                                    let dobDate: Date | null = null;
+                                    if (raw) {
+                                        if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) {
+                                            const [dd, mm, yyyy] = raw.split('-');
+                                            dobDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+                                        } else {
+                                            dobDate = new Date(raw);
+                                        }
+                                    }
+                                    const isDobValid = dobDate && !isNaN(dobDate.getTime());
+                                    if (isDobValid) {
+                                        return dobDate!.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                                    } else {
+                                        return <span className="text-[#94A3B8] font-normal">Pending</span>;
+                                    }
+                                })()}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Nationality</span>
+                            <span className="text-sm font-semibold text-slate-800">
+                                {getDisplayValue(userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian")}
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Destination Country</span>
+                            <span className="text-sm font-semibold text-slate-800">
+                                {getDisplayValue(
+                                    userData?.studyDestination ||
+                                    userData?.countryOfEducation ||
+                                    userData?.country ||
+                                    userData?.destinationCountry ||
+                                    userApplications?.find((app: any) => app.country || app.countryOfStudy || app.studyDestination)?.country ||
+                                    userApplications?.find((app: any) => app.country || app.countryOfStudy || app.studyDestination)?.countryOfStudy ||
+                                    userData?.academic?.countryOfEducation,
+                                    "Pending"
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Passport Details Card */}
+                <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm p-6 space-y-6 font-sans">
+                    <div className="border-b border-[#E2E8F0] pb-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
+                                <span className="material-symbols-outlined text-[16px]">badge</span>
+                            </div>
+                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Passport & Travel Details</h3>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border ${passportDoc?.uploaded || passportNumber
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/70"
+                                : "bg-amber-50 text-amber-700 border-amber-200/70"
+                            }`}>
+                            <span className="material-symbols-outlined text-[13px]">
+                                {passportDoc?.uploaded || passportNumber ? "verified" : "pending"}
+                            </span>
+                            {passportDoc?.uploaded ? "Document Verified" : passportNumber ? "Details Available" : "Pending Upload"}
+                        </span>
+                    </div>
+
+                    {/* Row 1: Passport Number, Name in Passport, Expiry Date */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-2">
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Passport Number</span>
+                            <span className="text-sm font-semibold text-slate-800 font-mono tracking-wider">{getDisplayValue(passportNumber)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Name as in Passport</span>
+                            <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportFullName || (userData.firstName ? `${userData.firstName} ${userData.lastName || ''}`.trim() : null))}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Date of Expiry</span>
+                            <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportExpiryDate)}</span>
+                        </div>
+                    </div>
+
+                    {/* Row 2: Country of Issue, Place of Birth, Document Status */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Country of Issue</span>
+                            <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportIssueCountry, "India")}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Place of Birth</span>
+                            <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportBirthCity)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Passport Vault</span>
+                            <span className="text-sm font-semibold text-slate-800">
+                                {passportDoc?.uploaded ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push(`/staff/users/${userData.id}/documents`)}
+                                        className="text-[#7C3AED] hover:text-[#6D28D9] font-bold text-xs flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">description</span>
+                                        View Uploaded Passport
+                                    </button>
+                                ) : (
+                                    <span className="text-[#94A3B8] font-normal">Pending Upload</span>
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Family & Co-applicant Details unified table view */}
+                {(() => {
+                    const fatherName = fatherData?.name || getParentName("father");
+                    const motherName = motherData?.name || getParentName("mother");
+
+                    const coApp1Name = getCoApplicantName(1);
+                    const coApp2Name = getCoApplicantName(2);
+                    const coApp3Name = getCoApplicantName(3);
+
+                    return (
+                        <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden font-sans">
+                            <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center bg-[#FFFFFF]">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
+                                        <span className="material-symbols-outlined text-[16px]">groups</span>
+                                    </div>
+                                    <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Family & Co-Applicant Details</h3>
                                 </div>
-                                <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Personal Details</h3>
                             </div>
 
-                            {/* Row 1: Email, Phone, and Target University */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-2">
-                                <div>
-                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Email Address</span>
-                                    <span className="text-sm font-semibold text-slate-800 lowercase break-all">{getDisplayValue(userData.email)}</span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Phone Number</span>
-                                    <span className="text-sm font-semibold text-slate-800">{getDisplayValue(userData.phoneNumber || userData.mobile || userData.phone)}</span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Target University</span>
-                                    <span className="text-sm font-semibold text-slate-800">
-                                        {getDisplayValue(
-                                            userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.universityName ||
-                                            userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.university ||
-                                            userApplications?.find((app: any) => app.universityName || app.university || app.targetUniversity)?.targetUniversity ||
-                                            userData?.targetUniversity ||
-                                            userData?.universityName ||
-                                            userData?.university ||
-                                            userData?.academic?.universityName ||
-                                            userData?.academic?.targetUniversity,
-                                            "Pending"
-                                        )}
-                                    </span>
-                                </div>
-                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-[#E2E8F0] text-sm">
+                                    <thead className="bg-[#F8FAFC]">
+                                        <tr>
+                                            <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">Role</th>
+                                            <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">Name</th>
+                                            <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">KYC Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#E2E8F0] bg-[#FFFFFF]">
+                                        {/* Father */}
+                                        <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Father</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{fatherName}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
+                                                <div className="mb-1 text-[#64748B]">Aadhaar: <span className={fatherData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{fatherData?.aadharNumber || "Pending"}</span></div>
+                                                <div className="text-[#64748B]">PAN: <span className={fatherData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{fatherData?.panNumber || "Pending"}</span></div>
+                                            </td>
+                                        </tr>
 
-                            {/* Row 2: DOB, Nationality, Destination Country */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
-                                <div>
-                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Date of Birth</span>
-                                    <span className="text-sm font-semibold text-slate-800">
-                                        {(() => {
-                                            const raw = (userData as any).dateOfBirth;
-                                            let dobDate: Date | null = null;
-                                            if (raw) {
-                                                if (/^\d{2}-\d{2}-\d{4}$/.test(raw)) {
-                                                    const [dd, mm, yyyy] = raw.split('-');
-                                                    dobDate = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
-                                                } else {
-                                                    dobDate = new Date(raw);
-                                                }
-                                            }
-                                            const isDobValid = dobDate && !isNaN(dobDate.getTime());
-                                            if (isDobValid) {
-                                                return dobDate!.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                                            } else {
-                                                return <span className="text-[#94A3B8] font-normal">Pending</span>;
-                                            }
-                                        })()}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Nationality</span>
-                                    <span className="text-sm font-semibold text-slate-800">
-                                        {getDisplayValue(userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian")}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Destination Country</span>
-                                    <span className="text-sm font-semibold text-slate-800">
-                                        {getDisplayValue(
-                                            userData?.studyDestination ||
-                                            userData?.countryOfEducation ||
-                                            userData?.country ||
-                                            userData?.destinationCountry ||
-                                            userApplications?.find((app: any) => app.country || app.countryOfStudy || app.studyDestination)?.country ||
-                                            userApplications?.find((app: any) => app.country || app.countryOfStudy || app.studyDestination)?.countryOfStudy ||
-                                            userData?.academic?.countryOfEducation,
-                                            "Pending"
-                                        )}
-                                    </span>
-                                </div>
+                                        {/* Mother */}
+                                        <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Mother</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{motherName}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
+                                                <div className="mb-1 text-[#64748B]">Aadhaar: <span className={motherData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{motherData?.aadharNumber || "Pending"}</span></div>
+                                                <div className="text-[#64748B]">PAN: <span className={motherData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{motherData?.panNumber || "Pending"}</span></div>
+                                            </td>
+                                        </tr>
+
+                                        {/* Primary Co-Applicant */}
+                                        <tr className="bg-[#F3E8FF]/20 hover:bg-[#F3E8FF]/30 transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#7C3AED]">Primary Co-Applicant</td>
+                                            <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#0F172A]">{coApp1Name}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] font-medium">
+                                                <div className="mb-1 text-[#64748B]">Phone: <span className={coapplicantData?.phone ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.phone || "Pending"}</span></div>
+                                                <div className="mb-1 text-[#64748B]">Email: <span className={coapplicantData?.email ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.email || "Pending"}</span></div>
+                                                <div className="mb-1 text-[#64748B]">Aadhaar: <span className={coapplicantData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.aadharNumber || "Pending"}</span></div>
+                                                <div className="text-[#64748B]">PAN: <span className={coapplicantData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.panNumber || "Pending"}</span></div>
+                                            </td>
+                                        </tr>
+
+                                        {/* Co-Applicant 2 */}
+                                        <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Co-Applicant 2</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{coApp2Name}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
+                                                <div className="mb-1 text-[#64748B]">Aadhaar: <span className="text-[#94A3B8] font-normal">Pending</span></div>
+                                                <div className="text-[#64748B]">PAN: <span className="text-[#94A3B8] font-normal">Pending</span></div>
+                                            </td>
+                                        </tr>
+
+                                        {/* Co-Applicant 3 */}
+                                        <tr className="hover:bg-[#F8FAFC] transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Co-Applicant 3</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{coApp3Name}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
+                                                <div className="mb-1 text-[#64748B]">Aadhaar: <span className="text-[#94A3B8] font-normal">Pending</span></div>
+                                                <div className="text-[#64748B]">PAN: <span className="text-[#94A3B8] font-normal">Pending</span></div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
+                    );
+                })()}
 
-                        {/* Family & Co-applicant Details unified table view */}
-                        {(() => {
-                            const fatherName = fatherData?.name || getParentName("father");
-                            const motherName = motherData?.name || getParentName("mother");
-
-                            const coApp1Name = getCoApplicantName(1);
-                            const coApp2Name = getCoApplicantName(2);
-                            const coApp3Name = getCoApplicantName(3);
-
-                            return (
-                                <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden font-sans">
-                                    <div className="px-6 py-4 border-b border-[#E2E8F0] flex justify-between items-center bg-[#FFFFFF]">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
-                                                <span className="material-symbols-outlined text-[16px]">groups</span>
-                                            </div>
-                                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Family & Co-Applicant Details</h3>
-                                        </div>
-                                    </div>
-
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full divide-y divide-[#E2E8F0] text-sm">
-                                            <thead className="bg-[#F8FAFC]">
-                                                <tr>
-                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">Role</th>
-                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">Name</th>
-                                                    <th scope="col" className="px-6 py-3 text-left font-semibold text-[#64748B] uppercase tracking-wider text-xs">KYC Details</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-[#E2E8F0] bg-[#FFFFFF]">
-                                                {/* Father */}
-                                                <tr className="hover:bg-[#F8FAFC] transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Father</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{fatherName}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
-                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className={fatherData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{fatherData?.aadharNumber || "Pending"}</span></div>
-                                                        <div className="text-[#64748B]">PAN: <span className={fatherData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{fatherData?.panNumber || "Pending"}</span></div>
-                                                    </td>
-                                                </tr>
-
-                                                {/* Mother */}
-                                                <tr className="hover:bg-[#F8FAFC] transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Mother</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{motherName}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
-                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className={motherData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{motherData?.aadharNumber || "Pending"}</span></div>
-                                                        <div className="text-[#64748B]">PAN: <span className={motherData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{motherData?.panNumber || "Pending"}</span></div>
-                                                    </td>
-                                                </tr>
-
-                                                {/* Primary Co-Applicant */}
-                                                <tr className="bg-[#F3E8FF]/20 hover:bg-[#F3E8FF]/30 transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#7C3AED]">Primary Co-Applicant</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-[#0F172A]">{coApp1Name}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A] font-medium">
-                                                        <div className="mb-1 text-[#64748B]">Phone: <span className={coapplicantData?.phone ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.phone || "Pending"}</span></div>
-                                                        <div className="mb-1 text-[#64748B]">Email: <span className={coapplicantData?.email ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.email || "Pending"}</span></div>
-                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className={coapplicantData?.aadharNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.aadharNumber || "Pending"}</span></div>
-                                                        <div className="text-[#64748B]">PAN: <span className={coapplicantData?.panNumber ? "text-[#0F172A] font-medium" : "text-[#94A3B8] font-normal"}>{coapplicantData?.panNumber || "Pending"}</span></div>
-                                                    </td>
-                                                </tr>
-
-                                                {/* Co-Applicant 2 */}
-                                                <tr className="hover:bg-[#F8FAFC] transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Co-Applicant 2</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{coApp2Name}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
-                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className="text-[#94A3B8] font-normal">Pending</span></div>
-                                                        <div className="text-[#64748B]">PAN: <span className="text-[#94A3B8] font-normal">Pending</span></div>
-                                                    </td>
-                                                </tr>
-
-                                                {/* Co-Applicant 3 */}
-                                                <tr className="hover:bg-[#F8FAFC] transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">Co-Applicant 3</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{coApp3Name}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-[#0F172A]">
-                                                        <div className="mb-1 text-[#64748B]">Aadhaar: <span className="text-[#94A3B8] font-normal">Pending</span></div>
-                                                        <div className="text-[#64748B]">PAN: <span className="text-[#94A3B8] font-normal">Pending</span></div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            );
-                        })()}
-
-                        {/* Academic Details Card */}
-                        <div className="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 shadow-sm">
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
-                                    <span className="material-symbols-outlined text-[16px]">school</span>
-                                </div>
-                                <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Academic Details</h3>
+                {/* Academic Details Card */}
+                <div className="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="w-7 h-7 rounded-lg bg-[#F3E8FF] flex items-center justify-center text-[#7C3AED]">
+                            <span className="material-symbols-outlined text-[16px]">school</span>
+                        </div>
+                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Academic Details</h3>
+                    </div>
+                    <div className="space-y-4">
+                        {/* SSC */}
+                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">10th Standard / SSC</label>
+                                <span className="text-sm font-semibold text-[#0F172A] block mt-1">{sscDetails.institute}</span>
                             </div>
-                            <div className="space-y-4">
-                                {/* SSC */}
-                                <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">10th Standard / SSC</label>
-                                        <span className="text-sm font-semibold text-[#0F172A] block mt-1">{sscDetails.institute}</span>
-                                    </div>
-                                    <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
-                                        <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
-                                        {sscDetails.percentage}
-                                    </div>
-                                </div>
-                                {/* HSC */}
-                                <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Intermediate / 12th / HSC</label>
-                                        <span className="text-sm font-semibold text-[#0F172A] block mt-1">{hscDetails.institute}</span>
-                                    </div>
-                                    <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
-                                        <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
-                                        {hscDetails.percentage}
-                                    </div>
-                                </div>
-                                {/* Graduation */}
-                                <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-                                    <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Graduation / Bachelors Degree</label>
-                                        <span className="text-sm font-semibold text-[#0F172A] block mt-1">{ugDetails.institute}</span>
-                                    </div>
-                                    <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
-                                        <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage/CGPA:</span>
-                                        {ugDetails.percentage}
-                                    </div>
-                                </div>
+                            <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
+                                {sscDetails.percentage}
+                            </div>
+                        </div>
+                        {/* HSC */}
+                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Intermediate / 12th / HSC</label>
+                                <span className="text-sm font-semibold text-[#0F172A] block mt-1">{hscDetails.institute}</span>
+                            </div>
+                            <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
+                                {hscDetails.percentage}
+                            </div>
+                        </div>
+                        {/* Graduation */}
+                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
+                            <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Graduation / Bachelors Degree</label>
+                                <span className="text-sm font-semibold text-[#0F172A] block mt-1">{ugDetails.institute}</span>
+                            </div>
+                            <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage/CGPA:</span>
+                                {ugDetails.percentage}
                             </div>
                         </div>
                     </div>
@@ -1002,42 +1150,58 @@ export default function ProfileTab() {
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4">Application Progress</h4>
                     {userApplications.length > 0 ? (() => {
                         const activeApp = userApplications[0];
-                        // Progress calculation
-                        const stages = [
-                            { label: "Applied", order: 10, active: activeApp.progress >= 10 },
-                            { label: "Verification", order: 40, active: activeApp.progress >= 40 },
-                            { label: "Bank Review", order: 70, active: activeApp.progress >= 70 },
-                            { label: "Approval", order: 90, active: activeApp.progress >= 90 },
-                            { label: "Disbursed", order: 100, active: activeApp.progress >= 100 }
-                        ];
+                        const stageKey = getStageKeyForApp(activeApp);
+                        const currentStage = STAGES_CONFIG[stageKey] || STAGES_CONFIG.application_created;
+                        const currentProgress = currentStage.progress;
+
+                        const stagesList = Object.entries(STAGES_CONFIG)
+                            .sort(([, a], [, b]) => a.order - b.order)
+                            .map(([key, val]) => ({
+                                id: key,
+                                ...val,
+                                active: val.order <= currentStage.order,
+                                isCurrent: val.order === currentStage.order
+                            }));
+
                         return (
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                                    <span className="text-xs font-semibold text-indigo-900">Current Progress</span>
-                                    <span className="text-lg font-black text-indigo-600">{activeApp.progress || 10}%</span>
+                            <div className="space-y-4 font-sans">
+                                <div className="flex items-center justify-between p-3.5 bg-[#F3E8FF]/40 rounded-xl border border-purple-100">
+                                    <div>
+                                        <span className="text-[10px] font-bold text-[#7C3AED] uppercase tracking-wider block">Current Progress</span>
+                                        <span className="text-xs font-extrabold text-slate-800">{currentStage.label}</span>
+                                    </div>
+                                    <span className="text-xl font-black text-[#7C3AED]">{currentProgress}%</span>
                                 </div>
 
                                 {/* Stepper Funnel */}
-                                <div className="relative pl-6 space-y-4 py-2">
+                                <div className="relative pl-6 space-y-3.5 py-2">
                                     {/* Stepper Connector Line */}
                                     <div className="absolute left-[9px] top-4 bottom-4 w-[2px] bg-slate-100" />
 
-                                    {stages.map((stg, sIdx) => (
-                                        <div key={sIdx} className="flex items-center gap-3 relative">
-                                            {/* Step Circle */}
-                                            <div className={`absolute -left-[21px] w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${stg.active
-                                                ? "bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-600/20"
-                                                : "bg-white border-slate-200 text-slate-400"
-                                                }`}>
-                                                {stg.active ? (
-                                                    <span className="material-symbols-outlined text-[10px] font-black">check</span>
-                                                ) : (
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                                                )}
+                                    {stagesList.map((stg) => (
+                                        <div key={stg.id} className="flex items-center justify-between gap-3 relative">
+                                            <div className="flex items-center gap-3">
+                                                {/* Step Circle */}
+                                                <div className={`absolute -left-[21px] w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${stg.active
+                                                        ? "bg-[#7C3AED] border-[#7C3AED] text-white shadow-sm shadow-purple-600/20"
+                                                        : "bg-white border-slate-200 text-slate-400"
+                                                    }`}>
+                                                    {stg.active ? (
+                                                        <span className="material-symbols-outlined text-[10px] font-black">check</span>
+                                                    ) : (
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                                    )}
+                                                </div>
+                                                <span className={`text-xs transition-all ${stg.isCurrent
+                                                        ? "font-extrabold text-[#7C3AED]"
+                                                        : stg.active
+                                                            ? "font-semibold text-slate-800"
+                                                            : "font-medium text-slate-400"
+                                                    }`}>
+                                                    {stg.label}
+                                                </span>
                                             </div>
-                                            <span className={`text-xs font-semibold transition-all ${stg.active ? "text-slate-900" : "text-slate-400"}`}>
-                                                {stg.label}
-                                            </span>
+                                            <span className="text-[10px] font-bold font-mono text-slate-400">{stg.progress}%</span>
                                         </div>
                                     ))}
                                 </div>
@@ -1138,6 +1302,7 @@ export default function ProfileTab() {
                         <div className="flex border-b border-slate-100 px-6 sm:px-8 bg-slate-50/40 gap-2 pt-2">
                             {[
                                 { id: 'student', label: 'Student Info', icon: 'person' },
+                                { id: 'passport', label: 'Passport', icon: 'travel_explore' },
                                 { id: 'parents', label: 'Parents', icon: 'family_history' },
                                 { id: 'coapplicant', label: 'Co-Applicant', icon: 'group' },
                                 { id: 'academic', label: 'Academic', icon: 'school' }
@@ -1247,7 +1412,6 @@ export default function ProfileTab() {
                                                 <option value="New Zealand" />
                                                 <option value="Singapore" />
                                                 <option value="Dubai (UAE)" />
-                                                <option value="Netherlands" />
                                                 <option value="Sweden" />
                                                 <option value="Switzerland" />
                                             </datalist>
@@ -1260,6 +1424,119 @@ export default function ProfileTab() {
                                                 onChange={(e) => setEditForm(prev => ({ ...prev, targetUniversity: e.target.value }))}
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
                                                 placeholder="e.g. Harvard University"
+                                            />
+                                        </div>
+                                        <div className="sm:col-span-2 pt-3 border-t border-slate-100">
+                                            <span className="block text-[11px] font-black uppercase tracking-wider text-indigo-600 mb-3 flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-[16px]">badge</span>
+                                                Passport & Travel Information
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Passport Number</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportNumber}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportNumber: e.target.value }))}
+                                                placeholder="e.g. A1234567"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-mono uppercase placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Passport Expiry Date</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.passportExpiryDate}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportExpiryDate: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Country of Issue</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportIssueCountry}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportIssueCountry: e.target.value }))}
+                                                placeholder="e.g. India"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Place of Birth</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportBirthCity}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportBirthCity: e.target.value }))}
+                                                placeholder="e.g. Hyderabad"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeEditTab === 'passport' && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="sm:col-span-2 p-3.5 bg-indigo-50/50 border border-indigo-100 rounded-xl flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-sm">
+                                                <span className="material-symbols-outlined text-[18px]">travel_explore</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-bold text-slate-900">Official Passport & Travel Details</h4>
+                                                <p className="text-[10px] text-slate-500 font-medium">Verify or edit full passport details (Numbers are displayed in full without masking)</p>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Passport Number (Full Unmasked)</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportNumber}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportNumber: e.target.value }))}
+                                                placeholder="e.g. Z1234567"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 font-mono uppercase font-bold focus:outline-none focus:border-indigo-500 focus:bg-white tracking-wider"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Name as in Passport</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportFullName}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportFullName: e.target.value }))}
+                                                placeholder="e.g. VENKATESWARA RAO SEELAM"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Expiry</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.passportExpiryDate}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportExpiryDate: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Country of Issue</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportIssueCountry}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportIssueCountry: e.target.value }))}
+                                                placeholder="e.g. India"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                                            />
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Place of Birth</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportBirthCity}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportBirthCity: e.target.value }))}
+                                                placeholder="e.g. Vijayawada"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
                                             />
                                         </div>
                                     </div>

@@ -257,28 +257,10 @@ export function getToken(): string | null {
     const portalToken = localStorage.getItem(keys.token);
     if (portalToken) return portalToken;
 
-    // 2. Try generic student / user tokens
-    const studentToken = localStorage.getItem("accessToken") || localStorage.getItem("token") || localStorage.getItem("userToken") || localStorage.getItem("jwt");
-    if (studentToken) return studentToken;
-
-    // 3. Try Admin token
-    const adminToken = localStorage.getItem("adminAccessToken");
-    if (adminToken) return adminToken;
-
-    // 4. Try IT token
-    const itToken = localStorage.getItem("itAccessToken");
-    if (itToken) return itToken;
-
-    // 5. Try Staff token
-    const staffToken = localStorage.getItem("staffAccessToken");
-    if (staffToken) return staffToken;
-
-    // 6. Try Agent / Bank tokens
-    const agentToken = localStorage.getItem("agentAccessToken");
-    if (agentToken) return agentToken;
-
-    const bankToken = localStorage.getItem("bankAccessToken");
-    if (bankToken) return bankToken;
+    // 2. If student portal, check standard user token key aliases ONLY
+    if (portal === "student") {
+        return localStorage.getItem("token") || localStorage.getItem("userToken") || localStorage.getItem("jwt") || null;
+    }
 
     return null;
 }
@@ -1210,7 +1192,7 @@ export const adminApi = {
             method: "POST",
             body: JSON.stringify(data),
         }),
-    updateUserDetails: (data: { userId?: string; email: string; firstName: string; lastName: string; phoneNumber: string; dateOfBirth: string; targetUniversity?: string; studyDestination?: string; fatherName?: string; motherName?: string; family?: any; coApplicant?: any; academic?: any }) =>
+    updateUserDetails: (data: { userId?: string; email: string; firstName: string; lastName: string; phoneNumber: string; dateOfBirth: string; targetUniversity?: string; studyDestination?: string; fatherName?: string; motherName?: string; family?: any; coApplicant?: any; academic?: any; passport?: any }) =>
         apiFetch(HttpApiPaths.admin.usersUpdateDetails(), {
             method: "POST",
             body: JSON.stringify(data),

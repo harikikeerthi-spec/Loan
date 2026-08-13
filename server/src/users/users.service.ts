@@ -40,6 +40,12 @@ export const USER_VALID_COLUMNS = new Set([
   'tests',
   'family',
   'coApplicant',
+  'passport',
+  'nationality',
+  'academic',
+  'workExperience',
+  'mailingAddress',
+  'emergencyContact',
 ]);
 
 export function sanitizeUserPayload(payload: any): Record<string, any> {
@@ -600,7 +606,8 @@ export class UsersService implements OnModuleInit {
     family?: any,
     coApplicant?: any,
     academic?: any,
-    userId?: string
+    userId?: string,
+    passport?: any
   ) {
     const dobDate = dateOfBirth ? this.parseDate(dateOfBirth) : null;
 
@@ -728,6 +735,9 @@ export class UsersService implements OnModuleInit {
     }
     if (academic !== undefined) {
       updatePayload.academic = parsedAcademic;
+    }
+    if (passport !== undefined) {
+      updatePayload.passport = typeof passport === 'string' ? passport : JSON.stringify(passport);
     }
 
     // Sanitize payload to ONLY include valid columns on User table (avoids PGRST204)
@@ -982,9 +992,9 @@ export class UsersService implements OnModuleInit {
         const isMother = relation === 'mother';
 
         const extractedName = isMother
-          ? (details.mother_name || details.motherName || details.mother_full_name || details.motherFullName || extractFullNameFromOcrRaw(details, docType) || details.full_name || details.fullName || details.name || details.holder_name || details.printed_name)
+          ? (details.full_name || details.fullName || details.holder_name || details.name || details.printed_name || details.mother_name || details.motherName || details.mother_full_name || extractFullNameFromOcrRaw(details, docType))
           : isFather
-          ? (details.father_name || details.fatherName || details.father_full_name || details.fatherFullName || extractFullNameFromOcrRaw(details, docType) || details.full_name || details.fullName || details.name || details.holder_name || details.printed_name)
+          ? (details.full_name || details.fullName || details.holder_name || details.name || details.printed_name || extractFullNameFromOcrRaw(details, docType))
           : (extractFullNameFromOcrRaw(details, docType) || details.full_name || details.fullName || details.name || details.holder_name || details.printed_name);
 
         const studentFirstName = (currentUser.firstName || '').trim().toLowerCase();
