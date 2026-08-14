@@ -530,17 +530,18 @@ export class UsersService implements OnModuleInit {
     }
 
     if (role && role !== 'all') {
-      if (role === 'student') {
+      if (role === 'student' || role === 'user') {
         query = query.or('role.eq.student,role.eq.user');
       } else if (role === 'staff') {
         query = query.or('role.eq.staff,role.eq.staff_admin');
       } else if (role === 'admin') {
         query = query.or('role.eq.admin,role.eq.super_admin');
+      } else if (role.includes(',')) {
+        const roles = role.split(',').map(r => r.trim());
+        query = query.in('role', roles);
       } else {
         query = query.eq('role', role);
       }
-    } else {
-      query = query.or('role.eq.bank,role.eq.staff,role.eq.staff_admin');
     }
 
     if (excludeRoles && excludeRoles.length > 0) {
@@ -568,21 +569,23 @@ export class UsersService implements OnModuleInit {
     try {
       const { data: users } = await this.db
         .from('User')
-        .select('role')
-        .or('role.eq.bank,role.eq.staff,role.eq.staff_admin');
+        .select('role');
 
       const all = users || [];
+      const student = all.filter((u: any) => u.role === 'student' || u.role === 'user').length;
       const bank = all.filter((u: any) => u.role === 'bank').length;
       const staff = all.filter((u: any) => u.role === 'staff' || u.role === 'staff_admin').length;
-      const total = bank + staff;
+      const admin = all.filter((u: any) => u.role === 'admin' || u.role === 'super_admin').length;
+      const other = all.length - (student + bank + staff + admin);
+      const total = all.length;
 
       return {
         total,
-        student: 0,
+        student,
         bank,
         staff,
-        admin: 0,
-        other: 0
+        admin,
+        other
       };
     } catch (e) {
       console.error('[getUserStats] Exception:', e);
@@ -1791,7 +1794,7 @@ export class UsersService implements OnModuleInit {
       const fallbackRes = await this.db
         .from('LoanApplication')
         .select('*')
-        .order('date', { ascending: false });
+        .order('submittedAt', { ascending: false, nullsFirst: false });
 
       return fallbackRes;
     }
@@ -2099,6 +2102,18 @@ export class UsersService implements OnModuleInit {
 
             console.log(`[DOCS SYNC] All documents verified for user ${userId}. Advancing app ${app.id} to submit_to_bank (50%)`);
             await this.db.from('LoanApplication').update(updatePayload).eq('id', app.id);
+
+            // Send notification email to student that all documents have been verified by staff!
+            try {
+              const { data: user } = await this.db.from('User').select('id, email, firstName, lastName').eq('id', userId).maybeSingle();
+              const studentEmail = user?.email || app.email;
+              const studentName = `${user?.firstName || app.firstName || ''} ${user?.lastName || app.lastName || ''}`.trim() || 'Student';
+              if (studentEmail && this.emailService) {
+                await this.emailService.sendAllDocumentsVerifiedEmail(studentEmail, studentName, app);
+              }
+            } catch (emailErr: any) {
+              console.error(`[DOCS SYNC] Failed to send documents verified email for user ${userId}:`, emailErr?.message);
+            }
           }
         } else if (uploadedCount > 0) {
           // Documents uploaded but not all verified yet

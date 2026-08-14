@@ -611,23 +611,23 @@ export class KycService {
                 is_valid: true if it is a Grade 12 or equivalent marksheet/certificate.
             `,
             marksheet_ug: `
-                EXPECTED DOCUMENT TYPE: UNDERGRADUATE DEGREE / MARKSHEET / TRANSCRIPT
+                EXPECTED DOCUMENT TYPE: UNDERGRADUATE DEGREE CERTIFICATE / CONSOLIDATED MARKS MEMO (CMM) / MARKSHEET / TRANSCRIPT
 
                 ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
                 - "PASSPORT", "AADHAAR", "UNIQUE IDENTIFICATION", "PAN CARD", "INCOME TAX"
-                - Document that is NOT an academic degree/marksheet/transcript
+                - Document that is NOT an academic degree/marksheet/transcript/CMM
                 
                 If ANY above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual type, do NOT extract fields.
 
                 ACCEPT ONLY IF YOU DETECT:
                 - University name (e.g., "Jawaharlal Nehru Technological University", "Delhi University")
-                - Degree name (e.g., "Bachelor of Technology", "B.Tech", "B.Sc")
+                - Degree, CMM, or transcript title (e.g., "Bachelor of Technology", "B.Tech", "B.Sc", "Consolidated Marks Memo", "CMM", "Consolidated Memorandum of Marks")
                 - Program/branch name
-                - Marksheet or transcript layout
+                - Degree certificate, CMM, marksheet, or transcript layout
                 - University seal/signature area
 
                 extracted_data fields (use exactly these keys):
-                - full_name: The candidate's full name as printed on the degree or transcript.
+                - full_name: The candidate's full name as printed on the degree, CMM, or transcript.
                 - university: The name of the awarding university or institute (e.g. "Jawaharlal Nehru Technological University", "Delhi University").
                 - institution_name: The name of the college or campus where the candidate studied (if separate from university).
                 - qualification: The degree name or program (e.g., "Bachelor of Technology", "B.Tech", "Bachelor of Science", "B.Sc").
@@ -647,7 +647,7 @@ export class KycService {
 
                 ocr_issues: short array of harmless OCR artifacts if present.
                 
-                is_valid: true if it is an Undergraduate degree certificate, marksheet, or transcript.
+                is_valid: true if it is an Undergraduate degree certificate, Consolidated Marks Memo (CMM), marksheet, or transcript.
             `,
             marksheet_pg: `
                 EXPECTED DOCUMENT TYPE: POSTGRADUATE DEGREE / MARKSHEET / TRANSCRIPT
@@ -702,7 +702,7 @@ export class KycService {
             targetType = 'marksheet_10';
         } else if (normalizedType.includes('marksheet_12') || normalizedType.includes('12th') || normalizedType.includes('hsc') || normalizedType.includes('intermediate') || normalizedType.includes('inter') || normalizedType.includes('grade12') || normalizedType.includes('grade_12')) {
             targetType = 'marksheet_12';
-        } else if (normalizedType.includes('marksheet_ug') || normalizedType.includes('ug_degree') || normalizedType.includes('ug_transcript') || normalizedType.includes('degree_certificate') || normalizedType.includes('degree') || normalizedType.includes('graduation') || normalizedType.includes('bachelor') || normalizedType.includes('undergrad') || normalizedType.includes('undergraduate')) {
+        } else if (normalizedType.includes('marksheet_ug') || normalizedType.includes('ug_degree') || normalizedType.includes('ug_transcript') || normalizedType.includes('degree_certificate') || normalizedType.includes('degree') || normalizedType.includes('graduation') || normalizedType.includes('bachelor') || normalizedType.includes('undergrad') || normalizedType.includes('undergraduate') || normalizedType.includes('cmm') || normalizedType.includes('consolidated')) {
             targetType = 'marksheet_ug';
         } else if (normalizedType.includes('marksheet_pg') || normalizedType.includes('pg_degree') || normalizedType.includes('pg_transcript') || normalizedType.includes('postgrad') || normalizedType.includes('postgraduate')) {
             targetType = 'marksheet_pg';
@@ -826,7 +826,7 @@ export class KycService {
         if (t.includes('marksheet_12') || t.includes('12th') || t.includes('hsc') || t.includes('intermediate') || t.includes('grade12') || t.includes('grade_12')) {
             return 'marksheet_12';
         }
-        if (t.includes('marksheet_ug') || t.includes('ug_degree') || t.includes('ug_transcript') || t.includes('undergrad') || t.includes('undergraduate') || t.includes('degree') || t.includes('graduation') || t.includes('bachelor')) {
+        if (t.includes('marksheet_ug') || t.includes('ug_degree') || t.includes('ug_transcript') || t.includes('undergrad') || t.includes('undergraduate') || t.includes('degree') || t.includes('graduation') || t.includes('bachelor') || t.includes('cmm') || t.includes('consolidated')) {
             return 'marksheet_ug';
         }
         if (t.includes('marksheet_pg') || t.includes('pg_degree') || t.includes('pg_transcript') || t.includes('postgrad') || t.includes('postgraduate')) {

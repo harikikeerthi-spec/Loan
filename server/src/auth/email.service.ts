@@ -903,6 +903,115 @@ export class EmailService {
     return defaultFallback;
   }
 
+  async sendAllDocumentsVerifiedEmail(email: string, userName: string, application?: any) {
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const year = new Date().getFullYear();
+    const appNum = application?.applicationNumber || (application?.id ? `#${application.id.slice(-6)}` : '');
+    const name = userName || 'Student';
+
+    const mailOptions = {
+      from: this.getFromAddress(),
+      to: name ? `"${name}" <${email}>` : email,
+      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
+      headers: this.getStandardHeaders(),
+      subject: `Documents Verified: All Your Submitted Documents Have Been Approved by Staff`,
+      text: `Dear ${name},\n\nGreat news! All documents submitted for your loan application ${appNum ? `(${appNum}) ` : ''}have been reviewed and successfully verified by our staff team.\n\nYour application has been updated to "Documents Verified" status and is now ready for bank review.\n\nTrack your application progress: ${frontendUrl}\n\nWarm regards,\nThe VidyaLoans Team`,
+      html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All Documents Verified</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; border-radius: 0 !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; padding: 45px 0;">
+    <tr>
+      <td align="center">
+        <table class="container" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05); overflow: hidden; border: 1px solid #e2e8f0;">
+          <tr>
+            <td style="background-color: #0f172a; padding: 28px 40px; text-align: left;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="color: #38bdf8; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; display: block; margin-bottom: 4px;">VidyaLoans</span>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">Documents Verified</h1>
+                  </td>
+                  ${appNum ? `<td align="right" valign="middle"><span style="background-color: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.3);">${appNum}</span></td>` : ''}
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 40px 20px;">
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 18px 24px; margin-bottom: 24px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td width="36" valign="middle">
+                      <div style="background-color: #22c55e; color: #ffffff; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: bold; font-size: 16px;">✓</div>
+                    </td>
+                    <td valign="middle" style="padding-left: 12px;">
+                      <strong style="color: #15803d; font-size: 15px; display: block;">Verification Complete!</strong>
+                      <span style="color: #166534; font-size: 13px;">All submitted documents have been reviewed and approved by VidyaLoans staff.</span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              <p style="color: #334155; font-size: 15px; line-height: 1.6; margin: 0 0 16px;">
+                Dear <strong>${name}</strong>,
+              </p>
+              <p style="color: #334155; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">
+                Great news! Our verification staff has successfully reviewed and verified all the required academic, identity, and financial documents submitted for your loan application.
+              </p>
+
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #f1f5f9;">
+                <tr>
+                  <td>
+                    <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Current Status</div>
+                    <div style="font-size: 18px; color: #0f172a; font-weight: 700;">Documents Verified & Approved (50%)</div>
+                    <div style="font-size: 13px; color: #475569; margin-top: 4px;">Your complete dossier is now ready and proceeding to bank submission.</div>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="text-align: center; margin: 32px 0 16px;">
+                <a href="${frontendUrl}" style="background-color: #0284c7; color: #ffffff; font-size: 14px; font-weight: 600; padding: 14px 32px; border-radius: 8px; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">Track Application Status</a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f8fafc; padding: 24px 40px; border-top: 1px solid #f1f5f9; text-align: center; color: #94a3b8; font-size: 12px;">
+              <p style="margin: 0 0 8px;">VidyaLoans Support Team &bull; support@vidyaloans.in</p>
+              <p style="margin: 0;">&copy; ${year} VidyaLoans. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
+    };
+
+    try {
+      console.log(`[EmailService] Sending All Documents Verified Email to ${email}`);
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        await this.transporter.sendMail(mailOptions);
+        console.log(`[EmailService] All Documents Verified Email sent successfully to ${email}`);
+      } else {
+        console.log(`[EmailService] SMTP credentials not set. Simulated sending email to ${email}`);
+      }
+    } catch (error: any) {
+      console.error(`[EmailService] Failed to send All Documents Verified Email to ${email}:`, error?.message || error);
+    }
+  }
+
   async sendLoanTrackingEmail(email: string, userName: string, bankName: string, application: any) {
     const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();

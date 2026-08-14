@@ -144,7 +144,7 @@ function normalizeDocTypeKey(
     if (d.includes('marksheet_10') || d.includes('10th') || d.includes('ssc') || d.includes('grade_10') || d.includes('grade10')) return 'marksheet_10';
     if (d.includes('marksheet_12') || d.includes('12th') || d.includes('hsc') || d.includes('intermediate') || d.includes('inter') || d.includes('grade_12') || d.includes('grade12')) return 'marksheet_12';
     if (d.includes('pg_degree') || d.includes('pg_transcript') || d.includes('marksheet_pg') || d.includes('postgraduate') || d.includes('post_grad')) return 'marksheet_pg';
-    if (d.includes('ug_degree') || d.includes('ug_transcript') || d.includes('marksheet_ug') || d.includes('undergraduate') || d.includes('under_grad') || d.includes('bachelor') || d.includes('degree') || d.includes('graduation')) return 'marksheet_ug';
+    if (d.includes('ug_degree') || d.includes('ug_transcript') || d.includes('marksheet_ug') || d.includes('undergraduate') || d.includes('under_grad') || d.includes('bachelor') || d.includes('degree') || d.includes('graduation') || d.includes('cmm') || d.includes('consolidated')) return 'marksheet_ug';
     return 'generic';
 }
 

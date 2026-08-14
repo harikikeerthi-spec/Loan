@@ -330,7 +330,7 @@ export class ChatController {
           detectedType = 'marksheet_10';
         } else if (cleanName.includes('12th') || cleanName.includes('hsc') || cleanName.includes('intermediate') || cleanName.includes('grade12')) {
           detectedType = 'marksheet_12';
-        } else if (cleanName.includes('ug_degree') || cleanName.includes('undergrad') || cleanName.includes('bachelor')) {
+        } else if (cleanName.includes('ug_degree') || cleanName.includes('undergrad') || cleanName.includes('bachelor') || cleanName.includes('degree') || cleanName.includes('cmm') || cleanName.includes('consolidated')) {
           detectedType = 'marksheet_ug';
         } else if (cleanName.includes('pg_degree') || cleanName.includes('postgrad') || cleanName.includes('master')) {
           detectedType = 'marksheet_pg';

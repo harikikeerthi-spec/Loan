@@ -87,9 +87,11 @@ export default function UserDirectoryPage() {
     };
 
     const userStatsData = useMemo(() => {
+        const studentAccounts = userSectionStats?.student ?? 0;
         const bankPartners = userSectionStats?.bank ?? 0;
         const staffMembers = userSectionStats?.staff ?? 0;
         return [
+            { id: 'student', label: 'Student Accounts', value: studentAccounts, icon: 'school', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', tag: 'ROLE' },
             { id: 'bank', label: 'Bank Partners', value: bankPartners, icon: 'account_balance', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', tag: 'ROLE' },
             { id: 'staff', label: 'Staff Members', value: staffMembers, icon: 'badge', color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100', tag: 'O_ADMIN' },
         ];
@@ -130,10 +132,6 @@ export default function UserDirectoryPage() {
         return `${item.firstName || ''} ${item.lastName || ''}`.trim() || '—';
     };
 
-    const bankAndStaffUsers = useMemo(() => {
-        return data.filter(item => ['bank', 'staff'].includes(item.role?.toLowerCase()));
-    }, [data]);
-
     const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
     const showingStart = (currentPage - 1) * itemsPerPage + 1;
     const showingEnd = Math.min(currentPage * itemsPerPage, totalItems);
@@ -145,11 +143,11 @@ export default function UserDirectoryPage() {
                     <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">
                         <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[11px] font-semibold text-indigo-700">
                             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                            MANAGE BANK & STAFF
+                            USER & MEMBER DIRECTORY
                         </span>
                     </p>
                     <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
-                        Bank & Staff Members
+                        User Directory
                     </h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -181,7 +179,7 @@ export default function UserDirectoryPage() {
             </div>
 
             {/* Metrics Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-2">
                 {userStatsData.map((c, i) => (
                     <button
                         key={i}
@@ -215,7 +213,7 @@ export default function UserDirectoryPage() {
                             <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
                         </TableHeader>
                         <tbody className={`divide-y divide-slate-50 ${loading ? 'opacity-60 pointer-events-none transition-opacity duration-300' : 'transition-opacity duration-300'}`}>
-                            {loading && bankAndStaffUsers.length === 0 ? (
+                            {loading && data.length === 0 ? (
                                 <tr>
                                     <td colSpan={10} className="px-8 py-32 text-center">
                                         <div className="flex flex-col items-center justify-center gap-4">
@@ -224,8 +222,8 @@ export default function UserDirectoryPage() {
                                         </div>
                                     </td>
                                 </tr>
-                            ) : bankAndStaffUsers.length > 0 ? (
-                                bankAndStaffUsers.map((item, idx) => {
+                            ) : data.length > 0 ? (
+                                data.map((item, idx) => {
                                     const roleKey = item.role?.toLowerCase() || 'user';
                                     const roleInfo = roleMap[roleKey] || roleMap['user'];
                                     const initials = getUserDisplayName(item)[0] || '?';

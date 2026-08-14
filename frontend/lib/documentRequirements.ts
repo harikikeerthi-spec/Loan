@@ -53,7 +53,7 @@ export function getStudentDocumentRequirements(student: any = {}): DocumentRequi
     requirement("IELTS / TOEFL / PTE Score Card", "english_test", hasValue(tests.ielts) || hasValue(tests.toefl) || hasValue(tests.pte), "academic"),
     requirement("GRE / GMAT / SAT Score Card", "aptitude_test", hasValue(tests.gre) || hasValue(tests.gmat) || hasValue(tests.sat), "academic"),
     requirement("Work Experience Letters", "work_letters", Array.isArray(workExperience) && workExperience.some((exp) => hasValue(exp?.employer)), "academic"),
-    requirement("Degree Certificate", "degree_certificate", true, "academic"),
+    requirement("Degree Certificate / CMM", "degree_certificate", true, "academic"),
   ].filter((doc) => doc.required);
 }
 

@@ -39,8 +39,8 @@ const REQUIRED_DOCUMENTS = [
   },
   {
     id: "bachelor",
-    name: "Bachelor's Degree Certificate",
-    description: "Latest qualification",
+    name: "Bachelor's Degree Certificate / CMM",
+    description: "Latest qualification or Consolidated Marks Memo",
     category: "Academic",
   },
   {

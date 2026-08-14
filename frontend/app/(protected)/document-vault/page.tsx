@@ -1219,175 +1219,175 @@ export default function DocumentVaultPage() {
                         <button
                             onClick={onAddOther}
                             className="px-4 py-2 bg-[#6605c7] hover:bg-[#5504a6] text-white text-[11px] font-bold rounded-xl transition-all flex items-center gap-2 shadow-sm shadow-purple-500/10 active:scale-95 animate-fade-in"
-                    >
-                        <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                        Add Other Documents
-                    </button>
-                )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {docList.map((req) => {
-                    const existing = findDocForRequirement(req.type);
-                    const isVerified = existing?.status === 'verified';
-                    const isRejected = existing?.status === 'rejected';
-                    const isPending = existing?.status === 'uploaded';
-                    const isUploaded = existing?.uploaded === true;
+                        >
+                            <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                            Add Other Documents
+                        </button>
+                    )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {docList.map((req) => {
+                        const existing = findDocForRequirement(req.type);
+                        const isVerified = existing?.status === 'verified';
+                        const isRejected = existing?.status === 'rejected';
+                        const isPending = existing?.status === 'uploaded';
+                        const isUploaded = existing?.uploaded === true;
 
-                    return (
-                        <div key={req.type} className={`bg-white rounded-xl p-5 border transition-all duration-200 ${isVerified ? 'border-emerald-100 bg-emerald-50/10' :
-                            isRejected ? 'border-rose-100 bg-rose-50/5' :
-                                isPending ? 'border-amber-100 bg-amber-50/5' :
-                                    'border-gray-100'
-                            }`}>
-                            <div className="flex justify-between items-start mb-5">
-                                <div className={`w-10 h-10 ${isVerified ? 'bg-emerald-100 text-emerald-600' :
-                                    isRejected ? 'bg-rose-100 text-rose-600' :
-                                        isPending ? 'bg-amber-100 text-[#d97706]' :
-                                            'bg-[#6605c7]/[0.03] text-[#6605c7]'
-                                    } rounded-xl flex items-center justify-center transition-colors`}>
-                                    <span className="material-symbols-outlined text-[20px]">{req.icon}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {isVerified && (
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
-                                            <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                                            Verified
-                                        </div>
-                                    )}
-                                    {isRejected && (
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
-                                            <span className="material-symbols-outlined text-[12px]">cancel</span>
-                                            Rejected
-                                        </div>
-                                    )}
-                                    {isPending && (
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
-                                            <span className="material-symbols-outlined text-[12px]">hourglass_empty</span>
-                                            Pending Review
-                                        </div>
-                                    )}
-                                    {req.type.includes('_other_') && !isVerified && (
-                                        <button
-                                            onClick={() => handleDelete(req.type, true)}
-                                            disabled={!!uploadingDocs[req.type]}
-                                            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0 disabled:opacity-50"
-                                            title="Remove this custom document"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">close</span>
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            <h3 className="text-[13px] font-bold text-gray-900 mb-1">{req.label}</h3>
-                            <p className="text-[11px] text-gray-500 mb-4">
-                                {isVerified ? "Document successfully verified and locked" :
-                                    isPending ? "Document uploaded, awaiting staff review" :
-                                        isRejected ? "Verification failed - please upload a new copy" :
-                                            "Click to upload your original document"}
-                            </p>
-
-                            {isRejected && (
-                                <div className="mb-4 p-3 bg-rose-50 rounded-lg border border-rose-100 flex gap-2">
-                                    <span className="material-symbols-outlined text-rose-500 text-[14px] shrink-0 mt-0.5">info</span>
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-0.5">Rejection Reason</p>
-                                        <p className="text-[10px] text-rose-700 leading-normal font-medium">{existing?.verificationMetadata?.rejectionReason || existing?.rejectionReason || "Please upload a clearer document."}</p>
+                        return (
+                            <div key={req.type} className={`bg-white rounded-xl p-5 border transition-all duration-200 ${isVerified ? 'border-emerald-100 bg-emerald-50/10' :
+                                isRejected ? 'border-rose-100 bg-rose-50/5' :
+                                    isPending ? 'border-amber-100 bg-amber-50/5' :
+                                        'border-gray-100'
+                                }`}>
+                                <div className="flex justify-between items-start mb-5">
+                                    <div className={`w-10 h-10 ${isVerified ? 'bg-emerald-100 text-emerald-600' :
+                                        isRejected ? 'bg-rose-100 text-rose-600' :
+                                            isPending ? 'bg-amber-100 text-[#d97706]' :
+                                                'bg-[#6605c7]/[0.03] text-[#6605c7]'
+                                        } rounded-xl flex items-center justify-center transition-colors`}>
+                                        <span className="material-symbols-outlined text-[20px]">{req.icon}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {isVerified && (
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                                <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                                                Verified
+                                            </div>
+                                        )}
+                                        {isRejected && (
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                                <span className="material-symbols-outlined text-[12px]">cancel</span>
+                                                Rejected
+                                            </div>
+                                        )}
+                                        {isPending && (
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                                <span className="material-symbols-outlined text-[12px]">hourglass_empty</span>
+                                                Pending Review
+                                            </div>
+                                        )}
+                                        {req.type.includes('_other_') && !isVerified && (
+                                            <button
+                                                onClick={() => handleDelete(req.type, true)}
+                                                disabled={!!uploadingDocs[req.type]}
+                                                className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0 disabled:opacity-50"
+                                                title="Remove this custom document"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">close</span>
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
-                            )}
 
+                                <h3 className="text-[13px] font-bold text-gray-900 mb-1">{req.label}</h3>
+                                <p className="text-[11px] text-gray-500 mb-4">
+                                    {isVerified ? "Document successfully verified and locked" :
+                                        isPending ? "Document uploaded, awaiting staff review" :
+                                            isRejected ? "Verification failed - please upload a new copy" :
+                                                "Click to upload your original document"}
+                                </p>
 
-                            <input
-                                id={`file-input-${req.type}`}
-                                type="file"
-                                className="hidden"
-                                onChange={(e) => handleFileChange(e, req.type)}
-                                accept=".pdf,.jpg,.jpeg,.png"
-                            />
-
-                            {isUploaded ? (
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleView(req.type)}
-                                        className="flex-1 py-2 bg-gray-50 text-gray-700 text-[11px] font-bold rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 border border-gray-100"
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">visibility</span> View
-                                    </button>
-                                    {!isVerified && (
-                                        <button
-                                            onClick={() => handleDelete(req.type)}
-                                            disabled={!!uploadingDocs[req.type]}
-                                            className="w-9 h-9 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition-all border border-red-100"
-                                            title="Delete Document"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                                        </button>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {existing?.status === 'available_in_digilocker' && !isUploaded ? (
-                                        <div className="relative">
-                                            <div className="absolute -top-2 -right-1 z-10">
-                                                <span className="bg-[#6605c7] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white uppercase tracking-tighter animate-pulse">
-                                                    Found!
-                                                </span>
-                                            </div>
-                                            <button
-                                                onClick={() => handleSyncFromDigilocker(req.type)}
-                                                disabled={!!uploadingDocs[req.type]}
-                                                className="w-full py-2.5 bg-[#6605c7] text-white text-[11px] font-bold rounded-lg hover:bg-[#5504a6] transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 border border-[#6605c7]/20"
-                                            >
-                                                <span className="material-symbols-outlined text-[18px]">sync_alt</span>
-                                                Sync to Vault
-                                            </button>
+                                {isRejected && (
+                                    <div className="mb-4 p-3 bg-rose-50 rounded-lg border border-rose-100 flex gap-2">
+                                        <span className="material-symbols-outlined text-rose-500 text-[14px] shrink-0 mt-0.5">info</span>
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-0.5">Rejection Reason</p>
+                                            <p className="text-[10px] text-rose-700 leading-normal font-medium">{existing?.verificationMetadata?.rejectionReason || existing?.rejectionReason || "Please upload a clearer document."}</p>
                                         </div>
-                                    ) : !isPassportUploaded && req.type !== 'passport' ? (
+                                    </div>
+                                )}
+
+
+                                <input
+                                    id={`file-input-${req.type}`}
+                                    type="file"
+                                    className="hidden"
+                                    onChange={(e) => handleFileChange(e, req.type)}
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                />
+
+                                {isUploaded ? (
+                                    <div className="flex gap-2">
                                         <button
-                                            disabled
-                                            className="w-full py-2.5 bg-gray-100 text-gray-400 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 border border-gray-200 cursor-not-allowed"
-                                            title="Please upload your Passport first to unlock this document slot"
+                                            onClick={() => handleView(req.type)}
+                                            className="flex-1 py-2 bg-gray-50 text-gray-700 text-[11px] font-bold rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 border border-gray-100"
                                         >
-                                            <span className="material-symbols-outlined text-[16px]">lock</span>
-                                            Locked (Passport First)
+                                            <span className="material-symbols-outlined text-[16px]">visibility</span> View
                                         </button>
-                                    ) : (
-                                        <>
+                                        {!isVerified && (
                                             <button
-                                                onClick={() => triggerFileInput(req.type)}
+                                                onClick={() => handleDelete(req.type)}
                                                 disabled={!!uploadingDocs[req.type]}
-                                                className={`w-full py-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${([
-                                                    'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
-                                                    'marksheet_10', 'marksheet_12', 'passport',
-                                                    'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
-                                                ].includes(req.type))
-                                                    ? 'bg-gray-50 text-black-500 border border-gray-200 hover:bg-gray-100'
-                                                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                                                    }`}
+                                                className="w-9 h-9 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition-all border border-red-100"
+                                                title="Delete Document"
                                             >
-                                                {uploadingDocs[req.type] ? (
-                                                    <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                                                ) : (
-                                                    <span className="material-symbols-outlined text-[16px]">upload</span>
-                                                )}
-                                                {uploadingDocs[req.type] ? "Processing..." : ([
-                                                    'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
-                                                    'marksheet_10', 'marksheet_12', 'passport',
-                                                    'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
-                                                ].includes(req.type)) ? "Upload Manually" : "Upload to Vault"}
+                                                <span className="material-symbols-outlined text-[16px]">delete</span>
                                             </button>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {existing?.status === 'available_in_digilocker' && !isUploaded ? (
+                                            <div className="relative">
+                                                <div className="absolute -top-2 -right-1 z-10">
+                                                    <span className="bg-[#6605c7] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white uppercase tracking-tighter animate-pulse">
+                                                        Found!
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleSyncFromDigilocker(req.type)}
+                                                    disabled={!!uploadingDocs[req.type]}
+                                                    className="w-full py-2.5 bg-[#6605c7] text-white text-[11px] font-bold rounded-lg hover:bg-[#5504a6] transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 border border-[#6605c7]/20"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">sync_alt</span>
+                                                    Sync to Vault
+                                                </button>
+                                            </div>
+                                        ) : !isPassportUploaded && req.type !== 'passport' ? (
+                                            <button
+                                                disabled
+                                                className="w-full py-2.5 bg-gray-100 text-gray-400 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 border border-gray-200 cursor-not-allowed"
+                                                title="Please upload your Passport first to unlock this document slot"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">lock</span>
+                                                Locked (Passport First)
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => triggerFileInput(req.type)}
+                                                    disabled={!!uploadingDocs[req.type]}
+                                                    className={`w-full py-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${([
+                                                        'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
+                                                        'marksheet_10', 'marksheet_12', 'passport',
+                                                        'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
+                                                    ].includes(req.type))
+                                                        ? 'bg-gray-50 text-black-500 border border-gray-200 hover:bg-gray-100'
+                                                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    {uploadingDocs[req.type] ? (
+                                                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                                                    ) : (
+                                                        <span className="material-symbols-outlined text-[16px]">upload</span>
+                                                    )}
+                                                    {uploadingDocs[req.type] ? "Processing..." : ([
+                                                        'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
+                                                        'marksheet_10', 'marksheet_12', 'passport',
+                                                        'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
+                                                    ].includes(req.type)) ? "Upload Manually" : "Upload to Vault"}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
-        </div>
-    );
-};
+        );
+    };
 
     if (!mounted) return null;
 
@@ -1428,17 +1428,6 @@ export default function DocumentVaultPage() {
                                 <div>
                                     <h1 className="text-3xl font-black text-gray-900 tracking-tight">Document Vault</h1>
                                     <p className="text-gray-500 text-[13px] font-medium">Securely store and manage your loan documents</p>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-4">
-                                <div className="flex items-center gap-3 p-2.5 px-4 bg-emerald-50 rounded-2xl border border-emerald-100/50">
-                                    <div className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                        <span className="material-symbols-outlined text-[16px] font-black">verified</span>
-                                    </div>
-                                    <div className="text-[13px] font-black text-emerald-700 tracking-tight">
-                                        {uploadedCount} / {allRequiredDocs.length + staffRequestedDocs.length} Verified
-                                    </div>
                                 </div>
                             </div>
                         </div>
