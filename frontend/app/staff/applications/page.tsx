@@ -441,13 +441,13 @@ function ApplicationsPageInner() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => { const appNo = item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`; router.push(`/staff/chat-customer?bankName=${encodeURIComponent(bankName)}&applicationId=${item.id || item._id}&applicationNumber=${encodeURIComponent(appNo)}`); }} className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-all border border-indigo-200 cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-2xs">
-                                                    <span className="material-symbols-outlined text-[16px]">forum</span>Chat with Bank
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <button onClick={() => { const appNo = item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`; router.push(`/staff/chat-customer?bankName=${encodeURIComponent(bankName)}&applicationId=${item.id || item._id}&applicationNumber=${encodeURIComponent(appNo)}`); }} className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold rounded-lg transition-all border border-indigo-200 cursor-pointer flex items-center gap-1 active:scale-90 shadow-2xs">
+                                                    <span className="material-symbols-outlined text-[14px]">forum</span>Chat with Bank
                                                 </button>
                                                 {(item.email || item.student?.email) && (
-                                                    <button onClick={() => { const email = item.email || item.student?.email; const name = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim(); setEmailModalRecipient(email); setEmailModalRecipientName(name); setIsEmailModalOpen(true); }} className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition-all border border-emerald-200 cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-2xs">
-                                                        <span className="material-symbols-outlined text-[16px]">mail</span>Email
+                                                    <button onClick={() => { const email = item.email || item.student?.email; const name = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim(); setEmailModalRecipient(email); setEmailModalRecipientName(name); setIsEmailModalOpen(true); }} className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold rounded-lg transition-all border border-emerald-200 cursor-pointer flex items-center gap-1 active:scale-95 shadow-2xs">
+                                                        <span className="material-symbols-outlined text-[14px]">mail</span>Email
                                                     </button>
                                                 )}
                                             </div>

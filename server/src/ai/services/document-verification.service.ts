@@ -289,8 +289,8 @@ function getExtractedDataSchema(normalizedType: string): string {
     }
     if (normalizedType === 'pan') {
         return `{
-    "full_name": "string — cardholder name exactly once as printed (do not duplicate)",
-    "father_name": "string",
+    "full_name": "string — Primary Cardholder Name printed directly under Govt of India / Income Tax Dept logo (above Father's Name label). THIS IS THE CARDHOLDER'S NAME.",
+    "father_name": "string — Cardholder's father name printed below 'Father's Name' label (this is the cardholder's father / grandfather).",
     "date_of_birth": "DD/MM/YYYY",
     "pan_number": "AAAAA9999A",
     "country": "string",
@@ -419,7 +419,7 @@ function normalizeDocType(docType: string): string {
     if (d.includes('bank_statement') || d.includes('bank_stmt')) return 'bank_statement';
     if (d.includes('itr') || d.includes('income_tax')) return 'itr';
     if (d.includes('marksheet_10') || d.includes('10th') || d.includes('ssc') || d.includes('grade_10') || d.includes('grade10')) return 'marksheet_10';
-    if (d.includes('marksheet_12') || d.includes('12th') || d.includes('hsc') || d.includes('intermediate') || d.includes('grade_12') || d.includes('grade12')) return 'marksheet_12';
+    if (d.includes('marksheet_12') || d.includes('12th') || d.includes('hsc') || d.includes('intermediate') || d.includes('diploma') || d.includes('grade_12') || d.includes('grade12')) return 'marksheet_12';
     if (d.includes('pg_degree') || d.includes('pg_transcript') || d.includes('marksheet_pg') || d.includes('postgraduate') || d.includes('post_grad')) return 'marksheet_pg';
     if (d.includes('ug_degree') || d.includes('ug_transcript') || d.includes('marksheet_ug') || d.includes('undergraduate') || d.includes('under_grad') || d.includes('bachelor') || d.includes('degree_certificate') || d.includes('cmm') || d.includes('consolidated')) return 'marksheet_ug';
     if (d.includes('marksheet') || d.includes('transcript')) return 'marksheet';

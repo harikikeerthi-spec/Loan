@@ -179,7 +179,12 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                         </button>
                         <button
                             onClick={() => {
-                                router.push(`/staff/chat-customer?id=${userData.id || userData._id}&email=${userData.email || ""}&firstName=${userData.firstName || ""}&lastName=${userData.lastName || ""}&phone=${userData.phoneNumber || userData.mobile || userData.phone || ""}`);
+                                const targetId = userData.id || userData._id || userId;
+                                const studentPhone = userData.phoneNumber || userData.mobile || userData.phone || "";
+                                const studentEmail = userData.email || "";
+                                const studentFirstName = userData.firstName || "";
+                                const studentLastName = userData.lastName || "";
+                                router.push(`/staff/chat-customer?userId=${targetId}&id=${targetId}&email=${encodeURIComponent(studentEmail)}&firstName=${encodeURIComponent(studentFirstName)}&lastName=${encodeURIComponent(studentLastName)}&phone=${encodeURIComponent(studentPhone)}`);
                             }}
                             className="px-4 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-[#FFFFFF] rounded-xl font-semibold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center shadow-sm shadow-[#7C3AED]/10"
                         >

@@ -63,7 +63,7 @@ export default function UserProfileView({
 
     const userDocs = data?.documents || [];
     const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
-    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'inter', 'grade_12', 'grade12']));
+    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'inter', 'diploma', 'diploma_marksheet', 'diploma_certificate', 'grade_12', 'grade12']));
     const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_', 'cmm', 'cmm_certificate', 'consolidated_marks_memo', 'consolidated']));
     const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['passport']));
 
@@ -138,15 +138,28 @@ export default function UserProfileView({
         }
 
         if (doc) {
-            const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks']);
-            const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of']);
+            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score']);
+            const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks', 'aggregate_marks', 'grand_total']);
+            const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of', 'max']);
             const cgpaVal = getExtractedField(doc, ['cgpa', 'gpa', 'overall_cgpa', 'overall_gpa', 'sgpa']);
+
+            if (pctVal) {
+                const pctNum = parseFloat(String(pctVal).replace(/[^\d.]/g, ''));
+                if (!isNaN(pctNum) && pctNum > 0 && pctNum <= 100) {
+                    return `${Math.round(pctNum * 10) / 10}%`;
+                }
+            }
 
             if (secVal && maxVal) {
                 const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
                 const max = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
                 if (!isNaN(sec) && !isNaN(max) && max > 0) {
                     return `${Math.round((sec / max) * 100 * 10) / 10}%`;
+                }
+            } else if (secVal && !maxVal) {
+                const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
+                if (!isNaN(sec) && sec > 0 && sec <= 100) {
+                    return `${Math.round(sec * 10) / 10}%`;
                 }
             }
 

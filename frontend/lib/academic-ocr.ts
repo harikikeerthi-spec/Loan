@@ -254,17 +254,19 @@ export function canonicalizeAcademicFields(
         raw.year_of_passing;
     if (examPeriod) out.exam_period = String(examPeriod).trim();
 
-    const marksSecured = raw.total_marks_secured ?? raw.total_marks;
-    const marksMaximum = raw.total_marks_maximum;
-    const hasGpa = raw.overall_gpa != null || raw.gpa != null || raw.cgpa != null;
+    const marksSecured = raw.total_marks_secured ?? raw.total_marks ?? raw.marks_secured ?? raw.marks_obtained ?? raw.obtained_marks ?? raw.secured_marks ?? raw.aggregate_marks ?? raw.grand_total;
+    const marksMaximum = raw.total_marks_maximum ?? raw.maximum_marks ?? raw.max_marks ?? raw.total_max ?? raw.out_of ?? raw.max;
+    const hasGpa = raw.overall_gpa != null || raw.gpa != null || raw.cgpa != null || raw.sgpa != null;
 
     let score: unknown =
         raw.percentage ||
         raw.overall_percentage ||
+        raw.marks_percentage ||
+        raw.aggregate_percentage ||
         percentageFromTotalMarks(marksSecured as string | number, marksMaximum as string | number);
 
     if (!score && hasGpa) {
-        score = raw.overall_gpa ?? raw.gpa ?? raw.cgpa;
+        score = raw.overall_gpa ?? raw.gpa ?? raw.cgpa ?? raw.sgpa;
     }
     if (!score) {
         score = raw.score;
@@ -290,7 +292,7 @@ export function canonicalizeAcademicFields(
 
     // Convert CGPA/GPA to Percentage!
     if (!converted && (hasGpa || grading === 'CGPA')) {
-        const gpaVal = raw.overall_gpa ?? raw.gpa ?? raw.cgpa ?? score;
+        const gpaVal = raw.overall_gpa ?? raw.gpa ?? raw.cgpa ?? raw.sgpa ?? score;
         const parsedGpa = parseFloat(String(gpaVal).replace(/[^\d.]/g, ''));
         if (!isNaN(parsedGpa) && parsedGpa <= 10 && parsedGpa > 0) {
             score = String(Math.round(parsedGpa * 9.5 * 10) / 10);
@@ -354,6 +356,7 @@ export function academicLevelFromDocType(docType: string): AcademicLevel | null 
         d.includes('12th') ||
         d.includes('hsc') ||
         d.includes('intermediate') ||
+        d.includes('diploma') ||
         d.includes('grade_12') ||
         d.includes('grade12')
     ) {

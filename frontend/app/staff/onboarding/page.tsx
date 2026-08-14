@@ -2572,24 +2572,28 @@ export default function OnboardingPage() {
                     updated.aadhaarNumber = String(aadharNum).replace(/\s/g, '');
                 }
             } else if (docType === 'father_pan') {
-                if (extractedFields.pan_number) {
-                    compareAndSet(updated.family?.fatherPan, extractedFields.pan_number, (val) => {
+                const panVal = extractedFields.pan_number || extractedFields.panNumber || extractedFields.pan;
+                if (panVal) {
+                    compareAndSet(updated.family?.fatherPan, String(panVal).toUpperCase(), (val) => {
                         updated.family = { ...updated.family, fatherPan: val };
                     });
                 }
-                if (extractedFields.full_name) {
-                    compareAndSet(updated.family?.fatherName, extractedFields.full_name, (val) => {
+                const nameVal = extractedFields.full_name || extractedFields.fullName || extractedFields.cardholder_name || extractedFields.holder_name || extractedFields.name;
+                if (nameVal) {
+                    compareAndSet(updated.family?.fatherName, String(nameVal).trim(), (val) => {
                         updated.family = { ...updated.family, fatherName: val };
                     });
                 }
             } else if (docType === 'mother_pan') {
-                if (extractedFields.pan_number) {
-                    compareAndSet(updated.family?.motherPan, extractedFields.pan_number, (val) => {
+                const panVal = extractedFields.pan_number || extractedFields.panNumber || extractedFields.pan;
+                if (panVal) {
+                    compareAndSet(updated.family?.motherPan, String(panVal).toUpperCase(), (val) => {
                         updated.family = { ...updated.family, motherPan: val };
                     });
                 }
-                if (extractedFields.full_name) {
-                    compareAndSet(updated.family?.motherName, extractedFields.full_name, (val) => {
+                const nameVal = extractedFields.full_name || extractedFields.fullName || extractedFields.cardholder_name || extractedFields.holder_name || extractedFields.name;
+                if (nameVal) {
+                    compareAndSet(updated.family?.motherName, String(nameVal).trim(), (val) => {
                         updated.family = { ...updated.family, motherName: val };
                     });
                 }
@@ -2607,6 +2611,8 @@ export default function OnboardingPage() {
             } else if (
                 docType === 'marksheet_10' ||
                 docType === 'marksheet_12' ||
+                docType === 'diploma' ||
+                docType === 'diploma_marksheet' ||
                 docType === 'marksheet_ug' ||
                 docType === 'ug_degree' ||
                 docType === 'ug_transcript' ||
@@ -2615,7 +2621,7 @@ export default function OnboardingPage() {
                 docType === 'pg_transcript'
             ) {
                 const isGrade10 = docType === 'marksheet_10';
-                const isGrade12 = docType === 'marksheet_12';
+                const isGrade12 = docType === 'marksheet_12' || docType === 'diploma' || docType === 'diploma_marksheet';
                 const isUndergrad = ['marksheet_ug', 'ug_degree', 'ug_transcript'].includes(docType);
                 const isPostgrad = ['marksheet_pg', 'pg_degree', 'pg_transcript'].includes(docType);
 

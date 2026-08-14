@@ -45,7 +45,7 @@ export function getStudentDocumentRequirements(student: any = {}): DocumentRequi
     requirement("National ID / Aadhar Card", "national_id", true, "identity"),
     requirement("PAN Card", "pan", true, "identity"),
     requirement("10th Marksheet", "marksheet_10", true, "academic"),
-    requirement("12th Marksheet", "marksheet_12", highestLevel !== "Grade 10", "academic"),
+    requirement("12th / Diploma Marksheet", "marksheet_12", highestLevel !== "Grade 10", "academic"),
     requirement("Undergraduate Transcript", "ug_transcript", ["Undergraduate", "Postgraduate"].includes(highestLevel), "academic"),
     requirement("Undergraduate Degree", "ug_degree", ["Undergraduate", "Postgraduate"].includes(highestLevel), "academic"),
     requirement("Postgraduate Transcript", "pg_transcript", highestLevel === "Postgraduate", "academic"),

@@ -825,43 +825,72 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
     };
 
     const startNewChat = async (targetUser: any) => {
-        const phone = targetUser.phoneNumber || targetUser.phone || targetUser.mobile;
+        let phone = targetUser.phoneNumber || targetUser.phone || targetUser.mobile;
         if (!phone) {
-            alert("This user does not have a phone number registered.");
+            if (targetUser.id || targetUser._id) {
+                phone = `USR_${targetUser.id || targetUser._id}`;
+            } else if (targetUser.email) {
+                phone = `USR_${targetUser.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            }
+        }
+        if (!phone) {
+            alert("This user does not have a phone or email registered.");
             return;
         }
-        try {
+
+        const doFetch = async (retried = false): Promise<any> => {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            };
+            try {
+                const csrfRes = await fetch('/api/csrf-token');
+                const csrfData = await csrfRes.json();
+                if (csrfData?.csrfToken) headers['X-CSRF-Token'] = csrfData.csrfToken;
+            } catch {}
+
             const res = await fetch(HttpApiPaths.chat.staffStart(), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
+                headers,
                 body: JSON.stringify({
                     customerPhone: phone,
                     customerEmail: targetUser.email,
                     customerName: `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim(),
-                    type: role,
+                    type: (role as string) === 'bank' || (role as string) === 'partner_bank' ? 'bank' : 'staff',
                     bank: role === 'bank' ? (user?.firstName || '') : undefined,
                     applicationId: targetUser.applicationId,
                     applicationNumber: targetUser.applicationNumber
                 })
             });
-            const data = await res.json();
-            if (data.success) {
+            if (res.status === 403 && !retried) {
+                return doFetch(true);
+            }
+            return res.json();
+        };
+
+        try {
+            const data = await doFetch();
+            if (data.success && data.conversation) {
                 setSidebarTab('chats');
-                setChatTypeFilter('student');
+                setChatTypeFilter('all');
                 setConversations(prev => {
-                    if (prev.find(c => c.id === data.conversation.id)) return prev;
+                    const idx = prev.findIndex(c => c.id === data.conversation.id);
+                    if (idx >= 0) {
+                        const copy = [...prev];
+                        copy[idx] = data.conversation;
+                        return copy;
+                    }
                     return [data.conversation, ...prev];
                 });
                 setActiveConversation(data.conversation.id);
                 fetchConversations();
+            } else {
+                console.error("startNewChat response not successful:", data);
             }
         } catch (e) {
             console.error("Failed to start chat", e);
         }
-    }
+    };
 
     const startBankChat = async (bankInfo: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string }) => {
         if (role === 'agent') {
@@ -914,11 +943,15 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
         }
     }
 
+    const hasStartedInitialUser = useRef<string | null>(null);
+
     // Handle initialUser from props
     useEffect(() => {
-        if (initialUser && token) {
-            startNewChat(initialUser);
-        }
+        if (!initialUser || !token) return;
+        const userKey = `${initialUser.id || ''}_${initialUser.email || ''}_${initialUser.phone || initialUser.phoneNumber || ''}`;
+        if (hasStartedInitialUser.current === userKey) return;
+        hasStartedInitialUser.current = userKey;
+        startNewChat(initialUser);
     }, [initialUser, token]);
 
     // Handle initialBank from props

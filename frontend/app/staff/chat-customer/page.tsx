@@ -1,11 +1,11 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import { adminApi } from "@/lib/api";
 
-export default function SupportChatPage() {
+function SupportChatContent() {
     const searchParams = useSearchParams();
 
     const userId = searchParams.get("userId") || searchParams.get("id");
@@ -108,5 +108,18 @@ export default function SupportChatPage() {
                 className="flex flex-1 h-full border-0 rounded-none overflow-hidden bg-white shadow-none mt-0 animate-fade-in text-gray-900"
             />
         </div>
+    );
+}
+
+export default function SupportChatPage() {
+    return (
+        <Suspense fallback={
+            <div className="h-[calc(100vh-56px)] flex flex-col bg-white items-center justify-center">
+                <div className="w-10 h-10 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loading Support Chat...</p>
+            </div>
+        }>
+            <SupportChatContent />
+        </Suspense>
     );
 }

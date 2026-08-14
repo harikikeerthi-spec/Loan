@@ -122,6 +122,8 @@ export default function ProfileTab() {
         nationality: "",
         studyDestination: "",
         targetUniversity: "",
+        panNumber: "",
+        aadhaarNumber: "",
         passportNumber: "",
         passportFullName: "",
         passportIssueDate: "",
@@ -248,16 +250,19 @@ export default function ProfileTab() {
         return <span className="text-[#94A3B8] font-normal">Pending</span>;
     };
 
-    const isDocTypeMatch = (docType: string, patterns: string[]) => {
+    const isDocTypeMatch = (docType: string, patterns: string[], excludeRelations = false) => {
         const dt = (docType || '').toLowerCase();
+        if (excludeRelations && (dt.includes('father') || dt.includes('mother') || dt.includes('coapp'))) return false;
         return patterns.some(p => dt === p || dt.includes(p));
     };
 
     const userDocs = userDocuments || [];
     const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
-    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'grade_12', 'grade12']));
+    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'inter', 'diploma', 'diploma_marksheet', 'diploma_certificate', 'grade_12', 'grade12']));
     const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_', 'cmm', 'cmm_certificate', 'consolidated_marks_memo', 'consolidated']));
     const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['passport']));
+    const panDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['pan', 'pancard', 'pan_card', 'student_pan'], true));
+    const aadharDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['national_id', 'aadhaar', 'aadhar', 'aadhaar_card', 'aadhar_card', 'student_aadhar', 'student_aadhaar'], true));
 
     const getExtractedField = (doc: any, fieldNames: string | string[]) => {
         if (!doc) return null;
@@ -279,6 +284,12 @@ export default function ProfileTab() {
         return null;
     };
 
+    const extPan = getExtractedField(panDoc, ['pan_number', 'panNumber', 'pan', 'pan_no', 'panNo', 'document_number', 'id_number', 'number', 'taxpayer_id']);
+    const extAadhaar = getExtractedField(aadharDoc, ['aadhaar_number', 'aadhar_number', 'aadhaarNumber', 'aadharNumber', 'aadhaar', 'aadhar', 'uid', 'document_number', 'id_number', 'number', 'national_id_number']);
+
+    const studentPan = userData?.panNumber || userData?.pan || userData?.panCardNumber || extPan;
+    const rawAadhaar = userData?.aadhaarNumber || userData?.aadharNumber || userData?.aadhaar || userData?.aadhar || extAadhaar;
+
     const formatPercentageValue = (rawPct?: any, doc?: any): string | undefined => {
         if (rawPct != null && String(rawPct).trim() !== "" && String(rawPct).trim() !== "—") {
             const str = String(rawPct).trim();
@@ -293,15 +304,28 @@ export default function ProfileTab() {
         }
 
         if (doc) {
-            const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks']);
-            const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of']);
+            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score']);
+            const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks', 'aggregate_marks', 'grand_total']);
+            const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of', 'max']);
             const cgpaVal = getExtractedField(doc, ['cgpa', 'gpa', 'overall_cgpa', 'overall_gpa', 'sgpa']);
+
+            if (pctVal) {
+                const pctNum = parseFloat(String(pctVal).replace(/[^\d.]/g, ''));
+                if (!isNaN(pctNum) && pctNum > 0 && pctNum <= 100) {
+                    return `${Math.round(pctNum * 10) / 10}%`;
+                }
+            }
 
             if (secVal && maxVal) {
                 const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
                 const max = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
                 if (!isNaN(sec) && !isNaN(max) && max > 0) {
                     return `${Math.round((sec / max) * 100 * 10) / 10}%`;
+                }
+            } else if (secVal && !maxVal) {
+                const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
+                if (!isNaN(sec) && sec > 0 && sec <= 100) {
+                    return `${Math.round(sec * 10) / 10}%`;
                 }
             }
 
@@ -503,7 +527,8 @@ export default function ProfileTab() {
             })(),
             studyDestination: userData?.studyDestination || userData?.countryOfEducation || userData?.country || (userApplications && userApplications[0]?.country) || (userApplications && userApplications[0]?.studyDestination) || "",
             targetUniversity: userData?.targetUniversity || userData?.universityName || userData?.university || (userApplications && userApplications[0]?.universityName) || (userApplications && userApplications[0]?.university) || (userApplications && userApplications[0]?.targetUniversity) || "",
-
+            panNumber: userData?.panNumber || userData?.pan || userData?.panCardNumber || extPan || "",
+            aadhaarNumber: userData?.aadhaarNumber || userData?.aadharNumber || userData?.aadhaar || userData?.aadhar || extAadhaar || "",
             passportNumber: passportNumber || "",
             passportFullName: passportFullName || (userData?.firstName ? `${userData.firstName} ${userData.lastName || ''}`.trim() : ""),
             passportIssueDate: passportIssueDate || "",
@@ -572,6 +597,13 @@ export default function ProfileTab() {
                 targetUniversity: editForm.targetUniversity,
                 universityName: editForm.targetUniversity,
                 university: editForm.targetUniversity,
+                panNumber: editForm.panNumber,
+                pan: editForm.panNumber,
+                panCardNumber: editForm.panNumber,
+                aadhaarNumber: editForm.aadhaarNumber,
+                aadharNumber: editForm.aadhaarNumber,
+                aadhaar: editForm.aadhaarNumber,
+                aadhar: editForm.aadhaarNumber,
 
                 passport: {
                     fullName: editForm.passportFullName,
@@ -852,6 +884,38 @@ export default function ProfileTab() {
                             </span>
                         </div>
                     </div>
+
+                    {/* Row 3: PAN Card & Aadhaar Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                        <div>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">PAN Card Number</span>
+                                {extPan && !userData?.panNumber && !userData?.pan && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
+
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-sm font-semibold text-slate-800 font-mono uppercase tracking-wider">
+                                {getDisplayValue(studentPan)}
+                            </span>
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Aadhaar Number</span>
+                                {extAadhaar && !userData?.aadhaarNumber && !userData?.aadharNumber && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
+
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-sm font-semibold text-slate-800 font-mono tracking-wider">
+                                {getDisplayValue(
+                                    rawAadhaar ? String(rawAadhaar).replace(/\s/g, '').replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3') : null
+                                )}
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Passport Details Card */}
@@ -864,8 +928,8 @@ export default function ProfileTab() {
                             <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Passport & Travel Details</h3>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 border ${passportDoc?.uploaded || passportNumber
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/70"
-                                : "bg-amber-50 text-amber-700 border-amber-200/70"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200/70"
+                            : "bg-amber-50 text-amber-700 border-amber-200/70"
                             }`}>
                             <span className="material-symbols-outlined text-[13px]">
                                 {passportDoc?.uploaded || passportNumber ? "verified" : "pending"}
@@ -1183,8 +1247,8 @@ export default function ProfileTab() {
                                             <div className="flex items-center gap-3">
                                                 {/* Step Circle */}
                                                 <div className={`absolute -left-[21px] w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${stg.active
-                                                        ? "bg-[#7C3AED] border-[#7C3AED] text-white shadow-sm shadow-purple-600/20"
-                                                        : "bg-white border-slate-200 text-slate-400"
+                                                    ? "bg-[#7C3AED] border-[#7C3AED] text-white shadow-sm shadow-purple-600/20"
+                                                    : "bg-white border-slate-200 text-slate-400"
                                                     }`}>
                                                     {stg.active ? (
                                                         <span className="material-symbols-outlined text-[10px] font-black">check</span>
@@ -1193,10 +1257,10 @@ export default function ProfileTab() {
                                                     )}
                                                 </div>
                                                 <span className={`text-xs transition-all ${stg.isCurrent
-                                                        ? "font-extrabold text-[#7C3AED]"
-                                                        : stg.active
-                                                            ? "font-semibold text-slate-800"
-                                                            : "font-medium text-slate-400"
+                                                    ? "font-extrabold text-[#7C3AED]"
+                                                    : stg.active
+                                                        ? "font-semibold text-slate-800"
+                                                        : "font-medium text-slate-400"
                                                     }`}>
                                                     {stg.label}
                                                 </span>
@@ -1424,6 +1488,27 @@ export default function ProfileTab() {
                                                 onChange={(e) => setEditForm(prev => ({ ...prev, targetUniversity: e.target.value }))}
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
                                                 placeholder="e.g. Harvard University"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">PAN Card Number</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.panNumber}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, panNumber: e.target.value.toUpperCase() }))}
+                                                placeholder="e.g. ABCDE1234F"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-mono uppercase placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Aadhaar Number</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.aadhaarNumber}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, aadhaarNumber: e.target.value.replace(/\D/g, '') }))}
+                                                placeholder="e.g. 123456789012"
+                                                maxLength={12}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-mono placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
                                             />
                                         </div>
                                         <div className="sm:col-span-2 pt-3 border-t border-slate-100">

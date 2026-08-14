@@ -51,17 +51,26 @@ export default function UserDirectoryPage() {
         setLoading(true);
         try {
             const offset = (currentPage - 1) * itemsPerPage;
+            const roleParam = userRoleFilter === "all" ? "bank,staff,staff_admin" : userRoleFilter;
             const [usersRes, statsRes]: [any, any] = await Promise.all([
-                adminApi.getUsers(itemsPerPage, offset, searchQuery, userRoleFilter === "all" ? undefined : userRoleFilter),
+                adminApi.getUsers(itemsPerPage, offset, searchQuery, roleParam),
                 adminApi.getUserStats().catch(() => null)
             ]);
 
             if (usersRes && usersRes.data) {
-                setData(usersRes.data);
-                setTotalItems(usersRes.total || usersRes.data.length);
+                const filtered = usersRes.data.filter((item: any) => {
+                    const r = (item.role || '').toLowerCase();
+                    return r !== 'student' && r !== 'user';
+                });
+                setData(filtered);
+                setTotalItems(usersRes.total || filtered.length);
             } else {
-                setData(Array.isArray(usersRes) ? usersRes : []);
-                setTotalItems(Array.isArray(usersRes) ? usersRes.length : 0);
+                const list = Array.isArray(usersRes) ? usersRes.filter((item: any) => {
+                    const r = (item.role || '').toLowerCase();
+                    return r !== 'student' && r !== 'user';
+                }) : [];
+                setData(list);
+                setTotalItems(list.length);
             }
 
             if (statsRes && statsRes.success) {
@@ -87,11 +96,9 @@ export default function UserDirectoryPage() {
     };
 
     const userStatsData = useMemo(() => {
-        const studentAccounts = userSectionStats?.student ?? 0;
         const bankPartners = userSectionStats?.bank ?? 0;
         const staffMembers = userSectionStats?.staff ?? 0;
         return [
-            { id: 'student', label: 'Student Accounts', value: studentAccounts, icon: 'school', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', tag: 'ROLE' },
             { id: 'bank', label: 'Bank Partners', value: bankPartners, icon: 'account_balance', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', tag: 'ROLE' },
             { id: 'staff', label: 'Staff Members', value: staffMembers, icon: 'badge', color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100', tag: 'O_ADMIN' },
         ];
@@ -143,7 +150,7 @@ export default function UserDirectoryPage() {
                     <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">
                         <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[11px] font-semibold text-indigo-700">
                             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                            USER & MEMBER DIRECTORY
+                            STAFF & BANK MEMBER DIRECTORY
                         </span>
                     </p>
                     <h2 className="text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">
@@ -171,7 +178,7 @@ export default function UserDirectoryPage() {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                            placeholder="Search users..."
+                            placeholder="Search bank or staff..."
                             className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-['Playfair_Display',serif] font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 w-64 shadow-sm"
                         />
                     </div>
@@ -179,7 +186,7 @@ export default function UserDirectoryPage() {
             </div>
 
             {/* Metrics Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 mb-2">
                 {userStatsData.map((c, i) => (
                     <button
                         key={i}
@@ -328,15 +335,6 @@ export default function UserDirectoryPage() {
                                                         title="View Profile"
                                                     >
                                                         <span className="material-symbols-outlined text-[16px]">visibility</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            router.push(`/staff/chat-customer?userId=${item.id || item._id}`);
-                                                        }}
-                                                        className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 flex items-center justify-center transition-all shadow-sm"
-                                                        title="Chat with Student"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[16px]">school</span>
                                                     </button>
                                                     <button
                                                         onClick={() => {

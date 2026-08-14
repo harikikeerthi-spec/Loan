@@ -171,12 +171,15 @@ export function percentageFromTotalMarks(
     if (!isNaN(sec) && !isNaN(max) && max > 0) {
         return String(Math.round((sec / max) * 1000) / 10);
     }
-    if (!isNaN(sec) && sec > 100 && sec < 1200) {
+    if (!isNaN(sec) && sec > 0 && sec <= 100) {
+        return String(Math.round(sec * 10) / 10);
+    }
+    if (!isNaN(sec) && sec > 100 && sec < 5000) {
         let inferredMax = 1000;
         if (level === 'grade10') {
             inferredMax = sec <= 500 ? 500 : 600;
         } else if (level === 'grade12') {
-            inferredMax = sec <= 600 ? 600 : 1000;
+            inferredMax = sec <= 600 ? 600 : sec <= 1000 ? 1000 : sec <= 2000 ? 2000 : 3000;
         } else {
             inferredMax = sec <= 500 ? 500 : sec <= 600 ? 600 : 1000;
         }

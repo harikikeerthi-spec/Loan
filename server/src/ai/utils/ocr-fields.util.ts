@@ -142,7 +142,7 @@ function normalizeDocTypeKey(
     if (d.includes('pan') && !d.includes('company')) return 'pan';
     if (d.includes('passport')) return 'passport';
     if (d.includes('marksheet_10') || d.includes('10th') || d.includes('ssc') || d.includes('grade_10') || d.includes('grade10')) return 'marksheet_10';
-    if (d.includes('marksheet_12') || d.includes('12th') || d.includes('hsc') || d.includes('intermediate') || d.includes('inter') || d.includes('grade_12') || d.includes('grade12')) return 'marksheet_12';
+    if (d.includes('marksheet_12') || d.includes('12th') || d.includes('hsc') || d.includes('intermediate') || d.includes('inter') || d.includes('diploma') || d.includes('grade_12') || d.includes('grade12')) return 'marksheet_12';
     if (d.includes('pg_degree') || d.includes('pg_transcript') || d.includes('marksheet_pg') || d.includes('postgraduate') || d.includes('post_grad')) return 'marksheet_pg';
     if (d.includes('ug_degree') || d.includes('ug_transcript') || d.includes('marksheet_ug') || d.includes('undergraduate') || d.includes('under_grad') || d.includes('bachelor') || d.includes('degree') || d.includes('graduation') || d.includes('cmm') || d.includes('consolidated')) return 'marksheet_ug';
     return 'generic';
@@ -391,10 +391,6 @@ export function extractFullNameFromOcrRaw(
         );
     } else if (normType.includes('father')) {
         direct = pickFirst(
-            raw.father_name,
-            raw.fatherName,
-            raw.father_full_name,
-            raw.fatherFullName,
             raw.full_name,
             raw.fullName,
             raw.holder_name,
@@ -556,8 +552,35 @@ export function canonicalizeOcrFields(
         const pan = pickFirst(raw.pan_number, raw.panNumber, raw.document_number, raw.pan);
         if (pan) out.pan_number = String(pan).toUpperCase().trim();
 
-        const father = pickFirst(raw.father_name, raw.fatherName, raw.guardian_name);
-        if (father) out.father_name = dedupeOcrFullName(String(father));
+        const dType = (docType || '').toLowerCase();
+        const isFatherDoc = dType.includes('father');
+        const isMotherDoc = dType.includes('mother');
+
+        const cardholderName = extractFullNameFromOcrRaw(raw, docType) || pickFirst(raw.full_name, raw.fullName, raw.holder_name, raw.cardholder_name, raw.name);
+        if (cardholderName) {
+            out.full_name = dedupeOcrFullName(String(cardholderName));
+        }
+
+        if (isFatherDoc) {
+            // For father's documents: The cardholder's full_name IS the student's father's name.
+            // Do NOT use raw.father_name (which is the student's father's father / grandfather!).
+            if (out.full_name) {
+                out.father_name = out.full_name;
+            } else {
+                const fName = pickFirst(raw.full_name, raw.fullName, raw.cardholder_name, raw.holder_name, raw.name);
+                if (fName) out.father_name = dedupeOcrFullName(String(fName));
+            }
+        } else if (isMotherDoc) {
+            if (out.full_name) {
+                out.mother_name = out.full_name;
+            } else {
+                const mName = pickFirst(raw.full_name, raw.fullName, raw.cardholder_name, raw.holder_name, raw.name);
+                if (mName) out.mother_name = dedupeOcrFullName(String(mName));
+            }
+        } else {
+            const father = pickFirst(raw.father_name, raw.fatherName, raw.guardian_name);
+            if (father) out.father_name = dedupeOcrFullName(String(father));
+        }
 
         const country = pickFirst(raw.country, raw.nationality);
         if (country) out.country = normalizeCountryName(String(country));

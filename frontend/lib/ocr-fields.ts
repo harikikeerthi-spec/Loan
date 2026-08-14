@@ -330,8 +330,29 @@ export function normalizeOcrFieldsForAutofill(
     } else if (d.includes('pan')) {
         const pan = pick(raw.pan_number as string, raw.panNumber as string, raw.document_number as string);
         if (pan) out.pan_number = pan.toUpperCase();
-        const father = pick(raw.father_name as string, raw.fatherName as string);
-        if (father) out.father_name = dedupeOcrFullName(father);
+
+        const isFatherDoc = d.includes('father');
+        const isMotherDoc = d.includes('mother');
+
+        const cardholderName = extractFullNameFromOcrRaw(raw, docType) || pick(raw.full_name as string, raw.fullName as string, raw.holder_name as string, raw.cardholder_name as string, raw.name as string);
+        if (cardholderName) {
+            out.full_name = dedupeOcrFullName(cardholderName);
+        }
+
+        if (isFatherDoc) {
+            // For father's PAN card: Cardholder name IS the student's father's name.
+            // Do NOT use raw.father_name (which is the student's grandfather!).
+            if (out.full_name) {
+                out.father_name = out.full_name;
+            }
+        } else if (isMotherDoc) {
+            if (out.full_name) {
+                out.mother_name = out.full_name;
+            }
+        } else {
+            const father = pick(raw.father_name as string, raw.fatherName as string);
+            if (father) out.father_name = dedupeOcrFullName(father);
+        }
 
         const country = pick(raw.country as string, raw.nationality as string);
         if (country) out.country = normalizeCountryName(country);

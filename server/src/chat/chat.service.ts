@@ -30,7 +30,11 @@ export class ChatService {
 
   async getOrCreateConversation(customerPhone: string, customerEmail?: string, conversationType: string = 'staff', customerName?: string, bankName?: string, additionalMetadata?: any) {
     if (!customerPhone) {
-        throw new HttpException('A valid phone number is required to start a chat. Please update your profile.', HttpStatus.BAD_REQUEST);
+        if (customerEmail) {
+            customerPhone = `USR_${customerEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        } else {
+            throw new HttpException('A valid phone number or email is required to start a chat.', HttpStatus.BAD_REQUEST);
+        }
     }
     // Clean phone number (strip 'whatsapp:' and normalize to 10 digits)
     const phone = this.normalizePhone(customerPhone);
@@ -191,6 +195,7 @@ export class ChatService {
   }
 
   async getConversations(status: string = 'active', user?: any) {
+    try {
       let query = this.db
       .from('Conversation')
       .select(`
@@ -229,16 +234,33 @@ export class ChatService {
           query = query.or('metadata->>type.eq.agent,metadata->>type.eq.agent_to_staff');
       }
 
-      const { data, error } = await query;
+      let { data, error } = await query;
       
-      if (error) {
-          throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
+      if (error || !data) {
+          this.logger.warn(`Query with Message relation failed (${error?.message}), executing fallback query...`);
+          let fallbackQuery = this.db
+            .from('Conversation')
+            .select('*')
+            .eq('status', status)
+            .order('updatedAt', { ascending: false });
+
+          if (user && (user.role === 'bank' || user.role === 'partner_bank')) {
+              fallbackQuery = fallbackQuery.contains('metadata', { type: 'bank' });
+          } else if (user && (user.role === 'agent' || user.role === 'partner_agent')) {
+              fallbackQuery = fallbackQuery.or('metadata->>type.eq.agent,metadata->>type.eq.agent_to_staff');
+          }
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+          if (fallbackError) {
+              this.logger.error('Fallback query failed:', fallbackError);
+              return [];
+          }
+          data = fallbackData || [];
       }
       
       // Sort messages and format
       let formatted = data.map((conv: any) => {
           const sortedMessages = conv.Message && conv.Message.length > 0
-              ? conv.Message.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              ? conv.Message.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               : [];
           
           let unreadCount = 0;
@@ -254,14 +276,15 @@ export class ChatService {
               }).length;
           }
 
-          let meta = conv.metadata;
-          if (typeof meta === 'string') {
-              try { meta = JSON.parse(meta); } catch {}
-          }
-
           return {
-              ...conv,
-              metadata: meta || {},
+              id: conv.id,
+              customerPhone: conv.customerPhone,
+              customerEmail: conv.customerEmail,
+              customerName: conv.customerName,
+              metadata: conv.metadata || {},
+              status: conv.status,
+              updatedAt: conv.updatedAt,
+              createdAt: conv.createdAt,
               lastMessage: sortedMessages[0] || null,
               unreadCount
           };
@@ -275,20 +298,30 @@ export class ChatService {
       }
 
       return formatted;
+    } catch (e: any) {
+      this.logger.error('Error fetching conversations:', e);
+      return [];
+    }
   }
 
   async getMessages(conversationId: string) {
-    const { data, error } = await this.db
-      .from('Message')
-      .select('*')
-      .eq('conversationId', conversationId)
-      .order('createdAt', { ascending: true });
+    try {
+      const { data, error } = await this.db
+        .from('Message')
+        .select('*')
+        .eq('conversationId', conversationId)
+        .order('createdAt', { ascending: true });
 
-    if (error) {
-      throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
+      if (error) {
+        this.logger.error('Failed to query messages:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (e: any) {
+      this.logger.error('Error fetching messages:', e);
+      return [];
     }
-
-    return data;
   }
 
   async getMessageById(messageId: string) {
