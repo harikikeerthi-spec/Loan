@@ -350,34 +350,71 @@ export function normalizeOcrFieldsForAutofill(
             raw.passport_number as string,
             raw.passportNumber as string,
             raw.document_number as string,
+            raw.passport_no as string,
+            raw.passportNo as string,
+            raw.passport_num as string,
+            raw.passportNum as string,
         );
         if (passport) out.passport_number = passport;
 
-        const given = pick(
+        let given = pick(
             raw.given_names as string,
             raw.given_name as string,
+            raw.givenNames as string,
+            raw.givenName as string,
             raw.first_name as string,
             raw.firstName as string,
         );
-        if (given) out.given_names = given;
 
-        const sur = pick(
+        let sur = pick(
             raw.surname as string,
+            raw.sur_name as string,
             raw.last_name as string,
             raw.lastName as string,
+            raw.familyName as string,
         );
+
+        const fullNameRaw = pick(
+            raw.full_name as string,
+            raw.fullName as string,
+            raw.name as string,
+        );
+
+        if (!given && !sur && fullNameRaw) {
+            const parts = String(fullNameRaw).trim().split(/\s+/);
+            if (parts.length > 1) {
+                given = parts.slice(0, -1).join(' ');
+                sur = parts[parts.length - 1];
+            } else if (parts.length === 1) {
+                given = parts[0];
+            }
+        }
+
+        if (given) out.given_names = given;
         if (sur) out.surname = sur;
+        if (fullNameRaw) out.full_name = fullNameRaw;
+        else if (given || sur) out.full_name = `${given || ''} ${sur || ''}`.trim();
 
         const nat = pick(raw.nationality as string, raw.citizenship as string);
         if (nat) out.nationality = nat;
 
-        const issue = pick(raw.date_of_issue as string, raw.issue_date as string, raw.issueDate as string);
+        const issue = pick(
+            raw.date_of_issue as string,
+            raw.issue_date as string,
+            raw.issueDate as string,
+            raw.dateOfIssue as string,
+        );
         if (issue) {
             const parsed = parseOcrDateForInput(issue);
             out.date_of_issue = parsed || issue;
         }
 
-        const expiry = pick(raw.date_of_expiry as string, raw.expiry_date as string, raw.expiryDate as string);
+        const expiry = pick(
+            raw.date_of_expiry as string,
+            raw.expiry_date as string,
+            raw.expiryDate as string,
+            raw.dateOfExpiry as string,
+        );
         if (expiry) {
             const parsed = parseOcrDateForInput(expiry);
             out.date_of_expiry = parsed || expiry;
@@ -387,10 +424,18 @@ export function normalizeOcrFieldsForAutofill(
             raw.issue_country as string,
             raw.issueCountry as string,
             raw.country_of_issue as string,
+            raw.issuing_country as string,
         );
         if (issueCountry) out.issue_country = normalizeCountryName(issueCountry);
 
-        const poi = pick(raw.place_of_issue as string, raw.issue_place as string, raw.issuing_authority as string);
+        const poi = pick(
+            raw.place_of_issue as string,
+            raw.placeOfIssue as string,
+            raw.issue_place as string,
+            raw.issuePlace as string,
+            raw.issuing_authority as string,
+            raw.issuingAuthority as string,
+        );
         if (poi) out.place_of_issue = poi;
 
         const birthCity = pick(raw.birth_city as string, raw.birthCity as string, raw.city_of_birth as string);
@@ -403,7 +448,7 @@ export function normalizeOcrFieldsForAutofill(
         );
         if (birthCountry) out.birth_country = normalizeCountryName(birthCountry);
 
-        const pob = pick(raw.place_of_birth as string, raw.birth_place as string);
+        const pob = pick(raw.place_of_birth as string, raw.birth_place as string, raw.placeOfBirth as string, raw.birthPlace as string);
         if (pob) {
             out.place_of_birth = pob;
             if (!out.birth_city || !out.birth_country) {
@@ -422,7 +467,13 @@ export function normalizeOcrFieldsForAutofill(
             if (n.includes('indian') || n === 'ind') out.issue_country = 'India';
         }
 
-        const dobRaw = pick(raw.dob as string, raw.date_of_birth as string);
+        const dobRaw = pick(
+            raw.dob as string,
+            raw.date_of_birth as string,
+            raw.birth_date as string,
+            raw.dateOfBirth as string,
+            raw.birthDate as string,
+        );
         if (dobRaw) {
             const parsed = parseOcrDateForInput(dobRaw);
             out.dob = parsed || dobRaw;
@@ -438,6 +489,7 @@ export function normalizeOcrFieldsForAutofill(
             raw.fatherFullName as string,
             raw.guardian_name as string,
             raw.name_of_father as string,
+            raw.father_given_name as string,
         );
         if (father) out.father_name = dedupeOcrFullName(father);
 
@@ -447,6 +499,7 @@ export function normalizeOcrFieldsForAutofill(
             raw.mother_full_name as string,
             raw.motherFullName as string,
             raw.name_of_mother as string,
+            raw.mother_given_name as string,
         );
         if (mother) out.mother_name = dedupeOcrFullName(mother);
 

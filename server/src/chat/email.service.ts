@@ -11,12 +11,36 @@ export class EmailService {
     this.initializeTransporter();
   }
 
+  private getFromAddress(): string {
+    const emailFrom = (this.configService.get<string>('EMAIL_FROM') || process.env.EMAIL_FROM || '').trim();
+    const emailUser = (this.configService.get<string>('EMAIL_USER') || process.env.EMAIL_USER || '').trim();
+
+    if (emailFrom && emailFrom.includes('@')) {
+      if (emailFrom.includes('<')) return emailFrom;
+      return `"VidyaLoans" <${emailFrom}>`;
+    }
+
+    if (emailUser) {
+      return `"VidyaLoans" <${emailUser}>`;
+    }
+
+    return '"VidyaLoans" <support@vidyaloans.in>';
+  }
+
+  private getFrontendUrl(): string {
+    const url = (this.configService.get<string>('FRONTEND_URL') || process.env.FRONTEND_URL || '').trim();
+    if (url && url !== 'http://localhost:3000' && url !== 'http://localhost:5000') {
+      return url;
+    }
+    return 'https://developer.vidyaloans.in';
+  }
+
   private initializeTransporter() {
-    const host = this.configService.get<string>('EMAIL_HOST') || 'smtp.gmail.com';
-    const port = this.configService.get<number>('EMAIL_PORT') || 587;
-    const user = this.configService.get<string>('EMAIL_USER');
-    const pass = this.configService.get<string>('EMAIL_PASS');
-    const from = this.configService.get<string>('EMAIL_FROM') || `VidyaLoan <${user}>`;
+    const host = this.configService.get<string>('EMAIL_HOST') || process.env.EMAIL_HOST || 'smtp.gmail.com';
+    const port = Number(this.configService.get<number>('EMAIL_PORT') || process.env.EMAIL_PORT) || 587;
+    const user = this.configService.get<string>('EMAIL_USER') || process.env.EMAIL_USER;
+    const pass = this.configService.get<string>('EMAIL_PASS') || process.env.EMAIL_PASS;
+    const from = this.getFromAddress();
 
     this.transporter = nodemailer.createTransport({
       host,
@@ -40,10 +64,11 @@ export class EmailService {
     }
   ): Promise<boolean> {
     try {
+      const frontendUrl = this.getFrontendUrl();
       const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); padding: 40px; border-radius: 16px; color: white; text-align: center; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoan</h1>
+            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoans</h1>
             <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">New Message in Your Application</p>
           </div>
 
@@ -77,7 +102,7 @@ export class EmailService {
           </div>
 
           <div style="text-align: center; margin-bottom: 30px;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard#applications" 
+            <a href="${frontendUrl}/dashboard#applications" 
                style="display: inline-block; background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
               View Application
             </a>
@@ -85,16 +110,17 @@ export class EmailService {
 
           <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; text-align: center; color: #999; font-size: 12px;">
             <p style="margin: 0 0 10px 0;">
-              You received this email because you have an active loan application with VidyaLoan.
+              You received this email because you have an active loan application with VidyaLoans.
             </p>
             <p style="margin: 0;">
-              © ${new Date().getFullYear()} VidyaLoan. All rights reserved.
+              © ${new Date().getFullYear()} VidyaLoans. All rights reserved.
             </p>
           </div>
         </div>
       `;
 
       await this.transporter.sendMail({
+        from: this.getFromAddress(),
         to,
         subject: `New Message: ${conversationContext.subject}`,
         html: htmlContent,
@@ -121,10 +147,11 @@ export class EmailService {
     }
   ): Promise<boolean> {
     try {
+      const frontendUrl = this.getFrontendUrl();
       const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); padding: 40px; border-radius: 16px; color: white; text-align: center; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoan</h1>
+            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoans</h1>
             <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Document Shared with You</p>
           </div>
 
@@ -153,19 +180,20 @@ export class EmailService {
           </div>
 
           <div style="text-align: center;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/document-vault" 
+            <a href="${frontendUrl}/document-vault" 
                style="display: inline-block; background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
               View Document
             </a>
           </div>
 
           <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
-            <p style="margin: 0;">© ${new Date().getFullYear()} VidyaLoan. All rights reserved.</p>
+            <p style="margin: 0;">© ${new Date().getFullYear()} VidyaLoans. All rights reserved.</p>
           </div>
         </div>
       `;
 
       await this.transporter.sendMail({
+        from: this.getFromAddress(),
         to,
         subject: `Document Shared: ${documentDetails.documentName}`,
         html: htmlContent,
@@ -188,10 +216,11 @@ export class EmailService {
     textSummary?: string
   ): Promise<boolean> {
     try {
+      const frontendUrl = this.getFrontendUrl();
       const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
           <div style="background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); padding: 40px; border-radius: 16px; color: white; text-align: center; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoan AI</h1>
+            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoans AI</h1>
             <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Your AI Tool Results are Ready</p>
           </div>
 
@@ -200,7 +229,7 @@ export class EmailService {
               Hello ${userName || 'there'},
             </p>
             <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-              Thank you for using the <strong>${toolName}</strong> tool on VidyaLoan! We hope our AI insights help you make informed decisions about your study abroad and financing journey.
+              Thank you for using the <strong>${toolName}</strong> tool on VidyaLoans! We hope our AI insights help you make informed decisions about your study abroad and financing journey.
             </p>
 
             <div style="background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-top: 10px;">
@@ -212,7 +241,7 @@ export class EmailService {
           </div>
 
           <div style="text-align: center; margin-bottom: 30px;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" 
+            <a href="${frontendUrl}/dashboard" 
                style="display: inline-block; background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 6px rgba(102, 5, 199, 0.2);">
               Go to Dashboard
             </a>
@@ -220,20 +249,21 @@ export class EmailService {
 
           <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; text-align: center; color: #999; font-size: 12px;">
             <p style="margin: 0 0 10px 0;">
-              You received this email because you used an AI tool on VidyaLoan.
+              You received this email because you used an AI tool on VidyaLoans.
             </p>
             <p style="margin: 0;">
-              © ${new Date().getFullYear()} VidyaLoan. All rights reserved.
+              © ${new Date().getFullYear()} VidyaLoans. All rights reserved.
             </p>
           </div>
         </div>
       `;
 
       await this.transporter.sendMail({
+        from: this.getFromAddress(),
         to,
-        subject: `Your VidyaLoan AI Results: ${toolName}`,
+        subject: `Your VidyaLoans AI Results: ${toolName}`,
         html: htmlContent,
-        text: textSummary || `Thank you for using ${toolName} on VidyaLoan. Find your results attached.`,
+        text: textSummary || `Thank you for using ${toolName} on VidyaLoans. Find your results attached.`,
       });
 
       this.logger.log(`AI Tool results email sent to ${to} for tool: ${toolName}`);

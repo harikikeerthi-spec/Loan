@@ -485,7 +485,7 @@ export const EVVTestAgent: React.FC<{
   const displayCurrency = (n: number) => formatCurrency(n);
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white/50 backdrop-blur-xl rounded-[2.5rem] border border-white/60 p-8 shadow-xl space-y-6">
+    <div className="w-full max-w-6xl mx-auto bg-white/50 backdrop-blur-xl rounded-[2.5rem] border border-white/60 p-8 shadow-xl space-y-6">
       {/* Top Header */}
       <div className="border-b border-slate-100/60 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3.5">
@@ -498,13 +498,6 @@ export const EVVTestAgent: React.FC<{
               AWS S3 Statement Storage & AI Banking Intelligence Pipeline
             </p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            AI Underwriting Active
-          </span>
         </div>
       </div>
 
@@ -601,12 +594,12 @@ export const EVVTestAgent: React.FC<{
           onClick={handleAnalyze}
           disabled={uploading}
           className={`px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider text-white flex items-center gap-2 transition-all duration-300 ${uploading
-              ? "bg-slate-400 cursor-not-allowed"
-              : "bg-gradient-to-r from-violet-600 to-indigo-700 hover:shadow-lg hover:shadow-violet-600/20 active:scale-98 cursor-pointer"
+            ? "bg-slate-400 cursor-not-allowed"
+            : "bg-gradient-to-r from-violet-600 to-indigo-700 hover:shadow-lg hover:shadow-violet-600/20 active:scale-98 cursor-pointer"
             }`}
         >
           <span className="material-symbols-outlined text-[18px]">{uploading ? "sync" : "bolt"}</span>
-          {uploading ? "Processing PDF & AI..." : "Verify EVV (AI Engine)"}
+          {uploading ? "Processing PDF & AI..." : "Verify EVV"}
         </button>
       </div>
 
@@ -617,7 +610,7 @@ export const EVVTestAgent: React.FC<{
             <span className="material-symbols-outlined text-4xl text-slate-300">receipt_long</span>
             <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">No Statement Analyzed Yet</h4>
             <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-              Upload a customer bank statement PDF above and click <span className="font-bold text-slate-600">Verify EVV (AI Engine)</span> to calculate the Estimated Verified Value score and store the document in AWS S3.
+              Upload a customer bank statement PDF above and click <span className="font-bold text-slate-600">Verify EVV</span> to calculate the Estimated Verified Value score and store the document in AWS S3.
             </p>
 
           </div>
@@ -648,10 +641,10 @@ export const EVVTestAgent: React.FC<{
                 <div className="flex flex-col items-center bg-violet-50/60 border border-violet-100/60 px-5 py-3 rounded-2xl min-w-[110px]">
                   <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Risk Profile</span>
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mt-2 border ${evvResult.overallRisk === "Low"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : evvResult.overallRisk === "Medium"
-                        ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : "border-rose-200 bg-rose-50 text-rose-700"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : evvResult.overallRisk === "Medium"
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-rose-200 bg-rose-50 text-rose-700"
                     }`}>
                     <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${evvResult.overallRisk === "Low" ? "bg-emerald-500" : evvResult.overallRisk === "Medium" ? "bg-amber-500" : "bg-rose-500"
                       }`} />
@@ -662,94 +655,202 @@ export const EVVTestAgent: React.FC<{
             </div>
           </div>
 
-          {/* Underwriting Indicators Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-white/60 border border-violet-100/60 rounded-2xl p-4">
-              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                Average Monthly Balance
+          {/* Side-by-side Layout: Left Side = Chart & Indicators, Right Side = EVV Monthly Breakdown Table */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Underwriting Indicators & SVG Trend Line Chart */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* Underwriting Indicators Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                <div className="bg-white/70 border border-violet-100/70 rounded-2xl p-4 shadow-sm">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Average Monthly Balance
+                  </div>
+                  <div className="text-base font-black text-slate-900">
+                    {displayCurrency(evvResult.overallAverageBalance)}
+                  </div>
+                </div>
+
+                <div className="bg-white/70 border border-violet-100/70 rounded-2xl p-4 shadow-sm">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Salary & Income Stability
+                  </div>
+                  <div className="text-base font-black text-slate-900">
+                    {evvResult.salaryStability}%
+                  </div>
+                </div>
+
+                <div className="bg-white/70 border border-violet-100/70 rounded-2xl p-4 shadow-sm">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Net Cash Flow
+                  </div>
+                  <div className={`text-base font-black ${evvResult.cashFlowStatus === "Positive" ? "text-emerald-600" : "text-rose-600"}`}>
+                    {evvResult.cashFlowStatus}
+                  </div>
+                </div>
+
+                <div className="bg-white/70 border border-violet-100/70 rounded-2xl p-4 shadow-sm">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Snapshot Interval
+                  </div>
+                  <div className="text-base font-black text-slate-900">
+                    {evvResult.snapshotInterval} Days
+                  </div>
+                </div>
+
+                <div className="bg-white/70 border border-violet-100/70 rounded-2xl p-4 shadow-sm">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Analysis Period
+                  </div>
+                  <div className="text-xs font-bold text-slate-700 leading-tight">
+                    {evvResult.totalMonths} Month{evvResult.totalMonths > 1 ? "s" : ""} ({evvResult.totalTransactions} txs)
+                  </div>
+                </div>
+
+                <div className="bg-white/70 border border-violet-100/70 rounded-2xl p-4 shadow-sm">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Document Storage
+                  </div>
+                  <div className="text-xs font-black text-indigo-600">
+                    AWS S3 Vault
+                  </div>
+                </div>
               </div>
-              <div className="text-base font-black text-slate-900">
-                {displayCurrency(evvResult.overallAverageBalance)}
-              </div>
+
+              {/* SVG Trend Line Chart */}
+              <EVVGradientAreaChart metrics={evvResult.monthlyMetrics} />
             </div>
 
-            <div className="bg-white/60 border border-violet-100/60 rounded-2xl p-4">
-              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                Salary & Income Stability
+            {/* Right Column: Monthly Breakdown Table & EVV Grade Benchmarks Scale */}
+            <div className="lg:col-span-5 bg-white/70 border border-violet-100/70 rounded-3xl p-5 shadow-sm space-y-5">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <span className="material-symbols-outlined text-violet-600 text-base">table_chart</span>
+                    Monthly EVV Table
+                  </h4>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono">
+                    {evvResult.totalMonths} Month{evvResult.totalMonths > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto border border-violet-100/70 rounded-2xl">
+                  <table className="w-full text-xs font-semibold text-slate-700">
+                    <thead>
+                      <tr className="border-b border-violet-100 bg-violet-50/40 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                        <th className="text-left px-3 py-3">Month</th>
+                        <th className="text-right px-3 py-3">Pts</th>
+                        <th className="text-right px-3 py-3">Avg Bal</th>
+                        <th className="text-right px-3 py-3">Min / Max</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-violet-50">
+                      {evvResult.monthlyMetrics.map((metric: MonthlyMetric, idx: number) => (
+                        <tr key={idx} className="hover:bg-violet-50/20 transition-all duration-150">
+                          <td className="px-3 py-3 text-slate-900 font-extrabold whitespace-nowrap">{metric.label}</td>
+                          <td className="px-3 py-3 text-right font-mono font-bold text-slate-500">{metric.points}</td>
+                          <td className="px-3 py-3 text-right font-extrabold text-slate-900 whitespace-nowrap">{displayCurrency(metric.avg)}</td>
+                          <td className="px-3 py-3 text-right text-slate-500 whitespace-nowrap text-[11px]">
+                            <div className="font-semibold text-slate-700">{displayCurrency(metric.min)}</div>
+                            <div className="text-[10px] text-slate-400">{displayCurrency(metric.max)}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="text-base font-black text-slate-900">
-                {evvResult.salaryStability}%
+
+              {/* EVV Grade & Risk Reference Scale */}
+              <div className="border-t border-violet-100/60 pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-violet-600 text-sm">workspace_premium</span>
+                    EVV Grade Scale & Benchmarks
+                  </h4>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Underwriting</span>
+                </div>
+
+                <div className="overflow-x-auto border border-violet-100/70 rounded-2xl bg-white/50">
+                  <table className="w-full text-xs font-semibold text-slate-700">
+                    <thead>
+                      <tr className="border-b border-violet-100 bg-violet-50/40 text-slate-400 text-[9px] font-black uppercase tracking-widest">
+                        <th className="text-left px-3 py-2">Grade</th>
+                        <th className="text-center px-2 py-2">Score</th>
+                        <th className="text-center px-2 py-2">Risk</th>
+                        <th className="text-left px-3 py-2">Assessment</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-violet-50 text-[10px]">
+                      <tr className={`transition-colors ${evvResult?.overallEVV >= 90 ? "bg-emerald-100/60 font-bold" : "hover:bg-violet-50/20"}`}>
+                        <td className="px-3 py-2 font-black text-emerald-700">
+                          <span className="px-1.5 py-0.5 bg-emerald-100 border border-emerald-200 rounded text-emerald-800 text-[10px]">A+</span>
+                        </td>
+                        <td className="px-2 py-2 text-center font-mono font-bold text-slate-800">90–100</td>
+                        <td className="px-2 py-2 text-center">
+                          <span className="px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded text-[8px] font-black uppercase">Low</span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-600 font-medium">Excellent liquidity & balance stability</td>
+                      </tr>
+
+                      <tr className={`transition-colors ${(evvResult?.overallEVV >= 80 && evvResult?.overallEVV < 90) ? "bg-emerald-100/60 font-bold" : "hover:bg-violet-50/20"}`}>
+                        <td className="px-3 py-2 font-black text-emerald-600">
+                          <span className="px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded text-emerald-700 text-[10px]">A</span>
+                        </td>
+                        <td className="px-2 py-2 text-center font-mono font-bold text-slate-800">80–89</td>
+                        <td className="px-2 py-2 text-center">
+                          <span className="px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded text-[8px] font-black uppercase">Low</span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-600 font-medium">Prime credit worthiness & high deposits</td>
+                      </tr>
+
+                      <tr className={`transition-colors ${(evvResult?.overallEVV >= 70 && evvResult?.overallEVV < 80) ? "bg-indigo-100/60 font-bold" : "hover:bg-violet-50/20"}`}>
+                        <td className="px-3 py-2 font-black text-indigo-600">
+                          <span className="px-1.5 py-0.5 bg-indigo-50 border border-indigo-200 rounded text-indigo-700 text-[10px]">B</span>
+                        </td>
+                        <td className="px-2 py-2 text-center font-mono font-bold text-slate-800">70–79</td>
+                        <td className="px-2 py-2 text-center">
+                          <span className="px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded text-[8px] font-black uppercase">Low/Med</span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-600 font-medium">Good liquidity, suitable for approval</td>
+                      </tr>
+
+                      <tr className={`transition-colors ${(evvResult?.overallEVV >= 55 && evvResult?.overallEVV < 70) ? "bg-amber-100/60 font-bold" : "hover:bg-violet-50/20"}`}>
+                        <td className="px-3 py-2 font-black text-amber-600">
+                          <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded text-amber-700 text-[10px]">C</span>
+                        </td>
+                        <td className="px-2 py-2 text-center font-mono font-bold text-slate-800">55–69</td>
+                        <td className="px-2 py-2 text-center">
+                          <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded text-[8px] font-black uppercase">Medium</span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-600 font-medium">Moderate balance variance; co-app recommended</td>
+                      </tr>
+
+                      <tr className={`transition-colors ${(evvResult?.overallEVV >= 40 && evvResult?.overallEVV < 55) ? "bg-rose-100/60 font-bold" : "hover:bg-violet-50/20"}`}>
+                        <td className="px-3 py-2 font-black text-rose-600">
+                          <span className="px-1.5 py-0.5 bg-rose-50 border border-rose-200 rounded text-rose-700 text-[10px]">D</span>
+                        </td>
+                        <td className="px-2 py-2 text-center font-mono font-bold text-slate-800">40–54</td>
+                        <td className="px-2 py-2 text-center">
+                          <span className="px-1.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[8px] font-black uppercase">High</span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-600 font-medium">High risk warning; fluctuating cash flows</td>
+                      </tr>
+
+                      <tr className={`transition-colors ${(evvResult && evvResult.overallEVV < 40) ? "bg-rose-200/60 font-bold" : "hover:bg-violet-50/20"}`}>
+                        <td className="px-3 py-2 font-black text-rose-700">
+                          <span className="px-1.5 py-0.5 bg-rose-100 border border-rose-300 rounded text-rose-800 text-[10px]">F</span>
+                        </td>
+                        <td className="px-2 py-2 text-center font-mono font-bold text-slate-800">0–39</td>
+                        <td className="px-2 py-2 text-center">
+                          <span className="px-1.5 py-0.5 bg-rose-100 border border-rose-300 text-rose-800 rounded text-[8px] font-black uppercase">Critical</span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-600 font-medium">Critical risk profile & statement anomalies</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-
-            <div className="bg-white/60 border border-violet-100/60 rounded-2xl p-4">
-              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                Net Cash Flow
-              </div>
-              <div className={`text-base font-black ${evvResult.cashFlowStatus === "Positive" ? "text-emerald-600" : "text-rose-600"}`}>
-                {evvResult.cashFlowStatus}
-              </div>
-            </div>
-
-            <div className="bg-white/60 border border-violet-100/60 rounded-2xl p-4">
-              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                Snapshot Interval
-              </div>
-              <div className="text-base font-black text-slate-900">
-                {evvResult.snapshotInterval} Days
-              </div>
-            </div>
-
-            <div className="bg-white/60 border border-violet-100/60 rounded-2xl p-4">
-              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                Analysis Period
-              </div>
-              <div className="text-xs font-bold text-slate-700 leading-tight">
-                {evvResult.totalMonths} Month{evvResult.totalMonths > 1 ? "s" : ""} ({evvResult.totalTransactions} txs)
-              </div>
-            </div>
-
-            <div className="bg-white/60 border border-violet-100/60 rounded-2xl p-4">
-              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                Document Storage
-              </div>
-              <div className="text-xs font-black text-indigo-600">
-                AWS S3 Vault
-              </div>
-            </div>
-          </div>
-
-          {/* SVG Trend Line Chart */}
-          <EVVGradientAreaChart metrics={evvResult.monthlyMetrics} />
-
-          {/* Monthly Metrics Table */}
-          <div className="overflow-x-auto border border-violet-100 rounded-3xl bg-white/60 backdrop-blur-md">
-            <table className="w-full text-xs font-semibold text-slate-700 min-w-[850px]">
-              <thead>
-                <tr className="border-b border-violet-100 bg-violet-50/30 text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                  <th className="text-left px-4 py-3.5">Month</th>
-                  <th className="text-right px-4 py-3.5">Points</th>
-                  <th className="text-right px-4 py-3.5">Avg Balance</th>
-                  <th className="text-right px-4 py-3.5">Min Balance</th>
-                  <th className="text-right px-4 py-3.5">Max Balance</th>
-                  <th className="text-right px-4 py-3.5">Low Bal Days</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-violet-50">
-                {evvResult.monthlyMetrics.map((metric: MonthlyMetric, idx: number) => (
-                  <tr key={idx} className="hover:bg-violet-50/20 transition-all duration-150">
-                    <td className="px-4 py-3.5 text-slate-900 font-extrabold">{metric.label}</td>
-                    <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-500">{metric.points}</td>
-                    <td className="px-4 py-3.5 text-right font-bold text-slate-900">{displayCurrency(metric.avg)}</td>
-                    <td className="px-4 py-3.5 text-right text-slate-500">{displayCurrency(metric.min)}</td>
-                    <td className="px-4 py-3.5 text-right text-slate-500">{displayCurrency(metric.max)}</td>
-                    <td className={`px-4 py-3.5 text-right font-mono font-bold ${metric.lowBalanceDays > 0 ? "text-amber-600" : "text-slate-400"}`}>
-                      {metric.lowBalanceDays}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       )}

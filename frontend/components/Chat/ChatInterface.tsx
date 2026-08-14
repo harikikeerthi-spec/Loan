@@ -45,6 +45,14 @@ function formatSidebarDate(dateStr: string) {
     }
 }
 
+function getMetadata(c: any): any {
+    if (!c || !c.metadata) return {};
+    if (typeof c.metadata === 'string') {
+        try { return JSON.parse(c.metadata); } catch { return {}; }
+    }
+    return typeof c.metadata === 'object' ? c.metadata : {};
+}
+
 function parseAttachmentMessage(content: string) {
     if (!content) return { fileName: 'Attachment', textContent: '' };
     const newlineIndex = content.indexOf('\n');
@@ -267,6 +275,7 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const activeConversationRef = useRef<string | null>(null);
     const hasStartedInitialStudent = useRef(false);
+    const hasStartedInitialBank = useRef<string | null>(null);
 
     // Sync ref with state
     useEffect(() => {
@@ -597,9 +606,11 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
 
     // Handle active conversation change
     useEffect(() => {
-        if (socket && activeConversation) {
-            socket.emit('join_conversation', activeConversation);
-            socket.emit('mark_read', { conversationId: activeConversation });
+        if (activeConversation && token) {
+            if (socket) {
+                socket.emit('join_conversation', activeConversation);
+                socket.emit('mark_read', { conversationId: activeConversation });
+            }
 
             setConversations(prev => prev.map(c =>
                 c.id === activeConversation ? { ...c, unreadCount: 0 } : c
@@ -615,7 +626,9 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                 }).catch(e => console.error("Could not load messages."));
 
             return () => {
-                socket.emit('leave_conversation', activeConversation);
+                if (socket) {
+                    socket.emit('leave_conversation', activeConversation);
+                }
             };
         }
     }, [socket, activeConversation, token]);
@@ -855,16 +868,31 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
             console.warn("Agents are not allowed to chat with banks directly.");
             return;
         }
-        try {
+        const doFetch = async (retried = false): Promise<any> => {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            };
+            // Try to include CSRF token if available
+            try {
+                const csrfRes = await fetch('/api/csrf-token');
+                const csrfData = await csrfRes.json();
+                if (csrfData?.csrfToken) headers['X-CSRF-Token'] = csrfData.csrfToken;
+            } catch {}
+
             const res = await fetch(HttpApiPaths.chat.bankStart(), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
+                headers,
                 body: JSON.stringify(bankInfo)
             });
-            const data = await res.json();
+            if (res.status === 403 && !retried) {
+                console.warn("bank-start got 403, retrying with fresh CSRF token...");
+                return doFetch(true);
+            }
+            return res.json();
+        };
+        try {
+            const data = await doFetch();
             if (data.success && data.conversation) {
                 setSidebarTab('chats');
                 setChatTypeFilter('bank');
@@ -878,6 +906,8 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
                     return [data.conversation, ...prev];
                 });
                 setActiveConversation(data.conversation.id);
+            } else {
+                console.error("startBankChat response not successful:", data);
             }
         } catch (e) {
             console.error("Failed to start bank chat", e);
@@ -893,7 +923,8 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
 
     // Handle initialBank from props
     useEffect(() => {
-        if (initialBank && token && role !== 'agent') {
+        if (initialBank && token && role !== 'agent' && hasStartedInitialBank.current !== `${initialBank.bankName}_${initialBank.applicationId}`) {
+            hasStartedInitialBank.current = `${initialBank.bankName}_${initialBank.applicationId}`;
             startBankChat(initialBank);
         }
     }, [initialBank?.applicationId, initialBank?.bankName, token, role]);
@@ -903,10 +934,14 @@ export default function ChatInterface({ role, initialUser, initialBank, initialC
         const appId = initialBank?.applicationId || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('applicationId') : null);
         if (!appId || conversations.length === 0) return;
 
-        const match = conversations.find(c => c.metadata?.applicationId === appId || c.id === appId);
+        const match = conversations.find(c => {
+            const meta = getMetadata(c);
+            return meta.applicationId === appId || c.id === appId;
+        });
         if (match && activeConversation !== match.id) {
             setSidebarTab('chats');
-            if (match.metadata?.type === 'bank') setChatTypeFilter('bank');
+            const meta = getMetadata(match);
+            if (meta.type === 'bank') setChatTypeFilter('bank');
             setActiveConversation(match.id);
         }
     }, [conversations, initialBank?.applicationId, activeConversation]);

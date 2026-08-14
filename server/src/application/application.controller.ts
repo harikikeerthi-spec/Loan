@@ -799,12 +799,14 @@ export class ApplicationController {
     @Post(':id/upload-statement')
     @UseGuards(StaffGuard)
     @UseInterceptors(FileInterceptor('file', {
-        limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit
+        limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
         fileFilter: (req, file, cb) => {
-            if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
+            const mimeMatch = !file.mimetype || file.mimetype.match(/\/(jpg|jpeg|png|pdf|octet-stream|x-pdf|document)$/i);
+            const extMatch = !file.originalname || file.originalname.match(/\.(jpg|jpeg|png|pdf)$/i);
+            if (mimeMatch || extMatch) {
                 cb(null, true);
             } else {
-                cb(new BadRequestException('Unsupported file type. Allowed: jpg, jpeg, png, pdf'), false);
+                cb(new BadRequestException('Unsupported file type. Allowed: JPG, JPEG, PNG, PDF'), false);
             }
         }
     }))
@@ -816,8 +818,8 @@ export class ApplicationController {
         if (!file) {
             throw new BadRequestException('File is required');
         }
-        const adminId = req.user.id;
-        const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+        const adminId = req.user?.id || 'staff';
+        const adminName = `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || req.user?.email || 'Staff User';
         return this.applicationService.processBankStatementEvv(applicationId, file, adminId, adminName);
     }
 

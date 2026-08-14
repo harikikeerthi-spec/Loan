@@ -601,49 +601,91 @@ export function canonicalizeOcrFields(
             raw.passport_number,
             raw.passportNumber,
             raw.document_number,
+            raw.passport_no,
+            raw.passportNo,
+            raw.passport_num,
+            raw.passportNum,
             mrzData.passport_number,
         );
         if (passportNum) out.passport_number = String(passportNum).trim();
 
-        const given = pickFirst(
+        let given = pickFirst(
             raw.given_names,
             raw.given_name,
+            raw.givenNames,
+            raw.givenName,
             raw.first_name,
             raw.firstName,
             mrzData.given_names,
         ) as string | undefined;
-        if (given) out.given_names = String(given).trim();
 
-        const sur = pickFirst(
+        let sur = pickFirst(
             raw.surname,
+            raw.sur_name,
             raw.last_name,
             raw.lastName,
+            raw.familyName,
             mrzData.surname,
         ) as string | undefined;
+
+        const fullNameRaw = pickFirst(
+            raw.full_name,
+            raw.fullName,
+            raw.name,
+            mrzData.full_name,
+        ) as string | undefined;
+
+        if (!given && !sur && fullNameRaw) {
+            const parts = String(fullNameRaw).trim().split(/\s+/);
+            if (parts.length > 1) {
+                given = parts.slice(0, -1).join(' ');
+                sur = parts[parts.length - 1];
+            } else if (parts.length === 1) {
+                given = parts[0];
+            }
+        }
+
+        if (given) out.given_names = String(given).trim();
         if (sur) out.surname = String(sur).trim();
+
+        if (fullNameRaw) {
+            out.full_name = String(fullNameRaw).trim();
+        } else if (out.given_names || out.surname) {
+            out.full_name = `${out.given_names || ''} ${out.surname || ''}`.trim();
+        }
 
         const nationality = pickFirst(raw.nationality, raw.citizenship);
         if (nationality) out.nationality = String(nationality).trim();
 
-        const issueDate = pickFirst(raw.date_of_issue, raw.issue_date, raw.issueDate);
+        const issueDate = pickFirst(
+            raw.date_of_issue,
+            raw.issue_date,
+            raw.issueDate,
+            raw.dateOfIssue,
+        );
         if (issueDate) out.date_of_issue = normalizeDobValue(String(issueDate).trim());
 
         const expiry = pickFirst(
             raw.date_of_expiry,
             raw.expiry_date,
             raw.expiryDate,
+            raw.dateOfExpiry,
             mrzData.date_of_expiry,
         );
         if (expiry) out.date_of_expiry = normalizeDobValue(String(expiry).trim());
 
         const dob = pickFirst(
-            out.dob,
+            raw.dob,
+            raw.date_of_birth,
+            raw.birth_date,
+            raw.dateOfBirth,
+            raw.birthDate,
             mrzData.dob,
         );
         if (dob) out.dob = normalizeDobValue(String(dob).trim());
 
         const gender = normalizeGender(
-            pickFirst(out.gender, mrzData.gender) as string | undefined,
+            pickFirst(raw.gender, raw.sex, mrzData.gender) as string | undefined,
         );
         if (gender) out.gender = gender;
 
@@ -657,8 +699,11 @@ export function canonicalizeOcrFields(
 
         const poi = pickFirst(
             raw.place_of_issue,
+            raw.placeOfIssue,
             raw.issue_place,
+            raw.issuePlace,
             raw.issuing_authority,
+            raw.issuingAuthority,
         );
         if (poi) out.place_of_issue = String(poi).trim();
 
@@ -674,7 +719,7 @@ export function canonicalizeOcrFields(
             out.birth_country = normalizeCountryName(String(birthCountry));
         }
 
-        const pob = pickFirst(raw.place_of_birth, raw.birth_place, raw.placeOfBirth);
+        const pob = pickFirst(raw.place_of_birth, raw.birth_place, raw.placeOfBirth, raw.birthPlace);
         if (pob) {
             out.place_of_birth = String(pob).trim();
             if (!out.birth_city || !out.birth_country) {
@@ -701,6 +746,7 @@ export function canonicalizeOcrFields(
             raw.guardian_name,
             raw.legal_guardian_name,
             raw.name_of_father,
+            raw.father_given_name,
         );
         if (father) out.father_name = dedupeOcrFullName(String(father));
 
@@ -710,6 +756,7 @@ export function canonicalizeOcrFields(
             raw.mother_full_name,
             raw.motherFullName,
             raw.name_of_mother,
+            raw.mother_given_name,
         );
         if (mother) out.mother_name = dedupeOcrFullName(String(mother));
 
@@ -749,30 +796,10 @@ export function canonicalizeOcrFields(
     return out;
 }
 
-/** Mask sensitive ID numbers for database persistence only. */
+/** Retain full unmasked ID numbers (Passport, Aadhaar, PAN) for database persistence and staff display. */
 export function maskSensitiveIds(
     data: Record<string, any>,
     docType: string,
 ): Record<string, any> {
-    const masked = { ...data };
-    const kind = normalizeDocTypeKey(docType);
-
-    if (kind === 'aadhaar' && masked.aadhaar_number) {
-        const clean = String(masked.aadhaar_number).replace(/\D/g, '');
-        if (clean.length === 12) {
-            masked.aadhaar_number = `XXXX XXXX ${clean.slice(-4)}`;
-        }
-    } else if (kind === 'pan' && masked.pan_number) {
-        const clean = String(masked.pan_number).trim().toUpperCase();
-        if (clean.length === 10) {
-            masked.pan_number = `${clean.slice(0, 3)}XX${clean.slice(5, 9)}X`;
-        }
-    } else if (kind === 'passport' && masked.passport_number) {
-        const clean = String(masked.passport_number).trim();
-        if (clean.length >= 2) {
-            masked.passport_number = `${clean[0]}${'X'.repeat(Math.max(clean.length - 2, 5))}${clean.slice(-1)}`;
-        }
-    }
-
-    return masked;
+    return { ...data };
 }

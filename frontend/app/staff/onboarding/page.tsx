@@ -98,6 +98,8 @@ const getApplicationDisplayProgress = (app: ApplicationProgressFields): number =
         stage === "submit_to_bank" ||
         stage === "bank_submission" ||
         status === "submitted_to_bank" ||
+        status === "documents_verified" ||
+        status === "docs_verified" ||
         status === "file_logged"
     ) {
         return Math.max(app.progress ?? 0, 50);

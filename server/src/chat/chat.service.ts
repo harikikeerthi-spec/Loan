@@ -254,8 +254,14 @@ export class ChatService {
               }).length;
           }
 
+          let meta = conv.metadata;
+          if (typeof meta === 'string') {
+              try { meta = JSON.parse(meta); } catch {}
+          }
+
           return {
               ...conv,
+              metadata: meta || {},
               lastMessage: sortedMessages[0] || null,
               unreadCount
           };

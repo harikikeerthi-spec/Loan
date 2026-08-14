@@ -2055,11 +2055,17 @@ export class UsersService implements OnModuleInit {
         .select('*')
         .eq('userId', userId);
 
-      const uploadedDocs = (userDocs || []).filter(
-        (d: any) => d.uploaded || d.status === 'uploaded' || d.status === 'verified'
+      const docsList = userDocs || [];
+      const uploadedDocs = docsList.filter(
+        (d: any) => d.uploaded || d.status === 'uploaded' || d.status === 'verified' || d.status === 'approved'
       );
+      const verifiedDocs = docsList.filter(
+        (d: any) => d.status === 'verified' || d.status === 'approved'
+      );
+
       const uploadedCount = uploadedDocs.length;
-      if (uploadedCount === 0) return;
+      const verifiedCount = verifiedDocs.length;
+      if (uploadedCount === 0 && verifiedCount === 0) return;
 
       const { data: apps } = await this.db
         .from('LoanApplication')
@@ -2068,34 +2074,46 @@ export class UsersService implements OnModuleInit {
 
       if (!apps || apps.length === 0) return;
 
-      // Calculate progress target: 25% baseline + up to 25% for document completeness
-      const targetProgress = uploadedCount >= 3 ? 50 : Math.min(50, 25 + Math.round((uploadedCount / 3) * 25));
+      // Check if all uploaded documents are verified by staff or at least 3 verified
+      const allVerified = uploadedCount > 0 && verifiedCount >= uploadedCount;
+      const isVerifiedComplete = allVerified || verifiedCount >= 3;
 
       for (const app of apps) {
         const status = String(app.status || '').toLowerCase();
+        const currentStage = String(app.stage || '').toLowerCase();
+        const currentProgress = typeof app.progress === 'number' ? app.progress : 0;
 
-        // Only auto-advance applications that are still in early stages
-        if (
-          ['submitted', 'application_submitted', 'created', 'application_created', 'pending', 'draft', 'docs_received', 'docs_uploaded', 'under_review'].includes(status) ||
-          (typeof app.progress === 'number' && app.progress < targetProgress)
-        ) {
-          const isFullUpload = uploadedCount >= 3 || targetProgress >= 50;
-          const updatePayload: any = {
-            progress: Math.max(app.progress || 0, targetProgress),
-            updatedAt: new Date().toISOString(),
-          };
+        if (isVerifiedComplete) {
+          // All documents verified by staff! Advance stage to submit_to_bank (50%)
+          if (
+            currentProgress < 50 ||
+            ['document_verification', 'application_submitted', 'application_created', 'created', 'docs_received', 'docs_uploaded'].includes(currentStage) ||
+            ['submitted', 'application_submitted', 'created', 'docs_received', 'docs_uploaded'].includes(status)
+          ) {
+            const updatePayload: any = {
+              progress: Math.max(currentProgress, 50),
+              stage: 'submit_to_bank',
+              status: 'documents_verified',
+              updatedAt: new Date().toISOString(),
+            };
 
-          if (isFullUpload) {
-            updatePayload.stage = 'document_verification';
-            if (!['staff_verified', 'submitted_to_bank', 'under_bank_review', 'sanctioned', 'disbursed'].includes(status)) {
-              updatePayload.status = 'documents_verified';
-            }
-          } else if (!app.stage || app.stage === 'application_created' || app.stage === 'application_submitted') {
-            updatePayload.stage = 'document_verification';
+            console.log(`[DOCS SYNC] All documents verified for user ${userId}. Advancing app ${app.id} to submit_to_bank (50%)`);
+            await this.db.from('LoanApplication').update(updatePayload).eq('id', app.id);
           }
-
-          console.log(`[DOCS SYNC] Updating application ${app.id} progress to ${updatePayload.progress}% (stage: ${updatePayload.stage || app.stage}, status: ${updatePayload.status || app.status})`);
-          await this.db.from('LoanApplication').update(updatePayload).eq('id', app.id);
+        } else if (uploadedCount > 0) {
+          // Documents uploaded but not all verified yet
+          if (
+            currentProgress < 40 &&
+            ['submitted', 'application_submitted', 'created', 'application_created', 'pending', 'draft'].includes(status)
+          ) {
+            const updatePayload: any = {
+              progress: Math.max(currentProgress, 40),
+              stage: 'document_verification',
+              updatedAt: new Date().toISOString(),
+            };
+            console.log(`[DOCS SYNC] Documents uploaded for user ${userId}. Updating app ${app.id} to document_verification (40%)`);
+            await this.db.from('LoanApplication').update(updatePayload).eq('id', app.id);
+          }
         }
       }
     } catch (err: any) {
@@ -2184,6 +2202,15 @@ export class UsersService implements OnModuleInit {
         }
       } catch (err: any) {
         console.error(`[UsersService.updateDocumentStatus] Error in auto-updating extracted details:`, err.message);
+      }
+    }
+
+    // Immediately sync application stage and progress when document status changes
+    if (data && data.userId) {
+      try {
+        await this.syncApplicationProgressWithDocuments(data.userId);
+      } catch (err: any) {
+        console.error(`[UsersService.updateDocumentStatus] Error syncing application progress:`, err.message);
       }
     }
 

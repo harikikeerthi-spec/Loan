@@ -376,29 +376,26 @@ export class EvvEngineService {
     const base64Data = fileBuffer.toString('base64');
     const dataUrl = `data:${mimetype};base64,${base64Data}`;
 
-    const prompt = `You are a bank statement OCR parser for Indian banks. Extract ALL transactions from this bank statement.
+    const prompt = `You are a specialized AI Bank Statement Underwriting Assistant powered by ChatGPT / OpenAI.
 
-For each transaction row, output a JSON object with these exact fields:
+FIRST: Document Verification
+Determine if this document is a genuine Bank Statement (bank passbook, e-statement, or transaction ledger).
+If it is NOT a bank statement (e.g. it is a Passport, Aadhaar card, Marks Sheet, Resume, Invoice, or unrelated file), set "isBankStatement": false, set "docTypeDetected" to the detected type (e.g. "Passport"), and set "error": "Uploaded document is not a valid Bank Statement".
+
+SECOND: Transaction & Metadata Extraction (for valid bank statements)
+Extract ALL transaction rows with:
 - date: string "YYYY-MM-DD"
 - narration: string (full transaction description)
-- debit: number (0 if it's a credit)
-- credit: number (0 if it's a debit)
+- debit: number (0 if credit)
+- credit: number (0 if debit)
 - balance: number (running balance after transaction)
-- referenceNumber: string or "" (cheque no / ref no if visible)
-- channel: string (one of: UPI, NEFT, RTGS, IMPS, CHEQUE, CASH, ATM, ONLINE) — infer from narration
+- referenceNumber: string or ""
+- channel: string (one of: UPI, NEFT, RTGS, IMPS, CHEQUE, CASH, ATM, ONLINE)
 
-Also extract statement metadata:
-- openingBalance: number
-- closingBalance: number
-- accountNumber: string or ""
-- accountHolder: string or ""
-- ifsc: string or ""
-- bankName: string or ""
-- statementFrom: "YYYY-MM-DD" or ""
-- statementTo: "YYYY-MM-DD" or ""
-
-Respond ONLY with this exact JSON structure, no markdown, no explanation:
+Respond ONLY with this exact JSON structure:
 {
+  "isBankStatement": true,
+  "docTypeDetected": "Bank Statement",
   "metadata": {
     "openingBalance": 0,
     "closingBalance": 0,
@@ -419,18 +416,17 @@ Respond ONLY with this exact JSON structure, no markdown, no explanation:
       "referenceNumber": "",
       "channel": "ONLINE"
     }
-  ]
-}
-
-If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
+  ],
+  "error": ""
+}`;
 
     try {
       const responseStr = await this.openRouter.chatWithVision(
         prompt,
         dataUrl,
-        'google/gemini-2.5-flash',
+        'openai/gpt-4o-mini',
       );
-      this.logger.log(`[EVV] OpenRouter response (first 400 chars): ${responseStr.slice(0, 400)}`);
+      this.logger.log(`[EVV] ChatGPT Vision AI response (first 400 chars): ${responseStr.slice(0, 400)}`);
 
       // Strip markdown fences
       let cleaned = responseStr.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -454,6 +450,13 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
         throw parseErr;
       }
 
+      // Check document type verification result
+      if (parsed.isBankStatement === false) {
+        const detectedType = parsed.docTypeDetected || 'non-bank document';
+        this.logger.warn(`[EVV Document Verification] Uploaded file is NOT a bank statement (Detected: ${detectedType})`);
+        throw new Error(`Uploaded document is not a valid Bank Statement (Detected: ${detectedType}). Please upload a customer bank statement PDF.`);
+      }
+
       if (parsed.error && (!parsed.transactions || parsed.transactions.length === 0)) {
         this.logger.warn(`[EVV] AI reported error: ${parsed.error}`);
         return [];
@@ -462,7 +465,7 @@ If the PDF is unreadable: {"metadata":{},"transactions":[],"error":"reason"}`;
       const rawTxs: any[] = Array.isArray(parsed.transactions) ? parsed.transactions : [];
       return rawTxs.map((tx: any) => this.normaliseTransaction(tx));
     } catch (err: any) {
-      this.logger.error(`[EVV] Extraction failed: ${err.message}`);
+      this.logger.error(`[EVV] ChatGPT AI extraction failed: ${err.message}`);
       throw err;
     }
   }
