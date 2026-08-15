@@ -109,8 +109,19 @@ export default function ProgressTracker({
         return stageKey;
     }, [application, calculatedProgress]);
 
+    const statusLower = application?.status?.toLowerCase() || '';
+    const isSanctionedOrApproved = ['sanctioned', 'approved', 'sanction', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'sanction_issued'].includes(statusLower) || application?.stage === 'sanction' || application?.stage === 'sanctioned';
+    const isDisbursedOrClosed = ['disbursed', 'disbursement_confirmed', 'closed'].includes(statusLower) || application?.stage === 'disbursement' || application?.stage === 'disbursed';
+
     const isRejected = application?.status === 'rejected' || application?.status === 'cancelled';
     const currentStage = currentStageKey ? STAGES_CONFIG[currentStageKey] : null;
+    const currentStageId = currentStageKey || '';
+
+    const maxCompletedOrder = isDisbursedOrClosed
+        ? 8
+        : isSanctionedOrApproved
+            ? 7
+            : (currentStage ? (currentStageId === 'disbursement' && calculatedProgress >= 100 ? 8 : currentStage.order - 1) : 0);
 
     if (!application) {
         return (
@@ -152,26 +163,39 @@ export default function ProgressTracker({
                     </span>
                     Application Progress
                 </h3>
-                <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                    {calculatedProgress}% Complete
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
+                    isDisbursedOrClosed || isSanctionedOrApproved
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                        : 'bg-emerald-50 text-emerald-700'
+                }`}>
+                    <span className="material-symbols-outlined text-xs">
+                        {isDisbursedOrClosed ? 'payments' : isSanctionedOrApproved ? 'verified' : 'rocket_launch'}
+                    </span>
+                    {isDisbursedOrClosed ? '100% Disbursed' : isSanctionedOrApproved ? 'Sanctioned & Approved' : `${calculatedProgress}% Complete`}
                 </div>
             </div>
 
             {/* Timeline */}
-            <div className="relative px-2 mb-16">
+            <div className="relative px-2 mb-16 select-none">
                 {/* Background Line */}
                 <div className="absolute top-5 left-0 right-0 h-[2px] bg-gray-100 rounded-full mx-6" />
 
                 {/* Active Progress Line */}
                 <div
-                    className="absolute top-5 left-0 h-[3px] bg-[#6605c7] rounded-full mx-6 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(102,5,199,0.3)]"
+                    className={`absolute top-5 left-0 h-[3px] rounded-full mx-6 transition-all duration-1000 ease-out ${
+                        isDisbursedOrClosed || isSanctionedOrApproved
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                            : 'bg-[#6605c7] shadow-[0_0_10px_rgba(102,5,199,0.3)]'
+                    }`}
                     style={{ width: `calc(${calculatedProgress}% - 48px)` }}
                 />
 
                 <div className="relative flex justify-between">
                     {STAGES_LIST.map((stage) => {
-                        const isCompleted = currentStage && stage.order < currentStage.order;
-                        const isCurrent = currentStage && stage.id === currentStageKey;
+                        const isCompleted = stage.order <= maxCompletedOrder;
+                        const isCurrent = !isCompleted && currentStage && (
+                            isSanctionedOrApproved ? stage.id === 'disbursement' : stage.id === currentStageKey
+                        );
 
                         return (
                             <div key={stage.id} className="flex flex-col items-center group relative" style={{ width: '40px' }}>

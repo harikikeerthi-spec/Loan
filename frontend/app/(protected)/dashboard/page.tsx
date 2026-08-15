@@ -82,24 +82,25 @@ const STAGES_LIST = Object.entries(STAGES_CONFIG)
 
 function ApplicationProgressCollapse({ app }: { app: any }) {
     const isRejected = app.status?.toLowerCase() === 'rejected' || app.status?.toLowerCase() === 'cancelled';
+    const statusLower = app.status?.toLowerCase() || '';
+    const isSanctionedOrApproved = ['sanctioned', 'approved', 'sanction', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'sanction_issued'].includes(statusLower) || app.stage === 'sanction' || app.stage === 'sanctioned';
+    const isDisbursedOrClosed = ['disbursed', 'disbursement_confirmed', 'closed'].includes(statusLower) || app.stage === 'disbursement' || app.stage === 'disbursed';
 
     const currentStageKey = (() => {
         if (!app) return null;
         if (app.status?.toLowerCase() === 'rejected' || app.status?.toLowerCase() === 'cancelled') return null;
 
         let stageKey = app.stage;
-        if (!stageKey || !STAGES_CONFIG[stageKey]) {
-            // Infer stage from status
-            const status = app.status?.toLowerCase() || '';
-            if (status.includes('approve') || status.includes('sanction')) return 'sanction';
-            if (status.includes('disburse')) return 'disbursement';
-            if (status.includes('process') || status.includes('review')) return 'bank_review';
-            if (status.includes('submit_to_bank') || status.includes('submitted_to_bank')) return 'submit_to_bank';
-            if (status === 'submitted') return 'application_submitted';
-            if (status.includes('document')) return 'document_verification';
-            if (status.includes('credit')) return 'credit_check';
+        const status = app.status?.toLowerCase() || '';
+        if (['sanctioned', 'approved', 'sanction', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'sanction_issued'].includes(status)) return 'sanction';
+        if (['disbursed', 'disbursement_confirmed', 'closed'].includes(status)) return 'disbursement';
+        if (status.includes('process') || status.includes('review') || status === 'under_bank_review') return 'bank_review';
+        if (status.includes('submit_to_bank') || status.includes('submitted_to_bank') || status === 'file_logged') return 'submit_to_bank';
+        if (status === 'submitted' || status === 'application_submitted') return 'application_submitted';
+        if (status.includes('document') || status.includes('verification')) return 'document_verification';
+        if (status.includes('credit')) return 'credit_check';
 
-            // Fallback: infer from progress if available
+        if (!stageKey || !STAGES_CONFIG[stageKey]) {
             if (app.progress >= 100) return 'disbursement';
             if (app.progress >= 95) return 'sanction';
             if (app.progress >= 90) return 'bank_review';
@@ -114,14 +115,18 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
     })();
 
     const currentStage = currentStageKey ? STAGES_CONFIG[currentStageKey] : null;
-    const currentProgress = currentStage?.progress || 10;
+    const currentProgress = getDynamicProgress(app, [], null);
+
+    const maxCompletedOrder = isDisbursedOrClosed
+        ? 8
+        : isSanctionedOrApproved
+            ? 7
+            : (currentStage ? (currentStageKey === 'disbursement' && currentProgress >= 100 ? 8 : currentStage.order - 1) : 0);
 
     const appCreatedAt = app.createdAt || app.created_at || app.submittedAt || app.submitted_at || app.date;
     const appUpdatedAt = app.updatedAt || app.updated_at || appCreatedAt;
 
-    const completedThresholds = [1, 2, 3, 4, 5, 6, 7, 8];
-    const currentOrder = currentStage?.order || 1;
-    const lastCompletedIdx = completedThresholds.reduce((acc, val, i) => currentOrder >= val ? i : acc, -1);
+    const lastCompletedIdx = maxCompletedOrder - 1;
 
     const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
         if (!completed && !active) return undefined;
@@ -210,8 +215,15 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                     Application Progress
                 </h3>
                 <div className="flex items-center gap-3">
-                    <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                        {currentProgress}% Complete
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
+                        isDisbursedOrClosed || isSanctionedOrApproved
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                            : 'bg-emerald-50 text-emerald-700'
+                    }`}>
+                        <span className="material-symbols-outlined text-xs">
+                            {isDisbursedOrClosed ? 'payments' : isSanctionedOrApproved ? 'verified' : 'rocket_launch'}
+                        </span>
+                        {isDisbursedOrClosed ? '100% Disbursed' : isSanctionedOrApproved ? 'Sanctioned & Approved' : `${currentProgress}% Complete`}
                     </div>
                 </div>
             </div>
@@ -223,15 +235,21 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
 
                 {/* Active Progress Line */}
                 <div
-                    className="absolute top-5 left-0 h-[3px] bg-[#6605c7] rounded-full mx-6 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(102,5,199,0.3)]"
+                    className={`absolute top-5 left-0 h-[3px] rounded-full mx-6 transition-all duration-1000 ease-out ${
+                        isDisbursedOrClosed || isSanctionedOrApproved
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                            : 'bg-[#6605c7] shadow-[0_0_10px_rgba(102,5,199,0.3)]'
+                    }`}
                     style={{ width: `calc(${currentProgress}% - 48px)` }}
                 />
 
                 <div className="relative flex justify-between">
                     {STAGES_LIST.map((stage) => {
-                        const isCompleted = !!(currentStage && stage.order < currentStage.order);
-                        const isCurrent = !!(currentStage && stage.id === currentStageKey);
-                        const stageTimestamp = getStageTimestamp(stage.order - 1, isCompleted, isCurrent);
+                        const isCompleted = stage.order <= maxCompletedOrder;
+                        const isCurrent = !isCompleted && currentStage && (
+                            isSanctionedOrApproved ? stage.id === 'disbursement' : stage.id === currentStageKey
+                        );
+                        const stageTimestamp = getStageTimestamp(stage.order - 1, isCompleted, Boolean(isCurrent));
                         const stageTimestampFormatted = formatToIST(stageTimestamp);
 
                         return (
@@ -1114,11 +1132,17 @@ export default function DashboardPage() {
                                                 pending: "bg-amber-100 text-amber-700",
                                                 submitted: "bg-blue-100 text-blue-700",
                                                 processing: "bg-indigo-100 text-indigo-700",
-                                                approved: "bg-emerald-100 text-emerald-700",
+                                                approved: "bg-emerald-100 text-emerald-700 font-extrabold",
+                                                sanctioned: "bg-emerald-100 text-emerald-700 font-extrabold",
+                                                conditional_sanction: "bg-emerald-100 text-emerald-700 font-extrabold",
+                                                partial_sanction: "bg-emerald-100 text-emerald-700 font-extrabold",
+                                                counter_offer: "bg-emerald-100 text-emerald-700 font-extrabold",
                                                 rejected: "bg-red-100 text-red-600",
-                                                disbursed: "bg-purple-100 text-purple-700",
+                                                disbursed: "bg-emerald-100 text-emerald-700 font-extrabold",
+                                                disbursement_confirmed: "bg-emerald-100 text-emerald-700 font-extrabold",
                                             };
                                             const sc = statusColors[app.status] || "bg-gray-100 text-gray-600";
+                                            const isSanctionedOrDisbursed = ['approved', 'sanctioned', 'sanction', 'disbursed', 'disbursement_confirmed', 'closed'].includes(app.status?.toLowerCase() || '');
                                             return (
                                                 <div key={app.id} className="bg-white rounded-xl p-4 border border-gray-100 hover:border-[#6605c7]/15 transition-all">
                                                     <div className="flex items-center justify-between mb-2">
@@ -1153,11 +1177,17 @@ export default function DashboardPage() {
                                                     <div className="flex items-center gap-3 mt-2">
                                                         <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                                                             <div
-                                                                className="bg-gradient-to-r from-[#6605c7] to-purple-400 h-1.5 rounded-full transition-all duration-700"
+                                                                className={`h-1.5 rounded-full transition-all duration-700 ${
+                                                                    isSanctionedOrDisbursed
+                                                                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                                                                        : 'bg-gradient-to-r from-[#6605c7] to-purple-400'
+                                                                }`}
                                                                 style={{ width: `${getDynamicProgress(app, data.documents, data.profile)}%` }}
                                                             />
                                                         </div>
-                                                        <span className="text-[10px] font-bold text-[#6605c7] whitespace-nowrap">{getDynamicProgress(app, data.documents, data.profile)}%</span>
+                                                        <span className={`text-[10px] font-bold whitespace-nowrap ${
+                                                            isSanctionedOrDisbursed ? 'text-emerald-600' : 'text-[#6605c7]'
+                                                        }`}>{getDynamicProgress(app, data.documents, data.profile)}%</span>
                                                     </div>
 
                                                     {/* Overview Staff Details */}

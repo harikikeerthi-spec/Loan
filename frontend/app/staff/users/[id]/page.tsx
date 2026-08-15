@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { adminApi, authApi, documentApi } from "@/lib/api";
+import { parseNumberFromWords } from "@/lib/academic-ocr";
 
 // Premium 3D Interactive Card Component
 function TiltCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -130,6 +131,7 @@ export default function ProfileTab() {
         passportExpiryDate: "",
         passportIssueCountry: "India",
         passportBirthCity: "",
+        passportBirthCountry: "India",
         fatherName: "",
         fatherAadhar: "",
         fatherPan: "",
@@ -304,9 +306,11 @@ export default function ProfileTab() {
         }
 
         if (doc) {
-            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score']);
+            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score', 'score_in_percentage']);
             const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks', 'aggregate_marks', 'grand_total']);
             const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of', 'max']);
+            const wordsSecVal = getExtractedField(doc, ['marks_in_words', 'total_marks_in_words', 'secured_marks_in_words', 'marks_obtained_in_words']);
+            const wordsMaxVal = getExtractedField(doc, ['max_marks_in_words', 'maximum_marks_in_words']);
             const cgpaVal = getExtractedField(doc, ['cgpa', 'gpa', 'overall_cgpa', 'overall_gpa', 'sgpa']);
 
             if (pctVal) {
@@ -316,17 +320,22 @@ export default function ProfileTab() {
                 }
             }
 
-            if (secVal && maxVal) {
-                const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
-                const max = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
-                if (!isNaN(sec) && !isNaN(max) && max > 0) {
-                    return `${Math.round((sec / max) * 100 * 10) / 10}%`;
-                }
-            } else if (secVal && !maxVal) {
-                const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
-                if (!isNaN(sec) && sec > 0 && sec <= 100) {
-                    return `${Math.round(sec * 10) / 10}%`;
-                }
+            let sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
+            let max = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
+
+            const secWordsNum = parseNumberFromWords(String(wordsSecVal || ''));
+            const maxWordsNum = parseNumberFromWords(String(wordsMaxVal || ''));
+
+            if (secWordsNum && (isNaN(sec) || Math.abs(sec - secWordsNum) > 5)) sec = secWordsNum;
+            if (maxWordsNum && (isNaN(max) || Math.abs(max - maxWordsNum) > 5)) max = maxWordsNum;
+
+            if (!isNaN(sec) && !isNaN(max) && max > 0) {
+                return `${Math.round((sec / max) * 100 * 10) / 10}%`;
+            } else if (!isNaN(sec) && sec > 0 && sec <= 100) {
+                return `${Math.round(sec * 10) / 10}%`;
+            } else if (!isNaN(sec) && sec > 100) {
+                const inferredMax = sec <= 500 ? 500 : sec <= 600 ? 600 : 1000;
+                return `${Math.round((sec / inferredMax) * 100 * 10) / 10}%`;
             }
 
             if (cgpaVal) {
@@ -389,6 +398,7 @@ export default function ProfileTab() {
     const passportExpiryDate = parsedPassportObj.expiryDate || parsedPassportObj.passportExpiry || parsedPassportObj.expiry_date || parsedPassportObj.dateOfExpiry || userData?.passportExpiry || getExtractedField(passportDoc, ['date_of_expiry', 'expiry_date', 'expiration_date', 'passport_expiry']);
     const passportIssueCountry = parsedPassportObj.issueCountry || parsedPassportObj.passportIssueCountry || parsedPassportObj.issue_country || userData?.passportIssueCountry || getExtractedField(passportDoc, ['issue_country', 'country_of_issue', 'issuing_country']) || "India";
     const passportBirthCity = parsedPassportObj.birthCity || parsedPassportObj.placeOfBirth || parsedPassportObj.birth_city || userData?.birthCity || getExtractedField(passportDoc, ['place_of_birth', 'birth_place', 'birth_city']);
+    const passportBirthCountry = parsedPassportObj.birthCountry || parsedPassportObj.passportBirthCountry || parsedPassportObj.birth_country || parsedPassportObj.countryOfBirth || userData?.passportBirthCountry || userData?.birthCountry || getExtractedField(passportDoc, ['birth_country', 'country_of_birth']) || "India";
     const passportFullName = parsedPassportObj.fullName || parsedPassportObj.full_name || userData?.passportOriginalName || userData?.nameAsInPassport || getExtractedField(passportDoc, ['full_name', 'fullName', 'name', 'printed_name', 'holder_name']);
 
     const activeApp = userApplications && userApplications.length > 0 ? userApplications[0] : null;
@@ -535,6 +545,7 @@ export default function ProfileTab() {
             passportExpiryDate: passportExpiryDate || "",
             passportIssueCountry: passportIssueCountry || "India",
             passportBirthCity: passportBirthCity || "",
+            passportBirthCountry: passportBirthCountry || "India",
 
             fatherName: fatherData?.name || parsedFamily?.fatherName || userData?.fatherName || "",
             fatherAadhar: fatherData?.aadharNumber || parsedFamily?.fatherAadhar || "",
@@ -613,12 +624,17 @@ export default function ProfileTab() {
                     expiryDate: editForm.passportExpiryDate,
                     issueCountry: editForm.passportIssueCountry,
                     birthCity: editForm.passportBirthCity,
+                    birthCountry: editForm.passportBirthCountry,
                 },
                 passportOriginalName: editForm.passportFullName,
                 nameAsInPassport: editForm.passportFullName,
                 passportNumber: editForm.passportNumber,
+                passportIssueDate: editForm.passportIssueDate,
                 passportExpiry: editForm.passportExpiryDate,
+                passportExpiryDate: editForm.passportExpiryDate,
                 passportIssueCountry: editForm.passportIssueCountry,
+                passportBirthCity: editForm.passportBirthCity,
+                passportBirthCountry: editForm.passportBirthCountry,
 
                 personal: {
                     firstName: editForm.firstName,
@@ -938,8 +954,8 @@ export default function ProfileTab() {
                         </span>
                     </div>
 
-                    {/* Row 1: Passport Number, Name in Passport, Expiry Date */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-2">
+                    {/* Row 1: Passport Number, Name in Passport, Issue Date, Expiry Date */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 pb-2">
                         <div>
                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Passport Number</span>
                             <span className="text-sm font-semibold text-slate-800 font-mono tracking-wider">{getDisplayValue(passportNumber)}</span>
@@ -949,13 +965,17 @@ export default function ProfileTab() {
                             <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportFullName || (userData.firstName ? `${userData.firstName} ${userData.lastName || ''}`.trim() : null))}</span>
                         </div>
                         <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Date of Issue</span>
+                            <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportIssueDate)}</span>
+                        </div>
+                        <div>
                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Date of Expiry</span>
                             <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportExpiryDate)}</span>
                         </div>
                     </div>
 
-                    {/* Row 2: Country of Issue, Place of Birth, Document Status */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                    {/* Row 2: Country of Issue, Place of Birth, Country of Birth, Document Status */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 pt-4 border-t border-slate-100">
                         <div>
                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Country of Issue</span>
                             <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportIssueCountry, "India")}</span>
@@ -963,6 +983,10 @@ export default function ProfileTab() {
                         <div>
                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Place of Birth</span>
                             <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportBirthCity)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Country of Birth</span>
+                            <span className="text-sm font-semibold text-slate-800">{getDisplayValue(passportBirthCountry, "India")}</span>
                         </div>
                         <div>
                             <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-1.5">Passport Vault</span>
@@ -1214,27 +1238,101 @@ export default function ProfileTab() {
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4">Application Progress</h4>
                     {userApplications.length > 0 ? (() => {
                         const activeApp = userApplications[0];
+                        const statusLower = activeApp.status?.toLowerCase() || '';
+                        const isSanctioned = ['sanctioned', 'approved', 'sanction', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'sanction_issued'].includes(statusLower) || activeApp.stage === 'sanction' || activeApp.stage === 'sanctioned';
+                        const isDisbursed = ['disbursed', 'disbursement_confirmed', 'closed'].includes(statusLower) || activeApp.stage === 'disbursement' || activeApp.stage === 'disbursed';
+
                         const stageKey = getStageKeyForApp(activeApp);
                         const currentStage = STAGES_CONFIG[stageKey] || STAGES_CONFIG.application_created;
-                        const currentProgress = currentStage.progress;
+                        const currentProgress = isDisbursed ? 100 : isSanctioned ? 95 : currentStage.progress;
+
+                        const maxCompletedOrder = isDisbursed ? 8 : isSanctioned ? 7 : (currentStage ? currentStage.order - 1 : 0);
 
                         const stagesList = Object.entries(STAGES_CONFIG)
                             .sort(([, a], [, b]) => a.order - b.order)
                             .map(([key, val]) => ({
                                 id: key,
                                 ...val,
-                                active: val.order <= currentStage.order,
-                                isCurrent: val.order === currentStage.order
+                                active: val.order <= maxCompletedOrder,
+                                isCurrent: !(val.order <= maxCompletedOrder) && (isSanctioned ? key === 'disbursement' : key === stageKey)
                             }));
+
+                        const appCreatedAt = activeApp.createdAt || activeApp.created_at || activeApp.submittedAt || activeApp.submitted_at || activeApp.date;
+                        const appUpdatedAt = activeApp.updatedAt || activeApp.updated_at || appCreatedAt;
+
+                        const lastCompletedIdx = maxCompletedOrder - 1;
+
+                        const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
+                            if (!completed && !active) return undefined;
+                            if (stageIdx === 0) return appCreatedAt;
+                            if (active || stageIdx === lastCompletedIdx) return appUpdatedAt || appCreatedAt;
+
+                            try {
+                                const baseDate = new Date(appCreatedAt);
+                                if (stageIdx > 0 && !isNaN(baseDate.getTime())) {
+                                    const offsetDate = new Date(baseDate.getTime() + stageIdx * 18 * 60 * 60 * 1000);
+                                    const updatedDate = new Date(appUpdatedAt);
+                                    if (offsetDate.getTime() < updatedDate.getTime()) {
+                                        return offsetDate.toISOString();
+                                    }
+                                }
+                            } catch { }
+                            return appCreatedAt;
+                        };
+
+                        const formatToIST = (dateVal: any): { date: string; time: string } | null => {
+                            if (!dateVal) return null;
+                            try {
+                                let str = String(dateVal).trim();
+                                if (!str) return null;
+                                if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}/.test(str) && !/[Zz+\-]\d{0,2}:?\d{0,2}$/.test(str)) {
+                                    str = str.replace(' ', 'T') + 'Z';
+                                }
+                                const d = new Date(str);
+                                if (isNaN(d.getTime())) return null;
+
+                                const parts = new Intl.DateTimeFormat("en-US", {
+                                    timeZone: "Asia/Kolkata",
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true
+                                }).formatToParts(d);
+
+                                const getPart = (type: string) => parts.find(p => p.type === type)?.value || "";
+
+                                const month = getPart("month");
+                                const day = getPart("day");
+                                const hour = getPart("hour");
+                                const minute = getPart("minute");
+                                const dayPeriod = getPart("dayPeriod").toUpperCase();
+
+                                return {
+                                    date: `${month} ${day}`,
+                                    time: `${hour}:${minute} ${dayPeriod}`
+                                };
+                            } catch {
+                                return null;
+                            }
+                        };
 
                         return (
                             <div className="space-y-4 font-sans">
-                                <div className="flex items-center justify-between p-3.5 bg-[#F3E8FF]/40 rounded-xl border border-purple-100">
+                                <div className={`flex items-center justify-between p-3.5 rounded-xl border ${isDisbursed || isSanctioned
+                                        ? 'bg-emerald-50/60 border-emerald-200/70'
+                                        : 'bg-[#F3E8FF]/40 border-purple-100'
+                                    }`}>
                                     <div>
-                                        <span className="text-[10px] font-bold text-[#7C3AED] uppercase tracking-wider block">Current Progress</span>
-                                        <span className="text-xs font-extrabold text-slate-800">{currentStage.label}</span>
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider block ${isDisbursed || isSanctioned ? 'text-emerald-700' : 'text-[#7C3AED]'
+                                            }`}>Current Status</span>
+                                        <span className="text-xs font-extrabold text-slate-800">
+                                            {isDisbursed ? 'Loan Disbursed' : isSanctioned ? 'Sanctioned & Approved' : currentStage.label}
+                                        </span>
                                     </div>
-                                    <span className="text-xl font-black text-[#7C3AED]">{currentProgress}%</span>
+                                    <span className={`text-xl font-black ${isDisbursed || isSanctioned ? 'text-emerald-600' : 'text-[#7C3AED]'
+                                        }`}>{currentProgress}%</span>
                                 </div>
 
                                 {/* Stepper Funnel */}
@@ -1242,32 +1340,46 @@ export default function ProfileTab() {
                                     {/* Stepper Connector Line */}
                                     <div className="absolute left-[9px] top-4 bottom-4 w-[2px] bg-slate-100" />
 
-                                    {stagesList.map((stg) => (
-                                        <div key={stg.id} className="flex items-center justify-between gap-3 relative">
-                                            <div className="flex items-center gap-3">
-                                                {/* Step Circle */}
-                                                <div className={`absolute -left-[21px] w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${stg.active
-                                                    ? "bg-[#7C3AED] border-[#7C3AED] text-white shadow-sm shadow-purple-600/20"
-                                                    : "bg-white border-slate-200 text-slate-400"
-                                                    }`}>
-                                                    {stg.active ? (
-                                                        <span className="material-symbols-outlined text-[10px] font-black">check</span>
-                                                    ) : (
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                                                    )}
+                                    {stagesList.map((stg) => {
+                                        const stageTimestamp = getStageTimestamp(stg.order - 1, stg.active, stg.isCurrent);
+                                        const stageTimestampFormatted = formatToIST(stageTimestamp);
+
+                                        return (
+                                            <div key={stg.id} className="flex items-start justify-between gap-3 relative py-0.5">
+                                                <div className="flex items-start gap-3 min-w-0">
+                                                    {/* Step Circle */}
+                                                    <div className={`absolute -left-[21px] top-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${stg.active
+                                                        ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-600/20"
+                                                        : stg.isCurrent
+                                                            ? "bg-white border-[#7C3AED] text-[#7C3AED] shadow-sm shadow-purple-600/20"
+                                                            : "bg-white border-slate-200 text-slate-400"
+                                                        }`}>
+                                                        {stg.active ? (
+                                                            <span className="material-symbols-outlined text-[10px] font-black">check</span>
+                                                        ) : (
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <span className={`text-xs block transition-all ${stg.isCurrent
+                                                            ? "font-extrabold text-[#7C3AED]"
+                                                            : stg.active
+                                                                ? "font-semibold text-emerald-700"
+                                                                : "font-medium text-slate-400"
+                                                            }`}>
+                                                            {stg.label}
+                                                        </span>
+                                                        {stageTimestampFormatted && (stg.active || stg.isCurrent) && (
+                                                            <span className="text-[9px] font-medium text-slate-400 block tracking-tight mt-0.5">
+                                                                {stageTimestampFormatted.date} • {stageTimestampFormatted.time}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <span className={`text-xs transition-all ${stg.isCurrent
-                                                    ? "font-extrabold text-[#7C3AED]"
-                                                    : stg.active
-                                                        ? "font-semibold text-slate-800"
-                                                        : "font-medium text-slate-400"
-                                                    }`}>
-                                                    {stg.label}
-                                                </span>
+                                                <span className="text-[10px] font-bold font-mono text-slate-400 shrink-0">{stg.progress}%</span>
                                             </div>
-                                            <span className="text-[10px] font-bold font-mono text-slate-400">{stg.progress}%</span>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         );
@@ -1327,7 +1439,6 @@ export default function ProfileTab() {
                             <p className="text-[12px] font-bold text-slate-700">
                                 {(userData.createdAt || userData.created_at) ? new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit', year: 'numeric' }) : "—"}
                             </p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono">Secure Access Node</p>
                         </div>
                     </div>
                 </div>
@@ -1528,6 +1639,15 @@ export default function ProfileTab() {
                                             />
                                         </div>
                                         <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Passport Issue Date</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.passportIssueDate}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportIssueDate: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white"
+                                            />
+                                        </div>
+                                        <div>
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Passport Expiry Date</label>
                                             <input
                                                 type="date"
@@ -1547,12 +1667,22 @@ export default function ProfileTab() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Place of Birth</label>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Place of Birth (City)</label>
                                             <input
                                                 type="text"
                                                 value={editForm.passportBirthCity}
                                                 onChange={(e) => setEditForm(prev => ({ ...prev, passportBirthCity: e.target.value }))}
                                                 placeholder="e.g. Hyderabad"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Country of Birth</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportBirthCountry}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportBirthCountry: e.target.value }))}
+                                                placeholder="e.g. India"
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
                                             />
                                         </div>
@@ -1594,6 +1724,16 @@ export default function ProfileTab() {
                                         </div>
 
                                         <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Passport Issue Date</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.passportIssueDate}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportIssueDate: e.target.value }))}
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white"
+                                            />
+                                        </div>
+
+                                        <div>
                                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Expiry</label>
                                             <input
                                                 type="date"
@@ -1614,13 +1754,24 @@ export default function ProfileTab() {
                                             />
                                         </div>
 
-                                        <div className="sm:col-span-2">
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Place of Birth</label>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Place of Birth (City)</label>
                                             <input
                                                 type="text"
                                                 value={editForm.passportBirthCity}
                                                 onChange={(e) => setEditForm(prev => ({ ...prev, passportBirthCity: e.target.value }))}
                                                 placeholder="e.g. Vijayawada"
+                                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Country of Birth</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.passportBirthCountry}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, passportBirthCountry: e.target.value }))}
+                                                placeholder="e.g. India"
                                                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
                                             />
                                         </div>

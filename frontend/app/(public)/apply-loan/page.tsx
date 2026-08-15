@@ -524,14 +524,12 @@ export default function ApplyLoanPage() {
                 errors.coApplicantPhone = "This phone number is not realistic";
             }
 
-            const coEmail = formData.coApplicantEmail.trim();
+            const coEmail = formData.coApplicantEmail.trim().toLowerCase();
             if (!coEmail) {
                 errors.coApplicantEmail = "Co-applicant email address is required";
-            } else if (coEmail.length > 30) {
-                errors.coApplicantEmail = "Email must not exceed 30 characters";
-            } else if (/[^a-zA-Z0-9@._-]/.test(coEmail)) {
-                errors.coApplicantEmail = "Special characters are not allowed (only letters, numbers, @, ., _, -)";
-            } else if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(coEmail)) {
+            } else if (coEmail.length > 100) {
+                errors.coApplicantEmail = "Email must not exceed 100 characters";
+            } else if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(coEmail)) {
                 errors.coApplicantEmail = "Please enter a valid email address (e.g., name@gmail.com)";
             }
         }
@@ -1199,9 +1197,10 @@ export default function ApplyLoanPage() {
                                         <InputField
                                             label="Co-Applicant Email / Gmail"
                                             icon="mail"
+                                            type="email"
                                             value={formData.coApplicantEmail}
                                             onChange={(v) => {
-                                                const cleaned = v.replace(/[^a-zA-Z0-9@._-]/g, "").slice(0, 30);
+                                                const cleaned = v.toLowerCase().replace(/[^a-z0-9@._%+-]/g, "").slice(0, 100);
                                                 update("coApplicantEmail", cleaned);
                                             }}
                                             placeholder="e.g. coapplicant@gmail.com"

@@ -160,14 +160,75 @@ export function normalizeAcademicScore(score?: string | number, grading?: string
     return s;
 }
 
+export function parseNumberFromWords(text?: string): number | undefined {
+    if (!text || typeof text !== 'string') return undefined;
+    const clean = text.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!clean) return undefined;
+
+    // Check for direct sequence of single digits e.g. "eight five seven" -> 857
+    const singleDigits: Record<string, number> = {
+        zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9
+    };
+    const words = clean.split(' ');
+    if (words.length >= 2 && words.length <= 4 && words.every(w => singleDigits[w] !== undefined)) {
+        const digStr = words.map(w => singleDigits[w]).join('');
+        const val = parseInt(digStr, 10);
+        if (!isNaN(val)) return val;
+    }
+
+    const wordVals: Record<string, number> = {
+        zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+        ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+        sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+        twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+    };
+
+    const multipliers: Record<string, number> = {
+        hundred: 100, thousand: 1000, lakh: 100000, lac: 100000
+    };
+
+    let total = 0;
+    let current = 0;
+    let found = false;
+
+    for (const w of words) {
+        if (w === 'and') continue;
+        if (wordVals[w] !== undefined) {
+            current += wordVals[w];
+            found = true;
+        } else if (multipliers[w] !== undefined) {
+            if (current === 0) current = 1;
+            current *= multipliers[w];
+            if (multipliers[w] >= 1000) {
+                total += current;
+                current = 0;
+            }
+            found = true;
+        }
+    }
+    total += current;
+
+    return found && total > 0 ? total : undefined;
+}
+
 /** Compute percentage from total marks if max is known or infer ~1000 for AP intermediate */
 export function percentageFromTotalMarks(
     secured?: string | number,
     maximum?: string | number,
     level?: AcademicLevel,
 ): string | undefined {
-    const sec = parseFloat(String(secured ?? '').replace(/[^\d.]/g, ''));
-    const max = parseFloat(String(maximum ?? '').replace(/[^\d.]/g, ''));
+    let sec = parseFloat(String(secured ?? '').replace(/[^\d.]/g, ''));
+    let max = parseFloat(String(maximum ?? '').replace(/[^\d.]/g, ''));
+
+    if (isNaN(sec) && typeof secured === 'string') {
+        const parsed = parseNumberFromWords(secured);
+        if (parsed) sec = parsed;
+    }
+    if (isNaN(max) && typeof maximum === 'string') {
+        const parsed = parseNumberFromWords(maximum);
+        if (parsed) max = parsed;
+    }
+
     if (!isNaN(sec) && !isNaN(max) && max > 0) {
         return String(Math.round((sec / max) * 1000) / 10);
     }
@@ -308,8 +369,27 @@ export function canonicalizeAcademicFields(
         raw.passing_year;
     if (examPeriod) out.exam_period = String(examPeriod).trim();
 
-    const marksSecured = raw.total_marks_secured ?? raw.total_marks ?? raw.marks_secured ?? raw.marks_obtained ?? raw.obtained_marks ?? raw.secured_marks;
-    const marksMaximum = raw.total_marks_maximum ?? raw.maximum_marks ?? raw.max_marks ?? raw.total_max ?? raw.out_of;
+    const marksSecuredRaw = raw.total_marks_secured ?? raw.total_marks ?? raw.marks_secured ?? raw.marks_obtained ?? raw.obtained_marks ?? raw.secured_marks;
+    const marksMaximumRaw = raw.total_marks_maximum ?? raw.maximum_marks ?? raw.max_marks ?? raw.total_max ?? raw.out_of;
+    const wordsSecuredRaw = raw.marks_in_words || raw.total_marks_in_words || raw.secured_marks_in_words || raw.marks_obtained_in_words;
+    const wordsMaxRaw = raw.max_marks_in_words || raw.maximum_marks_in_words || raw.total_max_in_words;
+
+    let secVal = parseFloat(String(marksSecuredRaw ?? '').replace(/[^\d.]/g, ''));
+    let maxVal = parseFloat(String(marksMaximumRaw ?? '').replace(/[^\d.]/g, ''));
+
+    const secWordsNum = parseNumberFromWords(wordsSecuredRaw);
+    const maxWordsNum = parseNumberFromWords(wordsMaxRaw);
+
+    if (secWordsNum && (isNaN(secVal) || Math.abs(secVal - secWordsNum) > 5)) {
+        secVal = secWordsNum;
+    }
+    if (maxWordsNum && (isNaN(maxVal) || Math.abs(maxVal - maxWordsNum) > 5)) {
+        maxVal = maxWordsNum;
+    }
+
+    const marksSecured = !isNaN(secVal) ? secVal : marksSecuredRaw;
+    const marksMaximum = !isNaN(maxVal) ? maxVal : marksMaximumRaw;
+
     const hasGpa = raw.overall_gpa != null || raw.gpa != null || raw.cgpa != null || raw.sgpa != null || raw.overall_cgpa != null;
 
     let score: string | number | undefined =

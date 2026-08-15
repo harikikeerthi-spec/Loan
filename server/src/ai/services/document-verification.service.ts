@@ -171,12 +171,15 @@ Extract exactly as printed using these JSON keys:
 - district (e.g. GUNTUR — use as city_of_study if no separate city)
 - roll_number
 - examination_month_year or exam_month_year (e.g. MARCH 2016)
+- total_marks_secured or total_marks (e.g. 543)
+- total_marks_in_words or marks_in_words (e.g. FIVE HUNDRED AND FORTY THREE)
+- total_marks_maximum (e.g. 600 or 500)
 - medium_of_instruction (e.g. ENGLISH)
 - gpa or overall_gpa if shown (e.g. 9.0 on 10-point scale); grading_system "CGPA"
 - city_of_study, state_of_study (infer from board/district; default country_of_study India)
 - date_of_issue if visible`,
 
-    marksheet_12: `This is a Grade 12 / HSC / Intermediate certificate (Indian state board, e.g. AP Board of Intermediate Education).
+    marksheet_12: `This is a Grade 12 / HSC / Intermediate / Diploma certificate (Indian state board, e.g. AP Board of Intermediate Education).
 Extract exactly as printed using these JSON keys:
 - full_name (candidate_name on certificate)
 - father_name, mother_name if visible
@@ -185,6 +188,7 @@ Extract exactly as printed using these JSON keys:
 - registration_number or roll_number
 - examination_month_year or exam_month_year (e.g. MARCH-2018)
 - total_marks_secured or total_marks (e.g. 857); total_marks_maximum if printed else omit
+- total_marks_in_words or marks_in_words (e.g. EIGHT HUNDRED FIFTY SEVEN)
 - percentage if computable (857/1000 = 85.7); grading_system "Percentage"
 - medium_of_instruction
 - city_of_study, state_of_study, country_of_study (infer from board; default India)

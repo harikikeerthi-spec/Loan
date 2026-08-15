@@ -1552,7 +1552,7 @@ export class EmailService {
     studentName: string,
     attachments?: any[],
   ) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL;
     const appNum = application.applicationNumber || 'N/A';
     const loanType = application.loanType || 'Education Loan';
     const amount = application.amount ? `₹${Number(application.amount).toLocaleString('en-IN')}` : 'N/A';

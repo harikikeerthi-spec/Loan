@@ -18,8 +18,19 @@ export class AdminGuard implements CanActivate {
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
         const authHeader = request.headers.authorization;
+        let token: string | undefined;
 
-        if (!authHeader) {
+        if (authHeader) {
+            const [type, tokenStr] = authHeader.split(' ');
+            if (type !== 'Bearer' || !tokenStr) {
+                throw new UnauthorizedException('Invalid authorization format');
+            }
+            token = tokenStr;
+        } else if (request.query && request.query.token) {
+            token = request.query.token as string;
+        }
+
+        if (!token) {
             if (request.body && (request.body.userId || request.body.email)) {
                 request.user = {
                     id: request.body.userId || 'staff-admin',
@@ -37,12 +48,6 @@ export class AdminGuard implements CanActivate {
                 return true;
             }
             throw new UnauthorizedException('No authorization token provided');
-        }
-
-        const [type, token] = authHeader.split(' ');
-
-        if (type !== 'Bearer' || !token) {
-            throw new UnauthorizedException('Invalid authorization format');
         }
 
         try {

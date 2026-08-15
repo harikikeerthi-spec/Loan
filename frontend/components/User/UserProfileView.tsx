@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { authApi, documentApi } from "@/lib/api";
 import DatePicker from "@/components/DatePicker";
 import { formatPhone, isPhoneValid } from "@/lib/validation";
+import { parseNumberFromWords } from "@/lib/academic-ocr";
 
 interface UserProfileViewProps {
     user: any;
@@ -138,9 +139,11 @@ export default function UserProfileView({
         }
 
         if (doc) {
-            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score']);
+            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score', 'score_in_percentage']);
             const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks', 'aggregate_marks', 'grand_total']);
             const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of', 'max']);
+            const wordsSecVal = getExtractedField(doc, ['marks_in_words', 'total_marks_in_words', 'secured_marks_in_words', 'marks_obtained_in_words']);
+            const wordsMaxVal = getExtractedField(doc, ['max_marks_in_words', 'maximum_marks_in_words']);
             const cgpaVal = getExtractedField(doc, ['cgpa', 'gpa', 'overall_cgpa', 'overall_gpa', 'sgpa']);
 
             if (pctVal) {
@@ -150,17 +153,22 @@ export default function UserProfileView({
                 }
             }
 
-            if (secVal && maxVal) {
-                const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
-                const max = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
-                if (!isNaN(sec) && !isNaN(max) && max > 0) {
-                    return `${Math.round((sec / max) * 100 * 10) / 10}%`;
-                }
-            } else if (secVal && !maxVal) {
-                const sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
-                if (!isNaN(sec) && sec > 0 && sec <= 100) {
-                    return `${Math.round(sec * 10) / 10}%`;
-                }
+            let sec = parseFloat(String(secVal).replace(/[^\d.]/g, ''));
+            let max = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
+
+            const secWordsNum = parseNumberFromWords(String(wordsSecVal || ''));
+            const maxWordsNum = parseNumberFromWords(String(wordsMaxVal || ''));
+
+            if (secWordsNum && (isNaN(sec) || Math.abs(sec - secWordsNum) > 5)) sec = secWordsNum;
+            if (maxWordsNum && (isNaN(max) || Math.abs(max - maxWordsNum) > 5)) max = maxWordsNum;
+
+            if (!isNaN(sec) && !isNaN(max) && max > 0) {
+                return `${Math.round((sec / max) * 100 * 10) / 10}%`;
+            } else if (!isNaN(sec) && sec > 0 && sec <= 100) {
+                return `${Math.round(sec * 10) / 10}%`;
+            } else if (!isNaN(sec) && sec > 100) {
+                const inferredMax = sec <= 500 ? 500 : sec <= 600 ? 600 : 1000;
+                return `${Math.round((sec / inferredMax) * 100 * 10) / 10}%`;
             }
 
             if (cgpaVal) {
@@ -225,9 +233,11 @@ export default function UserProfileView({
     if (!parsedPassportObj || typeof parsedPassportObj !== 'object') parsedPassportObj = {};
 
     const passportNumber = parsedPassportObj.number || parsedPassportObj.passportNumber || parsedPassportObj.passport_number || parsedPassportObj.passportNo || activeProfile?.passportNumber || activeProfile?.passportNo || getDocExtractedField(['passport'], ['passport_number', 'passportNumber', 'passport_no', 'passportNo', 'document_number']);
+    const passportIssueDate = parsedPassportObj.issueDate || parsedPassportObj.passportIssueDate || parsedPassportObj.issue_date || parsedPassportObj.date_of_issue || parsedPassportObj.dateOfIssue || activeProfile?.passportIssueDate || activeProfile?.issueDate || getDocExtractedField(['passport'], ['issue_date', 'date_of_issue', 'passport_issue_date', 'dateOfIssue', 'issueDate']);
     const passportExpiryDate = parsedPassportObj.expiryDate || parsedPassportObj.passportExpiry || parsedPassportObj.expiry_date || parsedPassportObj.dateOfExpiry || activeProfile?.passportExpiry || getDocExtractedField(['passport'], ['date_of_expiry', 'expiry_date', 'expiration_date', 'passport_expiry']);
     const passportIssueCountry = parsedPassportObj.issueCountry || parsedPassportObj.passportIssueCountry || parsedPassportObj.issue_country || activeProfile?.passportIssueCountry || getDocExtractedField(['passport'], ['issue_country', 'country_of_issue', 'issuing_country']) || "India";
     const passportBirthCity = parsedPassportObj.birthCity || parsedPassportObj.placeOfBirth || parsedPassportObj.birth_city || activeProfile?.birthCity || getDocExtractedField(['passport'], ['place_of_birth', 'birth_place', 'birth_city']);
+    const passportBirthCountry = parsedPassportObj.birthCountry || parsedPassportObj.passportBirthCountry || parsedPassportObj.birth_country || parsedPassportObj.countryOfBirth || activeProfile?.passportBirthCountry || activeProfile?.birthCountry || getDocExtractedField(['passport'], ['birth_country', 'country_of_birth', 'passport_birth_country']) || "India";
     const passportFullName = parsedPassportObj.fullName || parsedPassportObj.full_name || activeProfile?.passportOriginalName || activeProfile?.nameAsInPassport || activeProfile?.family?.passportOriginalName || getDocExtractedField(['passport'], ['full_name', 'fullName', 'name', 'printed_name', 'holder_name']);
 
     const studentAadhaar = activeProfile?.aadharNumber || activeProfile?.aadhar || activeProfile?.aadhaarNumber || activeProfile?.aadhaar || getDocExtractedField(['aadhar', 'aadhaar', 'student_aadhar', 'student_aadhaar', 'national_id'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
@@ -287,7 +297,12 @@ export default function UserProfileView({
         phoneNumber: "",
         dateOfBirth: "",
         passportNumber: "",
+        passportFullName: "",
+        passportIssueDate: "",
         passportExpiryDate: "",
+        passportIssueCountry: "",
+        passportBirthCity: "",
+        passportBirthCountry: "",
         aadharNumber: "",
         panNumber: "",
     });
@@ -314,7 +329,12 @@ export default function UserProfileView({
             phoneNumber: activeProfile?.phoneNumber || "",
             dateOfBirth: formatDateToDdMmYyyy(activeProfile?.dateOfBirth),
             passportNumber: passportNumber || "",
+            passportFullName: passportFullName || (activeProfile?.firstName ? `${activeProfile.firstName} ${activeProfile.lastName || ''}`.trim() : ""),
+            passportIssueDate: passportIssueDate || "",
             passportExpiryDate: passportExpiryDate || "",
+            passportIssueCountry: passportIssueCountry || "India",
+            passportBirthCity: passportBirthCity || "",
+            passportBirthCountry: passportBirthCountry || "India",
             aadharNumber: studentAadhaar || "",
             panNumber: studentPan || "",
         });
@@ -409,10 +429,23 @@ export default function UserProfileView({
                     passport: {
                         ...(parsedPassportObj || {}),
                         number: personalForm.passportNumber,
+                        fullName: personalForm.passportFullName,
+                        full_name: personalForm.passportFullName,
+                        issueDate: personalForm.passportIssueDate,
                         expiryDate: personalForm.passportExpiryDate,
+                        issueCountry: personalForm.passportIssueCountry,
+                        birthCity: personalForm.passportBirthCity,
+                        birthCountry: personalForm.passportBirthCountry,
                     },
                     passportNumber: personalForm.passportNumber,
+                    passportOriginalName: personalForm.passportFullName,
+                    nameAsInPassport: personalForm.passportFullName,
+                    passportIssueDate: personalForm.passportIssueDate,
                     passportExpiry: personalForm.passportExpiryDate,
+                    passportExpiryDate: personalForm.passportExpiryDate,
+                    passportIssueCountry: personalForm.passportIssueCountry,
+                    passportBirthCity: personalForm.passportBirthCity,
+                    passportBirthCountry: personalForm.passportBirthCountry,
                     aadharNumber: personalForm.aadharNumber,
                     panNumber: personalForm.panNumber,
                 });
@@ -767,13 +800,61 @@ export default function UserProfileView({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Passport Expiry Date</label>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Name as in Passport</label>
                                     <input
                                         type="text"
+                                        value={personalForm.passportFullName}
+                                        onChange={(e) => setPersonalForm(p => ({ ...p, passportFullName: e.target.value }))}
+                                        placeholder="Full name as printed on passport"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50 font-semibold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Passport Issue Date</label>
+                                    <input
+                                        type="date"
+                                        value={personalForm.passportIssueDate}
+                                        onChange={(e) => setPersonalForm(p => ({ ...p, passportIssueDate: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Passport Expiry Date</label>
+                                    <input
+                                        type="date"
                                         value={personalForm.passportExpiryDate}
                                         onChange={(e) => setPersonalForm(p => ({ ...p, passportExpiryDate: e.target.value }))}
-                                        placeholder="e.g. YYYY-MM-DD or DD/MM/YYYY"
                                         className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Country of Issue</label>
+                                    <input
+                                        type="text"
+                                        value={personalForm.passportIssueCountry}
+                                        onChange={(e) => setPersonalForm(p => ({ ...p, passportIssueCountry: e.target.value }))}
+                                        placeholder="e.g. India"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50 font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Place of Birth (City)</label>
+                                    <input
+                                        type="text"
+                                        value={personalForm.passportBirthCity}
+                                        onChange={(e) => setPersonalForm(p => ({ ...p, passportBirthCity: e.target.value }))}
+                                        placeholder="e.g. Hyderabad"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50 font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Country of Birth</label>
+                                    <input
+                                        type="text"
+                                        value={personalForm.passportBirthCountry}
+                                        onChange={(e) => setPersonalForm(p => ({ ...p, passportBirthCountry: e.target.value }))}
+                                        placeholder="e.g. India"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50 font-medium"
                                     />
                                 </div>
                                 <div>
@@ -864,10 +945,18 @@ export default function UserProfileView({
                                         </button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-purple-100/60 text-xs">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 pt-2 border-t border-purple-100/60 text-xs">
                                     <div>
                                         <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Passport Number</span>
                                         <span className="font-mono font-bold text-slate-800">{passportNumber || "—"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Name in Passport</span>
+                                        <span className="font-bold text-slate-800 truncate block">{passportFullName || "—"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Issue Date</span>
+                                        <span className="font-semibold text-slate-800">{passportIssueDate || "—"}</span>
                                     </div>
                                     <div>
                                         <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Expiry Date</span>
@@ -880,6 +969,10 @@ export default function UserProfileView({
                                     <div>
                                         <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Place of Birth</span>
                                         <span className="font-semibold text-slate-800">{passportBirthCity || "—"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Country of Birth</span>
+                                        <span className="font-semibold text-slate-800">{passportBirthCountry || "India"}</span>
                                     </div>
                                 </div>
                             </div>
