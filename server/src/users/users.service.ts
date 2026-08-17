@@ -161,11 +161,11 @@ export class UsersService implements OnModuleInit {
       const p3 = parseInt(parts[2], 10);
 
       if (!isNaN(p1) && !isNaN(p2) && !isNaN(p3)) {
-        if (p3 > 1000) {
+        if (p3 >= 1900 && p3 <= 2100) {
           // DD-MM-YYYY
           const d = new Date(Date.UTC(p3, p2 - 1, p1));
           if (!isNaN(d.getTime())) return d.toISOString();
-        } else if (p1 > 1000) {
+        } else if (p1 >= 1900 && p1 <= 2100) {
           // YYYY-MM-DD
           const d = new Date(Date.UTC(p1, p2 - 1, p3));
           if (!isNaN(d.getTime())) return d.toISOString();
@@ -174,7 +174,12 @@ export class UsersService implements OnModuleInit {
     }
 
     const d = new Date(trimmed);
-    if (!isNaN(d.getTime())) return d.toISOString();
+    if (!isNaN(d.getTime())) {
+      const year = d.getUTCFullYear();
+      if (year >= 1900 && year <= 2100) {
+        return d.toISOString();
+      }
+    }
 
     return null;
   }

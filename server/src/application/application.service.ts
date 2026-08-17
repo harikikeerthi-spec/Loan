@@ -84,21 +84,26 @@ export class ApplicationService {
 
   private parseDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
+    const trimmed = String(dateStr).trim();
+    if (!trimmed) return null;
 
     // Try native parsing first
-    let d = new Date(dateStr);
-    if (!isNaN(d.getTime())) return d.toISOString();
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) {
+      const year = d.getUTCFullYear();
+      if (year >= 1900 && year <= 2100) return d.toISOString();
+    }
 
     // Try DD-MM-YYYY or DD/MM/YYYY
-    const parts = dateStr.split(/[-/]/);
+    const parts = trimmed.split(/[-/]/);
     if (parts.length === 3) {
       const day = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10) - 1;
       const year = parseInt(parts[2], 10);
 
-      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-        d = new Date(year, month, day);
-        if (!isNaN(d.getTime())) return d.toISOString();
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year >= 1900 && year <= 2100) {
+        const parsedDate = new Date(year, month, day);
+        if (!isNaN(parsedDate.getTime())) return parsedDate.toISOString();
       }
     }
 

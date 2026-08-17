@@ -52,6 +52,7 @@ async function bootstrap() {
       url.includes('/auth/verify-otp') ||
       url.includes('/auth/request-otp') ||
       url.includes('/auth/firebase') ||
+      url.includes('/auth/landing-page-submit') ||
       url.includes('/auth/refresh') ||
       url.includes('/auth/login') ||
       url.includes('/digilocker/callback')

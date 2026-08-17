@@ -20,7 +20,7 @@ export default function LoginWall({ children }: { children: React.ReactNode }) {
     }
 
     // Skip pages that are meant to be fully public or are the login/signup flow
-    const skipList = ["/", "/login", "/signup", "/api-test", "/test-admin-system", "/visa-mock", "/connected", "/referral"];
+    const skipList = ["/", "/login", "/signup", "/api-test", "/test-admin-system", "/visa-mock", "/connected", "/referral", "/landing", "/apply"];
     // Also skip static/marketing/bank detail pages without triggering login wall
     const alwaysPublic = [
         "/about-us",

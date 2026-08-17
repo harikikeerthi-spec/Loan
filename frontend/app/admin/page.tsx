@@ -10,6 +10,7 @@ import ChatInterface from "@/components/Chat/ChatInterface";
 import CampaignsDashboard from "@/components/Admin/CampaignsDashboard";
 import AdminBanksSection from "@/components/Admin/AdminBanksSection";
 import AdminCountriesSection from "@/components/Admin/AdminCountriesSection";
+import SiteSettingsSection from "@/components/Admin/SiteSettingsSection";
 
 // ─── Application Progress & Helpers ──────────────────────────────────────────────
 
@@ -1121,6 +1122,7 @@ export default function AdminDashboardPage() {
         { section: "countries", icon: "public", label: "Study Countries", badge: 0 },
         { section: "chat", icon: "forum", label: "Student Chat", badge: 0 },
         { section: "community", icon: "groups", label: "Community", badge: 0 },
+        { section: "site_settings", icon: "settings_suggest", label: "Site Settings", badge: 0 },
         { section: "audit_logs", icon: "policy", label: "Audit Logs", badge: 0 },
     ];
 
@@ -1144,6 +1146,7 @@ export default function AdminDashboardPage() {
         analytics: 'Platform Analytics',
         applications: 'Applications',
         system: 'System Control',
+        site_settings: 'Site Settings & Platform Configuration',
         users: 'User Management',
         banks: 'Bank Partners Management',
         countries: 'Supported Study Destinations',
@@ -1151,6 +1154,7 @@ export default function AdminDashboardPage() {
         chat: 'Student Chat',
         community: 'Community Forum',
         audit_logs: 'Audit Logs',
+
         // Marketing/Campaigns
         campaigns_dashboard: 'Email Campaigns · Dashboard',
         campaigns_create: 'Email Campaigns · Create Campaign',
@@ -2055,6 +2059,10 @@ export default function AdminDashboardPage() {
 
                     {activeSection === "countries" && (
                         <AdminCountriesSection />
+                    )}
+
+                    {activeSection === "site_settings" && (
+                        <SiteSettingsSection />
                     )}
 
                     {/* ─── USERS MANAGEMENT DASHBOARD ──────────────────────────────────────── */}

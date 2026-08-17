@@ -273,6 +273,7 @@ function isPublicAuthUrl(url?: string): boolean {
         url.includes('/auth/firebase') ||
         url.includes('/auth/check-user/') ||
         url.includes('/auth/refresh') ||
+        url.includes('/auth/landing-page-submit') ||
         url.includes('/auth/logout') ||
         url.includes('/auth/dashboard')
     );
@@ -662,6 +663,12 @@ export const authApi = {
         filePath?: string;
     }) =>
         apiFetch(HttpApiPaths.auth.uploadDocument(), {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+
+    submitLandingPageApplication: (data: any) =>
+        apiFetch(`${API_URL}/auth/landing-page-submit`, {
             method: "POST",
             body: JSON.stringify(data),
         }),
@@ -1143,6 +1150,25 @@ export const adminApi = {
         }),
     viewDocument: (applicationId: string, documentId: string): Promise<Blob> =>
         fetchBlob(HttpApiPaths.admin.applicationDocumentView(applicationId, documentId)),
+
+    // Site Settings & Platform Config
+    getSiteSettings: () =>
+        apiFetch<any>(`${API_URL}/site-settings`),
+    updateSiteSettings: (data: any) =>
+        apiFetch<any>(`${API_URL}/site-settings`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+    resetSiteSettings: () =>
+        apiFetch<any>(`${API_URL}/site-settings/reset-defaults`, {
+            method: "POST",
+        }),
+    testDisposableEmail: (email: string) =>
+        apiFetch<any>(`${API_URL}/site-settings/check-email`, {
+            method: "POST",
+            body: JSON.stringify({ email }),
+        }),
+
 
     // Community
     getCommunityStats: () =>

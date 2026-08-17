@@ -149,6 +149,22 @@ export class AuthController {
   }
 
   /**
+   * Submit loan application directly from landing page with OTP verification
+   * POST /auth/landing-page-submit
+   */
+  @Post('landing-page-submit')
+  async landingPageSubmit(@Body() body: any) {
+    if (!body || !body.email || !body.otp) {
+      return {
+        success: false,
+        message: 'Email and OTP verification code are required',
+      };
+    }
+    return this.authService.submitLandingPageApplication(body);
+  }
+
+
+  /**
    * Firebase Authentication
    * POST /auth/firebase
    * @body idToken: string (required)

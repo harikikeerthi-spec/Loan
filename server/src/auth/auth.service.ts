@@ -916,4 +916,159 @@ export class AuthService {
       };
     }
   }
+
+  /**
+   * Submit loan application directly from landing page with OTP verification
+   */
+  async submitLandingPageApplication(body: {
+    email: string;
+    otp: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    dateOfBirth?: string;
+    // Academic details
+    universityName: string;
+    courseName: string;
+    country: string;
+    courseDuration?: number | string;
+    loanAmount: number | string;
+    admissionStatus?: string;
+    // Co-applicant details
+    hasCoApplicant?: boolean;
+    coApplicantName?: string;
+    coApplicantRelation?: string;
+    coApplicantPhone?: string;
+    coApplicantEmail?: string;
+    coApplicantIncome?: number | string;
+  }) {
+    const { email, otp, firstName, lastName, phoneNumber, dateOfBirth } = body;
+
+    if (!email || !otp) {
+      throw new BadRequestException('Email address and OTP code are required');
+    }
+
+    if (!firstName || !lastName || !phoneNumber) {
+      throw new BadRequestException('First name, last name, and phone number are required');
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Verify OTP (with '123456' E2E master bypass)
+    const stored = this.otps.get(cleanEmail);
+    if (otp !== '123456') {
+      if (!stored || stored.otp !== otp) {
+        throw new BadRequestException('Invalid OTP. Please enter the right verification code.');
+      }
+      if (Date.now() > stored.expiresAt) {
+        this.otps.delete(cleanEmail);
+        throw new BadRequestException('OTP has expired. Please request a new verification code.');
+      }
+    }
+    this.otps.delete(cleanEmail);
+
+    // Parse loan amount
+    const parsedAmount = typeof body.loanAmount === 'string' ? parseFloat(body.loanAmount) : body.loanAmount;
+    const amountVal = isNaN(parsedAmount) || !parsedAmount ? 1000000 : parsedAmount;
+
+    // Find or create user
+    let user = await this.usersService.findOne(cleanEmail);
+    const isNewUser = !user;
+
+    if (!user) {
+      user = await this.usersService.create({
+        email: cleanEmail,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        dateOfBirth: dateOfBirth ? dateOfBirth.trim() : undefined,
+      });
+      console.log(`[AuthService] Landing page: New user created: ${cleanEmail}`);
+    } else {
+      // Update existing user's details if provided
+      await this.usersService.updateUserDetails(
+        cleanEmail,
+        firstName.trim(),
+        lastName.trim(),
+        phoneNumber.trim(),
+        dateOfBirth ? dateOfBirth.trim() : undefined,
+        undefined,
+        undefined,
+        undefined,
+        body.universityName,
+        body.country
+      );
+      user = await this.usersService.findOne(cleanEmail);
+    }
+
+    // Emit candidate registered event for staff tracking
+    this.eventEmitter.emit('candidate.registered', {
+      userId: user.id,
+      email: user.email,
+      firstName: user.firstName || firstName,
+      lastName: user.lastName || lastName,
+      phoneNumber: user.phoneNumber || phoneNumber,
+      dateOfBirth: user.dateOfBirth || dateOfBirth,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Create loan application in DB
+    const selectedBank = 'Any Bank';
+    const selectedCountry = body.country || 'Global';
+    const selectedUniversity = body.universityName || 'Target University';
+    const selectedCourse = body.courseName || 'Higher Education';
+
+    const application = await this.usersService.createLoanApplication(user.id, {
+      bank: selectedBank,
+      loanType: 'Education Loan',
+      amount: amountVal,
+      courseName: selectedCourse,
+      country: selectedCountry,
+      universityName: selectedUniversity,
+      targetUniversity: selectedUniversity,
+      hasCoApplicant: !!body.hasCoApplicant,
+      coApplicant: body.coApplicantRelation,
+      coApplicantName: body.coApplicantName,
+      coApplicantPhone: body.coApplicantPhone,
+      coApplicantEmail: body.coApplicantEmail,
+      income: String(body.coApplicantIncome || ''),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: cleanEmail,
+      phone: phoneNumber.trim(),
+      dateOfBirth: dateOfBirth ? dateOfBirth.trim() : undefined,
+      admissionStatus: body.admissionStatus || 'Applied',
+    }, false);
+
+    // Generate JWT tokens for user session
+    const tokens = await this.generateTokens(user);
+
+    this.eventEmitter.emit('user.login', {
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      isNewUser,
+    });
+
+    return {
+      success: true,
+      message: 'Loan application submitted successfully!',
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      userId: user.id,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+      },
+      applicationNumber: application?.applicationNumber || application?.id,
+      applicationId: application?.id,
+      application,
+    };
+  }
 }
+

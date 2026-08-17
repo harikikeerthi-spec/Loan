@@ -31,6 +31,7 @@ import { AgentModule } from './agent/agent.module';
 import { SupportModule } from './support/support.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AssignmentModule } from './assignment/assignment.module';
+import { SiteSettingsModule } from './site-settings/site-settings.module';
 
 @Module({
   imports: [
@@ -66,8 +67,9 @@ import { AssignmentModule } from './assignment/assignment.module';
     AgentModule,
     SupportModule,
     AssignmentModule,
+    SiteSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule { }

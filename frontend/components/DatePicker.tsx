@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { format, addMonths, subMonths, setMonth, setYear, getDaysInMonth, startOfMonth, getDay, isSameDay } from "date-fns";
+import { format, getDaysInMonth, startOfMonth, getDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface DatePickerProps {
@@ -14,207 +14,393 @@ interface DatePickerProps {
     disabled?: boolean;
 }
 
-export default function DatePicker({ value, onChange, label, placeholder = "Select Date", error, required, disabled }: DatePickerProps) {
+type Step = "year" | "month" | "day";
+
+export default function DatePicker({
+    value,
+    onChange,
+    label = "DATE OF BIRTH",
+    placeholder = "Select Date",
+    error,
+    required,
+    disabled
+}: DatePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [viewDate, setViewDate] = useState(new Date());
+    const [currentStep, setCurrentStep] = useState<Step>("year");
+    
+    // Decade Window State (e.g. 1990 - 2005)
+    const [decadeStartYear, setDecadeStartYear] = useState<number>(1990);
+    
+    // Selected Date State
+    const [selectedYear, setSelectedYear] = useState<number>(1998);
+    const [selectedMonth, setSelectedMonth] = useState<number>(7); // 0-indexed (7 = Aug)
+    const [selectedDay, setSelectedDay] = useState<number>(14);
+
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Initial value parsing
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const MIN_AGE = 18;
+    const MAX_AGE = 40;
+
+    // Parse incoming value (DD-MM-YYYY or DD/MM/YYYY)
     useEffect(() => {
-        if (value && /^\d{2}-\d{2}-\d{4}$/.test(value)) {
-            const [d, m, y] = value.split("-").map(Number);
-            setViewDate(new Date(y, m - 1, d));
+        if (value) {
+            const cleaned = value.replace(/\s+/g, "").replace(/\//g, "-");
+            if (/^\d{2}-\d{2}-\d{4}$/.test(cleaned)) {
+                const [d, m, y] = cleaned.split("-").map(Number);
+                setSelectedYear(y);
+                setSelectedMonth(m - 1);
+                setSelectedDay(d);
+                
+                // Adjust decade range to contain the selected year
+                const start = Math.floor((y - 1970) / 16) * 16 + 1970;
+                setDecadeStartYear(start > 0 ? start : 1990);
+            }
+        } else {
+            // Default window centered around 1990 - 2005
+            setDecadeStartYear(1990);
+            setSelectedYear(1998);
+            setSelectedMonth(7);
+            setSelectedDay(14);
         }
     }, [value]);
 
+    // Handle click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
+                setCurrentStep("year");
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const handleDateSelect = (day: number) => {
-        const selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
-        const formattedDate = format(selectedDate, "dd-MM-yyyy");
-        onChange(formattedDate);
-        setIsOpen(false);
+    // Format value for display: "14 Aug 1998"
+    const getDisplayValue = (): string => {
+        if (!value) return "";
+        const cleaned = value.replace(/\s+/g, "").replace(/\//g, "-");
+        if (/^\d{2}-\d{2}-\d{4}$/.test(cleaned)) {
+            const [d, m, y] = cleaned.split("-").map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            return format(dateObj, "dd MMM yyyy");
+        }
+        return value;
     };
 
-    const daysInMonth = getDaysInMonth(viewDate);
-    const firstDayOfMonth = getDay(startOfMonth(viewDate));
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    const blanks = Array.from({ length: (firstDayOfMonth + 6) % 7 }, (_, i) => i); // Adjusted for Monday start if needed, but standard is Sunday. Let's use standard (firstDayOfMonth)
+    // Calculate real-time age
+    const calculateAge = (): number | null => {
+        if (!selectedYear || selectedMonth === null || !selectedDay) return null;
+        const dob = new Date(selectedYear, selectedMonth, selectedDay);
+        const ageMs = today.getTime() - dob.getTime();
+        if (isNaN(ageMs)) return null;
+        return new Date(ageMs).getUTCFullYear() - 1970;
+    };
 
-    // Standard Sunday-based grid
-    const standardBlanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
+    const currentAge = calculateAge();
+    const isAgeEligible = currentAge !== null && currentAge >= MIN_AGE && currentAge <= MAX_AGE;
 
-    const months = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
+    // Apply date and notify parent
+    const handleApplyDate = () => {
+        const dateObj = new Date(selectedYear, selectedMonth, selectedDay);
+        const formatted = format(dateObj, "dd-MM-yyyy");
+        onChange(formatted);
+        setIsOpen(false);
+        setCurrentStep("year");
+    };
+
+    // Month Abbreviation Array
+    const monthAbbrs = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
 
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    // Loan eligibility: applicant must be 18–40 years old at the time of application
-    const MIN_AGE = 18;
-    const MAX_AGE = 40;
-    // Oldest valid birth date: exactly MAX_AGE years ago
-    const maxBirthDate = new Date(today.getFullYear() - MAX_AGE, today.getMonth(), today.getDate());
-    // Youngest valid birth date: exactly MIN_AGE years ago
-    const minBirthDate = new Date(today.getFullYear() - MIN_AGE, today.getMonth(), today.getDate());
-    // Year dropdown: only show years within the allowed birth-year window
-    const years = Array.from(
-        { length: MAX_AGE - MIN_AGE + 1 },
-        (_, i) => currentYear - MIN_AGE - i
-    );
+    // Generate 16 years for grid (e.g. 1990 to 2005)
+    const yearGrid = Array.from({ length: 16 }, (_, i) => decadeStartYear + i);
 
-    const isSelected = (day: number) => {
-        if (!value) return false;
-        const [d, m, y] = value.split("-").map(Number);
-        return y === viewDate.getFullYear() && m === viewDate.getMonth() + 1 && d === day;
-    };
-
-    const isToday = (day: number) => {
-        return today.getFullYear() === viewDate.getFullYear() && today.getMonth() === viewDate.getMonth() && today.getDate() === day;
-    };
-
-    /** Returns true when a given calendar day falls outside the 18–40 age window */
-    const isOutOfRange = (day: number): boolean => {
-        const d = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
-        return d > minBirthDate || d < maxBirthDate;
-    };
+    // Days grid calculation
+    const viewDate = new Date(selectedYear, selectedMonth, 1);
+    const daysInMonth = getDaysInMonth(viewDate);
+    const firstDayOfMonth = getDay(startOfMonth(viewDate));
+    const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const dayBlanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
     return (
-        <div className="space-y-2 relative" ref={containerRef}>
-            {label && (
-                <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1 block">
-                    {label} {required && <span className="text-red-500">*</span>}
-                </label>
-            )}
-            
-            <div 
-                onClick={() => !disabled && setIsOpen(!isOpen)}
-                className={`w-full px-4 py-3 bg-gray-50/50 border rounded-xl text-sm transition-all ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} flex items-center justify-between ${
-                    isOpen ? "border-[#6605c7] ring-4 ring-[#6605c7]/5 bg-white" : "border-gray-100 hover:border-gray-300"
-                } ${error ? "border-red-300" : ""}`}
-            >
-                <span className={value ? "text-gray-900 font-medium" : "text-gray-400"}>
-                    {value || placeholder}
-                </span>
-                <span className={`material-symbols-outlined text-gray-400 text-xl transition-transform duration-300 ${isOpen ? "rotate-180 text-[#6605c7]" : ""}`}>
-                    calendar_today
-                </span>
+        <div className="dob-selector-card space-y-2 relative" ref={containerRef}>
+            {/* Input Trigger Field */}
+            <div className="field-group">
+                {label && (
+                    <label className="field-label text-[11px] font-bold text-slate-500 tracking-wider uppercase block mb-1.5 ml-0.5">
+                        {label} {required && <span className="text-rose-500 font-bold">*</span>}
+                    </label>
+                )}
+
+                <div
+                    onClick={() => {
+                        if (!disabled) {
+                            setIsOpen(!isOpen);
+                            if (!isOpen) setCurrentStep("year");
+                        }
+                    }}
+                    className={`field-input flex justify-between items-center bg-slate-50/70 border-1.5 border-slate-200 rounded-xl px-4 py-3 cursor-pointer transition-all duration-200 ${
+                        disabled ? "opacity-60 cursor-not-allowed" : ""
+                    } ${
+                        isOpen
+                            ? "active border-[#6c2bd9] bg-white ring-4 ring-[#6c2bd9]/10 shadow-md shadow-[#6c2bd9]/5"
+                            : "hover:border-[#6c2bd9]/60 hover:bg-white"
+                    } ${error ? "border-rose-300 ring-2 ring-rose-500/10" : ""}`}
+                >
+                    <span className={`field-value text-sm font-semibold ${value ? "text-slate-900" : "text-slate-400"}`}>
+                        {getDisplayValue() || placeholder}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        {value && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 text-[#6c2bd9] border border-purple-100">
+                                DOB
+                            </span>
+                        )}
+                        <span className="calendar-icon text-base">📅</span>
+                    </div>
+                </div>
             </div>
 
-            {error && <p className="text-red-500 text-[10px] font-medium ml-1">{error}</p>}
+            {error && <p className="text-rose-500 text-[10px] font-semibold ml-1">{error}</p>}
 
+            {/* Popover / Embedded Selector Panel */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 5, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 4, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.96 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="absolute z-[100] left-0 right-0 md:left-auto md:w-80 bg-white rounded-2xl shadow-2xl shadow-gray-200 border border-gray-100 p-5"
+                        className="selector-panel absolute z-[100] left-0 right-0 md:left-auto md:w-96 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl p-4 shadow-2xl shadow-[#6c2bd9]/15 text-slate-800 space-y-4"
                     >
-                        {/* Header: Month & Year Selector */}
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex gap-2">
-                                <select 
-                                    value={viewDate.getMonth()}
-                                    onChange={(e) => setViewDate(setMonth(viewDate, parseInt(e.target.value)))}
-                                    className="text-sm font-bold bg-transparent border-none focus:ring-0 cursor-pointer text-gray-900 hover:text-[#6605c7] appearance-none"
+                        {/* Panel Header with Selection Breadcrumbs */}
+                        <div className="panel-header flex justify-between items-center pb-3 border-b border-slate-100">
+                            {/* Selected Breadcrumbs */}
+                            <div className="selected-breadcrumbs flex items-center gap-1.5 text-xs font-semibold">
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentStep("year")}
+                                    className={`crumb hover:text-[#6c2bd9] transition-colors ${
+                                        currentStep === "year" ? "active-crumb text-[#6c2bd9] font-bold underline decoration-2 underline-offset-4" : "text-slate-500"
+                                    }`}
                                 >
-                                    {months.map((m, i) => (
-                                        <option key={m} value={i}>{m}</option>
-                                    ))}
-                                </select>
-                                <select 
-                                    value={viewDate.getFullYear()}
-                                    onChange={(e) => setViewDate(setYear(viewDate, parseInt(e.target.value)))}
-                                    className="text-sm font-bold bg-transparent border-none focus:ring-0 cursor-pointer text-gray-900 hover:text-[#6605c7] appearance-none"
-                                >
-                                    {years.map(y => (
-                                        <option key={y} value={y}>{y}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex gap-1">
-                                <button 
-                                    onClick={() => setViewDate(subMonths(viewDate, 1))}
-                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-lg">chevron_left</span>
+                                    {selectedYear}
                                 </button>
-                                <button 
-                                    onClick={() => setViewDate(addMonths(viewDate, 1))}
-                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors"
+                                <span className="crumb-separator text-slate-300 text-xs">/</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentStep("month")}
+                                    className={`crumb hover:text-[#6c2bd9] transition-colors ${
+                                        currentStep === "month" ? "active-crumb text-[#6c2bd9] font-bold underline decoration-2 underline-offset-4" : "text-slate-500"
+                                    }`}
                                 >
-                                    <span className="material-symbols-outlined text-lg">chevron_right</span>
+                                    {monthAbbrs[selectedMonth]}
+                                </button>
+                                <span className="crumb-separator text-slate-300 text-xs">/</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentStep("day")}
+                                    className={`crumb hover:text-[#6c2bd9] transition-colors ${
+                                        currentStep === "day" ? "active-crumb text-[#6c2bd9] font-bold underline decoration-2 underline-offset-4" : "text-slate-500"
+                                    }`}
+                                >
+                                    {selectedDay}
                                 </button>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsOpen(false)}
+                                className="text-slate-400 hover:text-slate-700 text-xs font-bold transition-colors"
+                            >
+                                ✕
+                            </button>
                         </div>
 
-                        {/* Calendar Grid */}
-                        <div className="grid grid-cols-7 gap-1 mb-2">
-                            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
-                                <div key={d} className="text-center text-[10px] font-black text-gray-400 uppercase tracking-tighter py-1">
-                                    {d}
+                        {/* ── YEAR SELECTOR GRID ── */}
+                        {currentStep === "year" && (
+                            <motion.div
+                                key="year-section"
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 8 }}
+                                transition={{ duration: 0.15 }}
+                                className="view-section space-y-2.5"
+                            >
+                                <div className="section-header flex justify-between items-center">
+                                    <span className="section-title text-[10px] font-bold text-slate-500 tracking-widest uppercase">
+                                        SELECT YEAR
+                                    </span>
+                                    <div className="decade-nav flex items-center gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDecadeStartYear((prev) => prev - 16)}
+                                            className="nav-btn border-none bg-slate-100 hover:bg-purple-100 hover:text-[#6c2bd9] rounded-md px-2 py-0.5 font-bold text-xs transition-colors"
+                                        >
+                                            &lt;
+                                        </button>
+                                        <span className="decade-label text-xs font-semibold text-slate-700">
+                                            {decadeStartYear} - {decadeStartYear + 15}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDecadeStartYear((prev) => prev + 16)}
+                                            className="nav-btn border-none bg-slate-100 hover:bg-purple-100 hover:text-[#6c2bd9] rounded-md px-2 py-0.5 font-bold text-xs transition-colors"
+                                        >
+                                            &gt;
+                                        </button>
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-7 gap-1">
-                            {standardBlanks.map(i => (
-                                <div key={`blank-${i}`} className="h-9" />
-                            ))}
-                            {days.map(day => {
-                                const outOfRange = isOutOfRange(day);
-                                return (
-                                    <button
-                                        key={day}
-                                        onClick={() => !outOfRange && handleDateSelect(day)}
-                                        disabled={outOfRange}
-                                        title={outOfRange ? "Outside eligible age range (18–40 years)" : undefined}
-                                        className={`h-9 flex items-center justify-center rounded-xl text-sm font-medium transition-all ${
-                                            outOfRange
-                                                ? "text-gray-200 cursor-not-allowed"
-                                                : isSelected(day)
-                                                ? "bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20"
-                                                : isToday(day)
-                                                ? "text-[#6605c7] bg-[#6605c7]/5 font-bold"
-                                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                                        }`}
-                                    >
-                                        {day}
-                                    </button>
-                                );
-                            })}
-                        </div>
 
-                        {/* Age Eligibility Note */}
-                        <div className="mt-4 pt-4 border-t border-gray-50">
-                            <div className="flex items-center gap-1.5 mb-2">
-                                <span className="material-symbols-outlined text-amber-500 text-[14px]">info</span>
-                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">
-                                    Eligible age: 18 – 40 years
+                                <div className="grid grid-years grid-cols-4 gap-2">
+                                    {yearGrid.map((yr) => {
+                                        const isSelected = selectedYear === yr;
+                                        const isEligible = yr >= currentYear - MAX_AGE - 1 && yr <= currentYear - MIN_AGE;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={yr}
+                                                onClick={() => {
+                                                    setSelectedYear(yr);
+                                                    setCurrentStep("month");
+                                                }}
+                                                className={`grid-item border rounded-xl py-2 px-1 text-xs font-semibold transition-all duration-150 text-center ${
+                                                    isSelected
+                                                        ? "selected bg-gradient-to-r from-[#6c2bd9] to-[#9333ea] text-white border-transparent shadow-md shadow-[#6c2bd9]/25 scale-105 font-bold"
+                                                        : isEligible
+                                                        ? "bg-white border-slate-200 text-slate-700 hover:border-[#6c2bd9] hover:text-[#6c2bd9] hover:bg-[#6c2bd9]/5"
+                                                        : "bg-slate-50 border-slate-200 text-slate-400 opacity-60"
+                                                }`}
+                                            >
+                                                {yr}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* ── MONTH SELECTOR GRID ── */}
+                        {currentStep === "month" && (
+                            <motion.div
+                                key="month-section"
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 8 }}
+                                transition={{ duration: 0.15 }}
+                                className="view-section space-y-2.5"
+                            >
+                                <div className="section-header flex justify-between items-center">
+                                    <span className="section-title text-[10px] font-bold text-slate-500 tracking-widest uppercase">
+                                        SELECT MONTH ({selectedYear})
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentStep("year")}
+                                        className="text-[10px] font-bold text-[#6c2bd9] hover:underline"
+                                    >
+                                        ← Change Year
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-months grid-cols-4 gap-2">
+                                    {monthAbbrs.map((mName, idx) => {
+                                        const isSelected = selectedMonth === idx;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={mName}
+                                                onClick={() => {
+                                                    setSelectedMonth(idx);
+                                                    setCurrentStep("day");
+                                                }}
+                                                className={`grid-item border rounded-xl py-2.5 px-1 text-xs font-semibold transition-all duration-150 text-center ${
+                                                    isSelected
+                                                        ? "selected bg-gradient-to-r from-[#6c2bd9] to-[#9333ea] text-white border-transparent shadow-md shadow-[#6c2bd9]/25 scale-105 font-bold"
+                                                        : "bg-white border-slate-200 text-slate-700 hover:border-[#6c2bd9] hover:text-[#6c2bd9] hover:bg-[#6c2bd9]/5"
+                                                }`}
+                                            >
+                                                {mName}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* ── DAY SELECTOR GRID ── */}
+                        {currentStep === "day" && (
+                            <motion.div
+                                key="day-section"
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 8 }}
+                                transition={{ duration: 0.15 }}
+                                className="view-section space-y-2.5"
+                            >
+                                <div className="section-header flex justify-between items-center">
+                                    <span className="section-title text-[10px] font-bold text-slate-500 tracking-widest uppercase">
+                                        SELECT DATE ({monthAbbrs[selectedMonth]} {selectedYear})
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentStep("month")}
+                                        className="text-[10px] font-bold text-[#6c2bd9] hover:underline"
+                                    >
+                                        ← Change Month
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-days grid-cols-7 gap-1.5">
+                                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+                                        <div key={d} className="text-center text-[10px] font-black text-slate-400 uppercase py-1">
+                                            {d}
+                                        </div>
+                                    ))}
+                                    {dayBlanks.map((i) => (
+                                        <div key={`blank-${i}`} className="h-8" />
+                                    ))}
+                                    {monthDays.map((d) => {
+                                        const isSelected = selectedDay === d;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={d}
+                                                onClick={() => setSelectedDay(d)}
+                                                className={`day-item border rounded-xl h-8 flex items-center justify-center text-xs font-semibold transition-all duration-150 ${
+                                                    isSelected
+                                                        ? "selected bg-gradient-to-r from-[#6c2bd9] to-[#9333ea] text-white border-transparent shadow-md shadow-[#6c2bd9]/25 scale-110 font-bold"
+                                                        : "bg-white border-slate-200 text-slate-700 hover:border-[#6c2bd9] hover:text-[#6c2bd9] hover:bg-[#6c2bd9]/5"
+                                                }`}
+                                            >
+                                                {d}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Confirmation Action Bar / Panel Footer */}
+                        <div className="panel-footer flex justify-between items-center pt-3 border-t border-slate-100">
+                            <div className="age-validation flex items-center gap-1.5 text-xs font-semibold">
+                                <span className={`status-dot w-2 h-2 rounded-full ${isAgeEligible ? "green bg-emerald-500" : "bg-amber-500"}`}></span>
+                                <span className={isAgeEligible ? "text-emerald-700 font-bold" : "text-amber-700 font-bold"}>
+                                    {currentAge !== null ? `Eligible Age: ${currentAge} Yrs` : "Select Date"}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-[9px] text-gray-400 font-medium">
-                                    Born {maxBirthDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} –&nbsp;
-                                    {minBirthDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </span>
-                                <button 
-                                    onClick={() => setIsOpen(false)}
-                                    className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-600"
-                                >
-                                    Close
-                                </button>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={handleApplyDate}
+                                className="btn-apply border-none bg-gradient-to-r from-[#6c2bd9] to-[#9333ea] hover:from-[#5b21b6] hover:to-[#7e22ce] text-white text-xs font-extrabold px-4 py-2 rounded-xl shadow-md shadow-[#6c2bd9]/20 transition-all active:scale-95"
+                            >
+                                Set Date
+                            </button>
                         </div>
                     </motion.div>
                 )}
