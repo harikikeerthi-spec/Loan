@@ -701,7 +701,7 @@ export default function UserProfileView({
         type: "text" | "aadhar" | "pan" = "text",
         _key?: string
     ) => {
-        const isEmpty = !val || val === "—" || val === "";
+        const isEmpty = !val || val === "—" || val === "" || val === "Not provided";
         const displayVal = isEmpty ? "Not provided" : val;
 
         if (type === "aadhar" || type === "pan") {
@@ -709,12 +709,8 @@ export default function UserProfileView({
                 return (
                     <div className="mb-4 group/field relative">
                         <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</span>
-                        <div
-                            onClick={onEditClick}
-                            className="flex items-center justify-between cursor-pointer py-1 min-h-[28px] border-b border-transparent hover:border-slate-100 transition-all"
-                        >
+                        <div className="flex items-center justify-between py-1 min-h-[28px]">
                             <span className="text-[15px] text-slate-400 italic">Not provided</span>
-                            <i className="ph ph-pencil-simple text-slate-400 opacity-0 group-hover/field:opacity-100 transition-opacity text-sm ml-2" />
                         </div>
                     </div>
                 );
@@ -741,13 +737,15 @@ export default function UserProfileView({
             <div className="mb-4 group/field relative">
                 <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</span>
                 <div
-                    onClick={onEditClick}
-                    className="flex items-center justify-between cursor-pointer py-1 min-h-[28px] border-b border-transparent hover:border-slate-100 transition-all"
+                    onClick={isEmpty ? undefined : onEditClick}
+                    className={`flex items-center justify-between py-1 min-h-[28px] ${isEmpty ? '' : 'cursor-pointer border-b border-transparent hover:border-slate-100 transition-all'}`}
                 >
                     <span className={`text-[15px] font-medium leading-tight ${isEmpty ? 'text-slate-400 italic' : 'text-[#0F172A]'}`}>
                         {displayVal}
                     </span>
-                    <i className="ph ph-pencil-simple text-slate-400 opacity-0 group-hover/field:opacity-100 transition-opacity text-sm ml-2" />
+                    {!isEmpty && (
+                        <i className="ph ph-pencil-simple text-slate-400 opacity-0 group-hover/field:opacity-100 transition-opacity text-sm ml-2" />
+                    )}
                 </div>
             </div>
         );
@@ -1094,13 +1092,15 @@ export default function UserProfileView({
                                             }`}>
                                             ● {passportDoc?.uploaded ? "Verified" : passportNumber ? "Details Available" : "Pending Upload"}
                                         </span>
-                                        <button
-                                            type="button"
-                                            onClick={startPersonalEdit}
-                                            className="bg-white border border-gray-300 text-gray-700 text-xs font-medium px-3.5 py-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
-                                        >
-                                            Edit
-                                        </button>
+                                        {(passportDoc?.uploaded || passportNumber || passportFullName) && (
+                                            <button
+                                                type="button"
+                                                onClick={startPersonalEdit}
+                                                className="bg-white border border-gray-300 text-gray-700 text-xs font-medium px-3.5 py-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
+                                            >
+                                                Edit
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -1519,27 +1519,57 @@ export default function UserProfileView({
                                 </h3>
                                 {editingCard !== "father" && editingCard !== "mother" && editingCard !== "coapplicant" && (
                                     <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={startFatherEdit}
-                                            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold uppercase transition-all border border-slate-200 cursor-pointer"
-                                        >
-                                            Edit Father
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={startMotherEdit}
-                                            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold uppercase transition-all border border-slate-200 cursor-pointer"
-                                        >
-                                            Edit Mother
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={startCoApplicantEdit}
-                                            className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-[#6605c7] rounded-lg text-[10px] font-bold uppercase transition-all border-0 cursor-pointer"
-                                        >
-                                            Edit Co-Applicant
-                                        </button>
+                                        {(() => {
+                                            const fatherRaw = fatherData?.name || activeProfile?.family?.fatherName || activeProfile?.fatherName;
+                                            const fatherDoc = getDocExtractedField(['father_aadhar', 'father_aadhaar', 'father_pan'], ['full_name', 'fullName', 'name', 'holder_name', 'father_name']);
+                                            const fatherAadhaar = fatherData?.aadharNumber || activeProfile?.family?.fatherAadhar || activeProfile?.fatherAadhar;
+                                            const fatherPan = fatherData?.panNumber || activeProfile?.family?.fatherPan || activeProfile?.fatherPan;
+                                            const fatherHasData = !!((fatherRaw && !isStudentName(fatherRaw)) || fatherDoc || fatherAadhaar || fatherPan);
+
+                                            const motherRaw = motherData?.name || activeProfile?.family?.motherName || activeProfile?.motherName;
+                                            const motherDoc = getDocExtractedField(['mother_aadhar', 'mother_aadhaar', 'mother_pan'], ['full_name', 'fullName', 'name', 'holder_name', 'mother_name']);
+                                            const motherAadhaar = motherData?.aadharNumber || activeProfile?.family?.motherAadhar || activeProfile?.motherAadhar;
+                                            const motherPan = motherData?.panNumber || activeProfile?.family?.motherPan || activeProfile?.motherPan;
+                                            const motherHasData = !!((motherRaw && !isStudentName(motherRaw)) || motherDoc || motherAadhaar || motherPan);
+
+                                            const coappRaw = coapplicantData?.name || activeProfile?.coApplicant?.name || activeProfile?.coApplicantName;
+                                            const coappAadhaar = activeProfile?.coApplicantAadhar || activeProfile?.coApplicant?.aadharNumber;
+                                            const coappPan = activeProfile?.coApplicantPan || activeProfile?.coApplicant?.panNumber;
+                                            const coappPhone = firstApp?.coApplicantPhone || activeProfile?.coApplicant?.mobile || activeProfile?.coApplicantPhone;
+                                            const coappHasData = !!(coappRaw || coappAadhaar || coappPan || coappPhone);
+
+                                            return (
+                                                <>
+                                                    {fatherHasData && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={startFatherEdit}
+                                                            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold uppercase transition-all border border-slate-200 cursor-pointer"
+                                                        >
+                                                            Edit Father
+                                                        </button>
+                                                    )}
+                                                    {motherHasData && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={startMotherEdit}
+                                                            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold uppercase transition-all border border-slate-200 cursor-pointer"
+                                                        >
+                                                            Edit Mother
+                                                        </button>
+                                                    )}
+                                                    {coappHasData && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={startCoApplicantEdit}
+                                                            className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-[#6605c7] rounded-lg text-[10px] font-bold uppercase transition-all border-0 cursor-pointer"
+                                                        >
+                                                            Edit Co-Applicant
+                                                        </button>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 )}
                             </div>

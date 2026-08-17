@@ -112,10 +112,15 @@ export default function DocumentVaultPage() {
         return matchRatio >= 0.6;
     };
 
-    // Sequential Upload Requirement: Passport must be uploaded first
+    // Identity Document Requirement: Either Passport OR Aadhaar Card must be uploaded first
     const isPassportUploaded = docs.some(
         d => d.docType === 'passport' && (d.uploaded === true || d.status === 'uploaded' || d.status === 'verified')
     );
+    const isAadhaarUploaded = docs.some(
+        d => (d.docType === 'national_id' || d.docType === 'aadhar' || d.docType === 'aadhaar') && (d.uploaded === true || d.status === 'uploaded' || d.status === 'verified')
+    );
+    const hasIdentityDocUploaded = isPassportUploaded || isAadhaarUploaded;
+    const isIdentityDocSlot = (type: string) => ['passport', 'national_id', 'aadhar', 'aadhaar'].includes(type.toLowerCase());
 
     // Parallel Bulk Upload State
     const [bulkQueue, setBulkQueue] = useState<Array<{
@@ -176,8 +181,8 @@ export default function DocumentVaultPage() {
     };
 
     const handleParallelUpload = async () => {
-        if (!isPassportUploaded) {
-            showAlert("Passport Required First", "Please upload your Passport first before uploading other documents.", "warning");
+        if (!hasIdentityDocUploaded) {
+            showAlert("Identity Document Required First", "Please upload either your Passport or Aadhaar Card first before uploading other documents.", "warning");
             return;
         }
 
@@ -597,8 +602,8 @@ export default function DocumentVaultPage() {
     };
 
     const triggerFileInput = (docType: string) => {
-        if (docType.toLowerCase() !== 'passport' && !isPassportUploaded) {
-            showAlert("Passport Required First", "Please upload your Passport first to unlock all other document upload slots.", "warning");
+        if (!isIdentityDocSlot(docType) && !hasIdentityDocUploaded) {
+            showAlert("Identity Document Required First", "Please upload either your Passport or Aadhaar Card first to unlock all other document upload slots.", "warning");
             return;
         }
         const input = document.getElementById(`file-input-${docType}`) as HTMLInputElement;
@@ -606,8 +611,8 @@ export default function DocumentVaultPage() {
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docType: string, docName?: string) => {
-        if (docType.toLowerCase() !== 'passport' && !isPassportUploaded) {
-            showAlert("Passport Required First", "Please upload your Passport first before uploading other documents.", "warning");
+        if (!isIdentityDocSlot(docType) && !hasIdentityDocUploaded) {
+            showAlert("Identity Document Required First", "Please upload either your Passport or Aadhaar Card first before uploading other documents.", "warning");
             return;
         }
         const file = e.target.files?.[0];
@@ -777,12 +782,12 @@ export default function DocumentVaultPage() {
 
             const extracted = result.data?.ocrResult?.extractedFields || result.data?.verification?.details?.extractedFields || {};
 
-            if (docType.toLowerCase() === 'passport') {
+            if (isIdentityDocSlot(docType)) {
                 const fatherName = extracted.father_name || extracted.fatherName || extracted.father_full_name;
                 const motherName = extracted.mother_name || extracted.motherName || extracted.mother_full_name;
-                const fullName = extracted.full_name || extracted.fullName || (extracted.given_names ? `${extracted.given_names} ${extracted.surname || ''}`.trim() : undefined);
+                const fullName = extracted.full_name || extracted.fullName || (extracted.given_names ? `${extracted.given_names} ${extracted.surname || ''}`.trim() : undefined) || extracted.person_name || extracted.holder_name || extracted.name || extracted.applicant_name;
                 const dob = extracted.dob || extracted.date_of_birth;
-                const passportNo = extracted.passport_number || extracted.passportNo;
+                const passportNo = extracted.passport_number || extracted.passportNo || extracted.aadhaarNumber || extracted.aadhar_number;
                 const gender = extracted.gender;
                 const address = typeof extracted.address === 'string' ? extracted.address : (extracted.address?.address1 ? `${extracted.address.address1}, ${extracted.address.city || ''}` : undefined);
 
@@ -999,7 +1004,7 @@ export default function DocumentVaultPage() {
                         showAlert("Record Retained", `Kept existing ${parentType}'s name "${existingParentName}".`, "info");
                     }
                 }
-            } else if (isStudentDoc && docType.toLowerCase() !== 'passport') {
+            } else if (isStudentDoc && !isIdentityDocSlot(docType)) {
                 const extractedStudentName = extracted.full_name || extracted.fullName || (extracted.given_names ? `${extracted.given_names} ${extracted.surname || ''}`.trim() : undefined) || extracted.person_name || extracted.holder_name || extracted.name;
                 const activeProf = getActiveProfile();
                 const existingStudentName = activeProf.passportOriginalName || activeProf.nameAsInPassport || (activeProf.firstName ? `${activeProf.firstName} ${activeProf.lastName || ''}`.trim() : "");
@@ -1052,8 +1057,8 @@ export default function DocumentVaultPage() {
     };
 
     const handleDigilockerVerify = async (docType: string) => {
-        if (docType.toLowerCase() !== 'passport' && !isPassportUploaded) {
-            showAlert("Passport Required First", "Please upload your Passport first before using DigiLocker verification.", "warning");
+        if (!isIdentityDocSlot(docType) && !hasIdentityDocUploaded) {
+            showAlert("Identity Document Required First", "Please upload either your Passport or Aadhaar Card first before using DigiLocker verification.", "warning");
             return;
         }
         if (!user?.id) {
@@ -1065,8 +1070,8 @@ export default function DocumentVaultPage() {
     };
 
     const handleSyncFromDigilocker = async (docType: string) => {
-        if (docType.toLowerCase() !== 'passport' && !isPassportUploaded) {
-            showAlert("Passport Required First", "Please upload your Passport first before syncing other documents.", "warning");
+        if (!isIdentityDocSlot(docType) && !hasIdentityDocUploaded) {
+            showAlert("Identity Document Required First", "Please upload either your Passport or Aadhaar Card first before syncing other documents.", "warning");
             return;
         }
         if (!user?.id) return;
@@ -1119,8 +1124,8 @@ export default function DocumentVaultPage() {
     };
 
     const handleAddOtherDocument = async (category: "student" | "coapplicant" | "parent") => {
-        if (!isPassportUploaded) {
-            showAlert("Passport Required First", "Please upload your Passport first before adding other document slots.", "warning");
+        if (!hasIdentityDocUploaded) {
+            showAlert("Identity Document Required First", "Please upload either your Passport or Aadhaar Card first before adding other document slots.", "warning");
             return;
         }
         const docName = prompt("Enter the name of the document you want to add:");
@@ -1394,14 +1399,14 @@ export default function DocumentVaultPage() {
                                                     Sync to Vault
                                                 </button>
                                             </div>
-                                        ) : !isPassportUploaded && req.type !== 'passport' ? (
+                                        ) : !hasIdentityDocUploaded && !isIdentityDocSlot(req.type) ? (
                                             <button
                                                 disabled
                                                 className="w-full py-2.5 bg-gray-100 text-gray-400 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 border border-gray-200 cursor-not-allowed"
-                                                title="Please upload your Passport first to unlock this document slot"
+                                                title="Please upload your Passport or Aadhaar Card first to unlock this document slot"
                                             >
                                                 <span className="material-symbols-outlined text-[16px]">lock</span>
-                                                Locked (Passport First)
+                                                Locked (Passport or Aadhaar First)
                                             </button>
                                         ) : (
                                             <>
@@ -1483,20 +1488,20 @@ export default function DocumentVaultPage() {
                             </div>
                         </div>
 
-                        {!isPassportUploaded && (
+                        {!hasIdentityDocUploaded && (
                             <div className="mb-10 p-6 bg-gradient-to-r from-purple-900/10 via-purple-500/10 to-indigo-500/10 border-2 border-dashed border-[#6605c7]/40 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl shadow-purple-500/5 animate-fade-in relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#6605c7]/10 rounded-full blur-2xl" />
                                 <div className="flex items-center gap-4 relative z-10">
                                     <div className="w-14 h-14 rounded-2xl bg-[#6605c7] text-white flex items-center justify-center shrink-0 shadow-xl shadow-purple-500/30 animate-pulse">
-                                        <span className="material-symbols-outlined text-[28px]">travel_explore</span>
+                                        <span className="material-symbols-outlined text-[28px]">fingerprint</span>
                                     </div>
                                     <div>
                                         <h3 className="text-base font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
-                                            Step 1 Mandatory Requirement: Upload Passport First
+                                            Step 1 Mandatory Requirement: Upload Passport or Aadhaar Card First
                                             <span className="px-2.5 py-0.5 bg-[#6605c7] text-white text-[10px] font-black rounded-full uppercase tracking-widest shadow-sm">Required Step 1</span>
                                         </h3>
                                         <p className="text-xs text-gray-600 font-medium mt-1 leading-relaxed max-w-2xl">
-                                            To ensure identity verification and automatic detail extraction, you must upload your <strong>Passport</strong> first. All other document slots will unlock automatically once your Passport is uploaded.
+                                            To ensure identity verification and automatic detail extraction, you must upload either your <strong>Passport</strong> or <strong>Aadhaar Card</strong> first. All other document slots will unlock automatically once either your Passport or Aadhaar Card is uploaded.
                                         </p>
                                     </div>
                                 </div>
@@ -1506,7 +1511,7 @@ export default function DocumentVaultPage() {
                                     className="px-6 py-3 bg-[#6605c7] hover:bg-[#5504a6] text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-500/30 shrink-0 flex items-center justify-center gap-2 active:scale-95 relative z-10"
                                 >
                                     <span className="material-symbols-outlined text-[18px]">upload</span>
-                                    Upload Passport Now
+                                    Upload Identity Document
                                 </button>
                             </div>
                         )}

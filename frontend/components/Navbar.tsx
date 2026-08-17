@@ -16,11 +16,13 @@ export default function Navbar() {
     const [hasApplied, setHasApplied] = useState<boolean>(() => {
         if (typeof window === 'undefined') return false;
         try {
-            if (localStorage.getItem('has_applied_loan') === 'true') return true;
+            if (localStorage.getItem('has_applied_loan')) {
+                localStorage.removeItem('has_applied_loan');
+            }
             const raw = localStorage.getItem('recent_application_submitted');
             if (raw) {
                 const parsed = JSON.parse(raw);
-                if (Date.now() - (parsed.timestamp || 0) < 2592000000) return true;
+                if ((parsed.userId === user?.id || (user?.email && parsed.email === user.email)) && Date.now() - (parsed.timestamp || 0) < 2592000000) return true;
             }
         } catch { }
         return false;
@@ -48,17 +50,18 @@ export default function Navbar() {
             const hasUserApps = !!((user as any)?.applications && ((user as any).applications as any[]).length > 0) || !!((user as any)?.loanApplications && ((user as any).loanApplications as any[]).length > 0);
             if (hasUserApps) {
                 setHasApplied(true);
-                try { localStorage.setItem('has_applied_loan', 'true'); } catch { }
             }
 
             const checkApplication = async () => {
                 let hasRecentLocal = false;
                 try {
-                    if (localStorage.getItem('has_applied_loan') === 'true') hasRecentLocal = true;
+                    if (localStorage.getItem('has_applied_loan')) {
+                        localStorage.removeItem('has_applied_loan');
+                    }
                     const raw = localStorage.getItem('recent_application_submitted');
                     if (raw) {
                         const parsed = JSON.parse(raw);
-                        if ((parsed.userId === user.id || parsed.email === user.email) && (Date.now() - (parsed.timestamp || 0)) < 2592000000) {
+                        if ((parsed.userId === user.id || (user?.email && parsed.email === user.email)) && (Date.now() - (parsed.timestamp || 0)) < 2592000000) {
                             hasRecentLocal = true;
                         }
                     }
@@ -71,12 +74,9 @@ export default function Navbar() {
                     const apps = res?.data?.applications || [];
                     const isApplied = apps.length > 0 || hasRecentLocal || hasUserApps;
                     setHasApplied(isApplied);
-                    if (isApplied) {
-                        try { localStorage.setItem('has_applied_loan', 'true'); } catch { }
-                    }
                 } catch (err) {
                     console.error("Navbar failed to check application status:", err);
-                    if (hasRecentLocal || hasUserApps) setHasApplied(true);
+                    setHasApplied(hasRecentLocal || hasUserApps);
                 }
             };
             checkApplication();

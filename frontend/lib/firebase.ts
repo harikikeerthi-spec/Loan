@@ -25,6 +25,7 @@ if (!isConfigValid && typeof window !== 'undefined') {
 let app;
 let auth: any;
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
 if (isConfigValid) {
   app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);

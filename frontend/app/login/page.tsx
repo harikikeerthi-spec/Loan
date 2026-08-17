@@ -239,9 +239,22 @@ function LoginContent() {
                 isLoginInitiated.current = true;
                 triggerSuccessAndRedirect(data, result.user.email || "");
             })
-            .catch((e: unknown) => {
+            .catch((e: any) => {
                 console.error("Google Login Error:", e);
-                setError(e instanceof Error ? e.message : "Failed to login with Google");
+                const code = e?.code || "";
+                let msg = e instanceof Error ? e.message : "Failed to login with Google";
+
+                if (code === "auth/invalid-continue-uri" || msg.includes("auth/invalid-continue-uri")) {
+                    msg = "Firebase Domain Whitelist Error (auth/invalid-continue-uri): Your domain (e.g. localhost or localhost:3000) is not authorized in Firebase Console > Authentication > Settings > Authorized Domains. Tip: You can also login directly using Email OTP below!";
+                } else if (code === "auth/unauthorized-domain" || msg.includes("auth/unauthorized-domain")) {
+                    msg = "Firebase Authorization Error: This domain is not authorized for Firebase Auth. Add 'localhost' / your host in Firebase Console > Authentication > Settings > Authorized Domains.";
+                } else if (code === "auth/popup-closed-by-user") {
+                    msg = "Sign-in popup was closed before finishing login.";
+                } else if (code === "auth/popup-blocked") {
+                    msg = "Sign-in popup was blocked by your browser. Please allow popups for this site.";
+                }
+
+                setError(msg);
             })
             .finally(() => {
                 setLoading(false);

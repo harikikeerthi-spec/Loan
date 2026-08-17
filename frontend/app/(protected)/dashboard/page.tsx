@@ -618,7 +618,9 @@ export default function DashboardPage() {
 
     const hasRecentLocalSubmission = typeof window !== 'undefined' && (() => {
         try {
-            if (localStorage.getItem('has_applied_loan') === 'true') return true;
+            if (localStorage.getItem('has_applied_loan')) {
+                localStorage.removeItem('has_applied_loan');
+            }
             const raw = localStorage.getItem('recent_application_submitted');
             if (!raw) return false;
             const parsed = JSON.parse(raw);
@@ -633,10 +635,23 @@ export default function DashboardPage() {
     const hasApplied = hasDataApps || hasUserApps || hasRecentLocalSubmission;
 
     useEffect(() => {
-        if (hasDataApps || hasUserApps) {
-            try { localStorage.setItem('has_applied_loan', 'true'); } catch { }
+        if (!hasDataApps && !hasUserApps && !loading) {
+            try {
+                if (localStorage.getItem('has_applied_loan')) {
+                    localStorage.removeItem('has_applied_loan');
+                }
+                const raw = localStorage.getItem('recent_application_submitted');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed.userId === user?.id || (user?.email && parsed.email === user.email)) {
+                        if (Date.now() - (parsed.timestamp || 0) > 60000) {
+                            localStorage.removeItem('recent_application_submitted');
+                        }
+                    }
+                }
+            } catch { }
         }
-    }, [hasDataApps, hasUserApps]);
+    }, [hasDataApps, hasUserApps, loading, user?.id, user?.email]);
 
     const firstApp = (data.applications && data.applications.length > 0) ? data.applications[0] : null;
     const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
