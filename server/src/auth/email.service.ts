@@ -12,13 +12,13 @@ export class EmailService {
     const isSecure = port === 465;
 
     this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      host: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'email-smtp.us-east-1.amazonaws.com',
       port: port,
       secure: isSecure, // true for 465, false for 587 STARTTLS
       requireTLS: !isSecure,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.EMAIL_USER || process.env.SMTP_USER,
+        pass: process.env.EMAIL_PASS || process.env.SMTP_PASS,
       },
       tls: {
         rejectUnauthorized: false,
