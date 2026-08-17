@@ -42,7 +42,7 @@ export function getStudentDocumentRequirements(student: any = {}): DocumentRequi
 
   return [
     requirement("Passport (Front & Back)", "passport", true, "identity"),
-    requirement("National ID / Aadhar Card", "national_id", true, "identity"),
+    requirement("National ID / Aadhaar Card", "national_id", true, "identity"),
     requirement("PAN Card", "pan", true, "identity"),
     requirement("10th Marksheet", "marksheet_10", true, "academic"),
     requirement("12th / Diploma Marksheet", "marksheet_12", highestLevel !== "Grade 10", "academic"),
@@ -74,7 +74,7 @@ export function getPersonDocumentRequirements(
     ? `${cleanName} (${baseRole})`
     : baseRole;
 
-  docs.push(requirement(`${name}'s Aadhar Card`, `${personType}_aadhar`, true, "identity"));
+  docs.push(requirement(`${name}'s Aadhaar Card`, `${personType}_aadhar`, true, "identity"));
   docs.push(requirement(`${name}'s PAN Card`, `${personType}_pan`, true, "identity"));
 
   return docs;

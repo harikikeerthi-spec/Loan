@@ -216,9 +216,63 @@ export default function UserProfileView({
         const rawPct = pctFromDoc || pctFallback;
         const formattedPct = formatPercentageValue(rawPct, doc);
 
+        // MARKS IN NUMBERS & WORDS EXTRACTION + TALLY LOGIC
+        const secNumVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks', 'aggregate_marks', 'grand_total']);
+        const maxNumVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of', 'max']);
+
+        let wordsSecStr = getExtractedField(doc, ['marks_in_words', 'total_marks_in_words', 'secured_marks_in_words', 'marks_obtained_in_words']);
+        let wordsMaxStr = getExtractedField(doc, ['max_marks_in_words', 'maximum_marks_in_words', 'total_max_in_words']);
+
+        if (!wordsSecStr && doc?.verificationMetadata?.extractedFields) {
+            const rawText = String(doc.verificationMetadata.extractedFields.raw_text_summary || doc.verificationMetadata.extractedFields.rawOcrText || '');
+            const wordsMatch = rawText.match(/(?:marks|total|secured|obtained)\s+(?:in\s+words)?[:\s]+([a-z\s]+)(?:only|hundred|thousand)?/i);
+            if (wordsMatch) wordsSecStr = wordsMatch[1].trim();
+        }
+
+        const secNum = parseFloat(String(secNumVal || '').replace(/[^\d.]/g, ''));
+        const maxNum = parseFloat(String(maxNumVal || '').replace(/[^\d.]/g, ''));
+
+        const secFromWords = parseNumberFromWords(wordsSecStr);
+        const maxFromWords = parseNumberFromWords(wordsMaxStr);
+
+        let calculatedPct: string | undefined = undefined;
+        if (!isNaN(secNum) && !isNaN(maxNum) && maxNum > 0) {
+            calculatedPct = `${Math.round((secNum / maxNum) * 100 * 10) / 10}%`;
+        } else if (secFromWords && maxFromWords && maxFromWords > 0) {
+            calculatedPct = `${Math.round((secFromWords / maxFromWords) * 100 * 10) / 10}%`;
+        } else if (secFromWords && secFromWords > 0 && secFromWords <= 100) {
+            calculatedPct = `${Math.round(secFromWords * 10) / 10}%`;
+        }
+
+        let tallyStatus: 'matched' | 'discrepancy' | 'numbers_only' | 'none' = 'none';
+        let tallyMessage = '';
+
+        if (!isNaN(secNum) && secFromWords != null) {
+            if (Math.abs(secNum - secFromWords) <= 1) {
+                tallyStatus = 'matched';
+                tallyMessage = `Tallied: ${secNum} = "${wordsSecStr}"`;
+            } else {
+                tallyStatus = 'discrepancy';
+                tallyMessage = `Mismatch: Numbers (${secNum}) != Words ("${wordsSecStr}" = ${secFromWords})`;
+            }
+        } else if (!isNaN(secNum)) {
+            tallyStatus = 'numbers_only';
+            tallyMessage = maxNum ? `Secured: ${secNum} / ${maxNum}` : `Secured: ${secNum}`;
+        }
+
+        const finalPercentage = formattedPct || calculatedPct || "—";
+
         return {
             institute: inst || "—",
-            percentage: formattedPct || "—"
+            percentage: finalPercentage,
+            secNum: !isNaN(secNum) ? secNum : undefined,
+            maxNum: !isNaN(maxNum) ? maxNum : undefined,
+            wordsSecStr,
+            wordsMaxStr,
+            secFromWords,
+            calculatedPct,
+            tallyStatus,
+            tallyMessage
         };
     };
 
@@ -228,20 +282,87 @@ export default function UserProfileView({
 
     let parsedPassportObj: any = activeProfile?.passport;
     if (typeof parsedPassportObj === 'string') {
-        try { parsedPassportObj = JSON.parse(parsedPassportObj); } catch {}
+        try { parsedPassportObj = JSON.parse(parsedPassportObj); } catch { }
     }
     if (!parsedPassportObj || typeof parsedPassportObj !== 'object') parsedPassportObj = {};
 
     const passportNumber = parsedPassportObj.number || parsedPassportObj.passportNumber || parsedPassportObj.passport_number || parsedPassportObj.passportNo || activeProfile?.passportNumber || activeProfile?.passportNo || getDocExtractedField(['passport'], ['passport_number', 'passportNumber', 'passport_no', 'passportNo', 'document_number']);
     const passportIssueDate = parsedPassportObj.issueDate || parsedPassportObj.passportIssueDate || parsedPassportObj.issue_date || parsedPassportObj.date_of_issue || parsedPassportObj.dateOfIssue || activeProfile?.passportIssueDate || activeProfile?.issueDate || getDocExtractedField(['passport'], ['issue_date', 'date_of_issue', 'passport_issue_date', 'dateOfIssue', 'issueDate']);
     const passportExpiryDate = parsedPassportObj.expiryDate || parsedPassportObj.passportExpiry || parsedPassportObj.expiry_date || parsedPassportObj.dateOfExpiry || activeProfile?.passportExpiry || getDocExtractedField(['passport'], ['date_of_expiry', 'expiry_date', 'expiration_date', 'passport_expiry']);
-    const passportIssueCountry = parsedPassportObj.issueCountry || parsedPassportObj.passportIssueCountry || parsedPassportObj.issue_country || activeProfile?.passportIssueCountry || getDocExtractedField(['passport'], ['issue_country', 'country_of_issue', 'issuing_country']) || "India";
+    const passportIssueCountry = parsedPassportObj.issueCountry || parsedPassportObj.passportIssueCountry || parsedPassportObj.issue_country || activeProfile?.passportIssueCountry || getDocExtractedField(['passport'], ['issue_country', 'country_of_issue', 'issuing_country']);
     const passportBirthCity = parsedPassportObj.birthCity || parsedPassportObj.placeOfBirth || parsedPassportObj.birth_city || activeProfile?.birthCity || getDocExtractedField(['passport'], ['place_of_birth', 'birth_place', 'birth_city']);
-    const passportBirthCountry = parsedPassportObj.birthCountry || parsedPassportObj.passportBirthCountry || parsedPassportObj.birth_country || parsedPassportObj.countryOfBirth || activeProfile?.passportBirthCountry || activeProfile?.birthCountry || getDocExtractedField(['passport'], ['birth_country', 'country_of_birth', 'passport_birth_country']) || "India";
+    const passportBirthCountry = parsedPassportObj.birthCountry || parsedPassportObj.passportBirthCountry || parsedPassportObj.birth_country || parsedPassportObj.countryOfBirth || activeProfile?.passportBirthCountry || activeProfile?.birthCountry || getDocExtractedField(['passport'], ['birth_country', 'country_of_birth', 'passport_birth_country']);
     const passportFullName = parsedPassportObj.fullName || parsedPassportObj.full_name || activeProfile?.passportOriginalName || activeProfile?.nameAsInPassport || activeProfile?.family?.passportOriginalName || getDocExtractedField(['passport'], ['full_name', 'fullName', 'name', 'printed_name', 'holder_name']);
 
     const studentAadhaar = activeProfile?.aadharNumber || activeProfile?.aadhar || activeProfile?.aadhaarNumber || activeProfile?.aadhaar || getDocExtractedField(['aadhar', 'aadhaar', 'student_aadhar', 'student_aadhaar', 'national_id'], ['aadhaarNumber', 'aadharNumber', 'document_number', 'aadhaar_number', 'aadhar_number', 'id_number', 'uid', 'aadhaar_no', 'aadhar_no']);
     const studentPan = activeProfile?.panNumber || activeProfile?.pan || activeProfile?.panNo || getDocExtractedField(['pan', 'pancard', 'pan_card', 'student_pan'], ['panNumber', 'document_number', 'pan_number', 'pan', 'pan_no', 'id_number', 'taxpayer_id']);
+
+    const getDerivedNationality = (): string => {
+        const direct = activeProfile?.nationality || baseProfile?.nationality || user?.nationality || data?.nationality;
+        if (direct && String(direct).trim() && String(direct).trim() !== "—" && String(direct).trim().toLowerCase() !== "not provided") {
+            return String(direct).trim();
+        }
+
+        const docNat = getDocExtractedField(['passport', 'aadhar', 'aadhaar'], ['nationality', 'citizenship']);
+        if (docNat && String(docNat).trim() && String(docNat).trim() !== "—" && String(docNat).trim().toLowerCase() !== "not provided") {
+            return String(docNat).trim();
+        }
+
+        // Derive from Address / Address Country
+        let addr = activeProfile?.address || activeProfile?.currentAddress || activeProfile?.permanentAddress ||
+            user?.address || data?.address || firstApp?.address || data?.applications?.[0]?.address ||
+            getDocExtractedField(['aadhar', 'aadhaar', 'passport', 'national_id', 'voter_id'], ['address', 'residential_address', 'permanent_address', 'address_formatted']);
+
+        if (typeof addr === 'object' && addr !== null) {
+            const country = addr.country || addr.addressCountry || addr.countryName;
+            if (country) {
+                addr = `${addr.street || ''} ${addr.city || ''} ${addr.state || ''} ${country}`;
+            } else {
+                addr = JSON.stringify(addr);
+            }
+        }
+
+        const countryHint = activeProfile?.country || activeProfile?.addressCountry || activeProfile?.state ||
+            user?.country || firstApp?.country || data?.applications?.[0]?.country ||
+            passportIssueCountry || passportBirthCountry;
+
+        const combinedAddressText = `${addr || ''} ${countryHint || ''}`.trim().toLowerCase();
+
+        if (combinedAddressText) {
+            if (combinedAddressText.includes('india') || combinedAddressText.includes('ind') || combinedAddressText.includes('bharat')) {
+                return 'Indian';
+            }
+            if (combinedAddressText.includes('united states') || combinedAddressText.includes('usa') || combinedAddressText.includes('us')) {
+                return 'American';
+            }
+            if (combinedAddressText.includes('united kingdom') || combinedAddressText.includes('uk') || combinedAddressText.includes('britain') || combinedAddressText.includes('england')) {
+                return 'British';
+            }
+            if (combinedAddressText.includes('canada')) {
+                return 'Canadian';
+            }
+            if (combinedAddressText.includes('australia')) {
+                return 'Australian';
+            }
+            if (combinedAddressText.includes('ireland')) {
+                return 'Irish';
+            }
+            if (countryHint) {
+                return countryHint === 'India' ? 'Indian' : countryHint;
+            }
+        }
+
+        // Default fallback if student Aadhaar, PAN, Indian pincode or Indian phone number is present
+        const phone = activeProfile?.phoneNumber || activeProfile?.mobile || user?.phoneNumber || user?.mobile || "";
+        const cleanPhone = String(phone).replace(/\D/g, '');
+        const isIndianPhone = cleanPhone.length === 10 || (cleanPhone.length === 12 && cleanPhone.startsWith('91'));
+
+        if (studentAadhaar || studentPan || passportIssueCountry === 'India' || passportBirthCountry === 'India' || activeProfile?.pincode || user?.pincode || isIndianPhone) {
+            return 'Indian';
+        }
+
+        return "";
+    };
 
     const displayUserId = user?.id || "";
 
@@ -296,6 +417,7 @@ export default function UserProfileView({
         lastName: "",
         phoneNumber: "",
         dateOfBirth: "",
+        nationality: "",
         passportNumber: "",
         passportFullName: "",
         passportIssueDate: "",
@@ -328,13 +450,14 @@ export default function UserProfileView({
             lastName: activeProfile?.lastName || "",
             phoneNumber: activeProfile?.phoneNumber || "",
             dateOfBirth: formatDateToDdMmYyyy(activeProfile?.dateOfBirth),
+            nationality: activeProfile?.nationality || getDerivedNationality() || "",
             passportNumber: passportNumber || "",
             passportFullName: passportFullName || (activeProfile?.firstName ? `${activeProfile.firstName} ${activeProfile.lastName || ''}`.trim() : ""),
             passportIssueDate: passportIssueDate || "",
             passportExpiryDate: passportExpiryDate || "",
-            passportIssueCountry: passportIssueCountry || "India",
+            passportIssueCountry: passportIssueCountry || "",
             passportBirthCity: passportBirthCity || "",
-            passportBirthCountry: passportBirthCountry || "India",
+            passportBirthCountry: passportBirthCountry || "",
             aadharNumber: studentAadhaar || "",
             panNumber: studentPan || "",
         });
@@ -423,9 +546,11 @@ export default function UserProfileView({
                 lastName: personalForm.lastName,
                 phoneNumber: personalForm.phoneNumber,
                 dateOfBirth: personalForm.dateOfBirth,
+                nationality: personalForm.nationality,
             });
             if (user?.id) {
                 await documentApi.updateProfile(user.id, {
+                    nationality: personalForm.nationality,
                     passport: {
                         ...(parsedPassportObj || {}),
                         number: personalForm.passportNumber,
@@ -466,43 +591,66 @@ export default function UserProfileView({
 
         setSavingProfile(true);
         try {
+            const familyPayload = {
+                fatherName: familyForm.fatherName || null,
+                fatherAadhar: familyForm.fatherAadhar ? familyForm.fatherAadhar.replace(/\s+/g, '') : null,
+                fatherPan: familyForm.fatherPan ? familyForm.fatherPan.toUpperCase().replace(/\s+/g, '') : null,
+                motherName: familyForm.motherName || null,
+                motherAadhar: familyForm.motherAadhar ? familyForm.motherAadhar.replace(/\s+/g, '') : null,
+                motherPan: familyForm.motherPan ? familyForm.motherPan.toUpperCase().replace(/\s+/g, '') : null,
+            };
+
+            const parentsPayload = [
+                {
+                    relation: "father",
+                    name: familyForm.fatherName || null,
+                    aadharNumber: familyForm.fatherAadhar ? familyForm.fatherAadhar.replace(/\s+/g, '') : null,
+                    panNumber: familyForm.fatherPan ? familyForm.fatherPan.toUpperCase().replace(/\s+/g, '') : null
+                },
+                {
+                    relation: "mother",
+                    name: familyForm.motherName || null,
+                    aadharNumber: familyForm.motherAadhar ? familyForm.motherAadhar.replace(/\s+/g, '') : null,
+                    panNumber: familyForm.motherPan ? familyForm.motherPan.toUpperCase().replace(/\s+/g, '') : null
+                },
+                {
+                    relation: "coapplicant",
+                    name: familyForm.coApplicantName || null,
+                    aadharNumber: familyForm.coApplicantAadhar ? familyForm.coApplicantAadhar.replace(/\s+/g, '') : null,
+                    panNumber: familyForm.coApplicantPan ? familyForm.coApplicantPan.toUpperCase().replace(/\s+/g, '') : null
+                }
+            ];
+
+            const coAppPayload = {
+                name: familyForm.coApplicantName || null,
+                relation: familyForm.coApplicantRelation || null,
+                mobile: familyForm.coApplicantPhone ? familyForm.coApplicantPhone.replace(/\s+/g, '') : null,
+                monthlyIncome: familyForm.coApplicantIncome ? parseFloat(familyForm.coApplicantIncome) : null
+            };
+
+            if (user?.email) {
+                await authApi.updateDetails(user.email, {
+                    firstName: activeProfile?.firstName || user?.firstName || "",
+                    lastName: activeProfile?.lastName || user?.lastName || "",
+                    phoneNumber: activeProfile?.phoneNumber || user?.phoneNumber || "",
+                    dateOfBirth: activeProfile?.dateOfBirth || user?.dateOfBirth || "",
+                    family: familyPayload,
+                    fatherName: familyForm.fatherName || null,
+                    motherName: familyForm.motherName || null,
+                    parents: parentsPayload,
+                    coApplicant: coAppPayload
+                });
+            }
+
             await documentApi.updateProfile(user.id, {
                 email: user.email,
-                family: {
-                    fatherName: familyForm.fatherName || null,
-                    fatherAadhar: familyForm.fatherAadhar ? familyForm.fatherAadhar.replace(/\s+/g, '') : null,
-                    fatherPan: familyForm.fatherPan ? familyForm.fatherPan.toUpperCase().replace(/\s+/g, '') : null,
-                    motherName: familyForm.motherName || null,
-                    motherAadhar: familyForm.motherAadhar ? familyForm.motherAadhar.replace(/\s+/g, '') : null,
-                    motherPan: familyForm.motherPan ? familyForm.motherPan.toUpperCase().replace(/\s+/g, '') : null,
-                },
-                parents: [
-                    {
-                        relation: "father",
-                        name: familyForm.fatherName || null,
-                        aadharNumber: familyForm.fatherAadhar ? familyForm.fatherAadhar.replace(/\s+/g, '') : null,
-                        panNumber: familyForm.fatherPan ? familyForm.fatherPan.toUpperCase().replace(/\s+/g, '') : null
-                    },
-                    {
-                        relation: "mother",
-                        name: familyForm.motherName || null,
-                        aadharNumber: familyForm.motherAadhar ? familyForm.motherAadhar.replace(/\s+/g, '') : null,
-                        panNumber: familyForm.motherPan ? familyForm.motherPan.toUpperCase().replace(/\s+/g, '') : null
-                    },
-                    {
-                        relation: "coapplicant",
-                        name: familyForm.coApplicantName || null,
-                        aadharNumber: familyForm.coApplicantAadhar ? familyForm.coApplicantAadhar.replace(/\s+/g, '') : null,
-                        panNumber: familyForm.coApplicantPan ? familyForm.coApplicantPan.toUpperCase().replace(/\s+/g, '') : null
-                    }
-                ],
-                coApplicant: {
-                    name: familyForm.coApplicantName || null,
-                    relation: familyForm.coApplicantRelation || null,
-                    mobile: familyForm.coApplicantPhone ? familyForm.coApplicantPhone.replace(/\s+/g, '') : null,
-                    monthlyIncome: familyForm.coApplicantIncome ? parseFloat(familyForm.coApplicantIncome) : null
-                }
+                fatherName: familyForm.fatherName || null,
+                motherName: familyForm.motherName || null,
+                family: familyPayload,
+                parents: parentsPayload,
+                coApplicant: coAppPayload
             });
+
             await refreshUser();
             await loadData();
             setEditingCard(null);
@@ -786,6 +934,16 @@ export default function UserProfileView({
                                     />
                                 </div>
                                 <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Nationality</label>
+                                    <input
+                                        type="text"
+                                        value={personalForm.nationality}
+                                        onChange={(e) => setPersonalForm(p => ({ ...p, nationality: e.target.value }))}
+                                        placeholder="e.g. Indian"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all text-slate-700 bg-slate-50/50 font-medium"
+                                    />
+                                </div>
+                                <div>
                                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Passport Number</label>
                                     <input
                                         type="text"
@@ -914,65 +1072,73 @@ export default function UserProfileView({
                     ) : (
                         <div className="space-y-6">
                             {/* Passport Details Card Banner */}
-                            <div className="p-4 bg-purple-50/60 border border-purple-100 rounded-2xl space-y-3">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+                                {/* Header Section */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 mb-5 gap-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-[#6605c7] text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/20">
-                                            <i className="ph ph-passport text-lg" />
+                                        <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-semibold shrink-0">
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h10M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                            </svg>
                                         </div>
                                         <div>
-                                            <span className="block text-[10px] font-black uppercase tracking-widest text-[#6605c7]">Passport Information</span>
-                                            <span className="text-xs font-bold text-slate-800">
-                                                {passportFullName || (activeProfile?.firstName ? `${activeProfile.firstName} ${activeProfile.lastName || ''}`.trim() : 'Passport Details')}
-                                            </span>
+                                            <h3 className="m-0 text-base font-semibold text-gray-900">Passport Information</h3>
+                                            <p className="m-0 mt-0.5 text-xs text-gray-500">Official passport and identification details</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1 border ${
-                                            passportDoc?.uploaded || passportNumber
-                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                                                : "bg-amber-50 text-amber-700 border-amber-200/60"
-                                        }`}>
-                                            <i className={`ph ${passportDoc?.uploaded || passportNumber ? "ph-check-circle text-emerald-600" : "ph-clock text-amber-600"} text-xs`} />
-                                            {passportDoc?.uploaded ? "Passport Verified" : passportNumber ? "Details Available" : "Pending Upload"}
+
+                                    <div className="flex items-center gap-2.5">
+                                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border inline-flex items-center gap-1 shrink-0 ${passportDoc?.uploaded || passportNumber
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                : "bg-amber-50 text-amber-700 border-amber-200"
+                                            }`}>
+                                            ● {passportDoc?.uploaded ? "Verified" : passportNumber ? "Details Available" : "Pending Upload"}
                                         </span>
                                         <button
                                             type="button"
                                             onClick={startPersonalEdit}
-                                            className="px-2.5 py-1 rounded-lg bg-white border border-purple-200 text-[#6605c7] hover:bg-purple-100/50 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                            className="bg-white border border-gray-300 text-gray-700 text-xs font-medium px-3.5 py-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
                                         >
-                                            <i className="ph ph-pencil-simple text-xs" /> Edit
+                                            Edit
                                         </button>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 pt-2 border-t border-purple-100/60 text-xs">
+
+                                {/* Content Grid (3 Columns) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                                     <div>
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Passport Number</span>
-                                        <span className="font-mono font-bold text-slate-800">{passportNumber || "—"}</span>
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Passport Number</span>
+                                        <span className="text-sm font-semibold text-gray-800">{passportNumber || "—"}</span>
                                     </div>
+
                                     <div>
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Name in Passport</span>
-                                        <span className="font-bold text-slate-800 truncate block">{passportFullName || "—"}</span>
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Full Name in Passport</span>
+                                        <span className="text-sm font-semibold text-gray-800">{passportFullName || "—"}</span>
                                     </div>
+
                                     <div>
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Issue Date</span>
-                                        <span className="font-semibold text-slate-800">{passportIssueDate || "—"}</span>
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Issue Country</span>
+                                        <span className="text-sm font-semibold text-gray-800">{passportIssueCountry || "—"}</span>
                                     </div>
+
                                     <div>
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Expiry Date</span>
-                                        <span className="font-semibold text-slate-800">{passportExpiryDate || "—"}</span>
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Issue Date</span>
+                                        <span className="text-sm font-medium text-gray-700">{passportIssueDate || "—"}</span>
                                     </div>
+
                                     <div>
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Issue Country</span>
-                                        <span className="font-semibold text-slate-800">{passportIssueCountry || "India"}</span>
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Expiry Date</span>
+                                        <span className="text-sm font-medium text-gray-700">{passportExpiryDate || "—"}</span>
                                     </div>
+
                                     <div>
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Place of Birth</span>
-                                        <span className="font-semibold text-slate-800">{passportBirthCity || "—"}</span>
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Country of Birth</span>
+                                        <span className="text-sm font-medium text-gray-700">{passportBirthCountry || "—"}</span>
                                     </div>
-                                    <div>
-                                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Country of Birth</span>
-                                        <span className="font-semibold text-slate-800">{passportBirthCountry || "India"}</span>
+
+                                    <div className="col-span-1 sm:col-span-2 md:col-span-3">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Place of Birth</span>
+                                        <span className="text-sm font-medium text-gray-700">{passportBirthCity || "—"}</span>
                                     </div>
                                 </div>
                             </div>
@@ -986,7 +1152,7 @@ export default function UserProfileView({
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {renderBentoField("Date of Birth", formatDob(activeProfile?.dateOfBirth), startPersonalEdit)}
-                                {renderBentoField("Nationality", activeProfile?.nationality || "Indian", startPersonalEdit)}
+                                {renderBentoField("Nationality", activeProfile?.nationality || getDerivedNationality(), startPersonalEdit)}
                                 {renderBentoField("Destination Country", activeProfile?.studyDestination || activeProfile?.country || firstApp?.country || firstApp?.destinationCountry || data?.applications?.[0]?.country, startPersonalEdit)}
                                 {renderBentoField("Target University", activeProfile?.targetUniversity || activeProfile?.universityName || firstApp?.universityName || firstApp?.targetUniversity || data?.applications?.[0]?.universityName || data?.applications?.[0]?.targetUniversity, startPersonalEdit)}
                             </div>
@@ -1020,6 +1186,24 @@ export default function UserProfileView({
                                     )}
                                 </div>
                             </div>
+                            {(sscDetails.secNum != null || sscDetails.wordsSecStr || sscDetails.tallyStatus !== 'none') && (
+                                <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[10px]">
+                                    <div className="flex items-center gap-2 truncate">
+                                        {sscDetails.secNum != null && (
+                                            <span className="text-slate-600 font-medium">Marks: <strong>{sscDetails.secNum}{sscDetails.maxNum ? `/${sscDetails.maxNum}` : ''}</strong></span>
+                                        )}
+                                        {sscDetails.wordsSecStr && (
+                                            <span className="text-purple-700 italic truncate" title={`In words: ${sscDetails.wordsSecStr}`}>("{sscDetails.wordsSecStr}")</span>
+                                        )}
+                                    </div>
+                                    {sscDetails.tallyStatus === 'matched' && (
+                                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 shrink-0">✓ Tallied</span>
+                                    )}
+                                    {sscDetails.tallyStatus === 'discrepancy' && (
+                                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 shrink-0" title={sscDetails.tallyMessage}>⚠ Mismatch</span>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* 12th Standard */}
@@ -1040,6 +1224,24 @@ export default function UserProfileView({
                                     )}
                                 </div>
                             </div>
+                            {(hscDetails.secNum != null || hscDetails.wordsSecStr || hscDetails.tallyStatus !== 'none') && (
+                                <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[10px]">
+                                    <div className="flex items-center gap-2 truncate">
+                                        {hscDetails.secNum != null && (
+                                            <span className="text-slate-600 font-medium">Marks: <strong>{hscDetails.secNum}{hscDetails.maxNum ? `/${hscDetails.maxNum}` : ''}</strong></span>
+                                        )}
+                                        {hscDetails.wordsSecStr && (
+                                            <span className="text-purple-700 italic truncate" title={`In words: ${hscDetails.wordsSecStr}`}>("{hscDetails.wordsSecStr}")</span>
+                                        )}
+                                    </div>
+                                    {hscDetails.tallyStatus === 'matched' && (
+                                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 shrink-0">✓ Tallied</span>
+                                    )}
+                                    {hscDetails.tallyStatus === 'discrepancy' && (
+                                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 shrink-0" title={hscDetails.tallyMessage}>⚠ Mismatch</span>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Graduation */}
@@ -1060,6 +1262,24 @@ export default function UserProfileView({
                                     )}
                                 </div>
                             </div>
+                            {(ugDetails.secNum != null || ugDetails.wordsSecStr || ugDetails.tallyStatus !== 'none') && (
+                                <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[10px]">
+                                    <div className="flex items-center gap-2 truncate">
+                                        {ugDetails.secNum != null && (
+                                            <span className="text-slate-600 font-medium">Marks: <strong>{ugDetails.secNum}{ugDetails.maxNum ? `/${ugDetails.maxNum}` : ''}</strong></span>
+                                        )}
+                                        {ugDetails.wordsSecStr && (
+                                            <span className="text-purple-700 italic truncate" title={`In words: ${ugDetails.wordsSecStr}`}>("{ugDetails.wordsSecStr}")</span>
+                                        )}
+                                    </div>
+                                    {ugDetails.tallyStatus === 'matched' && (
+                                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 shrink-0">✓ Tallied</span>
+                                    )}
+                                    {ugDetails.tallyStatus === 'discrepancy' && (
+                                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 shrink-0" title={ugDetails.tallyMessage}>⚠ Mismatch</span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

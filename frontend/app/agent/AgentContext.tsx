@@ -738,7 +738,6 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
             return student;
         }));
 
-        showToast(`Document uploaded successfully: ${fileName}. Awaiting verification review.`, "success");
     };
 
     const handleSendDocLink = async () => {

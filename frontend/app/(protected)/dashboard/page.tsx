@@ -10,7 +10,7 @@ import ProgressTracker from "@/components/ProgressTracker";
 import UserActivityLog from "@/components/User/UserActivityLog";
 import UserProfileView from "@/components/User/UserProfileView";
 import { io } from "socket.io-client";
-import { getProfileDocumentRequirements } from "@/lib/documentRequirements";
+import { getProfileDocumentRequirements, getDocumentRequirementName } from "@/lib/documentRequirements";
 import DatePicker from "@/components/DatePicker";
 import SupportTicketModal from "@/components/SupportTicketModal";
 import UserSupportTicketsView from "@/components/UserSupportTicketsView";
@@ -215,11 +215,10 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                     Application Progress
                 </h3>
                 <div className="flex items-center gap-3">
-                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${
-                        isDisbursedOrClosed || isSanctionedOrApproved
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${isDisbursedOrClosed || isSanctionedOrApproved
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
                             : 'bg-emerald-50 text-emerald-700'
-                    }`}>
+                        }`}>
                         <span className="material-symbols-outlined text-xs">
                             {isDisbursedOrClosed ? 'payments' : isSanctionedOrApproved ? 'verified' : 'rocket_launch'}
                         </span>
@@ -235,11 +234,10 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
 
                 {/* Active Progress Line */}
                 <div
-                    className={`absolute top-5 left-0 h-[3px] rounded-full mx-6 transition-all duration-1000 ease-out ${
-                        isDisbursedOrClosed || isSanctionedOrApproved
+                    className={`absolute top-5 left-0 h-[3px] rounded-full mx-6 transition-all duration-1000 ease-out ${isDisbursedOrClosed || isSanctionedOrApproved
                             ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                             : 'bg-[#6605c7] shadow-[0_0_10px_rgba(102,5,199,0.3)]'
-                    }`}
+                        }`}
                     style={{ width: `calc(${currentProgress}% - 48px)` }}
                 />
 
@@ -620,16 +618,26 @@ export default function DashboardPage() {
 
     const hasRecentLocalSubmission = typeof window !== 'undefined' && (() => {
         try {
+            if (localStorage.getItem('has_applied_loan') === 'true') return true;
             const raw = localStorage.getItem('recent_application_submitted');
             if (!raw) return false;
             const parsed = JSON.parse(raw);
-            return (parsed.userId === user?.id || (user?.email && parsed.email === user.email)) && (Date.now() - (parsed.timestamp || 0)) < 600000;
+            return (parsed.userId === user?.id || (user?.email && parsed.email === user.email)) && (Date.now() - (parsed.timestamp || 0)) < 2592000000;
         } catch {
             return false;
         }
     })();
 
-    const hasApplied = !!(data.applications && data.applications.length > 0) || hasRecentLocalSubmission;
+    const hasUserApps = !!((user as any)?.applications && ((user as any).applications as any[]).length > 0) || !!((user as any)?.loanApplications && ((user as any).loanApplications as any[]).length > 0);
+    const hasDataApps = !!(data.applications && data.applications.length > 0);
+    const hasApplied = hasDataApps || hasUserApps || hasRecentLocalSubmission;
+
+    useEffect(() => {
+        if (hasDataApps || hasUserApps) {
+            try { localStorage.setItem('has_applied_loan', 'true'); } catch { }
+        }
+    }, [hasDataApps, hasUserApps]);
+
     const firstApp = (data.applications && data.applications.length > 0) ? data.applications[0] : null;
     const isApproved = !!(firstApp && ['sanctioned', 'approved', 'disbursed'].includes(firstApp.status?.toLowerCase()));
 
@@ -1177,17 +1185,15 @@ export default function DashboardPage() {
                                                     <div className="flex items-center gap-3 mt-2">
                                                         <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                                                             <div
-                                                                className={`h-1.5 rounded-full transition-all duration-700 ${
-                                                                    isSanctionedOrDisbursed
+                                                                className={`h-1.5 rounded-full transition-all duration-700 ${isSanctionedOrDisbursed
                                                                         ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
                                                                         : 'bg-gradient-to-r from-[#6605c7] to-purple-400'
-                                                                }`}
+                                                                    }`}
                                                                 style={{ width: `${getDynamicProgress(app, data.documents, data.profile)}%` }}
                                                             />
                                                         </div>
-                                                        <span className={`text-[10px] font-bold whitespace-nowrap ${
-                                                            isSanctionedOrDisbursed ? 'text-emerald-600' : 'text-[#6605c7]'
-                                                        }`}>{getDynamicProgress(app, data.documents, data.profile)}%</span>
+                                                        <span className={`text-[10px] font-bold whitespace-nowrap ${isSanctionedOrDisbursed ? 'text-emerald-600' : 'text-[#6605c7]'
+                                                            }`}>{getDynamicProgress(app, data.documents, data.profile)}%</span>
                                                     </div>
 
                                                     {/* Overview Staff Details */}
@@ -1297,7 +1303,7 @@ export default function DashboardPage() {
                                     <div key={i} className="h-16 bg-gray-50 rounded-xl animate-pulse" />
                                 ))}
                             </div>
-                        ) : !data.applications?.length ? (
+                        ) : (!data.applications?.length && !hasApplied) ? (
                             <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
                                 <span className="material-symbols-outlined text-5xl text-gray-200 mb-4 block">description</span>
                                 <p className="text-gray-500 text-sm font-bold">No applications yet</p>
@@ -1306,9 +1312,15 @@ export default function DashboardPage() {
                                     Apply Now
                                 </Link>
                             </div>
+                        ) : (!data.applications?.length && hasApplied) ? (
+                            <div className="space-y-4">
+                                {[...Array(2)].map((_, i) => (
+                                    <div key={i} className="h-20 bg-gray-50 rounded-xl animate-pulse" />
+                                ))}
+                            </div>
                         ) : (
                             <div className="space-y-4">
-                                {data.applications.map((app) => {
+                                {(data.applications || []).map((app) => {
                                     const statusConfig: Record<string, { bg: string; text: string; icon: string }> = {
                                         pending: { bg: "bg-amber-50 border-amber-200", text: "text-amber-700", icon: "schedule" },
                                         submitted: { bg: "bg-blue-50 border-blue-200", text: "text-blue-700", icon: "assignment" },
@@ -1548,7 +1560,13 @@ export default function DashboardPage() {
                                                         <span className="material-symbols-outlined text-xl">{iconName}</span>
                                                     </div>
                                                     <div>
-                                                        <div className="font-bold text-[13px] text-gray-900 capitalize">{doc.docType.replace(/_/g, ' ')}</div>
+                                                        <div className="font-bold text-[13px] text-gray-900 capitalize">
+                                                            {(() => {
+                                                                const typeKey = doc.docType || doc.name || doc.type || '';
+                                                                const rawFallback = doc.docName || (typeKey ? typeKey.replace(/_/g, ' ') : 'Document');
+                                                                return typeKey ? getDocumentRequirementName(typeKey, rawFallback, data.profile || user) : rawFallback;
+                                                            })()}
+                                                        </div>
                                                         <div className={`text-[10px] uppercase font-black tracking-widest mt-0.5 ${statusColor}`}>{statusLabel}</div>
                                                     </div>
                                                 </div>

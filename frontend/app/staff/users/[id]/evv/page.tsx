@@ -50,6 +50,7 @@ export default function EvvTab() {
                     application={activeApp}
                     userDocuments={userDocuments}
                     onComplete={handleEVVComplete}
+                    onRefreshDocs={refreshData}
                 />
             ) : (
                 // No Application

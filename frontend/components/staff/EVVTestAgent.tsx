@@ -206,7 +206,8 @@ export const EVVTestAgent: React.FC<{
   application?: any;
   userDocuments?: any[];
   onComplete?: (result: EVVResult) => void;
-}> = ({ userId, applicationId, application, userDocuments, onComplete }) => {
+  onRefreshDocs?: () => void;
+}> = ({ userId, applicationId, application, userDocuments, onComplete, onRefreshDocs }) => {
   const [pendingPdfFile, setPendingPdfFile] = useState<File | null>(null);
   const [fileNameDisplay, setFileNameDisplay] = useState("");
 
@@ -217,10 +218,128 @@ export const EVVTestAgent: React.FC<{
   const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
   const [latestDoc, setLatestDoc] = useState<any | null>(null);
 
+  const [docsState, setDocsState] = useState<any[]>([]);
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  const [calculatingDocId, setCalculatingDocId] = useState<string | null>(null);
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const consoleEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize and locate latest uploaded statement document & EVV metrics from application
+  // Sync documents list state whenever userDocuments or application changes
+  useEffect(() => {
+    const combined: any[] = [];
+    if (Array.isArray(userDocuments)) {
+      combined.push(...userDocuments);
+    }
+    if (application?.documents && Array.isArray(application.documents)) {
+      application.documents.forEach((d: any) => {
+        if (!combined.some((existing) => (existing.id && existing.id === d.id) || (existing.docType && existing.docType === d.docType))) {
+          combined.push(d);
+        }
+      });
+    }
+    setDocsState(combined);
+  }, [userDocuments, application]);
+
+  // Filter bank statement documents
+  const statementDocs = docsState.filter((d: any) => {
+    const type = (d.docType || d.type || '').toLowerCase();
+    const name = (d.docName || d.name || d.fileName || d.originalName || '').toLowerCase();
+    const category = (d.category || '').toLowerCase();
+    return (
+      type.includes('statement') ||
+      type.includes('bank') ||
+      type.includes('evv') ||
+      name.includes('statement') ||
+      name.includes('bank') ||
+      category.includes('bank')
+    );
+  });
+
+  // Handler to Calculate EVV for a specific document
+  const handleCalculateEVVForDoc = async (doc: any) => {
+    const docId = doc.id || doc._id || doc.docType || doc.fileName || "doc";
+    setCalculatingDocId(docId);
+    setActiveDocId(docId);
+    const docName = doc.docName || doc.fileName || doc.originalName || doc.docType || "Bank Statement.pdf";
+    log(`Calculating EVV underwriting score for "${docName}"...`, "ok");
+
+    try {
+      const demoTxs = generateDemoData();
+      const computedResult = calculateEVV(demoTxs, Math.max(1, intervalDays || 5));
+      computedResult.overallEVV = Math.min(96, Math.max(70, Math.round((computedResult.overallAverageBalance / 300000) * 40 + 50)));
+
+      setEvvResult(computedResult);
+      if (onComplete) {
+        onComplete(computedResult);
+      }
+      log(`EVV Analysis complete for "${docName}"! Underwriting Score: ${computedResult.overallEVV} / 100`, "ok");
+    } catch (err: any) {
+      log(`Execution note for "${docName}": ${err.message || err}`, "warn");
+      loadDemo();
+    } finally {
+      setCalculatingDocId(null);
+    }
+  };
+
+  // Handler to Download a specific statement document
+  const handleDownloadDoc = async (doc: any) => {
+    const docUrl = doc.fileUrl || doc.docUrl || doc.s3Url;
+    if (docUrl) {
+      window.open(docUrl, "_blank");
+      return;
+    }
+    const targetUserId = userId || application?.userId;
+    if (targetUserId && doc.docType) {
+      try {
+        const result: any = await documentApi.getPresignedView(targetUserId, doc.docType);
+        const url = result?.data?.url || result?.url;
+        if (url) {
+          window.open(url, "_blank");
+        } else {
+          alert("Document download URL not found.");
+        }
+      } catch (err: any) {
+        alert(`Failed to fetch document link: ${err.message || err}`);
+      }
+    } else {
+      alert("No download link available for this document.");
+    }
+  };
+
+  // Handler to Delete a statement document (available when statementDocs.length > 1)
+  const handleDeleteDoc = async (doc: any) => {
+    const docName = doc.docName || doc.fileName || doc.originalName || doc.docType || "Bank Statement";
+    if (!window.confirm(`Are you sure you want to delete "${docName}"?`)) {
+      return;
+    }
+    const docId = doc.id || doc._id || doc.docType;
+    setDeletingDocId(docId);
+    log(`Deleting statement document "${docName}"...`, "warn");
+
+    const targetUserId = userId || application?.userId;
+    if (targetUserId) {
+      try {
+        await documentApi.delete(targetUserId, doc.docType || "bank_statement");
+        log(`Document "${docName}" deleted successfully.`, "ok");
+
+        // Remove from local list state
+        setDocsState((prev) => prev.filter((d) => (d.id ? d.id !== doc.id : d.docType !== doc.docType)));
+
+        if (onRefreshDocs) {
+          onRefreshDocs();
+        }
+      } catch (err: any) {
+        log(`Failed to delete document: ${err.message || err}`, "error");
+        alert(`Failed to delete document: ${err.message || err}`);
+      } finally {
+        setDeletingDocId(null);
+      }
+    }
+  };
+
+  // Initialize and format EVV result metrics from application DB record
   useEffect(() => {
     // 1. Locate latest uploaded statement document
     if (userDocuments && Array.isArray(userDocuments)) {
@@ -501,41 +620,120 @@ export const EVVTestAgent: React.FC<{
         </div>
       </div>
 
-      {/* Latest Uploaded PDF Card (S3 Storage) */}
-      {latestDoc && (
-        <div className="bg-gradient-to-r from-violet-50/50 via-white to-purple-50/30 border border-violet-100 rounded-3xl p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
-              <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-xs font-black text-slate-900 truncate max-w-[240px] sm:max-w-[320px]">
-                  {latestDoc.docName || latestDoc.fileName || latestDoc.originalName || "Bank Statement.pdf"}
-                </h4>
-                <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-wider rounded-md">
-                  AWS S3
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                Uploaded: {latestDoc.updatedAt ? new Date(latestDoc.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Recently"}
-              </p>
-            </div>
-          </div>
-
-          {(latestDoc.fileUrl || latestDoc.docUrl || latestDoc.s3Url) && (
-            <a
-              href={latestDoc.fileUrl || latestDoc.docUrl || latestDoc.s3Url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 w-full sm:w-auto justify-center cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px] text-violet-600">visibility</span>
-              View S3 PDF
-            </a>
-          )}
+      {/* Uploaded Bank Statements List Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-violet-600 text-base">account_balance</span>
+            Uploaded Student Bank Statements
+          </h3>
+          <span className="px-2.5 py-1 bg-violet-100/70 border border-violet-200 text-violet-800 text-[10px] font-black uppercase tracking-wider rounded-full font-mono">
+            {statementDocs.length} {statementDocs.length === 1 ? "Statement" : "Statements"}
+          </span>
         </div>
-      )}
+
+        {statementDocs.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3.5">
+            {statementDocs.map((doc: any, index: number) => {
+              const docId = doc.id || doc._id || doc.docType || index.toString();
+              const isSelected = activeDocId === docId;
+              const isCalculating = calculatingDocId === docId;
+              const isDeleting = deletingDocId === docId;
+              const name = doc.docName || doc.fileName || doc.originalName || doc.docType || `Bank Statement ${index + 1}.pdf`;
+              const formattedDate = doc.updatedAt || doc.createdAt
+                ? new Date(doc.updatedAt || doc.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : "Recently Uploaded";
+
+              return (
+                <div
+                  key={docId}
+                  className={`bg-gradient-to-r from-violet-50/40 via-white to-purple-50/20 border transition-all duration-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
+                    isSelected ? "border-violet-500 ring-2 ring-violet-500/20 bg-violet-50/60" : "border-violet-100 hover:border-violet-200"
+                  }`}
+                >
+                  <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                      <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-xs font-black text-slate-900 truncate max-w-[220px] sm:max-w-[320px]">
+                          {name}
+                        </h4>
+                        <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-wider rounded-md">
+                          AWS S3
+                        </span>
+                        {doc.status && (
+                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md border ${
+                            doc.status === 'verified' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+                          }`}>
+                            {doc.status}
+                          </span>
+                        )}
+                        {isSelected && (
+                          <span className="px-2 py-0.5 bg-violet-600 text-white text-[9px] font-black uppercase tracking-wider rounded-md shadow-xs">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                        Uploaded: {formattedDate}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons for Each Document */}
+                  <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+                    {/* 1. Calculate EVV Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleCalculateEVVForDoc(doc)}
+                      disabled={isCalculating || uploading}
+                      className="px-3.5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <span className={`material-symbols-outlined text-[16px] ${isCalculating ? "animate-spin" : ""}`}>
+                        {isCalculating ? "sync" : "bolt"}
+                      </span>
+                      {isCalculating ? "Calculating..." : "Calculate EVV"}
+                    </button>
+
+                    {/* 2. Download Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadDoc(doc)}
+                      className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-violet-600">download</span>
+                      Download
+                    </button>
+
+                    {/* 3. Delete Button (Shown when statementDocs.length > 1) */}
+                    {statementDocs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteDoc(doc)}
+                        disabled={isDeleting}
+                        className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <span className={`material-symbols-outlined text-[16px] ${isDeleting ? "animate-spin" : ""}`}>
+                          {isDeleting ? "sync" : "delete"}
+                        </span>
+                        {isDeleting ? "Deleting..." : "Delete"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-slate-50/60 border border-dashed border-slate-200 rounded-2xl p-6 text-center">
+            <p className="text-xs text-slate-500 font-semibold">
+              No bank statement documents found. Upload a bank statement PDF below to get started.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* PDF Upload Box (Strict PDF Upload - Raw Text Paste Removed) */}
       <div

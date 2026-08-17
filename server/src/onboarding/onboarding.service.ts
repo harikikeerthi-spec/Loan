@@ -121,12 +121,12 @@ export class OnboardingService {
 
         return JSON.stringify({
           ...familyObj,
-          fatherName: fatherFromParents !== undefined ? fatherFromParents : (personal.fatherName ?? data.fatherName ?? familyObj.fatherName ?? null),
-          motherName: motherFromParents !== undefined ? motherFromParents : (personal.motherName ?? data.motherName ?? familyObj.motherName ?? null),
-          fatherAadhar: fatherAadharFromParents !== undefined ? fatherAadharFromParents : (familyObj.fatherAadhar ?? null),
-          fatherPan: fatherPanFromParents !== undefined ? fatherPanFromParents : (familyObj.fatherPan ?? null),
-          motherAadhar: motherAadharFromParents !== undefined ? motherAadharFromParents : (familyObj.motherAadhar ?? null),
-          motherPan: motherPanFromParents !== undefined ? motherPanFromParents : (familyObj.motherPan ?? null),
+          fatherName: (fatherFromParents || personal.fatherName || data.fatherName || familyObj.fatherName || null),
+          motherName: (motherFromParents || personal.motherName || data.motherName || familyObj.motherName || null),
+          fatherAadhar: (fatherAadharFromParents || familyObj.fatherAadhar || null),
+          fatherPan: (fatherPanFromParents || familyObj.fatherPan || null),
+          motherAadhar: (motherAadharFromParents || familyObj.motherAadhar || null),
+          motherPan: (motherPanFromParents || familyObj.motherPan || null),
         });
       };
 

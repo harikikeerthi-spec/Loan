@@ -175,7 +175,6 @@ export default function AgentDocuments() {
                 setUploadProgress(Math.round(progress));
             });
             
-            showToast("Document verified and uploaded successfully!", "success");
             await fetchDocs();
         } catch (err: any) {
             console.error("Upload failed:", err);

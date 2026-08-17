@@ -635,10 +635,10 @@ export const authApi = {
         }),
 
     updateDetails: (email: string, details: {
-        firstName: string;
-        lastName: string;
-        phoneNumber: string;
-        dateOfBirth: string;
+        firstName?: string;
+        lastName?: string;
+        phoneNumber?: string;
+        dateOfBirth?: string;
         passportNumber?: string;
         intakeSeason?: string;
         pincode?: string;

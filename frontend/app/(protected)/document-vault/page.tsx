@@ -262,8 +262,7 @@ export default function DocumentVaultPage() {
 
         const key = `dashboardDataUpdated_${user?.id}`;
         localStorage.setItem(key, String(Date.now()));
-        window.dispatchEvent(new Event('dashboard-data-changed'));
-        showAlert("Upload Complete", "Selected documents uploaded in parallel!", "success");
+        // Success popup removed per user request: only show popups when rejected/failed
     };
 
     const showAlert = (title: string, message: string, type: "success" | "error" | "info" | "warning" = "info") => {
@@ -842,11 +841,72 @@ export default function DocumentVaultPage() {
             }
 
             const docTypeLower = docType.toLowerCase();
-            const isFatherDoc = docTypeLower.includes('father');
-            const isMotherDoc = docTypeLower.includes('mother');
-            const isStudentDoc = !isFatherDoc && !isMotherDoc;
+            const isCoappDoc = docTypeLower.includes('coapplicant') || docTypeLower.includes('coapp') || docTypeLower.includes('co_applicant');
+            const isFatherDoc = docTypeLower.includes('father') && !isCoappDoc;
+            const isMotherDoc = docTypeLower.includes('mother') && !isCoappDoc;
+            const isStudentDoc = !isFatherDoc && !isMotherDoc && !isCoappDoc;
 
-            if (isFatherDoc || isMotherDoc) {
+            if (isCoappDoc) {
+                const extractedCoappName = extracted.full_name || extracted.fullName || extracted.person_name || extracted.holder_name || extracted.name || extracted.printed_name || extracted.applicant_name;
+                const activeProf = getActiveProfile();
+                const existingCoappName = (activeProf.coApplicant?.name || activeProf.coApplicantName || "").trim();
+
+                const baseProfile = profile || user || {};
+                let coapp = baseProfile.coApplicant || {};
+                if (typeof coapp === 'string') { try { coapp = JSON.parse(coapp); } catch { coapp = {}; } }
+                if (!coapp || typeof coapp !== 'object') coapp = {};
+
+                const isGenericName = !existingCoappName || ['co-applicant', 'coapplicant', 'father', 'mother', 'spouse', 'sibling', 'uncle', 'aunt', 'grandparent', 'other', 'none', 'na', 'n/a'].includes(existingCoappName.toLowerCase().trim());
+
+                if (extractedCoappName) {
+                    if (isGenericName || areNamesMatching(extractedCoappName, existingCoappName)) {
+                        const updatedCoapp = { ...coapp, name: extractedCoappName };
+                        const updatedProfile = { ...baseProfile, coApplicant: updatedCoapp, coApplicantName: extractedCoappName };
+                        setProfile(updatedProfile);
+                        await onboardingApi.submit(updatedProfile);
+                        if (refreshUser) await refreshUser();
+                        await loadDocs(true);
+                    } else {
+                        const promptRes = await Swal.fire({
+                            title: "Name Discrepancy Detected",
+                            html: `<div class="text-left text-xs space-y-3 font-sans">
+                                <p class="text-gray-600 font-medium">Your uploaded document <strong>(${docType.replace(/_/g, ' ').toUpperCase()})</strong> contains a different co-applicant's name than your existing record.</p>
+                                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                    <span class="block text-[10px] font-bold text-slate-400 uppercase">Existing Record</span>
+                                    <span class="font-extrabold text-slate-800">${existingCoappName}</span>
+                                </div>
+                                <div class="p-3 bg-purple-50 rounded-xl border border-purple-200">
+                                    <span class="block text-[10px] font-bold text-[#6605c7] uppercase">Newly Uploaded Document Data</span>
+                                    <span class="font-extrabold text-[#6605c7]">${extractedCoappName}</span>
+                                </div>
+                                <p class="text-slate-700 font-bold pt-1">Would you like to keep the old data or update to the new co-applicant's name?</p>
+                            </div>`,
+                            icon: "warning",
+                            showCancelButton: true,
+                            confirmButtonText: "ADD NEW DATA",
+                            cancelButtonText: "KEEP OLD DATA",
+                            confirmButtonColor: "#6605c7",
+                            cancelButtonColor: "#475569",
+                            customClass: {
+                                popup: "rounded-3xl shadow-2xl border border-purple-100 font-sans p-6",
+                                title: "text-lg font-black text-gray-900",
+                                confirmButton: "px-5 py-2.5 bg-[#6605c7] hover:bg-[#5504a6] text-white font-black text-xs uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-md",
+                                cancelButton: "px-5 py-2.5 bg-slate-600 hover:bg-slate-700 text-white font-black text-xs uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-md"
+                            }
+                        });
+
+                        if (promptRes.isConfirmed) {
+                            const updatedCoapp = { ...coapp, name: extractedCoappName };
+                            const updatedProfile = { ...baseProfile, coApplicant: updatedCoapp, coApplicantName: extractedCoappName };
+                            setProfile(updatedProfile);
+                            await onboardingApi.submit(updatedProfile);
+                            if (refreshUser) await refreshUser();
+                            await loadDocs(true);
+                            showAlert("Details Updated", `Updated co-applicant's name to "${extractedCoappName}".`, "success");
+                        }
+                    }
+                }
+            } else if (isFatherDoc || isMotherDoc) {
                 const parentType = isFatherDoc ? 'father' : 'mother';
                 const extractedParentName = isFatherDoc
                     ? (extracted.full_name || extracted.fullName || extracted.person_name || extracted.holder_name || extracted.name || extracted.printed_name || extracted.applicant_name)
@@ -981,16 +1041,7 @@ export default function DocumentVaultPage() {
                     return;
                 }
             }
-
-            if (isAlreadyUploaded || result.wasAlreadyUploaded) {
-                showAlert(
-                    "Document Updated",
-                    `Notice: This document was already uploaded by you. Your previous version has been updated successfully!`,
-                    "info"
-                );
-            } else {
-                showAlert("Upload Success", "Document uploaded successfully!", "success");
-            }
+            // Success/Updated popups removed per user request: only show popups on rejection or failure
 
         } catch (e: any) {
             console.error("Upload error:", e.message || e);

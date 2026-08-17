@@ -122,7 +122,7 @@ export function normalizeGradingSystem(grading?: string, score?: string | number
     return '';
 }
 
-export function parseNumberFromWords(text?: string): number | undefined {
+export function parseNumberFromWords(text?: string | null): number | undefined {
     if (!text || typeof text !== 'string') return undefined;
     const clean = text.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
     if (!clean) return undefined;

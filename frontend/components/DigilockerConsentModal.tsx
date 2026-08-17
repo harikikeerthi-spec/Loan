@@ -8,7 +8,7 @@ const AVAILABLE_DOCS = [
     { id: "12th_marksheet", label: "12th Marksheet", type: "12TH", icon: "school" },
     { id: "bachelors_marksheet", label: "Bachelors Marksheet", type: "BDEG", icon: "history_edu" },
     { id: "bachelors_degree", label: "Bachelors Degree", type: "BDEG", icon: "workspace_premium" },
-    { id: "aadhar_card", label: "Aadhar Card", type: "ADHAR", icon: "fingerprint" },
+    { id: "aadhar_card", label: "Aadhaar Card", type: "ADHAR", icon: "fingerprint" },
     { id: "passport", label: "Passport", type: "PASPT", icon: "travel_explore" },
     { id: "driving_license", label: "Driving License", type: "DRILE", icon: "directions_car" },
 ];

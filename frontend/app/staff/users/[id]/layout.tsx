@@ -126,55 +126,65 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
     const activeBankAppsCount = (userApplications || []).filter(isApplicationSentToBank).length;
 
     const navigationTabs = [
-        { id: "profile", label: "Profile Details", path: `/staff/users/${userId}`, icon: "badge" },
-        { id: "documents", label: "Documents", path: `/staff/users/${userId}/documents`, icon: "folder" },
-        { id: "evv", label: "EVV", path: `/staff/users/${userId}/evv`, icon: "payments" },
-        { id: "credit-report", label: "Credit Analysis Report", path: `/staff/users/${userId}/credit-report`, icon: "analytics" },
-        { id: "applications", label: "Bank Applications", path: `/staff/users/${userId}/applications`, icon: "article", badge: activeBankAppsCount > 0 ? activeBankAppsCount : undefined },
-        { id: "follow-ups", label: "Follow Ups", path: `/staff/users/${userId}/follow-ups`, icon: "assignment_turned_in" },
-        { id: "notes", label: "Internal Notes", path: `/staff/users/${userId}/notes`, icon: "sticky_note_2" }
+        { id: "profile", label: "Profile Details", path: `/staff/users/${userId}` },
+        { id: "documents", label: "Documents", path: `/staff/users/${userId}/documents` },
+        { id: "evv", label: "EVV Verification", path: `/staff/users/${userId}/evv` },
+        { id: "credit-report", label: "Credit Analysis Report", path: `/staff/users/${userId}/credit-report` },
+        { id: "applications", label: "Bank Applications", path: `/staff/users/${userId}/applications`, badge: activeBankAppsCount > 0 ? activeBankAppsCount : undefined },
+        { id: "follow-ups", label: "Follow-Ups", path: `/staff/users/${userId}/follow-ups` },
+        { id: "notes", label: "Internal Notes", path: `/staff/users/${userId}/notes` }
     ];
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 relative overflow-hidden">
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-10">
-                {/* Header Actions */}
-                <div className="mb-6 flex justify-between items-center">
+        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 w-full">
+            {/* Top Global Header Bar (Edge-to-Edge Container) */}
+            <div className="w-full bg-white border-b border-gray-200/80 shadow-2xs">
+                {/* Top Action Breadcrumb Row */}
+                <div className="max-w-7xl mx-auto px-6 pt-3 pb-2 flex items-center justify-between">
                     <button
                         onClick={handleBack}
-                        className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 text-xs font-black uppercase tracking-widest transition-all cursor-pointer group"
+                        className="inline-flex items-center text-xs font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-wider cursor-pointer group"
                     >
-                        <span className="material-symbols-outlined text-[13px] transition-transform group-hover:-translate-x-1">arrow_back</span>
-                        Back to Members
+                        <span className="mr-1.5 text-sm transition-transform group-hover:-translate-x-0.5">←</span> Back to Members
                     </button>
+                    <div className="text-xs text-gray-400 font-medium">
+                        Student ID: <span className="text-gray-800 font-mono font-bold">{userData.studentId || userData.customId || userData.id || userId}</span>
+                    </div>
                 </div>
 
-                {/* Profile Header Card */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+                {/* Full-Width User Profile Hero Card */}
+                <div className="max-w-7xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-xl shadow-md shadow-indigo-500/10">
+                        {/* Avatar Ring */}
+                        <div className="w-12 h-12 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-lg shadow-sm ring-4 ring-indigo-50 overflow-hidden shrink-0">
                             {userData.avatarUrl ? (
-                                <img src={userData.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                                <img src={userData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
                                 <span>{(userData.firstName || "U").substring(0, 2).toUpperCase()}</span>
                             )}
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900 leading-tight">
-                                {userData.firstName || "—"} {userData.lastName || ""}
-                            </h1>
-                            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500 mt-1.5">
-                                <span>Registered: {formatDate(userData.createdAt, "MMM d, yyyy")}</span>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <h1 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
+                                    {userData.firstName || "—"} {userData.lastName || ""}
+                                </h1>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Low Risk • Grade A+
+                                </span>
                             </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Registered: <span className="font-medium text-gray-700">{formatDate(userData.createdAt, "MMM d, yyyy")}</span>
+                            </p>
                         </div>
                     </div>
-                    <div className="flex flex-wrap gap-3 w-full md:w-auto justify-end">
+
+                    {/* User Action Controls */}
+                    <div className="flex items-center gap-2.5">
                         <button
                             onClick={openCoAppModal}
                             disabled={actionLoading}
-                            className="px-4 py-2.5 bg-[#FFFFFF] border border-[#E2E8F0] text-[#475569] hover:bg-[#F8FAFC] rounded-xl font-semibold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center"
+                            className="px-3.5 py-2 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50"
                         >
-                            <span className="material-symbols-outlined text-[16px] text-slate-500">edit_note</span>
                             Change Co-Applicant
                         </button>
                         <button
@@ -186,44 +196,47 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                                 const studentLastName = userData.lastName || "";
                                 router.push(`/staff/chat-customer?userId=${targetId}&id=${targetId}&email=${encodeURIComponent(studentEmail)}&firstName=${encodeURIComponent(studentFirstName)}&lastName=${encodeURIComponent(studentLastName)}&phone=${encodeURIComponent(studentPhone)}`);
                             }}
-                            className="px-4 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-[#FFFFFF] rounded-xl font-semibold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer flex items-center gap-1.5 w-full sm:w-auto justify-center shadow-sm shadow-[#7C3AED]/10"
+                            className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer"
                         >
-                            <span className="material-symbols-outlined text-[16px]">chat</span>
-                            Chat with Student
+                            <span>Chat with Student</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Sub-Navigation Tabs */}
-                <div className="relative border-b border-slate-200 mb-8 w-full">
-                    <div className="flex items-center w-full overflow-x-auto scrollbar-hide pr-12">
+                {/* Edge-to-Edge Segmented Sub-Navigation Bar */}
+                <div className="bg-gray-50/80 border-t border-gray-200/60">
+                    <div className="max-w-7xl mx-auto px-6 flex items-center gap-1 overflow-x-auto text-xs font-semibold text-gray-600 py-1.5 scrollbar-hide">
                         {navigationTabs.map((tab) => {
                             const isActive = activeTab === tab.id;
                             return (
-                                <Link key={tab.id} href={tab.path} className="relative py-3 px-4 text-sm font-medium transition-colors hover:text-indigo-600 focus:outline-none select-none whitespace-nowrap shrink-0">
-                                    <span className={`text-[11px] font-black uppercase tracking-wider ${isActive ? "text-indigo-600" : "text-slate-500 hover:text-slate-700"}`}>
-                                        {tab.label}
-                                        {tab.badge && (
-                                            <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${isActive ? "bg-indigo-600 text-white animate-pulse" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>
-                                                {tab.badge}
-                                            </span>
-                                        )}
-                                    </span>
-                                    {isActive && (
-                                        <motion.div layoutId="activeTabUnderline" className="absolute bottom-0 inset-x-0 h-0.5 bg-indigo-600" />
+                                <Link
+                                    key={tab.id}
+                                    href={tab.path}
+                                    className={`px-3.5 py-2 rounded-md transition-all whitespace-nowrap inline-flex items-center gap-1.5 cursor-pointer ${
+                                        isActive
+                                            ? "bg-white text-indigo-600 shadow-2xs font-bold border border-gray-200/80"
+                                            : "hover:text-indigo-600 hover:bg-white"
+                                    }`}
+                                >
+                                    <span>{tab.label}</span>
+                                    {tab.badge && (
+                                        <span className="px-1.5 py-0.2 text-[10px] bg-indigo-100 text-indigo-700 rounded-full font-bold">
+                                            {tab.badge}
+                                        </span>
                                     )}
                                 </Link>
                             );
                         })}
                     </div>
-                    {/* Visual fade overlay indicating horizontal scrollability */}
-                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#F8FAFC] to-transparent pointer-events-none z-10" />
                 </div>
+            </div>
 
-                {/* Nested Page Render */}
+            {/* Main Content Workspace Container (Padded Below) */}
+            <main className="max-w-7xl mx-auto px-6 py-6">
                 {children}
+            </main>
 
-                {/* Edit Co-applicant Details Modal */}
+            {/* Edit Co-applicant Details Modal */}
                 {isCoAppModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                         <motion.div
@@ -362,7 +375,6 @@ function DossierLayoutInner({ children }: { children: React.ReactNode }) {
                         }}
                     />
                 )}
-            </div>
         </div>
     );
 }

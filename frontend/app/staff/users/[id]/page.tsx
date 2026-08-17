@@ -375,11 +375,65 @@ export default function ProfileTab() {
         const rawPct = (fallbackPct !== undefined && fallbackPct !== null && String(fallbackPct).trim() !== "") ? fallbackPct : extPct;
         const formattedPct = formatPercentageValue(rawPct, doc);
 
+        // MARKS IN NUMBERS & WORDS EXTRACTION + TALLY LOGIC
+        const secNumVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks', 'aggregate_marks', 'grand_total']);
+        const maxNumVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of', 'max']);
+
+        let wordsSecStr = getExtractedField(doc, ['marks_in_words', 'total_marks_in_words', 'secured_marks_in_words', 'marks_obtained_in_words']);
+        let wordsMaxStr = getExtractedField(doc, ['max_marks_in_words', 'maximum_marks_in_words', 'total_max_in_words']);
+
+        if (!wordsSecStr && doc?.verificationMetadata?.extractedFields) {
+            const rawText = String(doc.verificationMetadata.extractedFields.raw_text_summary || doc.verificationMetadata.extractedFields.rawOcrText || '');
+            const wordsMatch = rawText.match(/(?:marks|total|secured|obtained)\s+(?:in\s+words)?[:\s]+([a-z\s]+)(?:only|hundred|thousand)?/i);
+            if (wordsMatch) wordsSecStr = wordsMatch[1].trim();
+        }
+
+        const secNum = parseFloat(String(secNumVal || '').replace(/[^\d.]/g, ''));
+        const maxNum = parseFloat(String(maxNumVal || '').replace(/[^\d.]/g, ''));
+
+        const secFromWords = parseNumberFromWords(wordsSecStr);
+        const maxFromWords = parseNumberFromWords(wordsMaxStr);
+
+        let calculatedPct: string | undefined = undefined;
+        if (!isNaN(secNum) && !isNaN(maxNum) && maxNum > 0) {
+            calculatedPct = `${Math.round((secNum / maxNum) * 100 * 10) / 10}%`;
+        } else if (secFromWords && maxFromWords && maxFromWords > 0) {
+            calculatedPct = `${Math.round((secFromWords / maxFromWords) * 100 * 10) / 10}%`;
+        } else if (secFromWords && secFromWords > 0 && secFromWords <= 100) {
+            calculatedPct = `${Math.round(secFromWords * 10) / 10}%`;
+        }
+
+        let tallyStatus: 'matched' | 'discrepancy' | 'numbers_only' | 'none' = 'none';
+        let tallyMessage = '';
+
+        if (!isNaN(secNum) && secFromWords != null) {
+            if (Math.abs(secNum - secFromWords) <= 1) {
+                tallyStatus = 'matched';
+                tallyMessage = `Tallied: ${secNum} = "${wordsSecStr}"`;
+            } else {
+                tallyStatus = 'discrepancy';
+                tallyMessage = `Mismatch: Numbers (${secNum}) != Words ("${wordsSecStr}" = ${secFromWords})`;
+            }
+        } else if (!isNaN(secNum)) {
+            tallyStatus = 'numbers_only';
+            tallyMessage = maxNum ? `Secured: ${secNum} / ${maxNum}` : `Secured: ${secNum}`;
+        }
+
+        const finalPercentage = formattedPct || calculatedPct || "";
+
         return {
             rawInstitute: inst || "",
-            rawPercentage: formattedPct || "",
+            rawPercentage: finalPercentage,
             institute: inst ? inst : <span className="text-[#94A3B8] font-normal">Pending</span>,
-            percentage: formattedPct ? formattedPct : <span className="text-[#94A3B8] font-normal">Pending</span>
+            percentage: finalPercentage ? finalPercentage : <span className="text-[#94A3B8] font-normal">Pending</span>,
+            secNum: !isNaN(secNum) ? secNum : undefined,
+            maxNum: !isNaN(maxNum) ? maxNum : undefined,
+            wordsSecStr,
+            wordsMaxStr,
+            secFromWords,
+            calculatedPct,
+            tallyStatus,
+            tallyMessage
         };
     };
 
@@ -1106,37 +1160,129 @@ export default function ProfileTab() {
                     </div>
                     <div className="space-y-4">
                         {/* SSC */}
-                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-                            <div>
-                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">10th Standard / SSC</label>
-                                <span className="text-sm font-semibold text-[#0F172A] block mt-1">{sscDetails.institute}</span>
+                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col justify-between gap-3 shadow-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">10th Standard / SSC</label>
+                                    <span className="text-sm font-semibold text-[#0F172A] block mt-1">{sscDetails.institute}</span>
+                                </div>
+                                <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                    <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
+                                    <span className="font-extrabold text-[#7C3AED]">{sscDetails.percentage}</span>
+                                </div>
                             </div>
-                            <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
-                                <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
-                                {sscDetails.percentage}
-                            </div>
+                            {(sscDetails.secNum != null || sscDetails.wordsSecStr || sscDetails.tallyStatus !== 'none') && (
+                                <div className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <div className="flex items-center gap-3">
+                                        {sscDetails.secNum != null && (
+                                            <span className="text-slate-600 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
+                                                Numbers: <strong className="text-slate-900">{sscDetails.secNum}{sscDetails.maxNum ? ` / ${sscDetails.maxNum}` : ''}</strong>
+                                            </span>
+                                        )}
+                                        {sscDetails.wordsSecStr && (
+                                            <span className="text-purple-700 italic bg-purple-50/50 px-2 py-0.5 rounded border border-purple-100 font-medium">
+                                                Words: <strong className="not-italic text-purple-900 font-semibold">"{sscDetails.wordsSecStr}"</strong>
+                                            </span>
+                                        )}
+                                    </div>
+                                    {sscDetails.tallyStatus === 'matched' && (
+                                        <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full border border-emerald-200 flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                                            Tallied (Words = Numbers)
+                                        </span>
+                                    )}
+                                    {sscDetails.tallyStatus === 'discrepancy' && (
+                                        <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 text-[10px] font-black rounded-full border border-rose-200 flex items-center gap-1" title={sscDetails.tallyMessage}>
+                                            <span className="material-symbols-outlined text-[13px]">warning</span>
+                                            {sscDetails.tallyMessage}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
+
                         {/* HSC */}
-                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-                            <div>
-                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Intermediate / 12th / HSC</label>
-                                <span className="text-sm font-semibold text-[#0F172A] block mt-1">{hscDetails.institute}</span>
+                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col justify-between gap-3 shadow-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Intermediate / 12th / HSC</label>
+                                    <span className="text-sm font-semibold text-[#0F172A] block mt-1">{hscDetails.institute}</span>
+                                </div>
+                                <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                    <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
+                                    <span className="font-extrabold text-[#7C3AED]">{hscDetails.percentage}</span>
+                                </div>
                             </div>
-                            <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
-                                <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage:</span>
-                                {hscDetails.percentage}
-                            </div>
+                            {(hscDetails.secNum != null || hscDetails.wordsSecStr || hscDetails.tallyStatus !== 'none') && (
+                                <div className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <div className="flex items-center gap-3">
+                                        {hscDetails.secNum != null && (
+                                            <span className="text-slate-600 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
+                                                Numbers: <strong className="text-slate-900">{hscDetails.secNum}{hscDetails.maxNum ? ` / ${hscDetails.maxNum}` : ''}</strong>
+                                            </span>
+                                        )}
+                                        {hscDetails.wordsSecStr && (
+                                            <span className="text-purple-700 italic bg-purple-50/50 px-2 py-0.5 rounded border border-purple-100 font-medium">
+                                                Words: <strong className="not-italic text-purple-900 font-semibold">"{hscDetails.wordsSecStr}"</strong>
+                                            </span>
+                                        )}
+                                    </div>
+                                    {hscDetails.tallyStatus === 'matched' && (
+                                        <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full border border-emerald-200 flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                                            Tallied (Words = Numbers)
+                                        </span>
+                                    )}
+                                    {hscDetails.tallyStatus === 'discrepancy' && (
+                                        <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 text-[10px] font-black rounded-full border border-rose-200 flex items-center gap-1" title={hscDetails.tallyMessage}>
+                                            <span className="material-symbols-outlined text-[13px]">warning</span>
+                                            {hscDetails.tallyMessage}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
+
                         {/* Graduation */}
-                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-                            <div>
-                                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Graduation / Bachelors Degree</label>
-                                <span className="text-sm font-semibold text-[#0F172A] block mt-1">{ugDetails.institute}</span>
+                        <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E2E8F0] flex flex-col justify-between gap-3 shadow-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Graduation / Bachelors Degree</label>
+                                    <span className="text-sm font-semibold text-[#0F172A] block mt-1">{ugDetails.institute}</span>
+                                </div>
+                                <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
+                                    <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage/CGPA:</span>
+                                    <span className="font-extrabold text-[#7C3AED]">{ugDetails.percentage}</span>
+                                </div>
                             </div>
-                            <div className="sm:text-right bg-[#FFFFFF] border border-[#E2E8F0] rounded-lg px-3 py-1.5 self-start sm:self-auto font-mono text-xs text-[#0F172A]">
-                                <span className="font-bold text-[9px] uppercase tracking-wider text-[#64748B] block sm:inline mr-1">Percentage/CGPA:</span>
-                                {ugDetails.percentage}
-                            </div>
+                            {(ugDetails.secNum != null || ugDetails.wordsSecStr || ugDetails.tallyStatus !== 'none') && (
+                                <div className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <div className="flex items-center gap-3">
+                                        {ugDetails.secNum != null && (
+                                            <span className="text-slate-600 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
+                                                Numbers: <strong className="text-slate-900">{ugDetails.secNum}{ugDetails.maxNum ? ` / ${ugDetails.maxNum}` : ''}</strong>
+                                            </span>
+                                        )}
+                                        {ugDetails.wordsSecStr && (
+                                            <span className="text-purple-700 italic bg-purple-50/50 px-2 py-0.5 rounded border border-purple-100 font-medium">
+                                                Words: <strong className="not-italic text-purple-900 font-semibold">"{ugDetails.wordsSecStr}"</strong>
+                                            </span>
+                                        )}
+                                    </div>
+                                    {ugDetails.tallyStatus === 'matched' && (
+                                        <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full border border-emerald-200 flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                                            Tallied (Words = Numbers)
+                                        </span>
+                                    )}
+                                    {ugDetails.tallyStatus === 'discrepancy' && (
+                                        <span className="px-2.5 py-0.5 bg-rose-50 text-rose-700 text-[10px] font-black rounded-full border border-rose-200 flex items-center gap-1" title={ugDetails.tallyMessage}>
+                                            <span className="material-symbols-outlined text-[13px]">warning</span>
+                                            {ugDetails.tallyMessage}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

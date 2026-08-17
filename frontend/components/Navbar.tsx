@@ -13,7 +13,18 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [hasApplied, setHasApplied] = useState(false);
+    const [hasApplied, setHasApplied] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        try {
+            if (localStorage.getItem('has_applied_loan') === 'true') return true;
+            const raw = localStorage.getItem('recent_application_submitted');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Date.now() - (parsed.timestamp || 0) < 2592000000) return true;
+            }
+        } catch { }
+        return false;
+    });
     const profileRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -34,13 +45,20 @@ export default function Navbar() {
 
     useEffect(() => {
         if (isAuthenticated && user?.id) {
+            const hasUserApps = !!((user as any)?.applications && ((user as any).applications as any[]).length > 0) || !!((user as any)?.loanApplications && ((user as any).loanApplications as any[]).length > 0);
+            if (hasUserApps) {
+                setHasApplied(true);
+                try { localStorage.setItem('has_applied_loan', 'true'); } catch { }
+            }
+
             const checkApplication = async () => {
                 let hasRecentLocal = false;
                 try {
+                    if (localStorage.getItem('has_applied_loan') === 'true') hasRecentLocal = true;
                     const raw = localStorage.getItem('recent_application_submitted');
                     if (raw) {
                         const parsed = JSON.parse(raw);
-                        if ((parsed.userId === user.id || parsed.email === user.email) && (Date.now() - (parsed.timestamp || 0)) < 600000) {
+                        if ((parsed.userId === user.id || parsed.email === user.email) && (Date.now() - (parsed.timestamp || 0)) < 2592000000) {
                             hasRecentLocal = true;
                         }
                     }
@@ -51,10 +69,14 @@ export default function Navbar() {
                 try {
                     const res = await authApi.getDashboardData(user.id) as any;
                     const apps = res?.data?.applications || [];
-                    setHasApplied(apps.length > 0 || hasRecentLocal);
+                    const isApplied = apps.length > 0 || hasRecentLocal || hasUserApps;
+                    setHasApplied(isApplied);
+                    if (isApplied) {
+                        try { localStorage.setItem('has_applied_loan', 'true'); } catch { }
+                    }
                 } catch (err) {
                     console.error("Navbar failed to check application status:", err);
-                    if (hasRecentLocal) setHasApplied(true);
+                    if (hasRecentLocal || hasUserApps) setHasApplied(true);
                 }
             };
             checkApplication();
