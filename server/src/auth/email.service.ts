@@ -7,12 +7,12 @@ export class EmailService {
   private transporter;
 
   constructor() {
-    // Configure AWS SES SMTP transporter
+    // Configure SMTP transporter
     const port = parseInt(process.env.EMAIL_PORT || '587');
     const isSecure = port === 465;
 
     this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'email-smtp.ap-south-1.amazonaws.com',
+      host: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com',
       port: port,
       secure: isSecure, // true for 465, false for 587 STARTTLS
       requireTLS: !isSecure,

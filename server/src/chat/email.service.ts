@@ -36,7 +36,7 @@ export class EmailService {
   }
 
   private initializeTransporter() {
-    const host = this.configService.get<string>('EMAIL_HOST') || process.env.EMAIL_HOST || process.env.SMTP_HOST || 'email-smtp.ap-south-1.amazonaws.com';
+    const host = this.configService.get<string>('EMAIL_HOST') || process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com';
     const port = Number(this.configService.get<number>('EMAIL_PORT') || process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587;
     const user = this.configService.get<string>('EMAIL_USER') || process.env.EMAIL_USER || process.env.SMTP_USER;
     const pass = this.configService.get<string>('EMAIL_PASS') || process.env.EMAIL_PASS || process.env.SMTP_PASS;
