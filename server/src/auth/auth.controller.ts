@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import { ReferralService } from '../referral/referral.service';
 import { AssignmentService } from '../assignment/assignment.service';
 import { CsrfService } from './csrf.service';
+import { EmailService } from './email.service';
 import { UserGuard } from './user.guard';
 
 @Controller('auth')
@@ -13,6 +14,7 @@ export class AuthController {
     private usersService: UsersService,
     private referralService: ReferralService,
     private csrfService: CsrfService,
+    private emailService: EmailService,
     @Inject(forwardRef(() => AssignmentService)) private assignmentService: AssignmentService,
   ) { }
 
@@ -341,7 +343,7 @@ export class AuthController {
     if (body.coApplicantEmail) coApplicantPayload.email = coApplicantPayload.email || body.coApplicantEmail;
     if (body.coApplicantRelation) coApplicantPayload.relation = coApplicantPayload.relation || body.coApplicantRelation;
 
-    return this.usersService.updateUserDetails(
+    const result = await this.usersService.updateUserDetails(
       body.email,
       body.firstName,
       body.lastName,
@@ -359,6 +361,16 @@ export class AuthController {
       body.academic,
       body.userId
     );
+
+    // Automatically send welcome registration email to the user
+    const targetEmail = body.email || (result as any)?.user?.email;
+    const targetFirst = body.firstName || (result as any)?.user?.firstName;
+    const targetLast = body.lastName || (result as any)?.user?.lastName;
+    if (targetEmail) {
+      void this.emailService.sendDashboardWelcomeEmail(targetEmail, targetFirst, targetLast);
+    }
+
+    return result;
   }
 
   // ==================== LOAN APPLICATIONS ====================

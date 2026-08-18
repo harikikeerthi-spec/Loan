@@ -1417,6 +1417,13 @@ export class UsersService implements OnModuleInit {
         }
 
         if (academicUpdated) {
+          let fam = currentUser.family;
+          if (typeof fam === 'string') {
+            try { fam = JSON.parse(fam); } catch { fam = {}; }
+          }
+          if (!fam || typeof fam !== 'object') fam = {};
+          fam.academic = academic;
+          payload.family = typeof currentUser.family === 'object' && currentUser.family !== null ? fam : JSON.stringify(fam);
           payload.academic = typeof currentUser.academic === 'object' && currentUser.academic !== null ? academic : JSON.stringify(academic);
 
           // Sync to UserAcademicProfile
@@ -2947,29 +2954,57 @@ export class UsersService implements OnModuleInit {
 
       if (!refStudentName || refStudentName.trim().length < 2) return { issues: [], hardReject: false };
 
-      // Token overlap fuzzy matcher
+      // Helper to clean and strip titles
+      const cleanNameStr = (str: string) => {
+        return (str || '')
+          .toLowerCase()
+          .replace(/\b(mr|ms|mrs|shri|shree|dr|kumar|kumari|s\/o|d\/o|w\/o)\b/gi, '')
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+
+      // Comprehensive name matcher supporting token permutations, single-letter initials, and prefixes
       const namesMatch = (ref: string, target: string) => {
         if (!ref || !target) return true;
-        const n1 = ref.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-        const n2 = target.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+        const n1 = cleanNameStr(ref);
+        const n2 = cleanNameStr(target);
         if (n1 === n2) return true;
+
         const t1 = n1.split(/\s+/).filter(Boolean);
         const t2 = n2.split(/\s+/).filter(Boolean);
         if (t1.length === 0 || t2.length === 0) return true;
-        const matches = t1.filter(t => t2.some(dt => dt === t || (t.length > 2 && dt.startsWith(t)) || (dt.length > 2 && t.startsWith(dt))));
-        return (matches.length / Math.min(t1.length, t2.length)) >= 0.4;
+
+        // Substring inclusion check (e.g. "GURUNAGA RAO" in "SEDAM GURUNAGA RAO")
+        if (n1.includes(n2) || n2.includes(n1)) return true;
+
+        let matchedCount = 0;
+        for (const token of t1) {
+          const matched = t2.some(dt => {
+            if (dt === token) return true;
+            // Initial match (e.g. "S" matches "SEDAM")
+            if (token.length === 1 && dt.startsWith(token)) return true;
+            if (dt.length === 1 && token.startsWith(dt)) return true;
+            // Truncated/stem match
+            if (token.length >= 3 && dt.length >= 3 && (dt.startsWith(token) || token.startsWith(dt))) return true;
+            return false;
+          });
+          if (matched) matchedCount++;
+        }
+
+        // At least 50% of the reference name tokens must match the target
+        return (matchedCount / Math.min(t1.length, t2.length)) >= 0.5;
       };
 
       const checkDocNameMismatch = (docType: string, meta: any) => {
-        const dLower = (docType || '').toLowerCase();
+        const dLower = (docType || '').toLowerCase().trim();
         if (
-          dLower.includes('father') ||
-          dLower.includes('mother') ||
-          dLower.includes('coapplicant') ||
-          dLower.includes('brother') ||
-          dLower.includes('sister') ||
-          dLower.includes('spouse') ||
-          dLower.includes('guarantor')
+          dLower.startsWith('father_') || dLower.includes('_father') ||
+          dLower.startsWith('mother_') || dLower.includes('_mother') ||
+          dLower.startsWith('coapplicant_') || dLower.includes('_coapplicant') ||
+          dLower.startsWith('co_applicant_') || dLower.includes('_co_applicant') ||
+          dLower.startsWith('brother_') || dLower.startsWith('sister_') ||
+          dLower.startsWith('spouse_') || dLower.startsWith('guarantor_')
         ) {
           return [];
         }
@@ -2980,21 +3015,21 @@ export class UsersService implements OnModuleInit {
 
         if (extractedStudentName && typeof extractedStudentName === 'string' && extractedStudentName.trim().length > 2) {
           if (!namesMatch(refStudentName, extractedStudentName)) {
-            issues.push(`⚠️ Name Mismatch: Student name on ${docLabel} ("${extractedStudentName}") does not match reference ${refType} name ("${refStudentName}").`);
+            issues.push(`⚠️ Name Mismatch: Name on ${docLabel} ("${extractedStudentName}") does not match student verified name ("${refStudentName}").`);
           }
         }
 
         const extractedFather = meta.father_name || meta.fatherName;
         if (refFatherName && extractedFather && typeof extractedFather === 'string' && extractedFather.trim().length > 2) {
           if (!namesMatch(refFatherName, extractedFather)) {
-            issues.push(`⚠️ Father Name Mismatch: Father name on ${docLabel} ("${extractedFather}") does not match reference ${refType} father name ("${refFatherName}").`);
+            issues.push(`⚠️ Father Name Mismatch: Father name on ${docLabel} ("${extractedFather}") does not match reference father name ("${refFatherName}").`);
           }
         }
 
         const extractedMother = meta.mother_name || meta.motherName;
         if (refMotherName && extractedMother && typeof extractedMother === 'string' && extractedMother.trim().length > 2) {
           if (!namesMatch(refMotherName, extractedMother)) {
-            issues.push(`⚠️ Mother Name Mismatch: Mother name on ${docLabel} ("${extractedMother}") does not match reference ${refType} mother name ("${refMotherName}").`);
+            issues.push(`⚠️ Mother Name Mismatch: Mother name on ${docLabel} ("${extractedMother}") does not match reference mother name ("${refMotherName}").`);
           }
         }
 
@@ -3002,19 +3037,26 @@ export class UsersService implements OnModuleInit {
       };
 
       const isHardRejectDoc = (dt: string) => {
-        const d = dt.toLowerCase();
+        const d = dt.toLowerCase().trim();
+        // Never reject family/coapplicant/guarantor documents
+        if (
+          d.startsWith('father_') || d.includes('_father') ||
+          d.startsWith('mother_') || d.includes('_mother') ||
+          d.startsWith('coapplicant_') || d.includes('_coapplicant') ||
+          d.startsWith('co_applicant_') || d.includes('_co_applicant') ||
+          d.startsWith('guarantor_') || d.includes('_guarantor') ||
+          d.startsWith('brother_') || d.startsWith('sister_') || d.startsWith('spouse_')
+        ) {
+          return false;
+        }
+
+        // Student documents to strictly validate
         return (
-          !d.includes('father') &&
-          !d.includes('mother') &&
-          !d.includes('coapplicant') &&
-          !d.includes('co_applicant') &&
-          (
-            d.includes('pan') ||
-            d.includes('marksheet_10') || d.includes('10th') || d.includes('ssc') ||
-            d.includes('marksheet_12') || d.includes('12th') || d.includes('hsc') ||
-            d.includes('marksheet_ug') || d.includes('degree') || d.includes('graduation') ||
-            d.includes('bachelor') || d.includes('undergrad')
-          )
+          d === 'pan' || d === 'pancard' || d === 'pan_card' || d === 'student_pan' ||
+          d.includes('marksheet_10') || d.includes('10th') || d.includes('ssc') || d.includes('grade_10') || d.includes('grade10') ||
+          d.includes('marksheet_12') || d.includes('12th') || d.includes('hsc') || d.includes('intermediate') || d.includes('inter') || d.includes('grade_12') || d.includes('grade12') ||
+          d.includes('marksheet_ug') || d.includes('ug_degree') || d.includes('degree_certificate') || d.includes('degree') || d.includes('graduation') || d.includes('bachelor') || d.includes('undergrad') || d.includes('cmm') || d.includes('consolidated') ||
+          d.includes('marksheet_pg') || d.includes('pg_degree') || d.includes('postgrad')
         );
       };
 
@@ -3061,7 +3103,7 @@ export class UsersService implements OnModuleInit {
           return {
             issues: currentIssues,
             hardReject: true,
-            rejectReason: `Upload rejected: The student name on this document ("${extractedStudentName}") does not match your verified reference document (${refType}) name ("${refStudentName}"). All student documents must match your ${refType} name exactly.`,
+            rejectReason: `Upload rejected: The name on this document ("${extractedStudentName}") does not match the student's verified name ("${refStudentName}"). All student documents must belong to the student. Please upload the student's document.`,
           };
         }
       }

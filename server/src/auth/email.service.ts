@@ -8,17 +8,18 @@ export class EmailService {
 
   constructor() {
     // Configure SMTP transporter
-    const port = parseInt(process.env.EMAIL_PORT || '587');
+    const host = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'email-smtp.ap-south-1.amazonaws.com';
+    const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587');
     const isSecure = port === 465;
 
     this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com',
+      host: host,
       port: port,
       secure: isSecure, // true for 465, false for 587 STARTTLS
       requireTLS: !isSecure,
       auth: {
-        user: process.env.EMAIL_USER || process.env.SMTP_USER,
-        pass: process.env.EMAIL_PASS || process.env.SMTP_PASS,
+        user: process.env.SMTP_USER || process.env.EMAIL_USER,
+        pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
       },
       tls: {
         rejectUnauthorized: false,
@@ -26,20 +27,34 @@ export class EmailService {
     });
   }
 
-  private getFromAddress(): string {
-    const emailUser = (process.env.EMAIL_USER || '').trim();
-    const emailFrom = (process.env.EMAIL_FROM || '').trim();
+  private hasCredentials(): boolean {
+    return !!((process.env.SMTP_USER || process.env.EMAIL_USER) && (process.env.SMTP_PASS || process.env.EMAIL_PASS));
+  }
 
+  private getFromAddress(): string {
+    const emailFrom = (process.env.MAIL_FROM || process.env.EMAIL_FROM || '').trim();
     if (emailFrom && emailFrom.includes('@')) {
       if (emailFrom.includes('<')) return emailFrom;
       return `"VidyaLoans Support" <${emailFrom}>`;
     }
 
-    if (emailUser) {
+    const emailUser = (process.env.SMTP_USER || process.env.EMAIL_USER || '').trim();
+    if (emailUser && emailUser.includes('@')) {
       return `"VidyaLoans Support" <${emailUser}>`;
     }
 
     return '"VidyaLoans Support" <support@vidyaloans.in>';
+  }
+
+  private getReplyToAddress(): string {
+    const replyTo = (process.env.EMAIL_REPLY_TO || '').trim();
+    if (replyTo && replyTo.includes('@')) return replyTo;
+    const emailFrom = (process.env.MAIL_FROM || process.env.EMAIL_FROM || '').trim();
+    if (emailFrom && emailFrom.includes('@')) {
+      const match = emailFrom.match(/<([^>]+)>/);
+      return match ? match[1] : emailFrom;
+    }
+    return 'support@vidyaloans.in';
   }
 
   private getStandardHeaders() {
@@ -94,7 +109,7 @@ export class EmailService {
       console.log(`--------------------------------`);
 
       // Send actual email if credentials are configured
-      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      if (this.hasCredentials()) {
         await this.transporter.sendMail(mailOptions);
         console.log(`Email sent successfully to ${email}`);
       } else {
@@ -222,7 +237,7 @@ export class EmailService {
     const mailOptions = {
       from: this.getFromAddress(),
       to: fullName ? `"${fullName}" <${email}>` : email,
-      replyTo: process.env.EMAIL_USER || 'support@vidyaloans.in',
+      replyTo: this.getReplyToAddress(),
       headers: this.getStandardHeaders(),
       subject: `Welcome to VidyaLoans, ${name}! Your Education Loan Journey Begins`,
       text: `Dear ${name},\n\nWelcome to VidyaLoan – India's smartest education loan platform!\n\nYour profile is set up and your dashboard is ready. Here's what you can do now:\n\n🏦 LOAN OFFERINGS\n• Education loans up to ₹1.5 Crore\n• Competitive interest rates from 8.5% p.a.\n• Moratorium period during studies\n• No collateral for loans up to ₹7.5 Lakh\n• Covers tuition, living, travel, and equipment costs\n\n🚀 HOW TO GET YOUR LOAN IN 4 STEPS\n1. Complete Your Profile – Personal & academic details (done!)\n2. Upload Documents via DigiLocker – 100% digital & secure\n3. Choose Your Bank – Compare offers from 20+ lenders\n4. Track in Real Time – Get updates at every step\n\n✨ PLATFORM FEATURES\n• AI-powered bank matching\n• DigiLocker integration for instant document sync\n• Real-time application tracking\n• Dedicated loan counsellors\n• Community forum & expert blogs\n\nGo to your dashboard: ${frontendUrl}\n\nWarm regards,\nThe VidyaLoan Team\nsupport@vidyaloans.in`,
@@ -395,7 +410,7 @@ export class EmailService {
 
     try {
       console.log(`[EmailService] Sending welcome email to new user: ${email}`);
-      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      if (this.hasCredentials()) {
         await this.transporter.sendMail(mailOptions);
         console.log(`[EmailService] Welcome email sent successfully to ${email}`);
       } else {
