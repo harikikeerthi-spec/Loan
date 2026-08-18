@@ -164,6 +164,8 @@ export function extractNameFromLabeledOcrText(text: string): string | undefined 
             `(?:name|नाम)\\s*[:：]\\s*([^\\n,;]{2,80})`,
             'iu',
         ),
+        // E-Aadhaar letter format: "To\n<Name>\n[S/O|D/O|C/O|W/O|H.No]"
+        /(?:^|\n)\s*To\s*[\n,:]\s*([A-Za-z]+(?:\s+[A-Za-z]+){1,4})(?=\s*[\n,]*(?:[SDCW]\/O|Care|H\.?No|Door|D\.?No|Plot|\d))/i,
     ];
 
     for (const re of labelPatterns) {
@@ -185,7 +187,8 @@ export function extractNameFromLabeledOcrText(text: string): string | undefined 
 }
 
 export function parseMRZLine1(line: string, rawText?: string): { surname?: string; given_names?: string; full_name?: string } {
-    const match = line.match(/^P<([A-Z]{3})([A-Z0-9<]+)$/);
+    const cleanLine = (line || '').replace(/\s+/g, '').toUpperCase();
+    const match = cleanLine.match(/P<([A-Z]{3})([A-Z0-9<]+)/);
     if (!match) return {};
 
     const namePart = match[2];
@@ -196,32 +199,11 @@ export function parseMRZLine1(line: string, rawText?: string): { surname?: strin
     const rawGivenNames = parts[1];
 
     const cleanName = (raw: string) => {
-        return raw.split('<').map(p => p.trim()).filter(Boolean);
+        return raw.split('<').map(p => p.trim()).filter(p => p.length > 0 && /^[A-Z]+$/.test(p));
     };
 
     const surnameWords = cleanName(rawSurname);
-    let givenWords = cleanName(rawGivenNames);
-
-    if (rawText) {
-        const nonMRZLines = rawText.split('\n')
-            .map(l => l.trim().toUpperCase())
-            .filter(l => !l.startsWith('P<') && !l.includes('<<') && !/^[A-Z0-9<]{30,45}$/.test(l));
-        
-        const allWords = new Set<string>();
-        for (const l of nonMRZLines) {
-            const words = l.split(/[^A-Z]/).map(w => w.trim()).filter(w => w.length > 0);
-            for (const w of words) allWords.add(w);
-        }
-
-        if (allWords.size > 0) {
-            givenWords = givenWords.filter((w, idx) => {
-                if (allWords.has(w)) return true;
-                if (idx === givenWords.length - 1 && w.length <= 2) return false;
-                if (idx >= 2 && !allWords.has(w)) return false;
-                return true;
-            });
-        }
-    }
+    const givenWords = cleanName(rawGivenNames);
 
     const surname = surnameWords.join(' ');
     const given_names = givenWords.join(' ');
@@ -522,6 +504,41 @@ export function canonicalizeOcrFields(
             raw.national_id_number,
         );
         if (aadhaar) out.aadhaar_number = String(aadhaar).replace(/\s+/g, ' ').trim();
+
+        const cardholderName = extractFullNameFromOcrRaw(raw, docType) || pickFirst(
+            raw.full_name,
+            raw.fullName,
+            raw.holder_name,
+            raw.cardholder_name,
+            raw.name,
+            raw.printed_name,
+            raw.applicant_name,
+        );
+        if (cardholderName) {
+            out.full_name = dedupeOcrFullName(String(cardholderName));
+        }
+
+        const rawFather = pickFirst(
+            raw.father_name,
+            raw.fatherName,
+            raw.guardian_name,
+            raw.care_of,
+            raw.careOf,
+            raw.c_o,
+            raw.d_o,
+            raw.s_o,
+        );
+        if (rawFather) {
+            const cleanFather = String(rawFather)
+                .replace(/^(?:c\/o|d\/o|s\/o|w\/o|care\s*of|daughter\s*of|son\s*of|wife\s*of)\s*[:：\-]?\s*/i, '')
+                .trim();
+            if (cleanFather.length > 2) {
+                out.father_name = dedupeOcrFullName(cleanFather);
+            }
+        }
+
+        const phone = pickFirst(raw.phone_number, raw.phoneNumber, raw.mobile, raw.mobile_number);
+        if (phone) out.mobile = String(phone).replace(/\D/g, '').slice(-10);
 
         const vid = pickFirst(raw.vid, raw.VID);
         if (vid) out.vid = String(vid).trim();

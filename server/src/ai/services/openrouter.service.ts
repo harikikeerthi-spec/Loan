@@ -256,24 +256,22 @@ export class OpenRouterService {
         for (const currentModel of modelsToTry) {
             console.log(`[OpenRouter Vision] Attempting extraction with model: ${currentModel}...`);
             const isPdf = imageUrl.startsWith('data:application/pdf');
+            
+            // Standard OpenAI/OpenRouter vision format uses image_url (which also accepts data:application/pdf for Gemini)
+            const contentItems: any[] = [
+                { type: 'text', text: prompt },
+                {
+                    type: 'image_url',
+                    image_url: { url: imageUrl }
+                }
+            ];
+
             const requestBody = {
                 model: currentModel,
                 messages: [
                     {
                         role: 'user',
-                        content: [
-                            { type: 'text', text: prompt },
-                            isPdf ? {
-                                type: 'file',
-                                file: {
-                                    filename: 'document.pdf',
-                                    file_data: imageUrl
-                                }
-                            } : {
-                                type: 'image_url',
-                                image_url: { url: imageUrl }
-                            }
-                        ]
+                        content: contentItems
                     }
                 ],
                 max_tokens: 2048,

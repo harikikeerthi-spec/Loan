@@ -40,12 +40,6 @@ export const USER_VALID_COLUMNS = new Set([
   'tests',
   'family',
   'coApplicant',
-  'passport',
-  'nationality',
-  'academic',
-  'workExperience',
-  'mailingAddress',
-  'emergencyContact',
 ]);
 
 export function sanitizeUserPayload(payload: any): Record<string, any> {
@@ -1161,18 +1155,17 @@ export class UsersService implements OnModuleInit {
 
         let familyChanged = false;
 
-        // Auto-fill Student Full Name from Passport
+        // Auto-fill Student Full Name from Passport — ALWAYS overwrite since Passport is the authoritative identity document
         if (passportFull && typeof passportFull === 'string' && passportFull.trim()) {
           const origName = passportFull.trim();
-          payload.passportOriginalName = origName;
           family.passportOriginalName = origName;
           familyChanged = true;
 
-          // Also set user's firstName / lastName if not set
           const nameParts = origName.split(/\s+/);
-          if (nameParts.length >= 1 && !currentUser.firstName) {
+          if (nameParts.length >= 1) {
             payload.firstName = nameParts[0];
             payload.lastName = nameParts.slice(1).join(' ') || nameParts[0];
+            console.log(`[UsersService] Passport name anchored: firstName="${payload.firstName}", lastName="${payload.lastName}" (from "${origName}")`);
           }
         }
 
@@ -1198,7 +1191,13 @@ export class UsersService implements OnModuleInit {
           } catch {}
         }
 
-        // Auto-fill DOB & Gender & Passport Number
+        // Auto-fill DOB & Gender & Passport Number & Dates
+        const passportIssueDate = details.date_of_issue || details.issue_date || details.passport_issue_date || extFields.date_of_issue || extFields.issue_date;
+        const passportExpiryDate = details.date_of_expiry || details.expiry_date || details.passport_expiry || extFields.date_of_expiry || extFields.expiry_date;
+        const passportIssueCountry = details.issue_country || details.country_of_issue || extFields.issue_country || 'India';
+        const passportBirthCity = details.birth_city || details.place_of_birth || extFields.birth_city || extFields.place_of_birth;
+        const passportBirthCountry = details.birth_country || details.country_of_birth || extFields.birth_country || 'India';
+
         if (passportDob) {
           payload.dateOfBirth = passportDob;
         }
@@ -1209,6 +1208,24 @@ export class UsersService implements OnModuleInit {
         if (passportNum) {
           payload.passportNumber = passportNum;
         }
+
+        family.passport = {
+          number: passportNum || null,
+          passportNumber: passportNum || null,
+          fullName: passportFull || null,
+          full_name: passportFull || null,
+          issueDate: passportIssueDate || null,
+          passportIssueDate: passportIssueDate || null,
+          expiryDate: passportExpiryDate || null,
+          passportExpiryDate: passportExpiryDate || null,
+          issueCountry: passportIssueCountry || 'India',
+          passportIssueCountry: passportIssueCountry || 'India',
+          birthCity: passportBirthCity || null,
+          passportBirthCity: passportBirthCity || null,
+          birthCountry: passportBirthCountry || 'India',
+          passportBirthCountry: passportBirthCountry || 'India',
+        };
+        familyChanged = true;
 
         if (familyChanged) {
           payload.family = typeof currentUser.family === 'object' && currentUser.family !== null ? family : JSON.stringify(family);
@@ -1232,6 +1249,52 @@ export class UsersService implements OnModuleInit {
           }
         } catch (syncErr: any) {
           console.error(`[UsersService.updateExtractedDetails] Error syncing Passport fields to LoanApplication: ${syncErr.message}`);
+        }
+      }
+
+      // Automatically extract and set details from Student Aadhaar documents (when no Passport exists yet)
+      const isStudentAadhaar = !relation && (normalizedDocType.includes('aadhar') || normalizedDocType.includes('aadhaar') || normalizedDocType.includes('national_id'));
+      if (isStudentAadhaar) {
+        const extFields = details.extractedFields || details.extracted_fields || details.extracted_data || details;
+        const aadhaarFull = details.full_name || details.fullName || details.name || extFields.full_name || extFields.fullName || extFields.name;
+        const aadhaarNum = details.aadhaar_number || details.aadhar_number || details.id_number || extFields.aadhaar_number || extFields.aadhar_number || extFields.id_number;
+        const aadhaarDob = details.dob || details.date_of_birth || details.dateOfBirth || extFields.dob || extFields.date_of_birth;
+        const aadhaarGender = details.gender || details.sex || extFields.gender || extFields.sex;
+
+        let family = currentUser.family;
+        if (typeof family === 'string') {
+          try { family = JSON.parse(family); } catch { family = {}; }
+        }
+        if (!family || typeof family !== 'object') family = {};
+
+        const hasPassport = !!(family?.passportOriginalName);
+
+        if (aadhaarFull && typeof aadhaarFull === 'string' && aadhaarFull.trim()) {
+          const cleanAadhaarName = aadhaarFull.trim();
+          family.aadhaarOriginalName = cleanAadhaarName;
+
+          // If no passport has been uploaded yet, Aadhaar is the authoritative source for student name
+          if (!hasPassport) {
+            const nameParts = cleanAadhaarName.split(/\s+/);
+            if (nameParts.length >= 1) {
+              payload.firstName = nameParts[0];
+              payload.lastName = nameParts.slice(1).join(' ') || nameParts[0];
+              console.log(`[UsersService] Aadhaar name anchored: firstName="${payload.firstName}", lastName="${payload.lastName}" (from "${cleanAadhaarName}")`);
+            }
+          }
+          payload.family = typeof currentUser.family === 'object' && currentUser.family !== null ? family : JSON.stringify(family);
+        }
+
+        if (aadhaarDob && !currentUser.dateOfBirth && !hasPassport) {
+          payload.dateOfBirth = aadhaarDob;
+        }
+        if (aadhaarGender && !currentUser.gender && !hasPassport) {
+          const g = String(aadhaarGender).toLowerCase().trim();
+          payload.gender = g.startsWith('m') ? 'Male' : g.startsWith('f') ? 'Female' : aadhaarGender;
+        }
+        if (aadhaarNum && !currentUser.aadhaarNumber) {
+          const cleanNum = String(aadhaarNum).replace(/\D/g, '');
+          if (cleanNum.length === 12) payload.aadhaarNumber = cleanNum;
         }
       }
 
@@ -2663,6 +2726,49 @@ export class UsersService implements OnModuleInit {
 
       const updatedParentsList = Object.values(parentsMap);
 
+      // Extract comprehensive passport details from passport document or user record
+      const passportDoc = (documents || []).find((d: any) => {
+        const type = (d.docType || '').toLowerCase().trim();
+        return type === 'passport' || type.includes('passport');
+      });
+
+      let passportExtracted: any = {};
+      if (passportDoc) {
+        let meta = passportDoc.verificationMetadata;
+        if (typeof meta === 'string') {
+          try { meta = JSON.parse(meta); } catch { meta = {}; }
+        }
+        if (meta && typeof meta === 'object') {
+          const details = meta.details || meta.ocrResult || meta.ocr_result || passportDoc.ocrResult || passportDoc.ocr_result || {};
+          passportExtracted = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || {};
+        }
+      }
+
+      const passNumber = passportExtracted.passport_number || passportExtracted.passportNumber || passportExtracted.passport_no || passportExtracted.passportNo || passportExtracted.document_number || familyObj?.passport?.number || userWithActivity?.passportNumber;
+      const passFullName = passportExtracted.full_name || passportExtracted.fullName || passportExtracted.name || (passportExtracted.given_names ? `${passportExtracted.given_names} ${passportExtracted.surname || ''}`.trim() : undefined) || familyObj?.passportOriginalName || familyObj?.passport?.fullName || userWithActivity?.passportOriginalName || userWithActivity?.nameAsInPassport;
+      const passIssueDate = passportExtracted.date_of_issue || passportExtracted.issue_date || passportExtracted.passportIssueDate || passportExtracted.issueDate || familyObj?.passport?.issueDate || userWithActivity?.passportIssueDate;
+      const passExpiryDate = passportExtracted.date_of_expiry || passportExtracted.expiry_date || passportExtracted.passportExpiry || passportExtracted.passportExpiryDate || passportExtracted.expiryDate || familyObj?.passport?.expiryDate || userWithActivity?.passportExpiryDate;
+      const passIssueCountry = passportExtracted.issue_country || passportExtracted.country_of_issue || passportExtracted.issuing_country || passportExtracted.passportIssueCountry || familyObj?.passport?.issueCountry || userWithActivity?.passportIssueCountry || 'India';
+      const passBirthCity = passportExtracted.birth_city || passportExtracted.place_of_birth || passportExtracted.birth_place || passportExtracted.passportBirthCity || familyObj?.passport?.birthCity || userWithActivity?.birthCity || userWithActivity?.passportBirthCity;
+      const passBirthCountry = passportExtracted.birth_country || passportExtracted.country_of_birth || passportExtracted.passportBirthCountry || familyObj?.passport?.birthCountry || userWithActivity?.birthCountry || userWithActivity?.passportBirthCountry || 'India';
+
+      const passportObj = {
+        number: passNumber || null,
+        passportNumber: passNumber || null,
+        fullName: passFullName || null,
+        full_name: passFullName || null,
+        issueDate: passIssueDate || null,
+        passportIssueDate: passIssueDate || null,
+        expiryDate: passExpiryDate || null,
+        passportExpiryDate: passExpiryDate || null,
+        issueCountry: passIssueCountry || 'India',
+        passportIssueCountry: passIssueCountry || 'India',
+        birthCity: passBirthCity || null,
+        passportBirthCity: passBirthCity || null,
+        birthCountry: passBirthCountry || 'India',
+        passportBirthCountry: passBirthCountry || 'India',
+      };
+
       const sanitizedUser = userWithActivity ? {
         ...userWithActivity,
         family: familyObj,
@@ -2674,6 +2780,15 @@ export class UsersService implements OnModuleInit {
         fatherAadhar: finalFatherAadhar,
         fatherPan: finalFatherPan,
         parents: updatedParentsList,
+        passport: passportObj,
+        passportNumber: passNumber || userWithActivity?.passportNumber || null,
+        passportOriginalName: passFullName || userWithActivity?.passportOriginalName || null,
+        nameAsInPassport: passFullName || userWithActivity?.nameAsInPassport || null,
+        passportIssueDate: passIssueDate || null,
+        passportExpiryDate: passExpiryDate || null,
+        passportIssueCountry: passIssueCountry || 'India',
+        passportBirthCity: passBirthCity || null,
+        passportBirthCountry: passBirthCountry || 'India',
       } : null;
 
       if (sanitizedUser) {
@@ -2788,10 +2903,10 @@ export class UsersService implements OnModuleInit {
     }
   }
 
-  async performCrossDocumentValidation(userId: string, currentDocType: string, currentExtractedData: any): Promise<string[]> {
+  async performCrossDocumentValidation(userId: string, currentDocType: string, currentExtractedData: any): Promise<{ issues: string[]; hardReject: boolean; rejectReason?: string }> {
     try {
       const user = await this.findById(userId);
-      if (!user) return [];
+      if (!user) return { issues: [], hardReject: false };
 
       const userDocs = await this.getUserDocuments(userId);
       const normDocType = (currentDocType || '').toLowerCase();
@@ -2806,9 +2921,15 @@ export class UsersService implements OnModuleInit {
       );
 
       let refType = 'Profile';
-      let refStudentName = (user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}`.trim() : (user.passportOriginalName || '');
-      let refFatherName = user.family?.fatherName || '';
-      let refMotherName = user.family?.motherName || '';
+      let familyData: any = user.family;
+      if (typeof familyData === 'string') {
+        try { familyData = JSON.parse(familyData); } catch { familyData = {}; }
+      }
+      if (!familyData || typeof familyData !== 'object') familyData = {};
+
+      let refStudentName = (user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}`.trim() : (familyData.passportOriginalName || familyData.aadhaarOriginalName || '');
+      let refFatherName = familyData.fatherName || '';
+      let refMotherName = familyData.motherName || '';
 
       if (passportDoc) {
         refType = 'Passport';
@@ -2824,7 +2945,7 @@ export class UsersService implements OnModuleInit {
         refMotherName = meta.mother_name || meta.motherName || refMotherName;
       }
 
-      if (!refStudentName || refStudentName.trim().length < 2) return [];
+      if (!refStudentName || refStudentName.trim().length < 2) return { issues: [], hardReject: false };
 
       // Token overlap fuzzy matcher
       const namesMatch = (ref: string, target: string) => {
@@ -2880,6 +3001,23 @@ export class UsersService implements OnModuleInit {
         return issues;
       };
 
+      const isHardRejectDoc = (dt: string) => {
+        const d = dt.toLowerCase();
+        return (
+          !d.includes('father') &&
+          !d.includes('mother') &&
+          !d.includes('coapplicant') &&
+          !d.includes('co_applicant') &&
+          (
+            d.includes('pan') ||
+            d.includes('marksheet_10') || d.includes('10th') || d.includes('ssc') ||
+            d.includes('marksheet_12') || d.includes('12th') || d.includes('hsc') ||
+            d.includes('marksheet_ug') || d.includes('degree') || d.includes('graduation') ||
+            d.includes('bachelor') || d.includes('undergrad')
+          )
+        );
+      };
+
       const isReferenceDocUpload = normDocType.includes('passport') || (normDocType.includes('aadhar') && !passportDoc);
 
       if (isReferenceDocUpload) {
@@ -2910,10 +3048,28 @@ export class UsersService implements OnModuleInit {
         }
       }
 
-      return checkDocNameMismatch(currentDocType, currentExtractedData);
+      const currentIssues = checkDocNameMismatch(currentDocType, currentExtractedData);
+
+      // For student docs (PAN, 10th, 12th, degree): hard reject if name mismatch detected
+      if (currentIssues.length > 0 && isHardRejectDoc(currentDocType) && refStudentName) {
+        const extractedStudentName =
+          currentExtractedData.full_name || currentExtractedData.fullName ||
+          currentExtractedData.name || currentExtractedData.printed_name ||
+          (currentExtractedData.given_names ? `${currentExtractedData.given_names} ${currentExtractedData.surname || ''}`.trim() : undefined);
+
+        if (extractedStudentName && !namesMatch(refStudentName, extractedStudentName)) {
+          return {
+            issues: currentIssues,
+            hardReject: true,
+            rejectReason: `Upload rejected: The student name on this document ("${extractedStudentName}") does not match your verified reference document (${refType}) name ("${refStudentName}"). All student documents must match your ${refType} name exactly.`,
+          };
+        }
+      }
+
+      return { issues: currentIssues, hardReject: false };
     } catch (err: any) {
       console.error(`[CrossDocValidation] Error validating documents for user ${userId}:`, err.message);
-      return [];
+      return { issues: [], hardReject: false };
     }
   }
 }

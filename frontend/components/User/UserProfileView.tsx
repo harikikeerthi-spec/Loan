@@ -80,11 +80,30 @@ export default function UserProfileView({
 
         const names = Array.isArray(fieldNames) ? fieldNames : [fieldNames];
         for (const fn of names) {
-            if (ext[fn] && String(ext[fn]).trim()) return String(ext[fn]).trim();
-            if (details[fn] && String(details[fn]).trim()) return String(details[fn]).trim();
-            if (meta[fn] && String(meta[fn]).trim()) return String(meta[fn]).trim();
-            if (doc[fn] && String(doc[fn]).trim()) return String(doc[fn]).trim();
+            if (ext[fn] != null && String(ext[fn]).trim() && String(ext[fn]).trim() !== "—") return String(ext[fn]).trim();
+            if (details[fn] != null && String(details[fn]).trim() && String(details[fn]).trim() !== "—") return String(details[fn]).trim();
+            if (meta[fn] != null && String(meta[fn]).trim() && String(meta[fn]).trim() !== "—") return String(meta[fn]).trim();
+            if (doc[fn] != null && String(doc[fn]).trim() && String(doc[fn]).trim() !== "—") return String(doc[fn]).trim();
         }
+
+        // Special handling for compound full_name from given_names + surname
+        if (names.some(n => ['full_name', 'fullName', 'name', 'holder_name', 'printed_name'].includes(n))) {
+            const g = ext.given_names || ext.givenName || details.given_names || details.givenName || meta.given_names;
+            const s = ext.surname || ext.lastName || details.surname || details.lastName || meta.surname || '';
+            if (g && String(g).trim()) {
+                return `${String(g).trim()} ${String(s).trim()}`.trim();
+            }
+        }
+
+        // Special handling for address object
+        if (names.includes('address')) {
+            const addrObj = ext.address || details.address || meta.address;
+            if (typeof addrObj === 'object' && addrObj !== null) {
+                const parts = [addrObj.address1, addrObj.address2, addrObj.city, addrObj.state, addrObj.pincode, addrObj.country].filter(Boolean);
+                if (parts.length > 0) return parts.join(', ');
+            }
+        }
+
         return null;
     };
 
@@ -445,7 +464,7 @@ export default function UserProfileView({
             firstName: activeProfile?.firstName || "",
             lastName: activeProfile?.lastName || "",
             phoneNumber: activeProfile?.phoneNumber || "",
-            dateOfBirth: formatDateToDdMmYyyy(activeProfile?.dateOfBirth),
+            dateOfBirth: formatDateToDdMmYyyy(activeProfile?.dateOfBirth || getDocExtractedField(['passport', 'aadhar', 'aadhaar', 'pan'], ['dob', 'date_of_birth', 'dateOfBirth'])),
             nationality: activeProfile?.nationality || getDerivedNationality() || "",
             passportNumber: passportNumber || "",
             passportFullName: passportFullName || (activeProfile?.firstName ? `${activeProfile.firstName} ${activeProfile.lastName || ''}`.trim() : ""),
@@ -1147,7 +1166,7 @@ export default function UserProfileView({
                                 {renderBentoField("PAN Number", studentPan, startPersonalEdit, "pan")}
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {renderBentoField("Date of Birth", formatDob(activeProfile?.dateOfBirth), startPersonalEdit)}
+                                {renderBentoField("Date of Birth", formatDob(activeProfile?.dateOfBirth || getDocExtractedField(['passport', 'aadhar', 'aadhaar', 'pan'], ['dob', 'date_of_birth', 'dateOfBirth'])), startPersonalEdit)}
                                 {renderBentoField("Nationality", activeProfile?.nationality || getDerivedNationality(), startPersonalEdit)}
                                 {renderBentoField("Destination Country", activeProfile?.studyDestination || activeProfile?.country || firstApp?.country || firstApp?.destinationCountry || data?.applications?.[0]?.country, startPersonalEdit)}
                                 {renderBentoField("Target University", activeProfile?.targetUniversity || activeProfile?.universityName || firstApp?.universityName || firstApp?.targetUniversity || data?.applications?.[0]?.universityName || data?.applications?.[0]?.targetUniversity, startPersonalEdit)}

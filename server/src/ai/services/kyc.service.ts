@@ -291,17 +291,21 @@ export class KycService {
             matches = hasAadhaarKeywords || (!page1IsPan && !page1IsPassport);
         } else if (normalizedType.includes('passport')) {
             expectedLabel = 'Passport';
-            const hasPassportKeywords = clean.includes('passport') ||
-                clean.includes('republic of india') ||
-                clean.includes('p<ind') ||
-                clean.includes('nationality') ||
-                clean.includes('mrz');
+            // For scanned passport PDFs, PDF text extraction returns empty/binary gibberish.
+            // ONLY reject if we clearly detect Aadhaar or PAN keywords — otherwise pass and let AI Vision decide.
+            const clearlyIsAadhaar = clean.includes('uidai') || clean.includes('unique identification authority') || 
+                (clean.includes('aadhaar') && !clean.includes('passport'));
+            const clearlyIsPan = (clean.includes('income tax department') || clean.includes('permanent account number')) &&
+                !clean.includes('passport');
             
-            // Only exclude if page 1 is clearly Aadhaar or PAN
-            const page1IsAadhaar = (clean.includes('uidai') || clean.includes('aadhaar')) && !hasPassportKeywords;
-            const page1IsPan = (clean.includes('income tax') || clean.includes('permanent account')) && !hasPassportKeywords;
-            
-            matches = hasPassportKeywords && !page1IsAadhaar && !page1IsPan;
+            if (clearlyIsAadhaar) {
+                return { is_valid: false, error: 'Document mismatch: You uploaded an Aadhaar Card into a Passport slot. Only official Passports must be uploaded for Passport verification.' };
+            }
+            if (clearlyIsPan) {
+                return { is_valid: false, error: 'Document mismatch: You uploaded a PAN Card into a Passport slot. Only official Passports must be uploaded for Passport verification.' };
+            }
+            // Pass — scanned image PDFs won't have text keywords; AI Vision will verify
+            return { is_valid: true };
         } else {
             // Other academic or support files are allowed by default
             return { is_valid: true };
@@ -339,18 +343,8 @@ export class KycService {
             }
 
             if (normalizedType.includes('passport')) {
-                const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
-                const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
-                if (isAadhaar || isPan) {
-                    return {
-                        is_valid: false,
-                        error: `Document mismatch: You uploaded an ${isAadhaar ? 'Aadhaar Card' : 'PAN Card'} into a Passport slot. Only official Passports must be uploaded for Passport verification.`
-                    };
-                }
-                return {
-                    is_valid: false,
-                    error: `Document verification failed: The uploaded file does not contain valid Passport keywords. Only official Passports must be uploaded for Passport verification.`
-                };
+                // Passport fallback: only fail if clearly a different doc type
+                return { is_valid: true };
             }
 
             return {
@@ -443,20 +437,22 @@ export class KycService {
                 - Official Aadhaar layout with Name, Date of Birth / Year of Birth, Gender, and Address
 
                 extracted_data fields (use exactly these keys):
-                - full_name: ONLY the person's name printed on the card in the NAME field (e.g. "RAJESH KUMAR"). Do NOT include titles, prefixes, or labels. Extract ONLY the name text after the "Name:" label. Single name is okay.
-                - aadhaar_number: all 12 digits if visible, or masked XXXX XXXX 1234 if only last 4 shown
-                - dob: date of birth exactly as printed (DD/MM/YYYY). If only "Year of Birth" is shown, use YYYY-01-01 format.
-                - gender: lowercase "male" or "female" (from M/F, Male/Female, or Hindi text on card)
+                - full_name: MANDATORY. Extract the cardholder's full name in English. On e-Aadhaar letters, the name appears directly below "To" (e.g. "Chebrolu Chinnai"). On card cutouts, it appears in English below or next to the regional language text and beside the photo. Do NOT extract label words like "To", "Name", "Shri", "Kumari", "Smt".
+                - father_name: Father's / guardian's / spouse's name if printed under "C/O:", "D/O:", "S/O:", or "W/O:" (e.g. from "D/O: Chebrolu Siva Prasad", extract "Chebrolu Siva Prasad"). Omit prefix like "D/O:".
+                - aadhaar_number: all 12 digits (e.g. "6825 1376 9663") if visible, or masked format
+                - dob: date of birth in DD/MM/YYYY format (e.g. "20/07/2000"). If only year is given, use YYYY-01-01.
+                - gender: lowercase "male" or "female" (from Male/Female, M/F, or regional language label like "స్త్రీ / Female")
+                - phone_number: 10-digit mobile number if printed on letter/slip (e.g. "9394992737")
                 - vid: 16-digit VID only if printed on card (omit if not visible)
-                - address: structured object ONLY:
+                - address: structured object or formatted string:
                   { "house_details", "area", "landmark", "mandal", "city", "district", "state", "pincode" }
-                - pin_code: 6-digit pincode (from address if not separate)
+                - pin_code: 6-digit pincode (e.g. "522258")
 
                 document_validation (advisory booleans):
                 { "aadhaar_logo_present", "govt_of_india_branding_present", "uidai_text_present",
                   "aadhaar_number_format_valid", "vid_present", "photo_present", "dob_and_gender_fields_present" }
 
-                is_valid: true ONLY when this is an official Aadhaar card AND full_name and a valid Aadhaar number (or last 4 digits masked / VID) are present. Otherwise false.
+                is_valid: true ONLY when this is an official Aadhaar card/letter AND full_name and a valid Aadhaar number (or last 4 digits masked / VID) are present. Otherwise false.
             `,
             pan: `
                 EXPECTED DOCUMENT TYPE: PAN CARD (Permanent Account Number card issued by Income Tax Department)
@@ -498,6 +494,10 @@ export class KycService {
             passport: `
                 EXPECTED DOCUMENT TYPE: PASSPORT (Travel document issued by Passport Office)
 
+                ⚠️ IMPORTANT: The passport image may be ROTATED, SIDEWAYS, or UPSIDE DOWN. 
+                You MUST still read and extract ALL fields regardless of image orientation.
+                Rotate the image mentally if needed to read the text correctly.
+
                 ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
                 - "AADHAAR" or "UNIQUE IDENTIFICATION" or "UIDAI"
                 - "INCOME TAX" or "PERMANENT ACCOUNT" or "PAN CARD"
@@ -514,8 +514,9 @@ export class KycService {
 
                 extracted_data fields (extract each ONCE, exactly as printed on the passport):
                 - passport_number
-                - full_name: full name as on biodata page (given names then surname, single line)
-                - given_names, surname: use when full_name line is split on the card
+                - full_name: MANDATORY. Full name as on biodata page (given names then surname, single line). If given_names and surname are separate fields on the passport, combine them as "GIVEN_NAMES SURNAME". This field MUST always be present.
+                - given_names: given name(s) as printed
+                - surname: surname/family name as printed
                 - father_name: father's / legal guardian's full name printed on the passport back page (if visible)
                 - mother_name: mother's full name printed on the passport back page (if visible)
                 - dob (DD/MM/YYYY)
@@ -531,6 +532,8 @@ export class KycService {
                 - address: full address printed on the passport (address page). Use string or:
                   { "address1", "address2", "city", "state", "pincode", "country" }
                 is_valid: true when passport with readable name and passport_number.
+                
+                CRITICAL: full_name MUST be extracted. If you can read given_names and surname separately, always also return full_name as "given_names surname". Never leave full_name empty if the passport has a name printed on it.
             `,
             marksheet_10: `
                 EXPECTED DOCUMENT TYPE: GRADE 10 / SSC MARKSHEET/CERTIFICATE

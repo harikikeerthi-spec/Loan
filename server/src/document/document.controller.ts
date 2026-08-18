@@ -292,19 +292,27 @@ export class DocumentController {
       }
 
       // Perform cross-document name & parent verification against reference document (Passport / Aadhaar)
-      const crossDocIssues = await this.usersService.performCrossDocumentValidation(
+      const crossDocResult = await this.usersService.performCrossDocumentValidation(
         userId,
         docType,
         kycResult.extracted_data || {}
       );
 
-      if (crossDocIssues && crossDocIssues.length > 0) {
+      // Hard reject: student doc (PAN/10th/12th/Degree) name doesn't match Aadhaar/Passport reference
+      if (crossDocResult.hardReject && crossDocResult.rejectReason) {
+        // Delete the already-uploaded S3 file so it doesn't stay stored
+        try { await this.s3Service.delete(s3Key); } catch {}
+        throw new BadRequestException(crossDocResult.rejectReason);
+      }
+
+      if (crossDocResult.issues && crossDocResult.issues.length > 0) {
         const existingIssues = verificationResult.details.ocr_issues || [];
-        verificationResult.details.ocr_issues = Array.from(new Set([...existingIssues, ...crossDocIssues]));
+        verificationResult.details.ocr_issues = Array.from(new Set([...existingIssues, ...crossDocResult.issues]));
         if (kycResult) {
           kycResult.ocr_issues = verificationResult.details.ocr_issues;
         }
       }
+
 
       // ── 4. Save record in database ───────────────────────────────────────
       const document = await this.usersService.upsertUserDocument(
@@ -508,15 +516,15 @@ export class DocumentController {
       }, docType);
     }
 
-    const crossDocIssues = await this.usersService.performCrossDocumentValidation(
+    const crossDocResult2 = await this.usersService.performCrossDocumentValidation(
       userId,
       docType,
       kycResult.extracted_data || {}
     );
 
-    if (crossDocIssues && crossDocIssues.length > 0) {
+    if (crossDocResult2.issues && crossDocResult2.issues.length > 0) {
       const existingIssues = verificationResult.details.ocr_issues || [];
-      verificationResult.details.ocr_issues = Array.from(new Set([...existingIssues, ...crossDocIssues]));
+      verificationResult.details.ocr_issues = Array.from(new Set([...existingIssues, ...crossDocResult2.issues]));
       if (kycResult) {
         kycResult.ocr_issues = verificationResult.details.ocr_issues;
       }

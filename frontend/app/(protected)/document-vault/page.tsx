@@ -784,31 +784,37 @@ export default function DocumentVaultPage() {
             const extracted = result.data?.ocrResult?.extractedFields || result.data?.verification?.details?.extractedFields || {};
 
             if (isIdentityDocSlot(docType)) {
+                const isPassport = docType.toLowerCase().includes('passport');
+                const isAadhaar = docType.toLowerCase().includes('aadhar') || docType.toLowerCase().includes('aadhaar') || docType.toLowerCase().includes('national_id');
+
                 const fatherName = extracted.father_name || extracted.fatherName || extracted.father_full_name;
                 const motherName = extracted.mother_name || extracted.motherName || extracted.mother_full_name;
                 const fullName = extracted.full_name || extracted.fullName || (extracted.given_names ? `${extracted.given_names} ${extracted.surname || ''}`.trim() : undefined) || extracted.person_name || extracted.holder_name || extracted.name || extracted.applicant_name;
                 const dob = extracted.dob || extracted.date_of_birth;
-                const passportNo = extracted.passport_number || extracted.passportNo || extracted.aadhaarNumber || extracted.aadhar_number;
+                const docNum = extracted.passport_number || extracted.passportNo || extracted.aadhaarNumber || extracted.aadhar_number;
                 const gender = extracted.gender;
                 const address = typeof extracted.address === 'string' ? extracted.address : (extracted.address?.address1 ? `${extracted.address.address1}, ${extracted.address.city || ''}` : undefined);
 
-                if (fatherName || motherName || fullName || dob || passportNo) {
+                if (fatherName || motherName || fullName || dob || docNum) {
                     try {
                         const baseProfile = profile || user || {};
                         let family = baseProfile.family || baseProfile.familyDetails || {};
                         if (typeof family === 'string') { try { family = JSON.parse(family); } catch { family = {}; } }
                         if (!family || typeof family !== 'object') family = {};
 
+                        const hasExistingPassport = !!(baseProfile.passportOriginalName || family.passportOriginalName);
+
                         const updatedFamily = {
                             ...family,
-                            ...(fatherName ? { fatherName } : {}),
-                            ...(motherName ? { motherName } : {}),
-                            ...(fullName ? { passportOriginalName: fullName } : {}),
+                            ...(isPassport && fatherName ? { fatherName } : {}),
+                            ...(isPassport && motherName ? { motherName } : {}),
+                            ...(isPassport && fullName ? { passportOriginalName: fullName } : {}),
+                            ...(isAadhaar && fullName ? { aadhaarOriginalName: fullName } : {}),
                         };
 
                         let parsedFirstName: string | undefined = undefined;
                         let parsedLastName: string | undefined = undefined;
-                        if (fullName) {
+                        if (fullName && (isPassport || !hasExistingPassport)) {
                             const parts = fullName.trim().split(/\s+/);
                             if (parts.length === 1) {
                                 parsedFirstName = parts[0];
@@ -823,11 +829,14 @@ export default function DocumentVaultPage() {
                             ...baseProfile,
                             ...(parsedFirstName ? { firstName: parsedFirstName } : {}),
                             ...(parsedLastName !== undefined ? { lastName: parsedLastName } : {}),
-                            ...(fullName ? { passportOriginalName: fullName, nameAsInPassport: fullName } : {}),
-                            ...(dob ? { dob, dateOfBirth: dob } : {}),
-                            ...(gender ? { gender } : {}),
+                            ...(isPassport && fullName ? { passportOriginalName: fullName, nameAsInPassport: fullName } : {}),
+                            ...(isAadhaar && fullName ? { aadhaarOriginalName: fullName } : {}),
+                            ...(dob && (isPassport || !hasExistingPassport) ? { dob, dateOfBirth: dob } : {}),
+                            ...(gender && (isPassport || !hasExistingPassport) ? { gender } : {}),
                             ...(address ? { address } : {}),
-                            family: updatedFamily
+                            family: updatedFamily,
+                            ...(isPassport && fatherName ? { fatherName } : {}),
+                            ...(isPassport && motherName ? { motherName } : {})
                         };
                         setProfile(updatedProfile);
                         await onboardingApi.submit(updatedProfile);
@@ -841,7 +850,7 @@ export default function DocumentVaultPage() {
                         }
                         if (refreshUser) await refreshUser();
                     } catch (err) {
-                        console.error("Auto passport profile update error:", err);
+                        console.error("Auto identity profile update error:", err);
                     }
                 }
             }
