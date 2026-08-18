@@ -258,13 +258,13 @@ export default function ProfileTab() {
         return patterns.some(p => dt === p || dt.includes(p));
     };
 
-    const userDocs = userDocuments || [];
-    const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
-    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'inter', 'diploma', 'diploma_marksheet', 'diploma_certificate', 'grade_12', 'grade12']));
-    const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_', 'cmm', 'cmm_certificate', 'consolidated_marks_memo', 'consolidated']));
-    const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['passport']));
-    const panDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['pan', 'pancard', 'pan_card', 'student_pan'], true));
-    const aadharDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['national_id', 'aadhaar', 'aadhar', 'aadhaar_card', 'aadhar_card', 'student_aadhar', 'student_aadhaar'], true));
+    const userDocs = userDocuments || userData?.documents || [];
+    const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['marksheet_10', 'marksheet_10th', '10th', '10th_marksheet', 'ssc', 'ssc_marksheet', 'grade_10', 'grade10', 'secondary_school']));
+    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['marksheet_12', 'marksheet_12th', '12th', '12th_marksheet', 'hsc', 'hsc_marksheet', 'intermediate', 'intermediate_marksheet', 'intermediate_certificate', 'inter', 'inter_marksheet', 'diploma', 'diploma_marksheet', 'diploma_certificate', 'grade_12', 'grade12', 'senior_secondary', 'puc', 'pu_college', 'plus2', 'plus_two']));
+    const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_', 'cmm', 'cmm_certificate', 'consolidated_marks_memo', 'consolidated']));
+    const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['passport']));
+    const panDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['pan', 'pancard', 'pan_card', 'student_pan'], true));
+    const aadharDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['national_id', 'aadhaar', 'aadhar', 'aadhaar_card', 'aadhar_card', 'student_aadhar', 'student_aadhaar'], true));
 
     const getExtractedField = (doc: any, fieldNames: string | string[]) => {
         if (!doc) return null;
@@ -273,15 +273,23 @@ export default function ProfileTab() {
             try { meta = JSON.parse(meta); } catch { meta = {}; }
         }
         if (!meta || typeof meta !== 'object') meta = {};
-        const details = meta.details || meta.ocrResult || meta.ocr_result || doc.ocrResult || doc.ocr_result || {};
-        const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || {};
+
+        let docMeta = doc.metadata;
+        if (typeof docMeta === 'string') {
+            try { docMeta = JSON.parse(docMeta); } catch { docMeta = {}; }
+        }
+        if (!docMeta || typeof docMeta !== 'object') docMeta = {};
+
+        const details = meta.details || meta.ocrResult || meta.ocr_result || doc.ocrResult || doc.ocr_result || docMeta.details || docMeta.ocrResult || {};
+        const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || doc.extractedFields || doc.extracted_fields || doc.extracted_data || docMeta.extractedFields || docMeta.extracted_data || {};
 
         const names = Array.isArray(fieldNames) ? fieldNames : [fieldNames];
         for (const fn of names) {
-            if (ext[fn] && String(ext[fn]).trim()) return String(ext[fn]).trim();
-            if (details[fn] && String(details[fn]).trim()) return String(details[fn]).trim();
-            if (meta[fn] && String(meta[fn]).trim()) return String(meta[fn]).trim();
-            if (doc[fn] && String(doc[fn]).trim()) return String(doc[fn]).trim();
+            if (ext[fn] != null && String(ext[fn]).trim() && String(ext[fn]).trim() !== "—") return String(ext[fn]).trim();
+            if (details[fn] != null && String(details[fn]).trim() && String(details[fn]).trim() !== "—") return String(details[fn]).trim();
+            if (meta[fn] != null && String(meta[fn]).trim() && String(meta[fn]).trim() !== "—") return String(meta[fn]).trim();
+            if (docMeta[fn] != null && String(docMeta[fn]).trim() && String(docMeta[fn]).trim() !== "—") return String(docMeta[fn]).trim();
+            if (doc[fn] != null && String(doc[fn]).trim() && String(doc[fn]).trim() !== "—") return String(doc[fn]).trim();
         }
         return null;
     };
@@ -299,14 +307,18 @@ export default function ProfileTab() {
             if (!isNaN(num)) {
                 if (num <= 10 && num > 0) {
                     return `${Math.round(num * 9.5 * 10) / 10}%`;
+                } else if (num <= 100 && num > 0) {
+                    return str.includes('%') ? str : `${Math.round(num * 10) / 10}%`;
+                } else if (num > 100) {
+                    const inferredMax = num <= 500 ? 500 : num <= 600 ? 600 : 1000;
+                    return `${Math.round((num / inferredMax) * 100 * 10) / 10}%`;
                 }
-                return str.includes('%') ? str : `${Math.round(num * 10) / 10}%`;
             }
             return str;
         }
 
         if (doc) {
-            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score', 'score_in_percentage']);
+            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score', 'score_in_percentage', 'total_percentage', 'grade_percentage']);
             const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks', 'aggregate_marks', 'grand_total']);
             const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of', 'max']);
             const wordsSecVal = getExtractedField(doc, ['marks_in_words', 'total_marks_in_words', 'secured_marks_in_words', 'marks_obtained_in_words']);
@@ -317,6 +329,9 @@ export default function ProfileTab() {
                 const pctNum = parseFloat(String(pctVal).replace(/[^\d.]/g, ''));
                 if (!isNaN(pctNum) && pctNum > 0 && pctNum <= 100) {
                     return `${Math.round(pctNum * 10) / 10}%`;
+                } else if (!isNaN(pctNum) && pctNum > 100) {
+                    const inferredMax = pctNum <= 500 ? 500 : pctNum <= 600 ? 600 : 1000;
+                    return `${Math.round((pctNum / inferredMax) * 100 * 10) / 10}%`;
                 }
             }
 
@@ -350,7 +365,7 @@ export default function ProfileTab() {
     };
 
     const getAcademicDetails = (doc: any, key: 'ssc' | 'hsc' | 'ug') => {
-        let parsedAcademic: any = userData?.academic || (userData as any)?.family?.academic;
+        let parsedAcademic: any = userData?.academic || (userData as any)?.family?.academic || (userData as any)?.student?.academic || (userData as any)?.userAcademicProfile || (userData as any)?.academicProfile;
         if (typeof parsedAcademic === 'string') {
             try { parsedAcademic = JSON.parse(parsedAcademic); } catch { }
         }
@@ -368,8 +383,8 @@ export default function ProfileTab() {
         let extInst = getExtractedField(doc, instKeys);
         let extPct = getExtractedField(doc, pctKeys);
 
-        let fallbackInst = fallback.institute || fallback.college || fallback.school || (key === 'hsc' ? (parsedAcademic.intermediate?.institute || parsedAcademic['12th']?.institute || parsedAcademic.marksheet_12?.institute || parsedAcademic.grade12?.institute || parsedAcademic.inter?.institute) : key === 'ssc' ? (parsedAcademic.grade10?.institute || parsedAcademic['10th']?.institute) : (parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || userData?.bachelorsDegree));
-        let fallbackPct = fallback.percentage || fallback.score || (key === 'hsc' ? (parsedAcademic.intermediate?.percentage || parsedAcademic.intermediate?.score || parsedAcademic['12th']?.percentage || parsedAcademic.marksheet_12?.percentage || parsedAcademic.grade12?.percentage || parsedAcademic.inter?.percentage) : key === 'ssc' ? (parsedAcademic.grade10?.percentage || parsedAcademic['10th']?.percentage) : (parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score));
+        let fallbackInst = fallback.institute || fallback.college || fallback.school || (key === 'hsc' ? (parsedAcademic.intermediate?.institute || parsedAcademic.intermediate?.college || parsedAcademic.intermediate?.school || parsedAcademic['12th']?.institute || parsedAcademic['12th']?.college || parsedAcademic.marksheet_12?.institute || parsedAcademic.grade12?.institute || parsedAcademic.inter?.institute || parsedAcademic.inter?.college || userData?.twelfthSchool || (userData as any)?.userAcademicProfile?.twelfthSchool) : key === 'ssc' ? (parsedAcademic.grade10?.institute || parsedAcademic['10th']?.institute || (userData as any)?.userAcademicProfile?.tenthSchool) : (parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || userData?.bachelorsDegree || (userData as any)?.userAcademicProfile?.bachelorsDegree));
+        let fallbackPct = fallback.percentage || fallback.score || (key === 'hsc' ? (parsedAcademic.intermediate?.percentage || parsedAcademic.intermediate?.score || parsedAcademic['12th']?.percentage || parsedAcademic['12th']?.score || parsedAcademic.marksheet_12?.percentage || parsedAcademic.marksheet_12?.score || parsedAcademic.grade12?.percentage || parsedAcademic.inter?.percentage || userData?.twelfthPercentage || (userData as any)?.userAcademicProfile?.twelfthPercentage) : key === 'ssc' ? (parsedAcademic.grade10?.percentage || parsedAcademic.grade10?.score || parsedAcademic['10th']?.percentage || (userData as any)?.userAcademicProfile?.tenthPercentage) : (parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score || (userData as any)?.userAcademicProfile?.gpa));
 
         const inst = (fallbackInst && String(fallbackInst).trim() !== "") ? fallbackInst : extInst;
         const rawPct = (fallbackPct !== undefined && fallbackPct !== null && String(fallbackPct).trim() !== "") ? fallbackPct : extPct;
@@ -620,12 +635,12 @@ export default function ProfileTab() {
             coappAadhar: coapplicantData?.aadharNumber || parsedCoApp?.aadharNumber || "",
             coappPan: coapplicantData?.panNumber || parsedCoApp?.panNumber || "",
 
-            sscSchool: parsedAcademic?.ssc?.institute || sscDetails.rawInstitute,
-            sscScore: parsedAcademic?.ssc?.percentage || (sscDetails.rawPercentage ? sscDetails.rawPercentage.toString().replace('%', '') : ""),
-            hscCollege: parsedAcademic?.hsc?.institute || hscDetails.rawInstitute,
-            hscScore: parsedAcademic?.hsc?.percentage || (hscDetails.rawPercentage ? hscDetails.rawPercentage.toString().replace('%', '') : ""),
-            ugCollege: parsedAcademic?.ug?.institute || ugDetails.rawInstitute,
-            ugScore: parsedAcademic?.ug?.percentage || (ugDetails.rawPercentage ? ugDetails.rawPercentage.toString().replace('%', '') : ""),
+            sscSchool: parsedAcademic?.ssc?.institute || parsedAcademic?.grade10?.institute || parsedAcademic?.['10th']?.institute || parsedAcademic?.marksheet_10?.institute || sscDetails.rawInstitute,
+            sscScore: parsedAcademic?.ssc?.percentage || parsedAcademic?.grade10?.percentage || parsedAcademic?.['10th']?.percentage || (sscDetails.rawPercentage ? sscDetails.rawPercentage.toString().replace('%', '') : ""),
+            hscCollege: parsedAcademic?.hsc?.institute || parsedAcademic?.intermediate?.institute || parsedAcademic?.['12th']?.institute || parsedAcademic?.marksheet_12?.institute || parsedAcademic?.grade12?.institute || parsedAcademic?.inter?.institute || (userData as any)?.twelfthSchool || hscDetails.rawInstitute,
+            hscScore: parsedAcademic?.hsc?.percentage || parsedAcademic?.intermediate?.percentage || parsedAcademic?.['12th']?.percentage || parsedAcademic?.marksheet_12?.percentage || parsedAcademic?.grade12?.percentage || parsedAcademic?.inter?.percentage || (userData as any)?.twelfthPercentage || (hscDetails.rawPercentage ? hscDetails.rawPercentage.toString().replace('%', '') : ""),
+            ugCollege: parsedAcademic?.ug?.institute || parsedAcademic?.undergrad?.institute || parsedAcademic?.undergrad?.university || userData?.bachelorsDegree || ugDetails.rawInstitute,
+            ugScore: parsedAcademic?.ug?.percentage || parsedAcademic?.undergrad?.percentage || parsedAcademic?.undergrad?.gpa || (ugDetails.rawPercentage ? ugDetails.rawPercentage.toString().replace('%', '') : ""),
         });
         setIsEditOpen(true);
     };
@@ -738,12 +753,24 @@ export default function ProfileTab() {
                 academic: {
                     ...(parsedAcademic || {}),
                     ssc: { institute: editForm.sscSchool, percentage: editForm.sscScore },
+                    '10th': { institute: editForm.sscSchool, percentage: editForm.sscScore },
+                    marksheet_10: { institute: editForm.sscSchool, percentage: editForm.sscScore },
+                    grade10: { institute: editForm.sscSchool, percentage: editForm.sscScore },
                     hsc: { institute: editForm.hscCollege, percentage: editForm.hscScore },
+                    intermediate: { institute: editForm.hscCollege, percentage: editForm.hscScore },
+                    '12th': { institute: editForm.hscCollege, percentage: editForm.hscScore },
+                    marksheet_12: { institute: editForm.hscCollege, percentage: editForm.hscScore },
+                    grade12: { institute: editForm.hscCollege, percentage: editForm.hscScore },
+                    inter: { institute: editForm.hscCollege, percentage: editForm.hscScore },
                     ug: { institute: editForm.ugCollege, percentage: editForm.ugScore },
+                    undergrad: { institute: editForm.ugCollege, percentage: editForm.ugScore },
                     targetUniversity: editForm.targetUniversity,
                     universityName: editForm.targetUniversity,
                     countryOfEducation: editForm.studyDestination,
                 },
+                twelfthSchool: editForm.hscCollege,
+                twelfthPercentage: editForm.hscScore ? parseFloat(editForm.hscScore) : undefined,
+                bachelorsDegree: editForm.ugCollege,
 
                 parents: [
                     { relation: 'father', name: editForm.fatherName, aadharNumber: editForm.fatherAadhar, panNumber: editForm.fatherPan },

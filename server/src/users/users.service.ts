@@ -1413,13 +1413,25 @@ export class UsersService implements OnModuleInit {
           // Mirror 10th alias keys
           academic['10th'] = { ...academic.ssc };
           academic.marksheet_10 = { ...academic.ssc };
-        } else if (normalizedDocType.includes('12th') || normalizedDocType.includes('hsc') || normalizedDocType.includes('marksheet_12') || normalizedDocType.includes('intermediate') || normalizedDocType.includes('inter') || normalizedDocType.includes('grade_12') || normalizedDocType.includes('grade12')) {
+        } else if (
+          normalizedDocType.includes('12th') ||
+          normalizedDocType.includes('hsc') ||
+          normalizedDocType.includes('marksheet_12') ||
+          normalizedDocType.includes('intermediate') ||
+          normalizedDocType.includes('inter') ||
+          normalizedDocType.includes('diploma') ||
+          normalizedDocType.includes('puc') ||
+          normalizedDocType.includes('plus2') ||
+          normalizedDocType.includes('plus_two') ||
+          normalizedDocType.includes('grade_12') ||
+          normalizedDocType.includes('grade12')
+        ) {
           if (!academic.hsc) academic.hsc = {};
           if (inst) { academic.hsc.institute = inst; academic.hsc.school = inst; academic.hsc.college = inst; academicUpdated = true; }
           if (score) { academic.hsc.percentage = String(score); academic.hsc.score = String(score); academicUpdated = true; }
           if (board) { academic.hsc.board = board; academicUpdated = true; }
           if (year) { academic.hsc.passingYear = year; academic.hsc.year = year; academicUpdated = true; }
-          if (rollNum) { academic.hsc.rollNumber = rollNum; academic.hsc.hallTicket = rollNum; academicUpdated = true; }
+          if (rollNum) { academic.hsc.rollNumber = rollNum; academic.hsc.hallTicket = rollNum; academic.hsc.hallTicketNumber = rollNum; academicUpdated = true; }
           if (secured) { academic.hsc.totalMarksSecured = String(secured); academicUpdated = true; }
           if (max) { academic.hsc.totalMarksMaximum = String(max); academicUpdated = true; }
 
@@ -1427,6 +1439,8 @@ export class UsersService implements OnModuleInit {
           academic.intermediate = { ...academic.hsc };
           academic['12th'] = { ...academic.hsc };
           academic.marksheet_12 = { ...academic.hsc };
+          academic.grade12 = { ...academic.hsc };
+          academic.inter = { ...academic.hsc };
         }
 
         if (academicUpdated) {

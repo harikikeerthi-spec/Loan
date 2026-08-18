@@ -32,7 +32,7 @@ export class EmailService {
     if (url && url !== 'http://localhost:3000' && url !== 'http://localhost:5000') {
       return url;
     }
-    return 'https://developer.vidyaloans.in';
+    return 'https://www.vidyaloans.in';
   }
 
   private initializeTransporter() {

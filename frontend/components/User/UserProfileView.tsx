@@ -63,10 +63,10 @@ export default function UserProfileView({
     };
 
     const userDocs = data?.documents || user?.documents || [];
-    const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
-    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name, ['marksheet_12', '12th', 'hsc', 'intermediate', 'inter', 'diploma', 'diploma_marksheet', 'diploma_certificate', 'grade_12', 'grade12']));
-    const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_', 'cmm', 'cmm_certificate', 'consolidated_marks_memo', 'consolidated']));
-    const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name, ['passport']));
+    const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['marksheet_10', 'marksheet_10th', '10th', '10th_marksheet', 'ssc', 'ssc_marksheet', 'grade_10', 'grade10', 'secondary_school']));
+    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['marksheet_12', 'marksheet_12th', '12th', '12th_marksheet', 'hsc', 'hsc_marksheet', 'intermediate', 'intermediate_marksheet', 'intermediate_certificate', 'inter', 'inter_marksheet', 'diploma', 'diploma_marksheet', 'diploma_certificate', 'grade_12', 'grade12', 'senior_secondary', 'puc', 'pu_college', 'plus2', 'plus_two']));
+    const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_', 'cmm', 'cmm_certificate', 'consolidated_marks_memo', 'consolidated']));
+    const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name || d.docName || d.doc_type || d.category, ['passport']));
 
     const getExtractedField = (doc: any, fieldNames: string | string[]) => {
         if (!doc) return null;
@@ -75,21 +75,29 @@ export default function UserProfileView({
             try { meta = JSON.parse(meta); } catch { meta = {}; }
         }
         if (!meta || typeof meta !== 'object') meta = {};
-        const details = meta.details || meta.ocrResult || meta.ocr_result || doc.ocrResult || doc.ocr_result || {};
-        const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || {};
+
+        let docMeta = doc.metadata;
+        if (typeof docMeta === 'string') {
+            try { docMeta = JSON.parse(docMeta); } catch { docMeta = {}; }
+        }
+        if (!docMeta || typeof docMeta !== 'object') docMeta = {};
+
+        const details = meta.details || meta.ocrResult || meta.ocr_result || doc.ocrResult || doc.ocr_result || docMeta.details || docMeta.ocrResult || {};
+        const ext = details.extractedFields || details.extracted_fields || meta.extractedFields || meta.extracted_fields || details.extracted_data || meta.extracted_data || doc.extractedFields || doc.extracted_fields || doc.extracted_data || docMeta.extractedFields || docMeta.extracted_data || {};
 
         const names = Array.isArray(fieldNames) ? fieldNames : [fieldNames];
         for (const fn of names) {
             if (ext[fn] != null && String(ext[fn]).trim() && String(ext[fn]).trim() !== "—") return String(ext[fn]).trim();
             if (details[fn] != null && String(details[fn]).trim() && String(details[fn]).trim() !== "—") return String(details[fn]).trim();
             if (meta[fn] != null && String(meta[fn]).trim() && String(meta[fn]).trim() !== "—") return String(meta[fn]).trim();
+            if (docMeta[fn] != null && String(docMeta[fn]).trim() && String(docMeta[fn]).trim() !== "—") return String(docMeta[fn]).trim();
             if (doc[fn] != null && String(doc[fn]).trim() && String(doc[fn]).trim() !== "—") return String(doc[fn]).trim();
         }
 
         // Special handling for compound full_name from given_names + surname
         if (names.some(n => ['full_name', 'fullName', 'name', 'holder_name', 'printed_name'].includes(n))) {
-            const g = ext.given_names || ext.givenName || details.given_names || details.givenName || meta.given_names;
-            const s = ext.surname || ext.lastName || details.surname || details.lastName || meta.surname || '';
+            const g = ext.given_names || ext.givenName || details.given_names || details.givenName || meta.given_names || docMeta.given_names;
+            const s = ext.surname || ext.lastName || details.surname || details.lastName || meta.surname || docMeta.surname || '';
             if (g && String(g).trim()) {
                 return `${String(g).trim()} ${String(s).trim()}`.trim();
             }
@@ -97,7 +105,7 @@ export default function UserProfileView({
 
         // Special handling for address object
         if (names.includes('address')) {
-            const addrObj = ext.address || details.address || meta.address;
+            const addrObj = ext.address || details.address || meta.address || docMeta.address;
             if (typeof addrObj === 'object' && addrObj !== null) {
                 const parts = [addrObj.address1, addrObj.address2, addrObj.city, addrObj.state, addrObj.pincode, addrObj.country].filter(Boolean);
                 if (parts.length > 0) return parts.join(', ');
@@ -225,7 +233,7 @@ export default function UserProfileView({
         const instFromDoc = getExtractedField(doc, instKeys);
         const pctFromDoc = getExtractedField(doc, pctKeys);
 
-        let parsedAcademic: any = data?.academic || data?.user?.academic || user?.academic || (data as any)?.family?.academic || (data as any)?.user?.family?.academic || (user as any)?.family?.academic;
+        let parsedAcademic: any = data?.academic || data?.user?.academic || user?.academic || (data as any)?.family?.academic || (data as any)?.user?.family?.academic || (user as any)?.family?.academic || (data as any)?.student?.academic || (user as any)?.student?.academic || data?.userAcademicProfile || user?.userAcademicProfile;
         if (typeof parsedAcademic === 'string') {
             try { parsedAcademic = JSON.parse(parsedAcademic); } catch { parsedAcademic = {}; }
         }
@@ -235,14 +243,14 @@ export default function UserProfileView({
         let pctFallback: string | undefined = undefined;
 
         if (levelKey === 'ssc') {
-            instFallback = parsedAcademic.ssc?.institute || parsedAcademic.ssc?.school || parsedAcademic.grade10?.institute || parsedAcademic['10th']?.institute || parsedAcademic.marksheet_10?.institute;
-            pctFallback = parsedAcademic.ssc?.percentage || parsedAcademic.ssc?.score || parsedAcademic.grade10?.percentage || parsedAcademic['10th']?.percentage || parsedAcademic.marksheet_10?.percentage;
+            instFallback = parsedAcademic.ssc?.institute || parsedAcademic.ssc?.school || parsedAcademic.grade10?.institute || parsedAcademic.grade10?.school || parsedAcademic['10th']?.institute || parsedAcademic['10th']?.school || parsedAcademic.marksheet_10?.institute;
+            pctFallback = parsedAcademic.ssc?.percentage || parsedAcademic.ssc?.score || parsedAcademic.grade10?.percentage || parsedAcademic.grade10?.score || parsedAcademic['10th']?.percentage || parsedAcademic['10th']?.score || parsedAcademic.marksheet_10?.percentage;
         } else if (levelKey === 'hsc') {
-            instFallback = parsedAcademic.hsc?.institute || parsedAcademic.hsc?.college || parsedAcademic.hsc?.school || parsedAcademic.intermediate?.institute || parsedAcademic.intermediate?.college || parsedAcademic['12th']?.institute || parsedAcademic.marksheet_12?.institute || parsedAcademic.grade12?.institute || parsedAcademic.inter?.institute;
-            pctFallback = parsedAcademic.hsc?.percentage || parsedAcademic.hsc?.score || parsedAcademic.intermediate?.percentage || parsedAcademic.intermediate?.score || parsedAcademic['12th']?.percentage || parsedAcademic.marksheet_12?.percentage || parsedAcademic.grade12?.percentage || parsedAcademic.inter?.percentage;
+            instFallback = parsedAcademic.hsc?.institute || parsedAcademic.hsc?.college || parsedAcademic.hsc?.school || parsedAcademic.intermediate?.institute || parsedAcademic.intermediate?.college || parsedAcademic.intermediate?.school || parsedAcademic['12th']?.institute || parsedAcademic['12th']?.college || parsedAcademic['12th']?.school || parsedAcademic.marksheet_12?.institute || parsedAcademic.marksheet_12?.college || parsedAcademic.grade12?.institute || parsedAcademic.grade12?.college || parsedAcademic.inter?.institute || parsedAcademic.inter?.college || (data as any)?.twelfthSchool || (user as any)?.twelfthSchool || (data as any)?.userAcademicProfile?.twelfthSchool || (user as any)?.userAcademicProfile?.twelfthSchool;
+            pctFallback = parsedAcademic.hsc?.percentage || parsedAcademic.hsc?.score || parsedAcademic.intermediate?.percentage || parsedAcademic.intermediate?.score || parsedAcademic['12th']?.percentage || parsedAcademic['12th']?.score || parsedAcademic.marksheet_12?.percentage || parsedAcademic.marksheet_12?.score || parsedAcademic.grade12?.percentage || parsedAcademic.grade12?.score || parsedAcademic.inter?.percentage || parsedAcademic.inter?.score || (data as any)?.twelfthPercentage || (user as any)?.twelfthPercentage || (data as any)?.userAcademicProfile?.twelfthPercentage || (user as any)?.userAcademicProfile?.twelfthPercentage;
         } else if (levelKey === 'ug') {
-            instFallback = parsedAcademic.ug?.institute || parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || data?.bachelorsDegree || data?.user?.bachelorsDegree || user?.bachelorsDegree;
-            pctFallback = parsedAcademic.ug?.percentage || parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score;
+            instFallback = parsedAcademic.ug?.institute || parsedAcademic.ug?.university || parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || data?.bachelorsDegree || data?.user?.bachelorsDegree || user?.bachelorsDegree || (data as any)?.userAcademicProfile?.bachelorsDegree || (user as any)?.userAcademicProfile?.bachelorsDegree;
+            pctFallback = parsedAcademic.ug?.percentage || parsedAcademic.ug?.score || parsedAcademic.ug?.gpa || parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score || (data as any)?.userAcademicProfile?.gpa || (user as any)?.userAcademicProfile?.gpa;
         }
 
         const inst = instFromDoc || instFallback;
@@ -293,10 +301,10 @@ export default function UserProfileView({
             tallyMessage = maxNum ? `Secured: ${secNum} / ${maxNum}` : `Secured: ${secNum}`;
         }
 
-        const finalPercentage = formattedPct || calculatedPct || "—";
+        const finalPercentage = formattedPct || calculatedPct || "";
 
         return {
-            institute: inst || "—",
+            institute: inst || "",
             percentage: finalPercentage,
             secNum: !isNaN(secNum) ? secNum : undefined,
             maxNum: !isNaN(maxNum) ? maxNum : undefined,
@@ -1205,10 +1213,10 @@ export default function UserProfileView({
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-xs font-bold text-[#0F172A]">10th / SSC marksheets</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 truncate">{sscDetails.institute !== "—" ? sscDetails.institute : "Institution pending"}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 truncate">{sscDetails.institute && sscDetails.institute !== "—" ? sscDetails.institute : "Institution pending"}</p>
                                 </div>
                                 <div className="shrink-0 text-right">
-                                    {sscDetails.percentage !== "—" ? (
+                                    {sscDetails.percentage && sscDetails.percentage !== "—" && sscDetails.percentage !== "Missing" ? (
                                         <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black border border-emerald-100">{sscDetails.percentage}</span>
                                     ) : (
                                         <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black">Missing</span>
@@ -1242,11 +1250,11 @@ export default function UserProfileView({
                                     <i className="ph ph-book-bookmark text-base" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-bold text-[#0F172A]">12th / HSC marksheets</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 truncate">{hscDetails.institute !== "—" ? hscDetails.institute : "Institution pending"}</p>
+                                    <p className="text-xs font-bold text-[#0F172A]">12th / Intermediate marksheets</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 truncate">{hscDetails.institute && hscDetails.institute !== "—" ? hscDetails.institute : "Institution pending"}</p>
                                 </div>
                                 <div className="shrink-0 text-right">
-                                    {hscDetails.percentage !== "—" ? (
+                                    {hscDetails.percentage && hscDetails.percentage !== "—" && hscDetails.percentage !== "Missing" ? (
                                         <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black border border-emerald-100">{hscDetails.percentage}</span>
                                     ) : (
                                         <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black">Missing</span>
@@ -1281,10 +1289,10 @@ export default function UserProfileView({
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-xs font-bold text-[#0F172A]">Degree / Graduation</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 truncate">{ugDetails.institute !== "—" ? ugDetails.institute : "Institution pending"}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 truncate">{ugDetails.institute && ugDetails.institute !== "—" ? ugDetails.institute : "Institution pending"}</p>
                                 </div>
                                 <div className="shrink-0 text-right">
-                                    {ugDetails.percentage !== "—" ? (
+                                    {ugDetails.percentage && ugDetails.percentage !== "—" && ugDetails.percentage !== "Pending" ? (
                                         <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black border border-emerald-100">{ugDetails.percentage}</span>
                                     ) : (
                                         <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black">Pending</span>

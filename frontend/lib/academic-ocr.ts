@@ -398,7 +398,18 @@ export function canonicalizeAcademicFields(
     }
 
     if (grading) out.grading = grading;
-    if (score != null && score !== '') out.score = String(score).trim();
+    if (score != null && score !== '') {
+        const scoreStr = String(score).trim();
+        out.score = scoreStr;
+        out.percentage = scoreStr;
+        out.overall_percentage = scoreStr;
+    }
+
+    if (marksSecured != null && marksSecured !== '') out.total_marks_secured = marksSecured;
+    if (marksMaximum != null && marksMaximum !== '') out.total_marks_maximum = marksMaximum;
+    if (wordsSecuredRaw) out.marks_in_words = wordsSecuredRaw;
+    if (wordsMaxRaw) out.max_marks_in_words = wordsMaxRaw;
+    if (hasGpa) out.cgpa = raw.overall_gpa ?? raw.gpa ?? raw.cgpa ?? raw.sgpa;
 
     const endFromExam = examYearToEndDate(examPeriod as string);
     const endFromIssue = formatAcademicDate(String(raw.end_date || raw.date_of_issue || ''));
@@ -416,8 +427,11 @@ export function canonicalizeAcademicFields(
     if (raw.father_name) out.father_name = String(raw.father_name).trim();
     if (raw.dob || raw.date_of_birth) out.dob = String(raw.dob || raw.date_of_birth).trim();
 
-    const rollNumber = raw.roll_number || raw.registration_number || raw.registered_number;
-    if (rollNumber) out.roll_number = String(rollNumber).trim();
+    const rollNumber = raw.roll_number || raw.registration_number || raw.registered_number || raw.hall_ticket_number || raw.hall_ticket;
+    if (rollNumber) {
+        out.roll_number = String(rollNumber).trim();
+        out.hall_ticket_number = String(rollNumber).trim();
+    }
 
     const certificateNumber = raw.certificate_number || raw.certificate_no || raw.serial_number;
     if (certificateNumber) out.certificate_number = String(certificateNumber).trim();

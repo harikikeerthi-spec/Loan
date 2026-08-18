@@ -138,7 +138,7 @@ const FALLBACK_UNIVERSITIES_BY_COUNTRY: Record<string, Array<{ name: string; loc
   ],
 };
 
-function getFallbackUniversities(country?: string, query?: string): Array<{ name: string; loc: string; country: string; rank?: number }> {
+export function getFallbackUniversities(country?: string, query?: string): Array<{ name: string; loc: string; country: string; rank?: number }> {
   const cleanCountry = (country || '').trim().toLowerCase();
   const cleanQuery = (query || '').trim().toLowerCase();
 

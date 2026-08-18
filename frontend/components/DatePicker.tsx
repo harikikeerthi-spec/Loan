@@ -102,9 +102,10 @@ export default function DatePicker({
     const currentAge = calculateAge();
     const isAgeEligible = currentAge !== null && currentAge >= MIN_AGE && currentAge <= MAX_AGE;
 
-    // Apply date and notify parent
-    const handleApplyDate = () => {
-        const dateObj = new Date(selectedYear, selectedMonth, selectedDay);
+    // Handle day click: set date immediately, notify parent, and close
+    const handleSelectDay = (day: number) => {
+        setSelectedDay(day);
+        const dateObj = new Date(selectedYear, selectedMonth, day);
         const formatted = format(dateObj, "dd-MM-yyyy");
         onChange(formatted);
         setIsOpen(false);
@@ -371,7 +372,7 @@ export default function DatePicker({
                                             <button
                                                 type="button"
                                                 key={d}
-                                                onClick={() => setSelectedDay(d)}
+                                                onClick={() => handleSelectDay(d)}
                                                 className={`day-item border rounded-xl h-8 flex items-center justify-center text-xs font-semibold transition-all duration-150 ${
                                                     isSelected
                                                         ? "selected bg-gradient-to-r from-[#6c2bd9] to-[#9333ea] text-white border-transparent shadow-md shadow-[#6c2bd9]/25 scale-110 font-bold"
@@ -386,21 +387,15 @@ export default function DatePicker({
                             </motion.div>
                         )}
 
-                        {/* Confirmation Action Bar / Panel Footer */}
-                        <div className="panel-footer flex justify-between items-center pt-3 border-t border-slate-100">
-                            <div className="age-validation flex items-center gap-1.5 text-xs font-semibold">
+                        {/* Informational Panel Footer */}
+                        <div className="panel-footer flex justify-between items-center pt-2.5 border-t border-slate-100 text-xs">
+                            <div className="age-validation flex items-center gap-1.5 font-semibold">
                                 <span className={`status-dot w-2 h-2 rounded-full ${isAgeEligible ? "green bg-emerald-500" : "bg-amber-500"}`}></span>
                                 <span className={isAgeEligible ? "text-emerald-700 font-bold" : "text-amber-700 font-bold"}>
-                                    {currentAge !== null ? `Eligible Age: ${currentAge} Yrs` : "Select Date"}
+                                    {currentAge !== null ? `Age: ${currentAge} Yrs ${isAgeEligible ? "(Eligible)" : "(Min 18 required)"}` : "Click date to select"}
                                 </span>
                             </div>
-                            <button
-                                type="button"
-                                onClick={handleApplyDate}
-                                className="btn-apply border-none bg-gradient-to-r from-[#6c2bd9] to-[#9333ea] hover:from-[#5b21b6] hover:to-[#7e22ce] text-white text-xs font-extrabold px-4 py-2 rounded-xl shadow-md shadow-[#6c2bd9]/20 transition-all active:scale-95"
-                            >
-                                Set Date
-                            </button>
+                            <span className="text-[11px] text-slate-400 font-medium">Click date to set</span>
                         </div>
                     </motion.div>
                 )}

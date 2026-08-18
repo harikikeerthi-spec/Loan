@@ -983,7 +983,7 @@ export class NotificationService {
    * Build premium HTML body for disbursement confirmation email
    */
   private buildDisbursementEmailHtml(details: any): string {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
 
     return `

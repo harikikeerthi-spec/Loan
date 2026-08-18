@@ -8,6 +8,7 @@ import DatePicker from "@/components/DatePicker";
 import { getAllCountries } from "@/lib/countriesData";
 import { applicationApi, authApi, aiApi, referenceApi } from "@/lib/api";
 import { isPhoneValid } from "@/lib/validation";
+import { getFallbackUniversities } from "@/lib/aiSearchService";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -256,7 +257,7 @@ export default function ApplyLoanPage() {
         }
     };
 
-    // Fetch and search universities for the selected country purely using AI
+    // Fetch and search universities for the selected country (instant fallback + AI enhancement)
     useEffect(() => {
         const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
         const queryText = (formData.university || "").trim();
@@ -265,6 +266,17 @@ export default function ApplyLoanPage() {
         if (!selectedCountry && !queryText) {
             setSuggestedUniversities([]);
             return;
+        }
+
+        // Immediately populate with instant country/query universities so the user never sees an empty state
+        const initialFallbacks = getFallbackUniversities(selectedCountry, queryText).map(u => ({
+            name: u.name,
+            loc: u.loc || u.country || selectedCountry || "Global",
+            country: u.country || selectedCountry || "",
+            slug: u.name.toLowerCase().replace(/\s+/g, '-')
+        }));
+        if (initialFallbacks.length > 0) {
+            setSuggestedUniversities(initialFallbacks);
         }
 
         // Wait until at least 2 characters if typing a query
@@ -312,12 +324,14 @@ export default function ApplyLoanPage() {
                     }
                 });
 
-                setSuggestedUniversities(formatted);
+                if (formatted.length > 0) {
+                    setSuggestedUniversities(formatted);
+                }
                 if (!queryText && selectedCountry) {
                     setCountryAiLoaded(selectedCountry);
                 }
             } catch (err) {
-                console.error("Failed to query universities via AI", err);
+                console.warn("AI university search encountered an issue, keeping fallback dataset:", err);
             } finally {
                 if (active) setLoadingUniversities(false);
             }

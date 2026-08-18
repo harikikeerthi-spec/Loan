@@ -55,7 +55,11 @@ async function bootstrap() {
       url.includes('/auth/landing-page-submit') ||
       url.includes('/auth/refresh') ||
       url.includes('/auth/login') ||
-      url.includes('/digilocker/callback')
+      url.includes('/digilocker/callback') ||
+      url.includes('/ai-search') ||
+      url.includes('/ai/') ||
+      url.includes('/reference/') ||
+      url.includes('/explore/')
     ) {
       return next();
     }

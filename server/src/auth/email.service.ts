@@ -231,7 +231,7 @@ export class EmailService {
   async sendDashboardWelcomeEmail(email: string, firstName?: string, lastName?: string) {
     const fullName = firstName ? (lastName ? `${firstName} ${lastName}` : firstName) : '';
     const name = firstName ? firstName : 'there';
-    const frontendUrl = 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
 
     const mailOptions = {
@@ -423,7 +423,7 @@ export class EmailService {
   }
 
   async sendStaffReviewStartedEmail(email: string, userName: string, application: any) {
-    const frontendUrl = 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -704,7 +704,7 @@ export class EmailService {
   }
 
   async sendLoanSubmissionEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -919,7 +919,7 @@ export class EmailService {
   }
 
   async sendAllDocumentsVerifiedEmail(email: string, userName: string, application?: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application?.applicationNumber || (application?.id ? `#${application.id.slice(-6)}` : '');
     const name = userName || 'Student';
@@ -1028,7 +1028,7 @@ export class EmailService {
   }
 
   async sendLoanTrackingEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -1256,7 +1256,7 @@ export class EmailService {
   }
 
   async sendApplicationSentToBankEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -1462,7 +1462,7 @@ export class EmailService {
     application: any,
     studentName: string,
   ) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const appNum = application.applicationNumber || 'N/A';
     const loanType = application.loanType || 'Education Loan';
     const amount = application.amount ? `₹${Number(application.amount).toLocaleString('en-IN')}` : 'N/A';
@@ -1746,7 +1746,7 @@ export class EmailService {
   }
 
   async sendApplicationAcceptedByBankEmail(email: string, userName: string, bankName: string, application: any, details?: any) {
-    const frontendUrl = 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const progress = this.calculateProgress(application, 95);
@@ -1905,7 +1905,7 @@ export class EmailService {
   }
 
   async sendLoanDisbursedEmail(email: string, userName: string, bankName: string, application: any, transactionDetails?: any) {
-    const frontendUrl = 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application?.applicationNumber || 'N/A';
     const amount = transactionDetails?.amount ? `₹${Number(transactionDetails.amount).toLocaleString('en-IN')}` : (application?.disbursedAmount || application?.amount ? `₹${Number(application.disbursedAmount || application.amount).toLocaleString('en-IN')}` : 'N/A');
@@ -2242,7 +2242,7 @@ export class EmailService {
   }
 
   async sendApplicationRejectedByBankEmail(email: string, userName: string, bankName: string, reason: string) {
-    const frontendUrl = 'https://developer.vidyaloans.in';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.vidyaloans.in';
     const year = new Date().getFullYear();
 
     const mailOptions = {
@@ -2594,7 +2594,7 @@ export class EmailService {
             <p style="font-size: 14px; color: #475569; line-height: 1.5;">Please log in to your student dashboard to re-upload a clear and valid copy of this document so we can continue processing your loan application.</p>
             
             <div style="text-align: center; margin: 30px 0 20px 0;">
-              <a href="https://developer.vidyaloans.in/login" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">Log In & Re-upload Document</a>
+              <a href="https://www.vidyaloans.in/login" style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">Log In & Re-upload Document</a>
             </div>
 
             <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 25px 0;" />
