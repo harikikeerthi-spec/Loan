@@ -130,7 +130,7 @@ export default function JourneyPath() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: false, amount: 0.05 }}
             transition={{ duration: 0.4 }}
-            className="py-28 bg-[#f3eeff]/60 relative overflow-hidden"
+            className="py-28 bg-transparent relative overflow-hidden"
         >
             {/* Decorative blobs */}
             <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: 'radial-gradient(circle, #6605c7, transparent)' }} />

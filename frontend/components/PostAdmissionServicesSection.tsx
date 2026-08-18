@@ -79,8 +79,8 @@ export default function PostAdmissionServicesSection() {
     return (
         <section className="py-24 bg-transparent overflow-hidden relative">
             {/* Background elements */}
-            <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-[#6605c7]/5 rounded-full blur-[120px] -mr-[10vw] -mt-[10vw] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-blue-500/5 rounded-full blur-[120px] -ml-[10vw] -mb-[10vw] pointer-events-none" />
+            <div className="absolute top-1/2 right-0 w-[40vw] h-[40vw] bg-[#6605c7]/[0.03] rounded-full blur-[140px] pointer-events-none -translate-y-1/2" />
+            <div className="absolute bottom-0 left-0 w-[30vw] h-[30vw] bg-purple-500/[0.03] rounded-full blur-[120px] pointer-events-none" />
 
             <div className="max-w-7xl mx-auto px-6 relative z-10">
                 {/* Header */}

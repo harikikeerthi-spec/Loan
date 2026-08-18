@@ -271,13 +271,14 @@ export default function DocumentVaultPage() {
     };
 
     const showAlert = (title: string, message: string, type: "success" | "error" | "info" | "warning" = "info") => {
+        // Only show popup alert when an error or warning occurs
+        if (type === "success" || type === "info") return;
+
         Swal.fire({
             title: title,
             text: message,
             icon: type,
             confirmButtonColor: "#6605c7",
-            timer: type === "success" ? 3500 : undefined,
-            timerProgressBar: type === "success",
             customClass: {
                 popup: "rounded-3xl shadow-2xl border border-purple-100 font-sans p-6",
                 title: "text-lg font-black text-gray-900",

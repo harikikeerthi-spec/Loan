@@ -750,18 +750,31 @@ export class DocumentVerificationService {
     }
 
     private validateAadhaarExtraction(
-        _parsed: any,
+        parsed: any,
         extracted: Record<string, any>,
     ): { is_valid: boolean; error?: string } {
+        if (parsed?.fraud_reason === 'WRONG_DOCUMENT_TYPE_UPLOADED' || (parsed?.document_type && parsed.document_type.toLowerCase() !== 'aadhaar' && parsed.document_type.toLowerCase() !== 'aadhar')) {
+            const detected = String(parsed?.document_type || 'non-Aadhaar document').toUpperCase().replace(/_/g, ' ');
+            return {
+                is_valid: false,
+                error: `Document verification failed: The uploaded file was detected as a ${detected}. Only official Aadhaar Cards issued by UIDAI must be uploaded for Aadhaar verification.`,
+            };
+        }
+
         const failed: string[] = [];
-        if (!extracted.full_name) failed.push('full name');
-        if (!extracted.dob) failed.push('date of birth');
-        if (!extracted.gender) failed.push('gender');
+        const hasName = !!(extracted.full_name || extracted.mother_name || extracted.father_name || extracted.name);
+        const aadhaarRaw = String(extracted.aadhaar_number || extracted.aadhar_number || extracted.vid || '');
+        const digitsOnly = aadhaarRaw.replace(/\D/g, '');
+        const isMaskedAadhaar = /x{4,8}\d{4}/i.test(aadhaarRaw.replace(/\s/g, '')) || /^\d{4}$/.test(digitsOnly);
+        const isValidNumber = digitsOnly.length === 12 || digitsOnly.length === 16 || isMaskedAadhaar;
+
+        if (!hasName) failed.push('full name');
+        if (!aadhaarRaw || !isValidNumber) failed.push('valid 12-digit Aadhaar number');
 
         if (failed.length > 0) {
             return {
                 is_valid: false,
-                error: `Could not read required Aadhaar fields: ${failed.join(', ')}`,
+                error: `Document verification failed: Uploaded file is not a valid Aadhaar Card. Missing: ${failed.join(', ')}. Only official Aadhaar Cards issued by UIDAI must be uploaded for Aadhaar verification.`,
             };
         }
         return { is_valid: true };

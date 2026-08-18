@@ -61,7 +61,16 @@ export default async function HomePage() {
     })) : lenders;
 
     return (
-        <div className="relative min-h-screen text-gray-900">
+        <div className="relative min-h-screen text-gray-900 bg-gradient-to-b from-[#f5eeff] via-[#faf5ff] to-[#f5eeff] selection:bg-[#6605c7]/20">
+            {/* Global Ambient Page Background Canvas */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="absolute top-0 left-0 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] rounded-full blur-[140px] opacity-60" style={{ background: 'radial-gradient(circle, #d8b4fe 0%, transparent 70%)' }} />
+                <div className="absolute top-[18%] right-0 w-[50vw] h-[50vw] max-w-[700px] max-h-[700px] rounded-full blur-[140px] opacity-45" style={{ background: 'radial-gradient(circle, #fed7aa 0%, transparent 70%)' }} />
+                <div className="absolute top-[42%] left-[-10%] w-[55vw] h-[55vw] max-w-[750px] max-h-[750px] rounded-full blur-[140px] opacity-40" style={{ background: 'radial-gradient(circle, #c4b5fd 0%, transparent 70%)' }} />
+                <div className="absolute top-[68%] right-[-10%] w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] rounded-full blur-[140px] opacity-50" style={{ background: 'radial-gradient(circle, #e9d5ff 0%, transparent 70%)' }} />
+                <div className="absolute bottom-0 left-[15%] w-[50vw] h-[50vw] max-w-[700px] max-h-[700px] rounded-full blur-[140px] opacity-40" style={{ background: 'radial-gradient(circle, #eddcfd 0%, transparent 70%)' }} />
+            </div>
+
             <div className="relative z-10">
                 {/* Floating Referral Badge - Premium Design */}
                 <Link
@@ -127,7 +136,7 @@ export default async function HomePage() {
                 </Link>
 
                 {/* Hero Section */}
-                <section className="relative min-h-screen flex items-center pt-28 overflow-hidden" style={{ background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' }}>
+                <section className="relative min-h-screen flex items-center pt-28 overflow-hidden bg-transparent">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-50" style={{ background: 'radial-gradient(circle, #d8b4fe, transparent)' }} />
                         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-40" style={{ background: 'radial-gradient(circle, #fed7aa, transparent)' }} />
@@ -475,7 +484,7 @@ export default async function HomePage() {
                 </section>
 
                 {/* How It Works */}
-                <section className="py-28 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5f0ff 0%, #faf5ff 40%, #f0f9ff 70%, #fefce8 100%)' }}>
+                <section className="py-28 relative overflow-hidden bg-transparent">
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
                         <div className="absolute -top-24 left-1/4 w-96 h-96 rounded-full blur-[100px] opacity-40" style={{ background: 'radial-gradient(circle, #c084fc, transparent)' }} />
                         <div className="absolute -bottom-24 right-1/4 w-96 h-96 rounded-full blur-[100px] opacity-30" style={{ background: 'radial-gradient(circle, #67e8f9, transparent)' }} />
@@ -562,7 +571,7 @@ export default async function HomePage() {
                 </section>
 
                 {/* EMI Calculator Section */}
-                <section className="py-24 bg-transparent border-t border-gray-100">
+                <section className="py-24 bg-transparent border-t border-purple-900/5">
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                             <div>
@@ -597,7 +606,7 @@ export default async function HomePage() {
                 </section>
 
                 {/* Lending Partners Table */}
-                <section className="py-24 bg-transparent border-t border-gray-100">
+                <section className="py-24 bg-transparent border-t border-purple-900/5">
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="text-center mb-16">
                             <span className="inline-block px-4 py-1.5 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[11px] font-black uppercase tracking-widest mb-4 border border-[#6605c7]/15">
@@ -855,7 +864,7 @@ export default async function HomePage() {
                 </section>
 
                 {/* Final CTA */}
-                <section className="py-24 bg-transparent mb-12">
+                <section className="pt-24 pb-28 bg-transparent">
                     <div className="max-w-5xl mx-auto px-6">
                         <div className="bg-[#6605c7] rounded-xl p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />

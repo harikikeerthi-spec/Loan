@@ -300,15 +300,30 @@ export default function UserProfileView({
     const getDerivedNationality = (): string => {
         const direct = activeProfile?.nationality || baseProfile?.nationality || user?.nationality || data?.nationality;
         if (direct && String(direct).trim() && String(direct).trim() !== "—" && String(direct).trim().toLowerCase() !== "not provided") {
-            return String(direct).trim();
+            const d = String(direct).trim();
+            return d.toLowerCase() === 'india' ? 'Indian' : d;
         }
 
         const docNat = getDocExtractedField(['passport', 'aadhar', 'aadhaar'], ['nationality', 'citizenship']);
         if (docNat && String(docNat).trim() && String(docNat).trim() !== "—" && String(docNat).trim().toLowerCase() !== "not provided") {
-            return String(docNat).trim();
+            const d = String(docNat).trim();
+            return d.toLowerCase() === 'india' ? 'Indian' : d;
         }
 
-        // Derive from Address / Address Country
+        // Indian Indicators Check: 6-digit Indian Pincode, Aadhaar, PAN, +91 Phone, Passport India
+        const pincodeVal = activeProfile?.pincode || user?.pincode || data?.pincode || activeProfile?.permanentAddress?.pincode || activeProfile?.mailingAddress?.pincode;
+        const cleanPincode = String(pincodeVal || '').replace(/\D/g, '');
+        const isIndianPincode = cleanPincode.length === 6;
+
+        const phone = activeProfile?.phoneNumber || activeProfile?.mobile || user?.phoneNumber || user?.mobile || "";
+        const cleanPhone = String(phone).replace(/\D/g, '');
+        const isIndianPhone = cleanPhone.length === 10 || (cleanPhone.length === 12 && cleanPhone.startsWith('91'));
+
+        if (isIndianPincode || studentAadhaar || studentPan || passportIssueCountry === 'India' || passportBirthCountry === 'India' || isIndianPhone) {
+            return 'Indian';
+        }
+
+        // Derive from Address text (excluding study destination hints)
         let addr = activeProfile?.address || activeProfile?.currentAddress || activeProfile?.permanentAddress ||
             user?.address || data?.address || firstApp?.address || data?.applications?.[0]?.address ||
             getDocExtractedField(['aadhar', 'aadhaar', 'passport', 'national_id', 'voter_id'], ['address', 'residential_address', 'permanent_address', 'address_formatted']);
@@ -322,46 +337,27 @@ export default function UserProfileView({
             }
         }
 
-        const countryHint = activeProfile?.country || activeProfile?.addressCountry || activeProfile?.state ||
-            user?.country || firstApp?.country || data?.applications?.[0]?.country ||
-            passportIssueCountry || passportBirthCountry;
-
-        const combinedAddressText = `${addr || ''} ${countryHint || ''}`.trim().toLowerCase();
-
-        if (combinedAddressText) {
-            if (combinedAddressText.includes('india') || combinedAddressText.includes('ind') || combinedAddressText.includes('bharat')) {
+        const addrText = String(addr || '').toLowerCase();
+        if (addrText) {
+            if (addrText.includes('india') || addrText.includes('bharat') || /\b\d{6}\b/.test(addrText)) {
                 return 'Indian';
             }
-            if (combinedAddressText.includes('united states') || combinedAddressText.includes('usa') || combinedAddressText.includes('us')) {
+            if (addrText.includes('united states') || addrText.includes('usa')) {
                 return 'American';
             }
-            if (combinedAddressText.includes('united kingdom') || combinedAddressText.includes('uk') || combinedAddressText.includes('britain') || combinedAddressText.includes('england')) {
+            if (addrText.includes('united kingdom') || addrText.includes('uk') || addrText.includes('britain')) {
                 return 'British';
             }
-            if (combinedAddressText.includes('canada')) {
+            if (addrText.includes('canada')) {
                 return 'Canadian';
             }
-            if (combinedAddressText.includes('australia')) {
+            if (addrText.includes('australia')) {
                 return 'Australian';
             }
-            if (combinedAddressText.includes('ireland')) {
-                return 'Irish';
-            }
-            if (countryHint) {
-                return countryHint === 'India' ? 'Indian' : countryHint;
-            }
         }
 
-        // Default fallback if student Aadhaar, PAN, Indian pincode or Indian phone number is present
-        const phone = activeProfile?.phoneNumber || activeProfile?.mobile || user?.phoneNumber || user?.mobile || "";
-        const cleanPhone = String(phone).replace(/\D/g, '');
-        const isIndianPhone = cleanPhone.length === 10 || (cleanPhone.length === 12 && cleanPhone.startsWith('91'));
-
-        if (studentAadhaar || studentPan || passportIssueCountry === 'India' || passportBirthCountry === 'India' || activeProfile?.pincode || user?.pincode || isIndianPhone) {
-            return 'Indian';
-        }
-
-        return "";
+        // Default fallback for student loans portal
+        return "Indian";
     };
 
     const displayUserId = user?.id || "";

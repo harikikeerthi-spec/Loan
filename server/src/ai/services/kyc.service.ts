@@ -238,7 +238,6 @@ export class KycService {
 
         if (!isIdentityDoc) {
             // Other academic or support files are allowed by default without keyword checks.
-            // Bypassing local OCR/Tesseract to save CPU/Memory and avoid offline CDN initialization issues.
             return { is_valid: true };
         }
 
@@ -253,7 +252,10 @@ export class KycService {
             console.warn('[KycService] Local keyword extraction failed:', e.message);
         }
 
-        const clean = text.toLowerCase();
+        // For multi-page PDFs: only inspect the first ~3000 characters (page 1 content)
+        // This prevents false rejections when later pages contain different document types (PAN, Labour card, etc.)
+        const page1Text = isPdf ? text.slice(0, 3000) : text;
+        const clean = page1Text.toLowerCase();
         let matches = false;
         let expectedLabel = '';
 
@@ -266,8 +268,8 @@ export class KycService {
                 clean.includes('tax department') ||
                 /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
             
-            // Exclude if it is clearly an Aadhaar or Passport
-            const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
+            // Only exclude if page 1 itself is clearly an Aadhaar or Passport (not later pages)
+            const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai');
             const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
             
             matches = hasPanKeywords && !isAadhaar && !isPassport;
@@ -281,12 +283,12 @@ export class KycService {
                 clean.includes('enrolment') ||
                 /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
             
-            // Exclude if it is clearly a passport or PAN card
-            const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
-            const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+            // Only reject if PAGE 1 itself is clearly a passport or PAN card
+            // Multi-page PDFs may have PAN on page 2 — that should NOT fail page 1 Aadhaar
+            const page1IsPan = (clean.includes('income tax') || clean.includes('permanent account number')) && !hasAadhaarKeywords;
+            const page1IsPassport = (clean.includes('passport') || clean.includes('mrz')) && !hasAadhaarKeywords;
             
-            // Strict Aadhaar validation: must have Aadhaar keywords and must NOT have other document keywords
-            matches = hasAadhaarKeywords && !isPassport && !isPan;
+            matches = hasAadhaarKeywords || (!page1IsPan && !page1IsPassport);
         } else if (normalizedType.includes('passport')) {
             expectedLabel = 'Passport';
             const hasPassportKeywords = clean.includes('passport') ||
@@ -295,11 +297,11 @@ export class KycService {
                 clean.includes('nationality') ||
                 clean.includes('mrz');
             
-            // Exclude if it is clearly an Aadhaar or PAN card
-            const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
-            const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+            // Only exclude if page 1 is clearly Aadhaar or PAN
+            const page1IsAadhaar = (clean.includes('uidai') || clean.includes('aadhaar')) && !hasPassportKeywords;
+            const page1IsPan = (clean.includes('income tax') || clean.includes('permanent account')) && !hasPassportKeywords;
             
-            matches = hasPassportKeywords && !isAadhaar && !isPan;
+            matches = hasPassportKeywords && !page1IsAadhaar && !page1IsPan;
         } else {
             // Other academic or support files are allowed by default
             return { is_valid: true };
@@ -381,6 +383,12 @@ export class KycService {
             You are an advanced AI-powered OCR engine specialized in Indian identity documents.
             Read the document image and extract ONLY text that is visibly printed on the document.
 
+            📄 MULTI-PAGE PDF HANDLING (CRITICAL):
+            - If the uploaded file is a multi-page PDF containing MULTIPLE documents, you MUST analyze ONLY PAGE 1 (the first page/first document visible).
+            - Completely IGNORE all content from page 2 onwards or from any other document visible below the first document.
+            - The expected document slot is: ${normalizedCategory.toUpperCase()}. Verify ONLY against the FIRST document on page 1.
+            - Do NOT fail validation because page 2, 3, etc. contain a different document type (e.g. PAN card or Labour card on later pages is irrelevant).
+
             CRITICAL RULES:
             - Copy values exactly as printed. Do NOT guess, invent, or duplicate values.
             - Return each concept ONCE with the exact field names specified below.
@@ -388,10 +396,10 @@ export class KycService {
             - Do NOT output both a string address and a structured address object — use one format only.
             - If a field is missing or unreadable, omit it or use null. Never use placeholder names like "Resident Name".
             
-            ⚠️  DOCUMENT TYPE VERIFICATION (CRITICAL):
-            - You MUST verify if the uploaded document matches the expected document category: ${normalizedCategory.toUpperCase()}
-            - BEFORE extracting any data, FIRST check for markers of DIFFERENT document types
-            - If you detect markers of a DIFFERENT document type, you MUST:
+            ⚠️  DOCUMENT TYPE VERIFICATION (CRITICAL — PAGE 1 ONLY):
+            - You MUST verify if the FIRST PAGE document matches the expected document category: ${normalizedCategory.toUpperCase()}
+            - BEFORE extracting any data, FIRST check for markers of DIFFERENT document types ON PAGE 1 ONLY
+            - If you detect markers of a DIFFERENT document type ON PAGE 1, you MUST:
               1. Set is_valid to FALSE
               2. Set confidence_score to 0
               3. Set document_type to the actual detected type (not the expected type)
@@ -420,25 +428,21 @@ export class KycService {
             aadhaar: `
                 EXPECTED DOCUMENT TYPE: AADHAAR CARD (India's unique identity document issued by UIDAI)
 
-                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
-                - "PASSPORT" keyword anywhere
-                - "P<" or "MRZ" (Machine Readable Zone - Passport marker)
-                - "REPUBLIC OF INDIA" in header with "PASSPORT" 
-                - "TRAVEL DOCUMENT"
-                - "PASSPORT OFFICE"
-                - "DATE OF ISSUE" + "DATE OF EXPIRY" (Passport structure)
-                - Passport biodata page layout
+                ⚠️  REJECT IMMEDIATELY (Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual document_type) IF YOU DETECT:
+                - "INCOME TAX DEPARTMENT" or "PERMANENT ACCOUNT NUMBER" or PAN card layout
+                - "PASSPORT" keyword or "P<" / "MRZ" (Machine Readable Zone - Passport marker)
+                - "MARKSHEET", "BOARD OF INTERMEDIATE", "TRANSCRIPT", "DEGREE", "CERTIFICATE", "SCHOOL", "UNIVERSITY"
+                - "BANK PASSBOOK", "ACCOUNT NUMBER", "IFSC", "STATEMENT", "ELECTRICITY BILL"
+                - Any document that is NOT an official Aadhaar Card issued by UIDAI
                 
-                If ANY of the above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', document_type='PASSPORT', do NOT extract fields.
+                ACCEPT ONLY IF YOU DETECT OFFICIAL AADHAAR CARD FEATURES:
+                - "UNIQUE IDENTIFICATION AUTHORITY OF INDIA" or "UIDAI" or "BHARATIYA VISHISHTA PEHCHAN PRADHIKARAN"
+                - "AADHAAR" / "ADHAAR" text or emblem on card/slip
+                - 12-digit Aadhaar number in format XXXX XXXX XXXX (or masked XXXX XXXX 1234) or 16-digit Virtual ID (VID)
+                - "GOVT. OF INDIA" / "GOVERNMENT OF INDIA" branding
+                - Official Aadhaar layout with Name, Date of Birth / Year of Birth, Gender, and Address
 
-                ACCEPT ONLY IF YOU DETECT:
-                - "UNIQUE IDENTIFICATION" or "UIDAI"
-                - "AADHAAR" text on card
-                - 12-digit number in format XXXX XXXX XXXX
-                - "GOVT. OF INDIA" + "MINISTRY OF ELECTRONICS AND INFORMATION TECHNOLOGY"
-                - Aadhaar-specific layout with name, DOB, gender, address sections
-
-                extracted_data fields (use exactly these keys — dob and gender are REQUIRED):
+                extracted_data fields (use exactly these keys):
                 - full_name: ONLY the person's name printed on the card in the NAME field (e.g. "RAJESH KUMAR"). Do NOT include titles, prefixes, or labels. Extract ONLY the name text after the "Name:" label. Single name is okay.
                 - aadhaar_number: all 12 digits if visible, or masked XXXX XXXX 1234 if only last 4 shown
                 - dob: date of birth exactly as printed (DD/MM/YYYY). If only "Year of Birth" is shown, use YYYY-01-01 format.
@@ -448,11 +452,11 @@ export class KycService {
                   { "house_details", "area", "landmark", "mandal", "city", "district", "state", "pincode" }
                 - pin_code: 6-digit pincode (from address if not separate)
 
-                document_validation (advisory booleans — do not fail is_valid solely because VID is absent):
+                document_validation (advisory booleans):
                 { "aadhaar_logo_present", "govt_of_india_branding_present", "uidai_text_present",
                   "aadhaar_number_format_valid", "vid_present", "photo_present", "dob_and_gender_fields_present" }
 
-                is_valid: true when this is an Aadhaar card AND full_name, dob, and gender are readable.
+                is_valid: true ONLY when this is an official Aadhaar card AND full_name and a valid Aadhaar number (or last 4 digits masked / VID) are present. Otherwise false.
             `,
             pan: `
                 EXPECTED DOCUMENT TYPE: PAN CARD (Permanent Account Number card issued by Income Tax Department)
@@ -836,28 +840,37 @@ export class KycService {
     }
 
     private validateAadhaarDocument(
-        _parsed: any,
+        parsed: any,
         extracted: any,
     ): { is_valid: boolean; error?: string } {
-        const failedLabels: string[] = [];
+        if (parsed?.fraud_reason === 'WRONG_DOCUMENT_TYPE_UPLOADED' || (parsed?.document_type && parsed.document_type.toLowerCase() !== 'aadhaar' && parsed.document_type.toLowerCase() !== 'aadhar')) {
+            const detected = String(parsed?.document_type || 'non-Aadhaar document').toUpperCase().replace(/_/g, ' ');
+            return {
+                is_valid: false,
+                error: `Document verification failed: The uploaded file was detected as a ${detected}. Only official Aadhaar Cards issued by UIDAI must be uploaded for Aadhaar verification.`,
+            };
+        }
 
+        const failedLabels: string[] = [];
         const hasName = !!(extracted.full_name || extracted.mother_name || extracted.father_name || extracted.name);
-        const hasAadhaarNum = !!(extracted.aadhaar_number || extracted.aadhar_number);
+
+        const aadhaarRaw = String(extracted.aadhaar_number || extracted.aadhar_number || extracted.vid || '');
+        const digitsOnly = aadhaarRaw.replace(/\D/g, '');
+        const isMaskedAadhaar = /x{4,8}\d{4}/i.test(aadhaarRaw.replace(/\s/g, '')) || /^\d{4}$/.test(digitsOnly);
+        const isValidNumber = digitsOnly.length === 12 || digitsOnly.length === 16 || isMaskedAadhaar;
 
         if (!hasName) {
             failedLabels.push('full name');
         }
 
-        const aadhaarRaw = String(extracted.aadhaar_number || extracted.aadhar_number || '');
-        const digitsOnly = aadhaarRaw.replace(/\D/g, '');
-        if (!hasAadhaarNum || digitsOnly.length !== 12) {
+        if (!aadhaarRaw || !isValidNumber) {
             failedLabels.push('valid 12-digit Aadhaar number');
         }
 
         if (failedLabels.length > 0) {
             return {
                 is_valid: false,
-                error: `Document verification failed: Uploaded file is not a valid Aadhaar Card. Missing: ${failedLabels.join(', ')}. Please upload an official Aadhaar Card containing a valid 12-digit Aadhaar number.`,
+                error: `Document verification failed: Uploaded file is not a valid Aadhaar Card. Missing: ${failedLabels.join(', ')}. Only official Aadhaar Cards issued by UIDAI must be uploaded for Aadhaar verification.`,
             };
         }
 

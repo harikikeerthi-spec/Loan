@@ -367,17 +367,18 @@ export default function DocumentsTab() {
                                 <div>
                                     {/* Document preview thumbnail area */}
                                     <div className="relative h-36 bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border-b border-slate-100">
-                                        {(doc.uploaded || doc.filePath) ? (
-                                            <iframe
-                                                src={`/api/documents/view/${userId}/${doc.docType}`}
-                                                title={docLabel}
-                                                className="w-full h-full border-0 pointer-events-none opacity-90 overflow-hidden"
-                                            />
-                                        ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-[52px] text-slate-300">description</span>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-4 text-center">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                                (doc.uploaded || doc.filePath) ? 'bg-[#6605c7]/10 text-[#6605c7]' : 'bg-slate-200/60 text-slate-400'
+                                            }`}>
+                                                <span className="material-symbols-outlined text-[28px]">
+                                                    {(doc.uploaded || doc.filePath) ? 'description' : 'upload_file'}
+                                                </span>
                                             </div>
-                                        )}
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 truncate max-w-full">
+                                                {(doc.uploaded || doc.filePath) ? 'Click view to preview' : 'Not Uploaded'}
+                                            </span>
+                                        </div>
                                         {/* Hover overlay */}
                                         {(doc.uploaded || doc.filePath) && (
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

@@ -7,6 +7,41 @@ import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
+const FIELD_LIMITS = {
+    universityName: 100,
+    courseName: 100,
+    firstName: 50,
+    lastName: 50,
+    coApplicantName: 60,
+    phone: 10,
+    email: 80,
+    minLoanAmount: 50000,
+    maxLoanAmount: 100000000, // 10 Crores
+    minIncome: 0,
+    maxIncome: 500000000, // 50 Crores
+    otp: 6,
+};
+
+const DISPOSABLE_DOMAINS = [
+    "tempmail.com", "yopmail.com", "mailinator.com", "10minutemail.com", 
+    "trashmail.com", "guerrillamail.com", "getnada.com", "temp-mail.org", 
+    "dispostable.com", "throwawaymail.com"
+];
+
+function formatINR(valStr: string): string {
+    const val = parseFloat(valStr);
+    if (isNaN(val) || val <= 0) return "";
+    if (val >= 10000000) {
+        const cr = (val / 10000000).toFixed(2).replace(/\.00$/, "");
+        return `₹${val.toLocaleString("en-IN")} (${cr} Cr)`;
+    }
+    if (val >= 100000) {
+        const lk = (val / 100000).toFixed(2).replace(/\.00$/, "");
+        return `₹${val.toLocaleString("en-IN")} (${lk} Lakhs)`;
+    }
+    return `₹${val.toLocaleString("en-IN")}`;
+}
+
 export default function ApplyLandingPage() {
     const router = useRouter();
     const { login } = useAuth();
@@ -75,8 +110,13 @@ export default function ApplyLandingPage() {
             setErrorMessage("Please enter your Course or Degree name.");
             return false;
         }
-        if (!loanAmount || parseFloat(loanAmount) <= 0) {
-            setErrorMessage("Please enter a valid loan amount.");
+        const parsedAmt = parseFloat(loanAmount);
+        if (!loanAmount || isNaN(parsedAmt) || parsedAmt < FIELD_LIMITS.minLoanAmount) {
+            setErrorMessage(`Please enter a valid loan amount (Minimum ${formatINR(String(FIELD_LIMITS.minLoanAmount))}).`);
+            return false;
+        }
+        if (parsedAmt > FIELD_LIMITS.maxLoanAmount) {
+            setErrorMessage(`Loan amount cannot exceed ${formatINR(String(FIELD_LIMITS.maxLoanAmount))}.`);
             return false;
         }
         return true;
@@ -89,7 +129,8 @@ export default function ApplyLandingPage() {
                 setErrorMessage("Please enter your Co-Applicant's full name.");
                 return false;
             }
-            if (!coApplicantPhone.trim() || coApplicantPhone.trim().length < 10) {
+            const cleanPhone = coApplicantPhone.replace(/\D/g, "");
+            if (!cleanPhone || cleanPhone.length !== 10) {
                 setErrorMessage("Please enter a valid 10-digit mobile number for co-applicant.");
                 return false;
             }
@@ -99,16 +140,26 @@ export default function ApplyLandingPage() {
 
     const handleSendOtp = async () => {
         setErrorMessage("");
-        if (!email || !email.includes("@")) {
+        const cleanEmail = email.trim().toLowerCase();
+        if (!cleanEmail || !cleanEmail.includes("@")) {
             setErrorMessage("Please enter a valid email address.");
             return;
         }
+
+        const domain = cleanEmail.split("@")[1];
+        if (domain && DISPOSABLE_DOMAINS.includes(domain)) {
+            setErrorMessage("Temporary/disposable email addresses are not allowed. Please use your official personal email (e.g. Gmail, Yahoo, Outlook).");
+            return;
+        }
+
         if (!firstName.trim() || !lastName.trim()) {
             setErrorMessage("Please enter your first and last name.");
             return;
         }
-        if (!phoneNumber || phoneNumber.trim().length < 10) {
-            setErrorMessage("Please enter a valid 10-digit phone number.");
+
+        const cleanPhone = phoneNumber.replace(/\D/g, "");
+        if (!cleanPhone || cleanPhone.length !== 10) {
+            setErrorMessage("Please enter a valid 10-digit mobile phone number.");
             return;
         }
 
@@ -340,12 +391,18 @@ export default function ApplyLandingPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     {/* University Name */}
                                     <div className="sm:col-span-2">
-                                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                            Target College / University Name <span className="text-rose-500">*</span>
-                                        </label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                Target College / University Name <span className="text-rose-500">*</span>
+                                            </label>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {universityName.length}/{FIELD_LIMITS.universityName}
+                                            </span>
+                                        </div>
                                         <input
                                             type="text"
                                             required
+                                            maxLength={FIELD_LIMITS.universityName}
                                             value={universityName}
                                             onChange={(e) => setUniversityName(e.target.value)}
                                             placeholder="e.g. Northeastern University, Harvard, Oxford, etc."
@@ -355,12 +412,18 @@ export default function ApplyLandingPage() {
 
                                     {/* Course Name */}
                                     <div>
-                                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                            Course / Degree Name <span className="text-rose-500">*</span>
-                                        </label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                Course / Degree Name <span className="text-rose-500">*</span>
+                                            </label>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {courseName.length}/{FIELD_LIMITS.courseName}
+                                            </span>
+                                        </div>
                                         <input
                                             type="text"
                                             required
+                                            maxLength={FIELD_LIMITS.courseName}
                                             value={courseName}
                                             onChange={(e) => setCourseName(e.target.value)}
                                             placeholder="e.g. MS in Computer Science, MBA"
@@ -403,6 +466,7 @@ export default function ApplyLandingPage() {
                                             <option value="2">2 Years</option>
                                             <option value="3">3 Years</option>
                                             <option value="4">4 Years</option>
+                                            <option value="5">5 Years</option>
                                         </select>
                                     </div>
 
@@ -413,7 +477,8 @@ export default function ApplyLandingPage() {
                                         </label>
                                         <input
                                             type="number"
-                                            min={50000}
+                                            min={FIELD_LIMITS.minLoanAmount}
+                                            max={FIELD_LIMITS.maxLoanAmount}
                                             step={50000}
                                             required
                                             value={loanAmount}
@@ -421,6 +486,11 @@ export default function ApplyLandingPage() {
                                             placeholder="e.g. 2000000"
                                             className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium"
                                         />
+                                        {formatINR(loanAmount) && (
+                                            <p className="text-[11px] font-extrabold text-[#6605c7] mt-1">
+                                                Amount: {formatINR(loanAmount)}
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Admission Status */}
@@ -495,12 +565,18 @@ export default function ApplyLandingPage() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
                                         {/* Co-Applicant Name */}
                                         <div className="sm:col-span-2">
-                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                                Co-Applicant Full Name <span className="text-rose-500">*</span>
-                                            </label>
+                                            <div className="flex justify-between items-center mb-1.5">
+                                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                    Co-Applicant Full Name <span className="text-rose-500">*</span>
+                                                </label>
+                                                <span className="text-[10px] font-bold text-slate-400">
+                                                    {coApplicantName.length}/{FIELD_LIMITS.coApplicantName}
+                                                </span>
+                                            </div>
                                             <input
                                                 type="text"
                                                 required
+                                                maxLength={FIELD_LIMITS.coApplicantName}
                                                 value={coApplicantName}
                                                 onChange={(e) => setCoApplicantName(e.target.value)}
                                                 placeholder="e.g. Ramesh Kumar"
@@ -529,14 +605,20 @@ export default function ApplyLandingPage() {
 
                                         {/* Co-Applicant Mobile */}
                                         <div>
-                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                                Co-Applicant Mobile Number <span className="text-rose-500">*</span>
-                                            </label>
+                                            <div className="flex justify-between items-center mb-1.5">
+                                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                    Co-Applicant Mobile Number <span className="text-rose-500">*</span>
+                                                </label>
+                                                <span className="text-[10px] font-bold text-slate-400">
+                                                    {coApplicantPhone.length}/{FIELD_LIMITS.phone}
+                                                </span>
+                                            </div>
                                             <input
                                                 type="tel"
                                                 required
+                                                maxLength={FIELD_LIMITS.phone}
                                                 value={coApplicantPhone}
-                                                onChange={(e) => setCoApplicantPhone(e.target.value)}
+                                                onChange={(e) => setCoApplicantPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                                                 placeholder="10-digit mobile number"
                                                 className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium"
                                             />
@@ -549,8 +631,9 @@ export default function ApplyLandingPage() {
                                             </label>
                                             <input
                                                 type="email"
+                                                maxLength={FIELD_LIMITS.email}
                                                 value={coApplicantEmail}
-                                                onChange={(e) => setCoApplicantEmail(e.target.value)}
+                                                onChange={(e) => setCoApplicantEmail(e.target.value.trim().toLowerCase())}
                                                 placeholder="coapplicant@example.com"
                                                 className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium"
                                             />
@@ -563,12 +646,19 @@ export default function ApplyLandingPage() {
                                             </label>
                                             <input
                                                 type="number"
+                                                min={FIELD_LIMITS.minIncome}
+                                                max={FIELD_LIMITS.maxIncome}
                                                 step={50000}
                                                 value={coApplicantIncome}
                                                 onChange={(e) => setCoApplicantIncome(e.target.value)}
                                                 placeholder="e.g. 600000"
                                                 className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium"
                                             />
+                                            {formatINR(coApplicantIncome) && (
+                                                <p className="text-[11px] font-extrabold text-[#6605c7] mt-1">
+                                                    Income: {formatINR(coApplicantIncome)}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -611,14 +701,20 @@ export default function ApplyLandingPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     {/* First Name */}
                                     <div>
-                                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                            First Name <span className="text-rose-500">*</span>
-                                        </label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                First Name <span className="text-rose-500">*</span>
+                                            </label>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {firstName.length}/{FIELD_LIMITS.firstName}
+                                            </span>
+                                        </div>
                                         <input
                                             type="text"
                                             required
+                                            maxLength={FIELD_LIMITS.firstName}
                                             value={firstName}
-                                            onChange={(e) => setFirstName(e.target.value)}
+                                            onChange={(e) => setFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, "").slice(0, FIELD_LIMITS.firstName))}
                                             placeholder="Your First Name"
                                             className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium"
                                         />
@@ -626,14 +722,20 @@ export default function ApplyLandingPage() {
 
                                     {/* Last Name */}
                                     <div>
-                                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                            Last Name <span className="text-rose-500">*</span>
-                                        </label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                Last Name <span className="text-rose-500">*</span>
+                                            </label>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {lastName.length}/{FIELD_LIMITS.lastName}
+                                            </span>
+                                        </div>
                                         <input
                                             type="text"
                                             required
+                                            maxLength={FIELD_LIMITS.lastName}
                                             value={lastName}
-                                            onChange={(e) => setLastName(e.target.value)}
+                                            onChange={(e) => setLastName(e.target.value.replace(/[^a-zA-Z\s]/g, "").slice(0, FIELD_LIMITS.lastName))}
                                             placeholder="Your Last Name"
                                             className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium"
                                         />
@@ -641,14 +743,20 @@ export default function ApplyLandingPage() {
 
                                     {/* Phone Number */}
                                     <div>
-                                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                            Mobile Phone Number <span className="text-rose-500">*</span>
-                                        </label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                Mobile Phone Number <span className="text-rose-500">*</span>
+                                            </label>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {phoneNumber.length}/{FIELD_LIMITS.phone}
+                                            </span>
+                                        </div>
                                         <input
                                             type="tel"
                                             required
+                                            maxLength={FIELD_LIMITS.phone}
                                             value={phoneNumber}
-                                            onChange={(e) => setPhoneNumber(e.target.value)}
+                                            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
                                             placeholder="10-digit mobile number"
                                             className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium"
                                         />
@@ -661,6 +769,7 @@ export default function ApplyLandingPage() {
                                         </label>
                                         <input
                                             type="text"
+                                            maxLength={10}
                                             value={dateOfBirth}
                                             onChange={(e) => setDateOfBirth(e.target.value)}
                                             placeholder="15-08-2000"
@@ -670,16 +779,22 @@ export default function ApplyLandingPage() {
 
                                     {/* Email Address & Verification Button */}
                                     <div className="sm:col-span-2">
-                                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                            Email Address <span className="text-rose-500">*</span>
-                                        </label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                                Email Address <span className="text-rose-500">*</span>
+                                            </label>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {email.length}/{FIELD_LIMITS.email}
+                                            </span>
+                                        </div>
                                         <div className="flex flex-col sm:flex-row gap-3">
                                             <input
                                                 type="email"
                                                 required
                                                 disabled={otpSent}
+                                                maxLength={FIELD_LIMITS.email}
                                                 value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
+                                                onChange={(e) => setEmail(e.target.value.trim().toLowerCase())}
                                                 placeholder="student@example.com"
                                                 className="flex-1 px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium disabled:bg-slate-100"
                                             />
@@ -714,7 +829,7 @@ export default function ApplyLandingPage() {
                                                     maxLength={6}
                                                     required
                                                     value={otp}
-                                                    onChange={(e) => setOtp(e.target.value)}
+                                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                                                     placeholder="123456"
                                                     className="w-48 px-4 py-3 text-center text-lg tracking-widest font-mono font-bold rounded-xl border border-purple-300 focus:border-[#6605c7] focus:ring-2 focus:ring-purple-200 outline-none bg-white"
                                                 />

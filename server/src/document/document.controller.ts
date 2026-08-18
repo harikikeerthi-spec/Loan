@@ -291,6 +291,21 @@ export class DocumentController {
         }, docType);
       }
 
+      // Perform cross-document name & parent verification against reference document (Passport / Aadhaar)
+      const crossDocIssues = await this.usersService.performCrossDocumentValidation(
+        userId,
+        docType,
+        kycResult.extracted_data || {}
+      );
+
+      if (crossDocIssues && crossDocIssues.length > 0) {
+        const existingIssues = verificationResult.details.ocr_issues || [];
+        verificationResult.details.ocr_issues = Array.from(new Set([...existingIssues, ...crossDocIssues]));
+        if (kycResult) {
+          kycResult.ocr_issues = verificationResult.details.ocr_issues;
+        }
+      }
+
       // ── 4. Save record in database ───────────────────────────────────────
       const document = await this.usersService.upsertUserDocument(
         userId,
@@ -493,6 +508,27 @@ export class DocumentController {
       }, docType);
     }
 
+    const crossDocIssues = await this.usersService.performCrossDocumentValidation(
+      userId,
+      docType,
+      kycResult.extracted_data || {}
+    );
+
+    if (crossDocIssues && crossDocIssues.length > 0) {
+      const existingIssues = verificationResult.details.ocr_issues || [];
+      verificationResult.details.ocr_issues = Array.from(new Set([...existingIssues, ...crossDocIssues]));
+      if (kycResult) {
+        kycResult.ocr_issues = verificationResult.details.ocr_issues;
+      }
+      // Re-save document with cross doc issues updated
+      await this.usersService.upsertUserDocument(userId, docType, {
+        uploaded: true,
+        filePath: doc.filePath,
+        status: newStatus,
+        verificationMetadata: verificationResult,
+      });
+    }
+
     return {
       success: true,
       data: {
@@ -617,6 +653,15 @@ export class DocumentController {
         const files = fs.readdirSync(targetDir);
         if (files.length > 0) {
           const localFilePath = path.join(targetDir, files[0]);
+          const ext = path.extname(localFilePath).toLowerCase();
+          if (ext === '.pdf') {
+            res.setHeader('Content-Type', 'application/pdf');
+          } else if (ext === '.png') {
+            res.setHeader('Content-Type', 'image/png');
+          } else if (ext === '.jpg' || ext === '.jpeg') {
+            res.setHeader('Content-Type', 'image/jpeg');
+          }
+          res.setHeader('Content-Disposition', `inline; filename="${path.basename(localFilePath)}"`);
           return res.sendFile(localFilePath);
         }
       }
