@@ -275,7 +275,7 @@ export default function ApplyLandingPage() {
                     </span>
                 </Link>
 
-                <div className="flex items-center gap-4">
+                <div className="hidden sm:flex items-center gap-4">
                     <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
                         <span className="material-symbols-outlined text-base">verified_user</span>
                         <span>Official Partner Banks Connected</span>

@@ -350,7 +350,7 @@ export default function ProfileTab() {
     };
 
     const getAcademicDetails = (doc: any, key: 'ssc' | 'hsc' | 'ug') => {
-        let parsedAcademic: any = userData?.academic;
+        let parsedAcademic: any = userData?.academic || (userData as any)?.family?.academic;
         if (typeof parsedAcademic === 'string') {
             try { parsedAcademic = JSON.parse(parsedAcademic); } catch { }
         }
@@ -359,17 +359,17 @@ export default function ProfileTab() {
         const fallback = parsedAcademic?.[key] || {};
 
         const instKeys = [
-            'institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body', 'name_of_institution', 'awarding_body', 'degree_college', 'college'
+            'institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body', 'name_of_institution', 'awarding_body', 'degree_college', 'college', 'board_or_university', 'institute', 'school', 'name_of_the_board', 'name_of_the_university'
         ];
         const pctKeys = [
-            'score', 'percentage', 'gpa', 'cgpa', 'overall_percentage', 'overall_gpa', 'marks_percentage', 'aggregate_percentage', 'total_marks_secured', 'overall_score', 'cgpa_secured', 'gpa_secured'
+            'percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score', 'score_in_percentage', 'total_percentage', 'grade_percentage', 'gpa', 'cgpa', 'overall_gpa', 'overall_cgpa', 'total_marks_secured', 'overall_score', 'cgpa_secured', 'gpa_secured', 'grade', 'marks', 'obtained_marks', 'result'
         ];
 
         let extInst = getExtractedField(doc, instKeys);
         let extPct = getExtractedField(doc, pctKeys);
 
-        let fallbackInst = fallback.institute || (key === 'ug' ? (parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || userData?.bachelorsDegree) : undefined);
-        let fallbackPct = fallback.percentage || (key === 'ug' ? (parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score) : undefined);
+        let fallbackInst = fallback.institute || fallback.college || fallback.school || (key === 'hsc' ? (parsedAcademic.intermediate?.institute || parsedAcademic['12th']?.institute || parsedAcademic.marksheet_12?.institute || parsedAcademic.grade12?.institute || parsedAcademic.inter?.institute) : key === 'ssc' ? (parsedAcademic.grade10?.institute || parsedAcademic['10th']?.institute) : (parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || userData?.bachelorsDegree));
+        let fallbackPct = fallback.percentage || fallback.score || (key === 'hsc' ? (parsedAcademic.intermediate?.percentage || parsedAcademic.intermediate?.score || parsedAcademic['12th']?.percentage || parsedAcademic.marksheet_12?.percentage || parsedAcademic.grade12?.percentage || parsedAcademic.inter?.percentage) : key === 'ssc' ? (parsedAcademic.grade10?.percentage || parsedAcademic['10th']?.percentage) : (parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score));
 
         const inst = (fallbackInst && String(fallbackInst).trim() !== "") ? fallbackInst : extInst;
         const rawPct = (fallbackPct !== undefined && fallbackPct !== null && String(fallbackPct).trim() !== "") ? fallbackPct : extPct;
@@ -510,9 +510,10 @@ export default function ProfileTab() {
             const maximumBalance = maxs.length > 0 ? Math.max(...maxs) : 0;
 
             const stabilityRatio = averageBalance > 0 ? Math.min(1, minimumBalance / averageBalance) : 0;
+            const salaryStability = activeApp.salaryStability ?? (Math.round(stabilityRatio * 30 + 70));
             const balanceScore = Math.min(60, (averageBalance / 50000) * 60);
             const stabilityScore = stabilityRatio * 40;
-            const evvScore = Math.round(balanceScore + stabilityScore);
+            const evvScore = activeApp.evvScore ? Number(activeApp.evvScore) : Math.round(balanceScore + stabilityScore);
 
             let risk = "MEDIUM";
             if (evvScore >= 75) risk = "LOW";
@@ -527,6 +528,8 @@ export default function ProfileTab() {
                 averageBalance,
                 minimumBalance,
                 maximumBalance,
+                salaryStability,
+                totalMonths: breakdown.length,
                 evvScore,
                 risk,
                 recommendation
@@ -1350,12 +1353,12 @@ export default function ProfileTab() {
                                         <span className="block text-[11px] font-black text-slate-800 mt-0.5">₹{periodAvg.toLocaleString('en-IN')}</span>
                                     </div>
                                     <div className="bg-white p-2 rounded-xl border border-slate-100 text-center shadow-sm">
-                                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider">Max Bal</span>
-                                        <span className="block text-[11px] font-black text-slate-800 mt-0.5">₹{periodMax.toLocaleString('en-IN')}</span>
+                                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider">Salary Stability</span>
+                                        <span className="block text-[11px] font-black text-emerald-700 mt-0.5">{metrics.salaryStability}%</span>
                                     </div>
                                     <div className="bg-white p-2 rounded-xl border border-slate-100 text-center shadow-sm">
-                                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider">Min Bal</span>
-                                        <span className="block text-[11px] font-black text-slate-800 mt-0.5">₹{periodMin.toLocaleString('en-IN')}</span>
+                                        <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wider">Min / Max</span>
+                                        <span className="block text-[10px] font-black text-slate-700 mt-0.5">₹{(periodMin/1000).toFixed(0)}k / ₹{(periodMax/1000).toFixed(0)}k</span>
                                     </div>
                                 </div>
 

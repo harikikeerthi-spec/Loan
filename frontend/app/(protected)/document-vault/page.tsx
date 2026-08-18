@@ -662,6 +662,19 @@ export default function DocumentVaultPage() {
             }
         }
 
+        if (docTypeLower.includes('passport')) {
+            const nonPassportKeywords = ['aadhar', 'aadhaar', 'pan', 'marksheet', '10th', '12th', 'degree', 'graduation', 'transcript', 'certificate', 'salary', 'slip', 'bank', 'statement', 'passbook', 'cheque', 'bill', 'tax', 'itr'];
+            const matchedKey = nonPassportKeywords.find(kw => fileNameLower.includes(kw));
+            if (matchedKey) {
+                showAlert(
+                    "Wrong Document Type",
+                    `You selected a "${file.name}" file for a Passport slot. Only official Passports (containing both Front and Back pages) can be uploaded here.`,
+                    "warning"
+                );
+                return;
+            }
+        }
+
         // Pre-upload check: Detect if the same file is already uploaded under ANOTHER document slot
         const duplicateSlotDoc = docs.find(
             d => d.docType.toLowerCase() !== docType.toLowerCase() &&

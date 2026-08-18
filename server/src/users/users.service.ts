@@ -1341,9 +1341,9 @@ export class UsersService implements OnModuleInit {
         const board = details.board_name || details.board || details.board_or_university || details.examining_body || details.council || details.authority;
         const year = details.examination_month_year || details.year_of_passing || details.passing_year || details.exam_period || details.end_date || details.year;
         const rollNum = details.roll_number || details.registration_number || details.hall_ticket_number || details.hall_ticket || details.certificate_number;
-        const rawScore = details.percentage || details.score || details.gpa || details.cgpa || details.overall_percentage || details.marks_percentage || details.aggregate_percentage || details.overall_gpa || details.overall_cgpa || details.total_percentage || details.grade || details.marks || details.obtained_marks;
-        const secured = details.total_marks_secured || details.marks_secured || details.marks_obtained || details.obtained_marks || details.secured_marks || details.total_marks;
-        const max = details.total_marks_maximum || details.maximum_marks || details.max_marks || details.total_max || details.out_of;
+        const rawScore = details.percentage || details.overall_percentage || details.marks_percentage || details.aggregate_percentage || details.score || details.gpa || details.cgpa || details.overall_gpa || details.overall_cgpa || details.total_percentage || details.grade || details.marks || details.obtained_marks;
+        const secured = details.total_marks_secured || details.marks_secured || details.marks_obtained || details.obtained_marks || details.secured_marks || details.total_marks || details.aggregate_marks || details.grand_total;
+        const max = details.total_marks_maximum || details.maximum_marks || details.max_marks || details.total_max || details.out_of || details.max;
 
         let computedPercentage: string | undefined = undefined;
         if (rawScore != null && rawScore !== '') {
@@ -1351,16 +1351,29 @@ export class UsersService implements OnModuleInit {
           if (!isNaN(numScore)) {
             if (numScore <= 10 && numScore > 0) {
               computedPercentage = String(Math.round(numScore * 9.5 * 10) / 10);
-            } else if (numScore <= 100) {
+            } else if (numScore <= 100 && numScore > 0) {
               computedPercentage = String(Math.round(numScore * 10) / 10);
+            } else if (numScore > 100) {
+              // rawScore was entered as secured marks (e.g. 850)
+              const inferredMax = numScore <= 500 ? 500 : numScore <= 600 ? 600 : 1000;
+              computedPercentage = String(Math.round((numScore / inferredMax) * 100 * 10) / 10);
             }
           }
         }
-        if (!computedPercentage && secured != null && max != null) {
+        if (!computedPercentage && secured != null && secured !== '') {
           const secNum = parseFloat(String(secured).replace(/[^\d.]/g, ''));
-          const maxNum = parseFloat(String(max).replace(/[^\d.]/g, ''));
-          if (!isNaN(secNum) && !isNaN(maxNum) && maxNum > 0) {
-            computedPercentage = String(Math.round((secNum / maxNum) * 100 * 10) / 10);
+          let maxNum = max != null && max !== '' ? parseFloat(String(max).replace(/[^\d.]/g, '')) : NaN;
+          if (!isNaN(secNum) && secNum > 0) {
+            if (isNaN(maxNum) || maxNum <= 0) {
+              if (secNum <= 100) {
+                computedPercentage = String(Math.round(secNum * 10) / 10);
+              } else {
+                maxNum = secNum <= 500 ? 500 : secNum <= 600 ? 600 : 1000;
+                computedPercentage = String(Math.round((secNum / maxNum) * 100 * 10) / 10);
+              }
+            } else {
+              computedPercentage = String(Math.round((secNum / maxNum) * 100 * 10) / 10);
+            }
           }
         }
 

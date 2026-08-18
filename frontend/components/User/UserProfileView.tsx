@@ -58,15 +58,15 @@ export default function UserProfileView({
     const coapplicantData = getParentData('coapplicant');
 
     const isDocTypeMatch = (docType: string, patterns: string[]) => {
-        const dt = (docType || '').toLowerCase();
+        const dt = (docType || '').toLowerCase().trim();
         return patterns.some(p => dt === p || dt.includes(p));
     };
 
-    const userDocs = data?.documents || [];
-    const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
-    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_12', '12th', 'hsc', 'intermediate', 'inter', 'diploma', 'diploma_marksheet', 'diploma_certificate', 'grade_12', 'grade12']));
-    const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_', 'cmm', 'cmm_certificate', 'consolidated_marks_memo', 'consolidated']));
-    const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType, ['passport']));
+    const userDocs = data?.documents || user?.documents || [];
+    const sscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name, ['marksheet_10', '10th', 'ssc', 'grade_10', 'grade10']));
+    const hscDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name, ['marksheet_12', '12th', 'hsc', 'intermediate', 'inter', 'diploma', 'diploma_marksheet', 'diploma_certificate', 'grade_12', 'grade12']));
+    const ugDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name, ['marksheet_ug', 'ug_degree', 'ug_transcript', 'degree_certificate', 'graduation_degree', 'graduation_transcript', 'graduation_certificate', 'bachelors_degree', 'degree', 'graduation', 'undergrad', 'ug_', 'cmm', 'cmm_certificate', 'consolidated_marks_memo', 'consolidated']));
+    const passportDoc = userDocs.find((d: any) => isDocTypeMatch(d.docType || d.type || d.documentType || d.name, ['passport']));
 
     const getExtractedField = (doc: any, fieldNames: string | string[]) => {
         if (!doc) return null;
@@ -152,13 +152,23 @@ export default function UserProfileView({
                 if (num <= 10 && num > 0) {
                     return `${Math.round(num * 9.5 * 10) / 10}%`;
                 }
-                return str.includes('%') ? str : `${Math.round(num * 10) / 10}%`;
+                if (num <= 100 && num > 0) {
+                    return str.includes('%') ? str : `${Math.round(num * 10) / 10}%`;
+                }
+                if (num > 100) {
+                    const inferredMax = num <= 500 ? 500 : num <= 600 ? 600 : 1000;
+                    return `${Math.round((num / inferredMax) * 100 * 10) / 10}%`;
+                }
             }
             return str;
         }
 
         if (doc) {
-            const pctVal = getExtractedField(doc, ['percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score', 'score_in_percentage']);
+            const pctVal = getExtractedField(doc, [
+                'percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 
+                'score', 'score_in_percentage', 'total_percentage', 'grade_percentage', 'marks_obtained_percentage',
+                'gpa', 'cgpa', 'overall_gpa', 'overall_cgpa'
+            ]);
             const secVal = getExtractedField(doc, ['total_marks_secured', 'marks_secured', 'marks_obtained', 'obtained_marks', 'secured_marks', 'total_marks', 'aggregate_marks', 'grand_total']);
             const maxVal = getExtractedField(doc, ['total_marks_maximum', 'maximum_marks', 'max_marks', 'total_max', 'out_of', 'max']);
             const wordsSecVal = getExtractedField(doc, ['marks_in_words', 'total_marks_in_words', 'secured_marks_in_words', 'marks_obtained_in_words']);
@@ -169,6 +179,10 @@ export default function UserProfileView({
                 const pctNum = parseFloat(String(pctVal).replace(/[^\d.]/g, ''));
                 if (!isNaN(pctNum) && pctNum > 0 && pctNum <= 100) {
                     return `${Math.round(pctNum * 10) / 10}%`;
+                }
+                if (!isNaN(pctNum) && pctNum > 100) {
+                    const inferredMax = pctNum <= 500 ? 500 : pctNum <= 600 ? 600 : 1000;
+                    return `${Math.round((pctNum / inferredMax) * 100 * 10) / 10}%`;
                 }
             }
 
@@ -206,12 +220,12 @@ export default function UserProfileView({
             'institution', 'university', 'board', 'school_name', 'college_name', 'board_name', 'institution_name', 'university_name', 'examining_body', 'name_of_institution', 'awarding_body', 'degree_college', 'college', 'board_or_university', 'institute', 'school', 'name_of_the_board', 'name_of_the_university'
         ];
         const pctKeys = [
-            'score', 'percentage', 'gpa', 'cgpa', 'overall_percentage', 'overall_gpa', 'marks_percentage', 'aggregate_percentage', 'total_marks_secured', 'overall_score', 'cgpa_secured', 'gpa_secured', 'total_percentage', 'grade', 'marks', 'obtained_marks', 'result'
+            'percentage', 'overall_percentage', 'marks_percentage', 'aggregate_percentage', 'score', 'score_in_percentage', 'total_percentage', 'grade_percentage', 'gpa', 'cgpa', 'overall_gpa', 'overall_cgpa', 'total_marks_secured', 'overall_score', 'cgpa_secured', 'gpa_secured', 'grade', 'marks', 'obtained_marks', 'result'
         ];
         const instFromDoc = getExtractedField(doc, instKeys);
         const pctFromDoc = getExtractedField(doc, pctKeys);
 
-        let parsedAcademic: any = data?.academic || data?.user?.academic || user?.academic;
+        let parsedAcademic: any = data?.academic || data?.user?.academic || user?.academic || (data as any)?.family?.academic || (data as any)?.user?.family?.academic || (user as any)?.family?.academic;
         if (typeof parsedAcademic === 'string') {
             try { parsedAcademic = JSON.parse(parsedAcademic); } catch { parsedAcademic = {}; }
         }
@@ -221,11 +235,11 @@ export default function UserProfileView({
         let pctFallback: string | undefined = undefined;
 
         if (levelKey === 'ssc') {
-            instFallback = parsedAcademic.ssc?.institute || parsedAcademic.grade10?.institute;
-            pctFallback = parsedAcademic.ssc?.percentage || parsedAcademic.grade10?.percentage;
+            instFallback = parsedAcademic.ssc?.institute || parsedAcademic.ssc?.school || parsedAcademic.grade10?.institute || parsedAcademic['10th']?.institute || parsedAcademic.marksheet_10?.institute;
+            pctFallback = parsedAcademic.ssc?.percentage || parsedAcademic.ssc?.score || parsedAcademic.grade10?.percentage || parsedAcademic['10th']?.percentage || parsedAcademic.marksheet_10?.percentage;
         } else if (levelKey === 'hsc') {
-            instFallback = parsedAcademic.hsc?.institute || parsedAcademic.grade12?.institute || parsedAcademic.inter?.institute;
-            pctFallback = parsedAcademic.hsc?.percentage || parsedAcademic.grade12?.percentage || parsedAcademic.inter?.percentage;
+            instFallback = parsedAcademic.hsc?.institute || parsedAcademic.hsc?.college || parsedAcademic.hsc?.school || parsedAcademic.intermediate?.institute || parsedAcademic.intermediate?.college || parsedAcademic['12th']?.institute || parsedAcademic.marksheet_12?.institute || parsedAcademic.grade12?.institute || parsedAcademic.inter?.institute;
+            pctFallback = parsedAcademic.hsc?.percentage || parsedAcademic.hsc?.score || parsedAcademic.intermediate?.percentage || parsedAcademic.intermediate?.score || parsedAcademic['12th']?.percentage || parsedAcademic.marksheet_12?.percentage || parsedAcademic.grade12?.percentage || parsedAcademic.inter?.percentage;
         } else if (levelKey === 'ug') {
             instFallback = parsedAcademic.ug?.institute || parsedAcademic.undergrad?.institute || parsedAcademic.undergrad?.university || data?.bachelorsDegree || data?.user?.bachelorsDegree || user?.bachelorsDegree;
             pctFallback = parsedAcademic.ug?.percentage || parsedAcademic.undergrad?.percentage || parsedAcademic.undergrad?.gpa || parsedAcademic.undergrad?.score;

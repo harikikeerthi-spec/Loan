@@ -494,46 +494,49 @@ export class KycService {
             passport: `
                 EXPECTED DOCUMENT TYPE: PASSPORT (Travel document issued by Passport Office)
 
-                ⚠️ IMPORTANT: The passport image may be ROTATED, SIDEWAYS, or UPSIDE DOWN. 
-                You MUST still read and extract ALL fields regardless of image orientation.
-                Rotate the image mentally if needed to read the text correctly.
+                ⚠️ MANDATORY REQUIREMENT: BOTH FRONT (BIODATA) AND BACK (ADDRESS & PARENTS) PAGES MUST BE PRESENT.
+                Indian and international passports consist of two vital pages:
+                1. FRONT PAGE (Biodata): Photo, Passport Number, Full Name, Given Names, Surname, Date of Birth, Gender, Place of Birth, Date of Issue, Date of Expiry, Place of Issue, MRZ ("P<IND...").
+                2. BACK PAGE (Address & Parents): Father/Legal Guardian Name, Mother Name, Spouse Name (if any), Address with PIN code, Old Passport/File Number.
 
-                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
-                - "AADHAAR" or "UNIQUE IDENTIFICATION" or "UIDAI"
-                - "INCOME TAX" or "PERMANENT ACCOUNT" or "PAN CARD"
-                - "12-digit" Aadhaar number pattern without passport markers
-                
-                If ANY above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual type, do NOT extract fields.
+                In the AI response:
+                - front_page_present: boolean (true if front biodata page with photo/passport number/MRZ is visible)
+                - back_page_present: boolean (true if back page with address and/or parents' names is visible)
+                - both_pages_present: boolean (true ONLY if BOTH front and back pages are visible in the image/PDF)
 
-                ACCEPT ONLY IF YOU DETECT:
-                - "PASSPORT" text
-                - "REPUBLIC OF INDIA" with "PASSPORT" header
-                - "P<" or MRZ (Machine Readable Zone)
-                - Passport office/authority text
-                - Passport number in format (e.g., A12345678)
+                ⚠️  REJECT IMMEDIATELY IF:
+                - Only Front page is present (back_page_present = false): Set is_valid = false, fraud_reason = 'PASSPORT_BACK_PAGE_MISSING'.
+                - Only Back page is present (front_page_present = false): Set is_valid = false, fraud_reason = 'PASSPORT_FRONT_PAGE_MISSING'.
+                - Document is not a passport (e.g. Aadhaar, PAN, Marksheet): Set is_valid = false, fraud_reason = 'WRONG_DOCUMENT_TYPE_UPLOADED'.
 
-                extracted_data fields (extract each ONCE, exactly as printed on the passport):
-                - passport_number
-                - full_name: MANDATORY. Full name as on biodata page (given names then surname, single line). If given_names and surname are separate fields on the passport, combine them as "GIVEN_NAMES SURNAME". This field MUST always be present.
+                extracted_data fields (extract from both pages):
+                - passport_number: (e.g., A12345678 or 8 alphanumeric characters)
+                - full_name: MANDATORY. Full name as on biodata page. Combine given_names and surname as "GIVEN_NAMES SURNAME".
                 - given_names: given name(s) as printed
                 - surname: surname/family name as printed
-                - father_name: father's / legal guardian's full name printed on the passport back page (if visible)
-                - mother_name: mother's full name printed on the passport back page (if visible)
+                - father_name: father's / legal guardian's name printed on passport back page
+                - mother_name: mother's full name printed on passport back page
+                - spouse_name: spouse name if printed on back page
                 - dob (DD/MM/YYYY)
                 - gender: lowercase "male" or "female"
                 - date_of_issue (DD/MM/YYYY)
                 - date_of_expiry (DD/MM/YYYY)
-                - issue_country: country where passport was issued (e.g. "India", not the city)
-                - place_of_issue: city/passport office only (e.g. "HYDERABAD") — not the country
+                - issue_country: country where passport was issued (e.g. "India")
+                - place_of_issue: city/passport office (e.g. "HYDERABAD")
+                - place_of_birth: full Place of Birth line (e.g. "HYDERABAD, TELANGANA")
                 - birth_city: city from Place of Birth
                 - birth_country: country from Place of Birth (e.g. "India")
-                - place_of_birth: full Place of Birth line if shown (e.g. "HYDERABAD, TELANGANA")
-                - nationality: e.g. "INDIAN"
-                - address: full address printed on the passport (address page). Use string or:
-                  { "address1", "address2", "city", "state", "pincode", "country" }
-                is_valid: true when passport with readable name and passport_number.
-                
-                CRITICAL: full_name MUST be extracted. If you can read given_names and surname separately, always also return full_name as "given_names surname". Never leave full_name empty if the passport has a name printed on it.
+                - nationality: (e.g. "INDIAN")
+                - address: full address printed on passport back page (address page). Use string or { "address1", "address2", "city", "state", "pincode", "country" }
+                - file_number: file number printed on passport back page (if visible)
+                - front_page_present: boolean
+                - back_page_present: boolean
+                - both_pages_present: boolean
+
+                document_validation:
+                { "front_page_present": boolean, "back_page_present": boolean, "mrz_present": boolean, "passport_number_valid": boolean, "address_present": boolean, "parents_names_present": boolean }
+
+                is_valid: true ONLY when BOTH front_page_present AND back_page_present are true AND passport_number AND full_name are readable.
             `,
             marksheet_10: `
                 EXPECTED DOCUMENT TYPE: GRADE 10 / SSC MARKSHEET/CERTIFICATE
@@ -750,15 +753,22 @@ export class KycService {
             const lowerType = String(docType || '').toLowerCase();
             const isAadhaar = lowerType.includes('aadhaar') || lowerType.includes('aadhar') || lowerType.includes('national_id');
             const isPan = lowerType.includes('pan');
+            const isPassport = lowerType.includes('passport');
 
             let isValid = parsed.is_valid ?? (parsed.confidence_score >= 60);
             let validationError: string | undefined;
             let documentValidation = parsed.document_validation;
 
-            // Check for fraud_reason indicating wrong document type
+            // Check for fraud_reason indicating wrong document type or missing passport pages
             if (parsed.fraud_reason === 'WRONG_DOCUMENT_TYPE_UPLOADED') {
                 isValid = false;
                 validationError = `Document type mismatch: Expected a valid ${docType.toUpperCase().replace(/_/g, ' ')}, but the uploaded document appears to be a ${String(parsed.document_type || 'different document').toUpperCase()}. Please upload the correct document.`;
+            } else if (parsed.fraud_reason === 'PASSPORT_BACK_PAGE_MISSING') {
+                isValid = false;
+                validationError = 'Passport verification rejected: Only the Front page (Biodata) was detected. Both the Front page and Back page (Address & Parents details) of your Passport are required. Please upload a document containing BOTH pages.';
+            } else if (parsed.fraud_reason === 'PASSPORT_FRONT_PAGE_MISSING') {
+                isValid = false;
+                validationError = 'Passport verification rejected: Only the Back page (Address & Parents) was detected. Both the Front page (Biodata with Photo & Passport Number) and Back page of your Passport are required. Please upload a document containing BOTH pages.';
             } else {
                 // Strict document type validation check
                 const expectedNorm = this.normalizeDocTypeForComparison(docType);
@@ -771,7 +781,7 @@ export class KycService {
                     validationError = `Document type mismatch: Expected a valid ${docType.toUpperCase().replace(/_/g, ' ')}, but AI detected ${String(rawDetectedType || 'an invalid/unrecognized document').toUpperCase()}. Please upload the correct ${expectedNorm.toUpperCase()} document.`;
                 }
 
-                // ALWAYS run Aadhaar and PAN specific validation rules!
+                // ALWAYS run Aadhaar, PAN, and Passport specific validation rules!
                 if (isAadhaar) {
                     const aadhaarValidation = this.validateAadhaarDocument(parsed, extracted);
                     if (!aadhaarValidation.is_valid) {
@@ -784,6 +794,12 @@ export class KycService {
                     if (!panValidation.is_valid) {
                         isValid = false;
                         validationError = panValidation.error;
+                    }
+                } else if (isPassport) {
+                    const passportValidation = this.validatePassportDocument(parsed, extracted);
+                    if (!passportValidation.is_valid) {
+                        isValid = false;
+                        validationError = passportValidation.error;
                     }
                 } else if (!isCustomDoc && !extracted.full_name && Object.keys(extracted).length === 0) {
                     isValid = false;
@@ -874,6 +890,130 @@ export class KycService {
             return {
                 is_valid: false,
                 error: `Document verification failed: Uploaded file is not a valid Aadhaar Card. Missing: ${failedLabels.join(', ')}. Only official Aadhaar Cards issued by UIDAI must be uploaded for Aadhaar verification.`,
+            };
+        }
+
+        return { is_valid: true };
+    }
+
+    private validatePassportDocument(
+        parsed: any,
+        extracted: any,
+    ): { is_valid: boolean; error?: string } {
+        if (
+            parsed?.fraud_reason === 'WRONG_DOCUMENT_TYPE_UPLOADED' ||
+            (parsed?.document_type &&
+                !parsed.document_type.toLowerCase().includes('passport'))
+        ) {
+            const detected = String(parsed?.document_type || 'non-Passport document')
+                .toUpperCase()
+                .replace(/_/g, ' ');
+            return {
+                is_valid: false,
+                error: `Document verification failed: The uploaded file was detected as a ${detected}. Only official Passports must be uploaded for Passport verification.`,
+            };
+        }
+
+        const rawText = String(
+            parsed?.raw_text_summary ||
+                parsed?.rawOcrText ||
+                extracted?.raw_text_summary ||
+                '',
+        ).toLowerCase();
+        const docVal = parsed?.document_validation || {};
+
+        // 1. Detect Front Page (Biodata)
+        const hasPassportNum = !!(
+            extracted.passport_number &&
+            String(extracted.passport_number).trim().length >= 6
+        );
+        const hasName = !!(
+            extracted.full_name ||
+            extracted.given_names ||
+            extracted.surname
+        );
+        const hasMrz = !!(
+            docVal.mrz_present ||
+            rawText.includes('p<') ||
+            rawText.includes('p<ind') ||
+            extracted.mrz_line1 ||
+            extracted.mrz_line2
+        );
+        const hasFrontIndicators =
+            docVal.front_page_present ||
+            extracted.front_page_present ||
+            (hasPassportNum && (hasName || hasMrz || extracted.dob));
+
+        // 2. Detect Back Page (Address & Parents)
+        const hasParents = !!(
+            extracted.father_name ||
+            extracted.mother_name ||
+            extracted.spouse_name ||
+            extracted.guardian_name
+        );
+        const hasAddress = !!(
+            extracted.address &&
+            String(
+                typeof extracted.address === 'object'
+                    ? JSON.stringify(extracted.address)
+                    : extracted.address,
+            ).trim().length > 8
+        );
+        const hasFileNum = !!(
+            extracted.file_number ||
+            rawText.includes('file no') ||
+            rawText.includes('old passport')
+        );
+        const hasBackKeywords =
+            rawText.includes('father') ||
+            rawText.includes('mother') ||
+            rawText.includes('spouse') ||
+            rawText.includes('legal guardian') ||
+            rawText.includes('address') ||
+            rawText.includes('pin :') ||
+            rawText.includes('pin code') ||
+            rawText.includes('pin:');
+        const hasBackIndicators =
+            docVal.back_page_present ||
+            extracted.back_page_present ||
+            (hasParents && hasAddress) ||
+            (hasAddress && hasBackKeywords) ||
+            (hasParents && hasFileNum);
+
+        // Check if only one side is uploaded or missing both
+        if (!hasFrontIndicators && !hasBackIndicators) {
+            return {
+                is_valid: false,
+                error: 'Passport verification rejected: Unable to detect valid Passport pages. Both the Front page (Biodata with Photo) and Back page (Address & Parents details) of your Passport are required. Please upload a clear document showing BOTH pages.',
+            };
+        }
+
+        if (hasFrontIndicators && !hasBackIndicators) {
+            return {
+                is_valid: false,
+                error: 'Passport verification rejected: Only the Front page (Biodata) was detected. Both the Front page and Back page (Address & Parents details) of your Passport are required. Please upload a document containing BOTH pages.',
+            };
+        }
+
+        if (!hasFrontIndicators && hasBackIndicators) {
+            return {
+                is_valid: false,
+                error: 'Passport verification rejected: Only the Back page (Address & Parents) was detected. Both the Front page (Biodata with Photo & Passport Number) and Back page of your Passport are required. Please upload a document containing BOTH pages.',
+            };
+        }
+
+        // Both pages present — ensure basic validity
+        if (!hasPassportNum) {
+            return {
+                is_valid: false,
+                error: 'Passport verification rejected: Valid Passport Number could not be read from the Front page. Please ensure both Front and Back pages are clearly legible.',
+            };
+        }
+
+        if (!hasName) {
+            return {
+                is_valid: false,
+                error: 'Passport verification rejected: Full Name could not be read from the Front page. Please ensure both Front and Back pages are clearly legible.',
             };
         }
 

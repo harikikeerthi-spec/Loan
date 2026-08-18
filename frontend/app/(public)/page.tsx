@@ -6,6 +6,11 @@ import AnimatedNumber from "../../components/AnimatedNumber";
 import InteractiveEMI from "../../components/InteractiveEMI";
 import ToolCard from "../../components/ToolCard";
 import PostAdmissionServicesSection from "../../components/PostAdmissionServicesSection";
+import MobileLendersCardSlider from "../../components/MobileLendersCardSlider";
+import MobileStepSlider from "../../components/MobileStepSlider";
+import MobileTestimonialsSlider from "../../components/MobileTestimonialsSlider";
+import MobileFloatingActionBar from "../../components/MobileFloatingActionBar";
+import WebsiteLaunchCountdown from "../../components/WebsiteLaunchCountdown";
 import { lenders, features } from "../../data/home";
 import { fetchTopGoogleReviews } from "../../lib/googleReviews";
 
@@ -62,6 +67,9 @@ export default async function HomePage() {
 
     return (
         <div className="relative min-h-screen text-gray-900 bg-gradient-to-b from-[#f5eeff] via-[#faf5ff] to-[#f5eeff] selection:bg-[#6605c7]/20">
+            {/* Website Launch Countdown & Celebration Overlay */}
+            <WebsiteLaunchCountdown />
+
             {/* Global Ambient Page Background Canvas */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
                 <div className="absolute top-0 left-0 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] rounded-full blur-[140px] opacity-60" style={{ background: 'radial-gradient(circle, #d8b4fe 0%, transparent 70%)' }} />
@@ -223,15 +231,13 @@ export default async function HomePage() {
                             <div className="absolute inset-0 scale-105 rounded-xl blur-2xl opacity-20" style={{ background: 'linear-gradient(135deg, #d8b4fe, #fed7aa)' }} />
                             <div className="relative rounded-xl overflow-hidden shadow-[0_30px_60px_-15px_rgba(102,5,199,0.15)] border-4 border-white/70 group">
                                 <Image
-                                    src="/images/hero/students-abroad.jpg"
+                                    src="/images/hero-3d.jpg"
                                     alt="Students studying abroad"
                                     width={1200}
                                     height={900}
                                     className="w-full h-auto object-cover transition-transform duration-1000 group-hover:scale-105"
                                     priority
                                     fetchPriority="high"
-                                    placeholder="blur"
-                                    blurDataURL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlMGUwZTAiLz48L3N2Zz4="
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                             </div>
@@ -510,13 +516,24 @@ export default async function HomePage() {
                             <div className="hidden lg:block absolute top-[3.5rem] left-[12%] right-[12%] h-px rounded-full" style={{ background: 'linear-gradient(90deg, transparent, #c084fc 20%, #6605c7 50%, #c084fc 80%, transparent)' }} />
                             <div className="hidden lg:block absolute top-[3.5rem] w-2 h-2 rounded-full -translate-y-1/2 -translate-x-1/2 animate-pulse" style={{ background: '#6605c7', left: '50%', boxShadow: '0 0 12px #a855f7' }} />
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {/* Mobile Steps Slider */}
+                            <MobileStepSlider
+                                steps={[
+                                    { num: '01', emoji: '📋', title: 'Check Eligibility', desc: 'Answer a few smart questions about your university, course, and financial profile.', time: '2 mins', chips: ['No credit score', 'AI-assisted'], color: '#7c3aed', bg: '#f5f0ff', border: '#c4b5fd' },
+                                    { num: '02', emoji: '⚖️', title: 'Compare Offers', desc: 'Get personalized loan offers from 5+ lenders. Compare rates and terms.', time: '5 mins', chips: ['5+ lenders', 'Best rates'], color: '#0284c7', bg: '#e0f2fe', border: '#7dd3fc' },
+                                    { num: '03', emoji: '📁', title: 'Apply Online', desc: 'Complete your application digitally. Upload documents and e-sign securely.', time: '10 mins', chips: ['100% digital', 'e-KYC'], color: '#059669', bg: '#ecfdf5', border: '#6ee7b7' },
+                                    { num: '04', emoji: '💸', title: 'Get Funded', desc: 'Receive your sanction letter in 48 hours. Funds disbursed to your university.', time: '48 hrs', chips: ['Fastest', 'Zero fees'], color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
+                                ]}
+                            />
+
+                            {/* Desktop Steps Grid */}
+                            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {[
                                     { num: '01', emoji: '📋', title: 'Check Eligibility', desc: 'Answer a few smart questions about your university, course, and financial profile.', time: '2 mins', chips: ['No credit score', 'AI-assisted'], color: '#7c3aed', bg: '#f5f0ff', border: '#c4b5fd' },
                                     { num: '02', emoji: '⚖️', title: 'Compare Offers', desc: 'Get personalized loan offers from 5+ lenders. Compare rates and terms.', time: '5 mins', chips: ['5+ lenders', 'Best rates'], color: '#0284c7', bg: '#e0f2fe', border: '#7dd3fc' },
                                     { num: '03', emoji: '📁', title: 'Apply Online', desc: 'Complete your application digitally. Upload documents and e-sign securely.', time: '10 mins', chips: ['100% digital', 'e-KYC'], color: '#059669', bg: '#ecfdf5', border: '#6ee7b7' },
                                     { num: '04', emoji: '💸', title: 'Get Funded', desc: 'Receive your sanction letter in 48 hours. Funds disbursed to your university.', time: '48 hrs', chips: ['Fastest', 'Zero fees'], color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
-                                ].map((step, idx) => (
+                                ].map((step) => (
                                     <div key={step.num} className="group relative flex flex-col items-center text-center">
                                         <div
                                             className="relative w-28 h-28 rounded-xl flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110 shadow-lg"
@@ -605,17 +622,22 @@ export default async function HomePage() {
                     </div>
                 </section>
 
-                {/* Lending Partners Table */}
+                {/* Lending Partners Table / Mobile Slider */}
                 <section className="py-24 bg-transparent border-t border-purple-900/5">
                     <div className="max-w-7xl mx-auto px-6">
-                        <div className="text-center mb-16">
+                        <div className="text-center mb-10 md:mb-16">
                             <span className="inline-block px-4 py-1.5 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[11px] font-black uppercase tracking-widest mb-4 border border-[#6605c7]/15">
                                 Banking Network
                             </span>
                             <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Our Lending Partners</h2>
                             <p className="text-gray-500 text-[13px] font-medium">Compare interest rates, processing times & fees from India&apos;s top lenders</p>
                         </div>
-                        <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-xl bg-white/40 backdrop-blur-sm will-change-transform">
+
+                        {/* Mobile Interactive Lender Card Slider */}
+                        <MobileLendersCardSlider lenders={activeLenders} />
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-100 shadow-xl bg-white/40 backdrop-blur-sm will-change-transform">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50/50 text-gray-900 border-b border-gray-100">
                                     <tr>
@@ -662,7 +684,7 @@ export default async function HomePage() {
                 {/* Testimonials */}
                 <section className="py-24 bg-transparent">
                     <div className="max-w-7xl mx-auto px-6">
-                        <div className="text-center mb-16">
+                        <div className="text-center mb-10 md:mb-16">
                             <span className="inline-block px-4 py-1.5 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[11px] font-black uppercase tracking-widest mb-4 border border-[#6605c7]/15">
                                 Testimonials
                             </span>
@@ -671,7 +693,18 @@ export default async function HomePage() {
                             </h2>
                             <p className="text-gray-500 text-[13px] font-medium">Real stories from students who funded their dreams with us</p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                        {/* Mobile Testimonials Interactive Slider */}
+                        <MobileTestimonialsSlider
+                            testimonials={dynamicTestimonials && dynamicTestimonials.length > 0 ? dynamicTestimonials : [
+                                { name: "Priya Sharma", school: "MS Computer Science, NYU", quote: "VidyaLoans made my dream of studying at NYU possible. Got my loan approved in just 48 hours with zero hassle!", highlight: "₹45 Lakhs", highlightLabel: "Loan Approved" },
+                                { name: "Rahul Mehta", school: "MBA, Oxford Said", quote: "Comparing 20+ lenders saved me over 1.5% in interest rate. The loan counsellor walked me through every single step.", highlight: "8.65%", highlightLabel: "Interest Rate" },
+                                { name: "Ananya Reddy", school: "MS Data Science, Univ. of Melbourne", quote: "Completely paperless! DigiLocker sync and digital signatures took only 10 minutes. Highly recommended for study abroad.", highlight: "48 Hours", highlightLabel: "Turnaround Time" },
+                            ]}
+                        />
+
+                        {/* Desktop Testimonials 3-Card Grid */}
+                        <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-6">
                             {[
                                 { bg: "bg-[#e7e1f7]", borderColor: "border-[#6605c7]/10", accent: "text-[#6605c7]" },
                                 { bg: "bg-[#fdfaf2]", borderColor: "border-amber-200/50", accent: "text-amber-600" },
@@ -881,6 +914,9 @@ export default async function HomePage() {
                     </div>
                 </section>
             </div>
+
+            {/* Mobile Native App Floating Action Bar */}
+            <MobileFloatingActionBar />
         </div>
     );
 }
