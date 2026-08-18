@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 // Target launch date: 19-08-2026 11:09 AM IST
-const DEFAULT_LAUNCH_DATE = "2026-08-19T00:51:30+05:30";
+const DEFAULT_LAUNCH_DATE = "2026-08-19T11:09:30+05:30";
 
 interface TimeLeft {
     days: number;
