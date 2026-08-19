@@ -10,7 +10,6 @@ import MobileLendersCardSlider from "../../components/MobileLendersCardSlider";
 import MobileStepSlider from "../../components/MobileStepSlider";
 import MobileTestimonialsSlider from "../../components/MobileTestimonialsSlider";
 import MobileFloatingActionBar from "../../components/MobileFloatingActionBar";
-import WebsiteLaunchCountdown from "../../components/WebsiteLaunchCountdown";
 import { lenders, features } from "../../data/home";
 import { fetchTopGoogleReviews } from "../../lib/googleReviews";
 
@@ -67,9 +66,6 @@ export default async function HomePage() {
 
     return (
         <div className="relative min-h-screen text-gray-900 bg-gradient-to-b from-[#f5eeff] via-[#faf5ff] to-[#f5eeff] selection:bg-[#6605c7]/20">
-            {/* Website Launch Countdown & Celebration Overlay */}
-            <WebsiteLaunchCountdown />
-
             {/* Global Ambient Page Background Canvas */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
                 <div className="absolute top-0 left-0 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] rounded-full blur-[140px] opacity-60" style={{ background: 'radial-gradient(circle, #d8b4fe 0%, transparent 70%)' }} />

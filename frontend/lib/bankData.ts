@@ -76,7 +76,7 @@ export const banks: Record<string, BankData> = {
         specifications: [
             { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "Up to ₹40 Lakhs" },
-            { label: "Processing Fee", value: "5.7% + GST" },
+            { label: "Processing Fee", value: "1% + GST" },
             { label: "Repayment Tenure", value: "Up to 15 years" },
             { label: "Moratorium Period", value: "Course + 12 months" },
             { label: "Collateral", value: "Not required up to ₹40L" }
@@ -135,7 +135,7 @@ export const banks: Record<string, BankData> = {
         specifications: [
             { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "No Upper Limit" },
-            { label: "Processing Fee", value: "5.7% + GST" },
+            { label: "Processing Fee", value: "1% + GST" },
             { label: "Repayment Tenure", value: "Up to 10 years" },
             { label: "Moratorium Period", value: "Course Duration + 6 months" },
             { label: "Collateral", value: "Both Secured & Unsecured" }
@@ -195,7 +195,7 @@ export const banks: Record<string, BankData> = {
         specifications: [
             { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "No Upper Limit" },
-            { label: "Processing Fee", value: "5.7% + GST" },
+            { label: "Processing Fee", value: "1% + GST" },
             { label: "Repayment Tenure", value: "Up to 15 years" },
             { label: "Moratorium Period", value: "Course Duration + 6 months" },
             { label: "Collateral", value: "Not required up to ₹50L" }
@@ -254,7 +254,7 @@ export const banks: Record<string, BankData> = {
         specifications: [
             { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "No Upper Limit" },
-            { label: "Processing Fee", value: "5.7% + GST" },
+            { label: "Processing Fee", value: "1% + GST" },
             { label: "Repayment Tenure", value: "Up to 15 years" },
             { label: "Moratorium Period", value: "Course Duration + 12 months" },
             { label: "Collateral", value: "Both Secured & Unsecured" }
@@ -313,7 +313,7 @@ export const banks: Record<string, BankData> = {
         specifications: [
             { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "Up to ₹50 Lakhs" },
-            { label: "Processing Fee", value: "5.7% + GST" },
+            { label: "Processing Fee", value: "1% + GST" },
             { label: "Repayment Tenure", value: "Up to 10 years" },
             { label: "Moratorium Period", value: "Course Duration + 6 months" },
             { label: "Collateral", value: "Unsecured up to ₹50L" }
