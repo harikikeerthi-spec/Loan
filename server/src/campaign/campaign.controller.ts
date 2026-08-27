@@ -43,6 +43,45 @@ export class CampaignController {
     );
   }
 
+  // --- Student Recipients & Sent Email Logs ---
+  @Get('recipients')
+  @UseGuards(StaffGuard)
+  async getCampaignRecipients(
+    @Query('campaignId') campaignId?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.campaignService.getCampaignRecipients({
+      campaignId,
+      status,
+      search,
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+    });
+  }
+
+  @Get('recipients/:recipientId')
+  @UseGuards(StaffGuard)
+  async getRecipientEmailPreview(@Param('recipientId') recipientId: string) {
+    return this.campaignService.getRecipientEmailPreview(recipientId);
+  }
+
+  @Get('logs')
+  @UseGuards(StaffGuard)
+  async getEmailLogs(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.campaignService.getEmailLogs(
+      limit ? parseInt(limit, 10) : 100,
+      offset ? parseInt(offset, 10) : 0,
+      status,
+    );
+  }
+
   // --- Audience Builder Filters ---
   @Get('audience')
   @UseGuards(StaffGuard)

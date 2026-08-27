@@ -1852,6 +1852,19 @@ export const campaignApi = {
     createAutomationRule: (data: any) => apiFetch(`${API_URL}/campaigns/automation`, { method: "POST", body: JSON.stringify(data) }),
     getPromptHistory: () => apiFetch(`${API_URL}/campaigns/prompt-history`),
     getOverviewStats: () => apiFetch(`${API_URL}/campaigns/analytics/overview`),
+    getRecipients: (filters: { campaignId?: string; status?: string; search?: string; limit?: number; offset?: number } = {}) => {
+        const q = new URLSearchParams();
+        Object.entries(filters).forEach(([k, v]) => {
+            if (v !== undefined && v !== '' && v !== null) q.set(k, String(v));
+        });
+        return apiFetch(`${API_URL}/campaigns/recipients?${q.toString()}`);
+    },
+    getRecipientPreview: (recipientId: string) => apiFetch(`${API_URL}/campaigns/recipients/${recipientId}`),
+    getEmailLogs: (limit = 100, offset = 0, status?: string) => {
+        let url = `${API_URL}/campaigns/logs?limit=${limit}&offset=${offset}`;
+        if (status) url += `&status=${status}`;
+        return apiFetch(url);
+    },
 };
 
 // ─── Support Ticket API ───────────────────────────────────────────────────────

@@ -1130,6 +1130,7 @@ export default function AdminDashboardPage() {
     const marketingNavItems = [
         { section: "campaigns_dashboard", icon: "dashboard", label: "Dashboard" },
         { section: "campaigns_create", icon: "add_circle", label: "Create Campaign" },
+        { section: "campaigns_student_emails", icon: "mark_email_read", label: "Sent Student Emails" },
         { section: "campaigns_templates", icon: "style", label: "Campaign Templates" },
         { section: "campaigns_audience", icon: "group", label: "Audience Builder" },
         { section: "campaigns_scheduled", icon: "schedule", label: "Scheduled Campaigns" },

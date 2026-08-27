@@ -65,16 +65,7 @@ export default async function HomePage() {
     })) : lenders;
 
     return (
-        <div className="relative min-h-screen text-gray-900 bg-gradient-to-b from-[#f5eeff] via-[#faf5ff] to-[#f5eeff] selection:bg-[#6605c7]/20">
-            {/* Global Ambient Page Background Canvas */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-                <div className="absolute top-0 left-0 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] rounded-full blur-[140px] opacity-60" style={{ background: 'radial-gradient(circle, #d8b4fe 0%, transparent 70%)' }} />
-                <div className="absolute top-[18%] right-0 w-[50vw] h-[50vw] max-w-[700px] max-h-[700px] rounded-full blur-[140px] opacity-45" style={{ background: 'radial-gradient(circle, #fed7aa 0%, transparent 70%)' }} />
-                <div className="absolute top-[42%] left-[-10%] w-[55vw] h-[55vw] max-w-[750px] max-h-[750px] rounded-full blur-[140px] opacity-40" style={{ background: 'radial-gradient(circle, #c4b5fd 0%, transparent 70%)' }} />
-                <div className="absolute top-[68%] right-[-10%] w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] rounded-full blur-[140px] opacity-50" style={{ background: 'radial-gradient(circle, #e9d5ff 0%, transparent 70%)' }} />
-                <div className="absolute bottom-0 left-[15%] w-[50vw] h-[50vw] max-w-[700px] max-h-[700px] rounded-full blur-[140px] opacity-40" style={{ background: 'radial-gradient(circle, #eddcfd 0%, transparent 70%)' }} />
-            </div>
-
+        <div className="relative min-h-screen text-gray-900 bg-transparent selection:bg-[#6605c7]/20">
             <div className="relative z-10">
                 {/* Floating Referral Badge - Premium Design */}
                 <Link
@@ -141,13 +132,6 @@ export default async function HomePage() {
 
                 {/* Hero Section */}
                 <section className="relative min-h-screen flex items-center pt-28 overflow-hidden bg-transparent">
-                    <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-50" style={{ background: 'radial-gradient(circle, #d8b4fe, transparent)' }} />
-                        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] opacity-40" style={{ background: 'radial-gradient(circle, #fed7aa, transparent)' }} />
-                        <div className="absolute top-1/3 right-1/3 w-64 h-64 rounded-full blur-[80px] opacity-20" style={{ background: 'radial-gradient(circle, #c4b5fd, transparent)' }} />
-                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, #6605c7 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-                    </div>
-
                     <div className="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full border border-purple-200/40 pointer-events-none" />
                     <div className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full border border-purple-100/30 pointer-events-none" />
 

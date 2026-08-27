@@ -1,7 +1,8 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OpenRouterService } from '../ai/services/openrouter.service';
 import { EmailService } from '../auth/email.service';
+import { CampaignProcessorService } from './campaign-processor.service';
 
 @Injectable()
 export class CampaignService {
@@ -11,6 +12,8 @@ export class CampaignService {
     private readonly prisma: PrismaService,
     private readonly openRouter: OpenRouterService,
     private readonly emailService: EmailService,
+    @Inject(forwardRef(() => CampaignProcessorService))
+    private readonly campaignProcessor: CampaignProcessorService,
   ) { }
 
   // ─── Campaign CRUD Operations ──────────────────────────────────────────────
@@ -336,35 +339,20 @@ export class CampaignService {
       },
     });
 
-    // 6. Process recipients in the background asynchronously
-    (async () => {
-      // Transition campaign status to 'sending'
-      await this.prisma.campaign.update({
-        where: { id },
-        data: { status: 'sending', updatedAt: new Date() },
-      }).catch(e => this.logger.error(`Error updating campaign status to sending: ${e.message}`));
+    // 6. Trigger rate-limited background queue processor (60 emails/minute = 1 email/sec)
+    setTimeout(() => {
+      this.campaignProcessor.processQueuedEmails().catch(e => {
+        this.logger.error(`Error in queue processor trigger: ${e.message}`);
+      });
+    }, 100);
 
-      for (const r of recipients) {
-        try {
-          await this.processRecipientEmail(id, r.id);
-        } catch (err: any) {
-          this.logger.error(`Error processing email for recipient ${r.id}: ${err.message}`);
-        }
-      }
-
-      // Transition campaign status to 'completed'
-      await this.prisma.campaign.update({
-        where: { id },
-        data: { status: 'completed', updatedAt: new Date() },
-      }).catch(e => this.logger.error(`Error updating campaign status to completed: ${e.message}`));
-    })();
-
-    this.logger.log(`Started background processing for ${recipients.length} recipients for campaign ${campaign.name}`);
+    this.logger.log(`[EmailQueue] Successfully queued ${recipients.length} emails for campaign "${campaign.name}" with rate limit of 60 emails/minute.`);
 
     return {
       success: true,
-      message: 'Campaign recipients queued successfully',
+      message: 'Campaign recipients enqueued successfully. Processing via queue at 60 emails/minute.',
       queuedCount: recipients.length,
+      rateLimit: '60 emails / minute (1 email/sec)',
     };
   }
 
@@ -767,26 +755,277 @@ export class CampaignService {
     return { success: true, data: prompts };
   }
 
+  // ─── Student Recipients & Sent Emails Logs ──────────────────────────────────
+
+  async getCampaignRecipients(options: {
+    campaignId?: string;
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const { campaignId, status, search, limit = 50, offset = 0 } = options;
+    const where: any = {};
+    if (campaignId && campaignId !== 'all') where.campaignId = campaignId;
+    if (status && status !== 'all') where.status = status;
+    if (search) {
+      where.OR = [
+        { recipientEmail: { contains: search, mode: 'insensitive' } },
+        { recipientName: { contains: search, mode: 'insensitive' } },
+        { campaign: { name: { contains: search, mode: 'insensitive' } } },
+        { campaign: { subject: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.campaignRecipient.findMany({
+        where,
+        orderBy: [{ sentAt: 'desc' }, { createdAt: 'desc' }],
+        skip: offset,
+        take: limit,
+        include: {
+          campaign: {
+            select: {
+              id: true,
+              name: true,
+              subject: true,
+              body: true,
+              campaignType: true,
+            },
+          },
+        },
+      }),
+      this.prisma.campaignRecipient.count({ where }),
+    ]);
+
+    // Enhance with user profile details if userId is present
+    const userIds = data.map(r => r.userId).filter(Boolean) as string[];
+    const users = userIds.length > 0
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            studyDestination: true,
+            targetUniversity: true,
+            courseName: true,
+            loanAmount: true,
+            mobile: true,
+          },
+        })
+      : [];
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    const enriched = data.map(r => {
+      const user = r.userId ? userMap.get(r.userId) : null;
+      return {
+        ...r,
+        user: user || {
+          firstName: r.recipientName?.split(' ')[0] || 'Student',
+          lastName: r.recipientName?.split(' ').slice(1).join(' ') || '',
+          email: r.recipientEmail,
+          studyDestination: (r.variables as any)?.country || '',
+          targetUniversity: (r.variables as any)?.university || '',
+          courseName: (r.variables as any)?.course || '',
+          loanAmount: (r.variables as any)?.loanAmount || '',
+        },
+      };
+    });
+
+    return {
+      success: true,
+      data: enriched,
+      pagination: {
+        total,
+        limit,
+        offset,
+      },
+    };
+  }
+
+  async getRecipientEmailPreview(recipientId: string) {
+    const recipient = await this.prisma.campaignRecipient.findUnique({
+      where: { id: recipientId },
+      include: {
+        campaign: true,
+      },
+    });
+
+    if (!recipient) {
+      throw new NotFoundException(`Recipient with ID ${recipientId} not found`);
+    }
+
+    let user: any = null;
+    if (recipient.userId) {
+      user = await this.prisma.user.findUnique({
+        where: { id: recipient.userId },
+        include: {
+          loanApplications: { take: 1, orderBy: { date: 'desc' } },
+        },
+      });
+    }
+
+    // Build the personalized body from campaign template + variables
+    const vars: any = (recipient.variables as any) || {};
+    let renderedSubject = recipient.campaign.subject;
+    let renderedBody = recipient.campaign.body;
+
+    const studentName = vars.studentName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || recipient.recipientName || 'Student';
+    const firstName = studentName.split(' ')[0] || 'Student';
+    const university = vars.university || user?.targetUniversity || 'your chosen university';
+    const country = vars.country || user?.studyDestination || 'your study destination';
+    const loanAmount = vars.loanAmount || user?.loanAmount || 'eligible loan amount';
+    const dashboardUrl = vars.dashboardUrl || 'https://vidyaloan.com/dashboard';
+
+    renderedSubject = renderedSubject
+      .replace(/{{studentName}}/g, studentName)
+      .replace(/{{firstName}}/g, firstName)
+      .replace(/{{university}}/g, university)
+      .replace(/{{targetUniversity}}/g, university)
+      .replace(/{{country}}/g, country)
+      .replace(/{{loanAmount}}/g, loanAmount);
+
+    renderedBody = renderedBody
+      .replace(/{{studentName}}/g, studentName)
+      .replace(/{{firstName}}/g, firstName)
+      .replace(/{{university}}/g, university)
+      .replace(/{{targetUniversity}}/g, university)
+      .replace(/{{country}}/g, country)
+      .replace(/{{loanAmount}}/g, loanAmount)
+      .replace(/{{dashboardUrl}}/g, dashboardUrl);
+
+    return {
+      success: true,
+      data: {
+        recipient,
+        user,
+        renderedSubject,
+        renderedBody,
+        sentAt: recipient.sentAt,
+        openedAt: recipient.openedAt,
+        clickedAt: recipient.clickedAt,
+        status: recipient.status,
+        variables: vars,
+      },
+    };
+  }
+
+  async getEmailLogs(limit = 100, offset = 0, status?: string) {
+    const where: any = {};
+    if (status && status !== 'all') where.status = status;
+
+    const [logs, total] = await Promise.all([
+      this.prisma.emailLog.findMany({
+        where,
+        orderBy: { sentAt: 'desc' },
+        skip: offset,
+        take: limit,
+        include: {
+          campaign: { select: { id: true, name: true, subject: true } },
+        },
+      }),
+      this.prisma.emailLog.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data: logs,
+      pagination: { total, limit, offset },
+    };
+  }
+
+  // ─── AI Email Generation Engine ───────────────────────────────────────────
+
   async generateCampaignEmail(data: any) {
-    const prompt = `You are a professional study abroad education loan email generator.
-    Draft a personalized email for standard campaigns:
-    Goal: ${data.optimizationGoal || ''}
-    Objective: ${data.primaryObjective || ''}
-    Context: ${data.targetContext || ''}
-    Tone: ${data.tone || 'friendly'}
-    Length: ${data.emailLength || 'medium'}
-    CTA text: ${data.cta || 'Visit Portal'}
-    Language: ${data.language || 'English'}
-    Brand identity: ${data.brand || 'VidyaLoan'}
+    let referenceInfo = '';
+    if (data.referenceCampaignId) {
+      try {
+        const refCamp = await this.prisma.campaign.findUnique({
+          where: { id: data.referenceCampaignId },
+        });
+        if (refCamp) {
+          referenceInfo = `
+Existing Reference Campaign from VidyaLoans Admin:
+- Campaign Title: "${refCamp.name}"
+- Reference Subject: "${refCamp.subject}"
+- Reference Goal / Objective: "${refCamp.optimizationGoal || ''}" / "${refCamp.primaryObjective || ''}"
+- Reference Body Template:
+"""
+${refCamp.body}
+"""
 
-    Requirements:
-    1. Compose subject line.
-    2. Write beautifully responsive HTML email template using basic inline styles. Include deep violet colors (#6605c7), clean text hierarchy.
-    3. Include placeholders like {{studentName}} and {{loanAmount}} where appropriate.
-    4. Return JSON with keys: "subject", "bodyTemplate". No markdown markup.`;
+Instructions based on Reference Campaign:
+- Adopt the effective points, messaging hierarchy, and value propositions of this reference campaign.
+- Elevate the copy to be more compelling, modern, and high-converting with personalized merge tags for students.
+`;
+        }
+      } catch (err) {
+        this.logger.warn(`Could not load reference campaign ${data.referenceCampaignId}`);
+      }
+    }
 
-    const aiRes = await this.openRouter.getJson<{ subject: string; bodyTemplate: string }>(prompt);
-    return { success: true, data: aiRes };
+    const tone = data.tone || 'Professional & Encouraging';
+    const goal = data.optimizationGoal || 'Empower students to complete their overseas education loan application';
+    const objective = data.primaryObjective || data.cta || 'Apply for Education Loan';
+    const context = data.targetContext || 'Study abroad education loan applicants';
+    const brand = data.brand || 'VidyaLoan';
+    const language = data.language || 'English';
+
+    const prompt = `You are the Lead Marketing & Student Financing Copywriter at ${brand} (India's premier study abroad education loan platform).
+    
+Draft an elite, highly professional, responsive HTML email campaign for Indian students planning to study abroad (USA, UK, Canada, Germany, Australia, Ireland, etc.).
+
+${referenceInfo}
+
+Campaign Parameters:
+- Campaign Title / Context: ${context}
+- Optimization Goal: ${goal}
+- Primary Call to Action: ${objective}
+- Tone: ${tone}
+- Length: ${data.emailLength || 'medium'}
+- Target Language: ${language}
+- Custom Focus / Notes: ${data.customInstructions || 'Highlight lowest interest rates, zero collateral up to ₹1.5 Cr, 50+ partnered banks, and 48-hour approval turnaround.'}
+
+Requirements:
+1. Subject Line: Create a captivating, professional, spam-free subject line. Include merge tags like {{firstName}} or {{studentName}} naturally.
+2. Email Body HTML:
+   - Output clean, modern, responsive inline-styled HTML container (max-width: 600px, font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif).
+   - Use clean card design with VidyaLoans branding (#6605c7 deep purple accent, clean borders, crisp typography).
+   - Use dynamic tags: {{studentName}}, {{university}}, {{country}}, {{loanAmount}}, {{dashboardUrl}}.
+   - Include 3 concise key value highlights with checkmarks/badges.
+   - Include a prominent, styled call-to-action button linking to {{dashboardUrl}} with button text "${objective}".
+   - Include a professional trust footer with RBI-regulated partner notice and support contact info.
+
+Format output as strict JSON with keys:
+- "subject": "String"
+- "previewText": "String"
+- "bodyTemplate": "String (valid HTML string with inline styles)"
+- "keyHighlights": ["Highlight 1", "Highlight 2", "Highlight 3"]
+- "confidenceScore": Number (between 90 and 99)
+- "spamScore": Number (between 0.2 and 1.5)`;
+
+    const aiRes = await this.openRouter.getJson<{
+      subject: string;
+      previewText?: string;
+      bodyTemplate: string;
+      keyHighlights?: string[];
+      confidenceScore?: number;
+      spamScore?: number;
+    }>(prompt);
+
+    return {
+      success: true,
+      data: {
+        subject: aiRes.subject || 'Special Education Loan Update for Your Study Abroad Journey',
+        previewText: aiRes.previewText || 'Exclusive loan options and pre-approvals for your destination university.',
+        bodyTemplate: aiRes.bodyTemplate || '',
+        keyHighlights: aiRes.keyHighlights || ['Lowest Interest Rates from 9.5%', '48h Approval Turnaround', '100% Paperless Process'],
+        confidenceScore: aiRes.confidenceScore || 96,
+        spamScore: aiRes.spamScore || 0.8,
+      },
+    };
   }
 
   async handleAutomationTrigger(event: string, userId: string, context?: any) {

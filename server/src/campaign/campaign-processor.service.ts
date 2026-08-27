@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { SupabaseService } from '../supabase/supabase.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../auth/email.service';
 
 @Injectable()
@@ -8,135 +8,216 @@ export class CampaignProcessorService {
   private readonly logger = new Logger(CampaignProcessorService.name);
   private isProcessing = false;
 
+  // Rate Limiting: 60 emails per minute = 1 email every 1000ms
+  private readonly THROTTLE_DELAY_MS = 1000;
+
   constructor(
-    private readonly supabase: SupabaseService,
+    private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
   ) {}
 
-  @Cron('*/30 * * * * *')
+  /**
+   * Background queue worker cron:
+   * Checks every 5 seconds for any pending queued emails across all campaigns.
+   */
+  @Cron('*/5 * * * * *')
   async handleCron() {
-    this.logger.log('Campaign Processor Cron Triggered...');
     await this.processQueuedEmails().catch(err => {
-      this.logger.error('Error during campaign batch processing:', err);
+      this.logger.error('Error during campaign queue batch processing:', err);
     });
   }
 
+  /**
+   * Main Queue Processor with Rate Limiting (60 emails/minute)
+   */
   async processQueuedEmails() {
     if (this.isProcessing) {
-      this.logger.warn('Previous batch processing is still in progress. Skipping this tick.');
       return;
     }
 
     this.isProcessing = true;
     try {
-      // 1. Fetch campaigns that are queued or currently sending
-      const { data: activeCampaigns, error: campError } = await this.supabase
-        .from('EmailCampaign')
-        .select('*')
-        .in('status', ['queued', 'sending'])
-        .lte('scheduledAt', new Date().toISOString());
+      // 1. Fetch active campaigns in 'queued' or 'sending' status that have reached their scheduled time
+      const activeCampaigns = await this.prisma.campaign.findMany({
+        where: {
+          status: { in: ['queued', 'sending'] },
+          scheduledAt: { lte: new Date() },
+        },
+      });
 
-      if (campError || !activeCampaigns || activeCampaigns.length === 0) {
+      if (activeCampaigns.length === 0) {
         this.isProcessing = false;
         return;
       }
 
-      this.logger.log(`Found ${activeCampaigns.length} active campaigns. Processing next batch of 10...`);
-
-      // 2. Fetch the next 10 pending recipients across all active campaigns (prioritizing high/medium priority)
-      // Since we want to send 10 emails per batch total across the system
       const campaignIds = activeCampaigns.map(c => c.id);
 
-      const { data: pendingRecipients, error: recError } = await this.supabase
-        .from('CampaignRecipient')
-        .select('*')
-        .in('campaignId', campaignIds)
-        .eq('status', 'pending')
-        .limit(10);
+      // 2. Fetch the next batch of queued recipients in FIFO order
+      const pendingRecipients = await this.prisma.campaignRecipient.findMany({
+        where: {
+          campaignId: { in: campaignIds },
+          status: 'queued',
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 60, // process up to 60 per minute cycle
+        include: {
+          campaign: true,
+        },
+      });
 
-      if (recError) {
-        this.logger.error('Failed to query pending recipients:', recError.message);
-        this.isProcessing = false;
-        return;
-      }
-
-      // If no pending recipients are left, we should check if campaigns are finished
-      if (!pendingRecipients || pendingRecipients.length === 0) {
+      if (pendingRecipients.length === 0) {
         await this.checkAndFinalizeCampaigns(campaignIds);
         this.isProcessing = false;
         return;
       }
 
-      this.logger.log(`Processing ${pendingRecipients.length} emails in this batch...`);
+      this.logger.log(`[EmailQueue] Processing ${pendingRecipients.length} queued emails at rate of 60 emails/min (1 email/sec)...`);
 
-      // 3. Process each recipient in the batch
+      // 3. Process each queued email with exact 1-second delay (60 emails/min)
       for (const recipient of pendingRecipients) {
-        const campaign = activeCampaigns.find(c => c.id === recipient.campaignId);
-        if (!campaign) continue;
+        const campaign = recipient.campaign;
+        if (!campaign || campaign.status === 'cancelled') {
+          continue;
+        }
 
-        // If campaign was in 'queued' state, transition to 'sending'
+        // Transition campaign status to 'sending' if still 'queued'
         if (campaign.status === 'queued') {
-          await this.supabase
-            .from('EmailCampaign')
-            .update({ status: 'sending', updatedAt: new Date().toISOString() })
-            .eq('id', campaign.id);
+          await this.prisma.campaign.update({
+            where: { id: campaign.id },
+            data: { status: 'sending', updatedAt: new Date() },
+          }).catch(() => {});
           campaign.status = 'sending';
         }
 
-        const variables = recipient.variables || {};
-        // Compile subject and body templates
-        const compiledSubject = this.replacePlaceholders(campaign.subject, variables);
-        const compiledBody = this.replacePlaceholders(campaign.bodyTemplate, variables);
-        const textFallback = `Dear ${recipient.recipientName},\n\nPlease read this email in an HTML-enabled client.`;
+        // Transition recipient to 'generating'
+        await this.prisma.campaignRecipient.update({
+          where: { id: recipient.id },
+          data: { status: 'generating' },
+        }).catch(() => {});
 
-        // Inject open and click tracking
-        const trackedBody = this.injectTracking(compiledBody, recipient.id);
+        const startTime = Date.now();
 
         try {
-          this.logger.log(`Sending campaign email to ${recipient.recipientEmail} (${recipient.recipientName})...`);
-          
-          // Send mail
+          // Fetch student variables or profile
+          const vars: any = (recipient.variables as any) || {};
+          let studentName = recipient.recipientName || vars.studentName || 'Student';
+          let university = vars.university || 'your university';
+          let country = vars.country || 'your destination';
+          let loanAmount = vars.loanAmount || 'eligible loan amount';
+          let dashboardUrl = vars.dashboardUrl || 'https://vidyaloan.com/dashboard';
+
+          // Compile Subject & HTML Body
+          let compiledSubject = (campaign.subject || 'Education Loan Update')
+            .replace(/{{studentName}}/g, studentName)
+            .replace(/{{firstName}}/g, studentName.split(' ')[0])
+            .replace(/{{university}}/g, university)
+            .replace(/{{targetUniversity}}/g, university)
+            .replace(/{{country}}/g, country)
+            .replace(/{{loanAmount}}/g, loanAmount);
+
+          let compiledBody = (campaign.body || '')
+            .replace(/{{studentName}}/g, studentName)
+            .replace(/{{firstName}}/g, studentName.split(' ')[0])
+            .replace(/{{university}}/g, university)
+            .replace(/{{targetUniversity}}/g, university)
+            .replace(/{{country}}/g, country)
+            .replace(/{{loanAmount}}/g, loanAmount)
+            .replace(/{{dashboardUrl}}/g, dashboardUrl);
+
+          // Inject open pixel and click tracking
+          const trackedBody = this.injectTracking(compiledBody, recipient.id);
+
+          this.logger.log(`[EmailQueue Dispatch] Sending email to ${recipient.recipientEmail} (${studentName}) for campaign: "${campaign.name}"`);
+
+          // Dispatch via EmailService SMTP
           await this.emailService.sendMail(
             recipient.recipientEmail,
             compiledSubject,
             trackedBody,
-            textFallback
+            `Dear ${studentName},\n\nPlease view this email in an HTML-compatible email client.`,
           );
 
-          // Update recipient to sent
-          await this.supabase
-            .from('CampaignRecipient')
-            .update({
+          // Update recipient status to 'sent'
+          await this.prisma.campaignRecipient.update({
+            where: { id: recipient.id },
+            data: {
               status: 'sent',
-              sentAt: new Date().toISOString(),
-            })
-            .eq('id', recipient.id);
+              sentAt: new Date(),
+            },
+          });
 
-          // Increment sent count
-          await this.incrementCampaignCounter(campaign.id, 'sentCount');
+          // Create EmailLog record
+          await this.prisma.emailLog.create({
+            data: {
+              campaignId: campaign.id,
+              recipientEmail: recipient.recipientEmail,
+              subject: compiledSubject,
+              status: 'sent',
+              sentAt: new Date(),
+            },
+          }).catch(() => {});
+
+          // Increment sent counter on campaign
+          await this.prisma.campaign.update({
+            where: { id: campaign.id },
+            data: {
+              sentCount: { increment: 1 },
+              updatedAt: new Date(),
+            },
+          }).catch(() => {});
+
         } catch (sendError: any) {
-          this.logger.error(`Failed to send email to ${recipient.recipientEmail}: ${sendError.message}`);
+          this.logger.error(`[EmailQueue Error] Failed to send email to ${recipient.recipientEmail}: ${sendError.message}`);
 
-          // Update recipient to failed
-          await this.supabase
-            .from('CampaignRecipient')
-            .update({
+          // Update recipient status to 'failed'
+          await this.prisma.campaignRecipient.update({
+            where: { id: recipient.id },
+            data: {
               status: 'failed',
-              errorMessage: sendError.message || 'Unknown SMTP error',
-              sentAt: new Date().toISOString(),
-            })
-            .eq('id', recipient.id);
+              errorMessage: sendError.message || 'SMTP delivery failure',
+              sentAt: new Date(),
+            },
+          }).catch(() => {});
 
-          // Increment failed count
-          await this.incrementCampaignCounter(campaign.id, 'failedCount');
+          // Create EmailLog record
+          await this.prisma.emailLog.create({
+            data: {
+              campaignId: campaign.id,
+              recipientEmail: recipient.recipientEmail,
+              subject: campaign.subject,
+              status: 'failed',
+              errorMessage: sendError.message,
+              sentAt: new Date(),
+            },
+          }).catch(() => {});
+
+          // Increment failed counter on campaign
+          await this.prisma.campaign.update({
+            where: { id: campaign.id },
+            data: {
+              failedCount: { increment: 1 },
+              updatedAt: new Date(),
+            },
+          }).catch(() => {});
+        }
+
+        // Enforce exact rate-limit delay: 60 emails per minute = 1000ms delay per email
+        const elapsed = Date.now() - startTime;
+        const sleepTime = Math.max(0, this.THROTTLE_DELAY_MS - elapsed);
+        if (sleepTime > 0) {
+          await new Promise(resolve => setTimeout(resolve, sleepTime));
         }
       }
 
-      // Check if campaigns have completed
+      // 4. Check if campaigns have finished all recipients
       await this.checkAndFinalizeCampaigns(campaignIds);
 
-    } catch (error) {
-      this.logger.error('Unhandled error in processQueuedEmails:', error);
+    } catch (error: any) {
+      if (error?.message?.includes('connection timeout') || error?.message?.includes('Connection terminated')) {
+        this.logger.warn('[EmailQueue] Database connection warming up / temporarily unreachable. Will retry on next tick.');
+      } else {
+        this.logger.error('[EmailQueue] Error processing queued emails:', error?.message || error);
+      }
     } finally {
       this.isProcessing = false;
     }
@@ -144,54 +225,24 @@ export class CampaignProcessorService {
 
   private async checkAndFinalizeCampaigns(campaignIds: string[]) {
     for (const campaignId of campaignIds) {
-      // Check if there are any remaining pending recipients for this campaign
-      const { count, error } = await this.supabase
-        .from('CampaignRecipient')
-        .select('*', { count: 'exact', head: true })
-        .eq('campaignId', campaignId)
-        .eq('status', 'pending');
+      const remainingQueued = await this.prisma.campaignRecipient.count({
+        where: {
+          campaignId,
+          status: { in: ['queued', 'generating'] },
+        },
+      });
 
-      if (!error && count === 0) {
-        this.logger.log(`Campaign ${campaignId} has no pending recipients left. Marking as completed.`);
-        await this.supabase
-          .from('EmailCampaign')
-          .update({
+      if (remainingQueued === 0) {
+        this.logger.log(`[EmailQueue] Campaign ${campaignId} has finished all queued emails. Marking as 'completed'.`);
+        await this.prisma.campaign.update({
+          where: { id: campaignId },
+          data: {
             status: 'completed',
-            updatedAt: new Date().toISOString(),
-          })
-          .eq('id', campaignId);
+            updatedAt: new Date(),
+          },
+        }).catch(() => {});
       }
     }
-  }
-
-  private async incrementCampaignCounter(campaignId: string, counterField: 'sentCount' | 'failedCount') {
-    // Fetch current counters
-    const { data: campaign } = await this.supabase
-      .from('EmailCampaign')
-      .select('sentCount, failedCount')
-      .eq('id', campaignId)
-      .single();
-
-    if (campaign) {
-      const updateData: any = {};
-      updateData[counterField] = (campaign[counterField] || 0) + 1;
-      updateData.updatedAt = new Date().toISOString();
-
-      await this.supabase
-        .from('EmailCampaign')
-        .update(updateData)
-        .eq('id', campaignId);
-    }
-  }
-
-  private replacePlaceholders(template: string, variables: Record<string, string>): string {
-    if (!template) return '';
-    let result = template;
-    for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
-      result = result.replace(regex, value || '');
-    }
-    return result;
   }
 
   private injectTracking(html: string, recipientId: string): string {

@@ -21,6 +21,7 @@ model User {
   role             String            @default("user") // user, admin, super_admin
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @default(now()) @updatedAt
+  registeredAtIndia String?
   blogs            Blog[]            @relation("AuthorBlogs")
   loanApplications LoanApplication[]
   documents        UserDocument[]
