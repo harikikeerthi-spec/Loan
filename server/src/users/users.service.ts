@@ -1752,11 +1752,12 @@ export class UsersService implements OnModuleInit {
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
+    const applicationNumber = await this.generateApplicationNumber();
+
     const insertPayload: any = {
       id: randomUUID(),
       userId,
-      // applicationNumber is intentionally NOT set here.
-      // VL-APP-YYYY-XXXXX will be assigned ONLY when staff submits the application to a bank.
+      applicationNumber,
       bank: data.bank,
       loanType: data.loanType,
       amount: data.amount,

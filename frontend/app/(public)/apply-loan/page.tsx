@@ -8,7 +8,6 @@ import DatePicker from "@/components/DatePicker";
 import { getAllCountries } from "@/lib/countriesData";
 import { applicationApi, authApi, aiApi, referenceApi } from "@/lib/api";
 import { isPhoneValid } from "@/lib/validation";
-import { getFallbackUniversities } from "@/lib/aiSearchService";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -124,6 +123,7 @@ export default function ApplyLoanPage() {
     const [showUniversitySuggestions, setShowUniversitySuggestions] = useState(false);
     const [countryOptions, setCountryOptions] = useState<string[]>(popularCountries);
     const [countryAiLoaded, setCountryAiLoaded] = useState<string>(""); // tracks which country AI has been fetched for
+    const countryUniversitiesCache = useRef<Record<string, any[]>>({});
 
     const [existingApp, setExistingApp] = useState<any>(null);
     const [checkingExisting, setCheckingExisting] = useState<boolean>(true);
@@ -257,44 +257,35 @@ export default function ApplyLoanPage() {
         }
     };
 
-    // Fetch and search universities for the selected country (instant fallback + AI enhancement)
+    // Fetch live AI universities for the selected country (pure AI, no predefined fallback lists)
     useEffect(() => {
-        const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
+        const selectedCountry = (formData.country === "Other" ? formData.otherCountry : formData.country || "").trim();
         const queryText = (formData.university || "").trim();
 
-        // Clear suggestions if neither country nor query text are present
-        if (!selectedCountry && !queryText) {
+        if (!selectedCountry) {
             setSuggestedUniversities([]);
+            setLoadingUniversities(false);
             return;
         }
 
-        // Immediately populate with instant country/query universities so the user never sees an empty state
-        const initialFallbacks = getFallbackUniversities(selectedCountry, queryText).map(u => ({
-            name: u.name,
-            loc: u.loc || u.country || selectedCountry || "Global",
-            country: u.country || selectedCountry || "",
-            slug: u.name.toLowerCase().replace(/\s+/g, '-')
-        }));
-        if (initialFallbacks.length > 0) {
-            setSuggestedUniversities(initialFallbacks);
-        }
-
-        // Wait until at least 2 characters if typing a query
-        if (queryText.length > 0 && queryText.length < 2) {
+        // If query is empty and we already have cached AI universities for this exact country, use them instantly!
+        if (!queryText && countryUniversitiesCache.current[selectedCountry]?.length > 0) {
+            setSuggestedUniversities(countryUniversitiesCache.current[selectedCountry]);
+            setCountryAiLoaded(selectedCountry);
+            setLoadingUniversities(false);
             return;
         }
 
         let active = true;
-        // When country changes with no university typed, fetch AI universities immediately (0ms delay)
-        // When user is typing, use 300ms debounce
-        const delay = queryText.length === 0 ? 0 : 300;
+        const delay = queryText.length === 0 ? 0 : 350;
+
         const delayDebounceFn = setTimeout(async () => {
             setLoadingUniversities(true);
             try {
                 const res = await aiApi.aiSearch({
                     type: "university",
                     query: queryText,
-                    country: selectedCountry || ""
+                    country: selectedCountry
                 }) as any;
 
                 if (!active) return;
@@ -317,21 +308,24 @@ export default function ApplyLoanPage() {
                     if (uniName && !formatted.some(m => m.name.toLowerCase() === uniName.toLowerCase())) {
                         formatted.push({
                             name: uniName,
-                            loc: uniLoc || uniCountry || selectedCountry || "Global",
-                            country: uniCountry || selectedCountry || "",
-                            slug: uniName.toLowerCase().replace(/\s+/g, '-')
+                            loc: uniLoc || uniCountry || selectedCountry,
+                            country: uniCountry || selectedCountry,
+                            slug: uniName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
                         });
                     }
                 });
 
                 if (formatted.length > 0) {
                     setSuggestedUniversities(formatted);
-                }
-                if (!queryText && selectedCountry) {
-                    setCountryAiLoaded(selectedCountry);
+                    if (!queryText) {
+                        countryUniversitiesCache.current[selectedCountry] = formatted;
+                        setCountryAiLoaded(selectedCountry);
+                    }
+                } else if (!queryText && countryUniversitiesCache.current[selectedCountry]) {
+                    setSuggestedUniversities(countryUniversitiesCache.current[selectedCountry]);
                 }
             } catch (err) {
-                console.warn("AI university search encountered an issue, keeping fallback dataset:", err);
+                console.error("AI university dynamic search failed:", err);
             } finally {
                 if (active) setLoadingUniversities(false);
             }
@@ -343,11 +337,10 @@ export default function ApplyLoanPage() {
         };
     }, [formData.university, formData.country, formData.otherCountry]);
 
-    // When destination country changes, auto-show the university suggestions dropdown
+    // When destination country changes, auto-open the university suggestions dropdown
     useEffect(() => {
         const selectedCountry = formData.country === "Other" ? formData.otherCountry : formData.country;
         if (selectedCountry && !formData.university) {
-            // Auto-open the university suggestions so user sees country-specific options immediately
             setShowUniversitySuggestions(true);
         }
     }, [formData.country, formData.otherCountry]);
