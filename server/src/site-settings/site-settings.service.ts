@@ -38,20 +38,26 @@ const DEFAULT_SETTINGS = {
   customCss: '/* Custom site overrides */\n:root {\n  --brand-primary: #6605c7;\n}',
 
   // Integrations & Analytics
-  googleAnalyticsId: 'G-VIDYA2026',
-  googleTagManagerId: 'GTM-VDY8899',
+  googleAnalyticsId: 'G-SB8FV1EK2S',
+  googleTagManagerId: 'GTM-MD6CB6LJ',
   facebookPixelId: '987654321098765',
   posthogApiKey: 'phc_vidyaloans_live_key_998877',
   mixpanelToken: 'mp_token_vidyaloans_production',
   hotjarSiteId: '3456789',
-  customHeadScripts: '<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\'gtm.start\':new Date().getTime(),event:\'gtm.js\'});})(window,document,\'script\',\'dataLayer\',\'GTM-VDY8899\');</script>',
-  customBodyScripts: '<!-- Chat Widget Script -->\n<script>console.log("VidyaLoans Analytics Initialized");</script>',
+  customHeadScripts: '<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\'gtm.start\':new Date().getTime(),event:\'gtm.js\'});})(window,document,\'script\',\'dataLayer\',\'GTM-MD6CB6LJ\');</script>',
+  customBodyScripts: '<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MD6CB6LJ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>',
   webhookUrl: 'https://api.vidyaloans.com/v1/webhooks/events',
+
+  // AI Service Settings
+  openRouterApiKey: process.env.OPENROUTER_API_KEY || '',
+  aiModel: 'google/gemini-2.0-flash-001',
+  aiTemperature: 0.7,
+  groqApiKey: process.env.GROQ_API_KEY || '',
 
   // Disposable Email Protection
   disposableEmailBlock: true,
   disposableBlockLevel: 'strict', // strict, warning, audit_only
-  blockedDomains: 'tempmail.com, mailinator.com, 10minutemail.com, guerrillamail.com, throwawaymail.com, yopmail.com, trashmail.com, getnada.com, fakeinbox.com, dispostable.com, tempmailo.com, 10minutemail.net, temp-mail.org, mohmal.com, nada.ltd',
+  blockedDomains: require('./disposable-domains.json').join(', '),
   allowedDomains: 'gmail.com, yahoo.com, outlook.com, hotmail.com, icloud.com, proton.me, protonmail.com, vidyaloans.com',
   disposableApiKey: '',
   disposableProvider: 'builtin', // builtin, kickbox, zerobounce, debounce, hunter

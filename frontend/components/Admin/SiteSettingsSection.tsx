@@ -1,9 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { adminApi } from "@/lib/api";
+import {
+  Cpu,
+  Key,
+  Zap,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Save,
+  Sliders,
+  CheckCircle2,
+  Shield,
+  Search,
+  Globe,
+  Mail,
+  CreditCard,
+  Building2,
+  Calendar,
+  RotateCcw,
+  Check,
+  AlertTriangle,
+  Radio,
+  Copy,
+  Terminal,
+  Code,
+  ExternalLink,
+} from "lucide-react";
+
+const DEFAULT_BLOCKED_DOMAINS = require("@/lib/disposable-domains.json").join(", ");
 
 interface SiteSettings {
+  // General & Branding
   siteName: string;
   tagline: string;
   metaTitle: string;
@@ -16,15 +45,6 @@ interface SiteSettings {
   currency: string;
   timezone: string;
   copyrightText: string;
-
-  facebookUrl: string;
-  instagramUrl: string;
-  twitterUrl: string;
-  linkedinUrl: string;
-  youtubeUrl: string;
-  whatsappNumber: string;
-  telegramUrl: string;
-
   logoLightUrl: string;
   logoDarkUrl: string;
   faviconUrl: string;
@@ -34,16 +54,20 @@ interface SiteSettings {
   darkThemeBg: string;
   customCss: string;
 
-  googleAnalyticsId: string;
-  googleTagManagerId: string;
-  facebookPixelId: string;
-  posthogApiKey: string;
-  mixpanelToken: string;
-  hotjarSiteId: string;
-  customHeadScripts: string;
-  customBodyScripts: string;
-  webhookUrl: string;
+  // Payments & Ads
+  razorpayKeyId: string;
+  razorpayKeySecret: string;
+  stripePublishableKey: string;
+  stripeSecretKey: string;
+  googleAdsId: string;
 
+  // AI Integration
+  openRouterApiKey: string;
+  aiModel: string;
+  aiTemperature: number;
+  groqApiKey: string;
+
+  // Security, SEO & Disposable Email Protection
   disposableEmailBlock: boolean;
   disposableBlockLevel: string;
   blockedDomains: string;
@@ -51,13 +75,54 @@ interface SiteSettings {
   disposableApiKey: string;
   disposableProvider: string;
   disposableAction: string;
+  enableRecaptcha: boolean;
+  recaptchaSiteKey: string;
+
+  // Amber HQ Leads API
+  amberApiKey: string;
+  amberApiSecret: string;
+  amberWebhookUrl: string;
+
+  // Google & Social Discovery
+  googleAnalyticsId: string;
+  googleTagManagerId: string;
+  facebookPixelId: string;
+  facebookUrl: string;
+  instagramUrl: string;
+  twitterUrl: string;
+  linkedinUrl: string;
+  youtubeUrl: string;
+  whatsappNumber: string;
+  telegramUrl: string;
+  posthogApiKey: string;
+  mixpanelToken: string;
+  hotjarSiteId: string;
+  customHeadScripts: string;
+  customBodyScripts: string;
+  webhookUrl: string;
+
+  // Email & AWS SES
+  awsSesRegion: string;
+  awsSesAccessKey: string;
+  awsSesSecretKey: string;
+  awsSesSenderEmail: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPassword: string;
+
+  // Event Scraper
+  eventScraperCron: string;
+  eventScraperEnabled: boolean;
+  eventScraperSource: string;
 }
 
 const DEFAULT_FORM: SiteSettings = {
   siteName: "VidyaLoans",
   tagline: "Overseas Education Financing & Study Abroad Loan Portal",
   metaTitle: "VidyaLoans - Instant Education Loans for Overseas Studies",
-  metaDescription: "Compare and apply for top education loans with lowest interest rates, quick approval, and zero hidden charges.",
+  metaDescription:
+    "Compare and apply for top education loans with lowest interest rates, quick approval, and zero hidden charges.",
   supportEmail: "support@vidyaloans.com",
   contactEmail: "contact@vidyaloans.com",
   phone: "+91 1800-123-4567",
@@ -66,15 +131,6 @@ const DEFAULT_FORM: SiteSettings = {
   currency: "INR",
   timezone: "Asia/Kolkata",
   copyrightText: "© 2026 VidyaLoans Inc. All rights reserved.",
-
-  facebookUrl: "https://facebook.com/vidyaloans",
-  instagramUrl: "https://instagram.com/vidyaloans",
-  twitterUrl: "https://x.com/vidyaloans",
-  linkedinUrl: "https://linkedin.com/company/vidyaloans",
-  youtubeUrl: "https://youtube.com/@vidyaloans",
-  whatsappNumber: "+919876543210",
-  telegramUrl: "https://t.me/vidyaloans",
-
   logoLightUrl: "/images/vidyaloans-logo-transparent.png",
   logoDarkUrl: "/images/vidyaloans-logo-transparent.png",
   faviconUrl: "/favicon.ico",
@@ -84,27 +140,77 @@ const DEFAULT_FORM: SiteSettings = {
   darkThemeBg: "#0f172a",
   customCss: "/* Custom CSS Overrides */\n:root {\n  --brand-primary: #6605c7;\n}",
 
-  googleAnalyticsId: "G-VIDYA2026",
-  googleTagManagerId: "GTM-VDY8899",
-  facebookPixelId: "987654321098765",
-  posthogApiKey: "phc_vidyaloans_live_key_998877",
-  mixpanelToken: "mp_token_vidyaloans_production",
-  hotjarSiteId: "3456789",
-  customHeadScripts: "<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});})(window,document,'script','dataLayer','GTM-VDY8899');</script>",
-  customBodyScripts: "<!-- Chat Widget -->\n<script>console.log('VidyaLoans Chat Widget Initialized');</script>",
-  webhookUrl: "https://api.vidyaloans.com/v1/webhooks/events",
+  razorpayKeyId: "",
+  razorpayKeySecret: "",
+  stripePublishableKey: "",
+  stripeSecretKey: "",
+  googleAdsId: "AW-1234567890",
+
+  openRouterApiKey: "",
+  aiModel: "google/gemini-2.0-flash-001",
+  aiTemperature: 0.7,
+  groqApiKey: "",
 
   disposableEmailBlock: true,
   disposableBlockLevel: "strict",
-  blockedDomains: "tempmail.com, mailinator.com, 10minutemail.com, guerrillamail.com, throwawaymail.com, yopmail.com, trashmail.com, getnada.com, fakeinbox.com, dispostable.com, tempmailo.com, 10minutemail.net, temp-mail.org, mohmal.com, nada.ltd",
-  allowedDomains: "gmail.com, yahoo.com, outlook.com, hotmail.com, icloud.com, proton.me, protonmail.com, vidyaloans.com",
+  blockedDomains: DEFAULT_BLOCKED_DOMAINS,
+  allowedDomains:
+    "gmail.com, yahoo.com, outlook.com, hotmail.com, icloud.com, proton.me, protonmail.com, vidyaloans.com",
   disposableApiKey: "",
   disposableProvider: "builtin",
   disposableAction: "reject",
+  enableRecaptcha: true,
+  recaptchaSiteKey: "",
+
+  amberApiKey: "",
+  amberApiSecret: "",
+  amberWebhookUrl: "https://api.vidyaloans.in/api/webhooks/amber",
+
+  googleAnalyticsId: "G-SB8FV1EK2S",
+  googleTagManagerId: "GTM-MD6CB6LJ",
+  facebookPixelId: "987654321098765",
+  facebookUrl: "https://facebook.com/vidyaloans",
+  instagramUrl: "https://instagram.com/vidyaloans",
+  twitterUrl: "https://x.com/vidyaloans",
+  linkedinUrl: "https://linkedin.com/company/vidyaloans",
+  youtubeUrl: "https://youtube.com/@vidyaloans",
+  whatsappNumber: "+919876543210",
+  telegramUrl: "https://t.me/vidyaloans",
+  posthogApiKey: "phc_vidyaloans_live_key_998877",
+  mixpanelToken: "mp_token_vidyaloans_production",
+  hotjarSiteId: "3456789",
+  customHeadScripts:
+    "<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});})(window,document,'script','dataLayer','GTM-MD6CB6LJ');</script>",
+  customBodyScripts:
+    "<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-MD6CB6LJ\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>",
+  webhookUrl: "https://api.vidyaloans.com/v1/webhooks/events",
+
+  awsSesRegion: "ap-south-1",
+  awsSesAccessKey: "AKIAXXXXXXXXXXXXXXXX",
+  awsSesSecretKey: "••••••••••••••••••••••••",
+  awsSesSenderEmail: "no-reply@vidyaloans.in",
+  smtpHost: "email-smtp.ap-south-1.amazonaws.com",
+  smtpPort: 587,
+  smtpUser: "AKIAXXXXXXXXXXXXXXXX",
+  smtpPassword: "••••••••••••••••••••••••",
+
+  eventScraperCron: "0 0 * * *",
+  eventScraperEnabled: true,
+  eventScraperSource: "https://education.events.api/v1/scrapes",
 };
 
+type TabType =
+  | "general"
+  | "payments"
+  | "ai"
+  | "security"
+  | "amber"
+  | "discovery"
+  | "email"
+  | "scraper";
+
 export default function SiteSettingsSection() {
-  const [activeTab, setActiveTab] = useState<"identity" | "social" | "branding" | "analytics" | "disposable">("identity");
+  const [activeTab, setActiveTab] = useState<TabType>("ai");
   const [form, setForm] = useState<SiteSettings>(DEFAULT_FORM);
   const [initialForm, setInitialForm] = useState<SiteSettings>(DEFAULT_FORM);
   const [loading, setLoading] = useState(true);
@@ -112,10 +218,20 @@ export default function SiteSettingsSection() {
   const [resetting, setResetting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+  // Visibility toggles for passwords & API keys
+  const [showOpenRouter, setShowOpenRouter] = useState(false);
+  const [showGroq, setShowGroq] = useState(false);
+  const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
+  const [showAmberSecret, setShowAmberSecret] = useState(false);
+  const [showAwsSecret, setShowAwsSecret] = useState(false);
+
   // Email Tester state
-  const [testEmail, setTestEmail] = useState("user@tempmail.com");
+  const [testEmail, setTestEmail] = useState("user@0-mail.com");
   const [testResult, setTestResult] = useState<any>(null);
   const [testLoading, setTestLoading] = useState(false);
+
+  // Copy indicator
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Load Settings
   useEffect(() => {
@@ -127,8 +243,26 @@ export default function SiteSettingsSection() {
     try {
       const res = await adminApi.getSiteSettings();
       if (res && res.data) {
-        setForm(res.data);
-        setInitialForm(res.data);
+        // Smart merge: ensure full 4,600+ domain list is present in the UI along with any DB custom domains
+        const dbDomains = (res.data.blockedDomains || "")
+          .split(/[\n,]+/)
+          .map((d: string) => d.trim().toLowerCase())
+          .filter(Boolean);
+        const defaultDomains = DEFAULT_BLOCKED_DOMAINS.split(", ").map((d: string) => d.trim().toLowerCase());
+        const mergedSet = new Set([...defaultDomains, ...dbDomains]);
+        const fullBlocked = Array.from(mergedSet).sort().join(", ");
+
+        const mergedForm: SiteSettings = {
+          ...DEFAULT_FORM,
+          ...res.data,
+          blockedDomains: fullBlocked,
+          openRouterApiKey: res.data.openRouterApiKey || DEFAULT_FORM.openRouterApiKey,
+          googleTagManagerId: res.data.googleTagManagerId || DEFAULT_FORM.googleTagManagerId,
+          googleAnalyticsId: res.data.googleAnalyticsId || DEFAULT_FORM.googleAnalyticsId,
+        };
+
+        setForm(mergedForm);
+        setInitialForm(mergedForm);
       }
     } catch (e) {
       console.error("Error fetching site settings:", e);
@@ -143,6 +277,14 @@ export default function SiteSettingsSection() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  const copyToClipboard = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(label);
+    showToast(`Copied ${label} to clipboard!`, "success");
+    setTimeout(() => setCopiedKey(null), 2500);
+  };
+
   const handleChange = (field: keyof SiteSettings, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -154,11 +296,11 @@ export default function SiteSettingsSection() {
     try {
       const res = await adminApi.updateSiteSettings(form);
       if (res && res.data) {
-        setForm(res.data);
-        setInitialForm(res.data);
-        showToast("Site settings saved successfully!", "success");
+        setForm((prev) => ({ ...prev, ...res.data }));
+        setInitialForm((prev) => ({ ...prev, ...res.data }));
+        showToast("Settings saved successfully!", "success");
       } else {
-        showToast("Updated site configuration", "success");
+        showToast("Settings updated successfully!", "success");
         setInitialForm(form);
       }
     } catch (e) {
@@ -170,13 +312,13 @@ export default function SiteSettingsSection() {
   };
 
   const handleReset = async () => {
-    if (!confirm("Are you sure you want to reset all site settings to factory defaults?")) return;
+    if (!confirm("Are you sure you want to reset all site settings to default values?")) return;
     setResetting(true);
     try {
       const res = await adminApi.resetSiteSettings();
       if (res && res.data) {
-        setForm(res.data);
-        setInitialForm(res.data);
+        setForm((prev) => ({ ...prev, ...res.data }));
+        setInitialForm((prev) => ({ ...prev, ...res.data }));
         showToast("Settings reset to defaults", "success");
       }
     } catch (e) {
@@ -202,9 +344,25 @@ export default function SiteSettingsSection() {
     }
   };
 
+  const blockedCount = (form.blockedDomains || "")
+    .split(/[\n,]+/)
+    .map((d) => d.trim())
+    .filter(Boolean).length;
+
+  const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
+    { id: "general", label: "General & Branding", icon: <Building2 className="w-4 h-4" /> },
+    { id: "payments", label: "Payments & Ads", icon: <CreditCard className="w-4 h-4" /> },
+    { id: "ai", label: "AI Integration", icon: <Cpu className="w-4 h-4" /> },
+    { id: "security", label: "Security & SEO", icon: <Shield className="w-4 h-4" /> },
+    { id: "amber", label: "Amber HQ Leads API", icon: <ExternalLink className="w-4 h-4" /> },
+    { id: "discovery", label: "Google & Social Discovery", icon: <Globe className="w-4 h-4" /> },
+    { id: "email", label: "Email & AWS SES", icon: <Mail className="w-4 h-4" /> },
+    { id: "scraper", label: "Event Scraper", icon: <Calendar className="w-4 h-4" /> },
+  ];
+
   if (loading) {
     return (
-      <div className="p-8 flex flex-col items-center justify-center min-h-[400px]">
+      <div className="p-12 flex flex-col items-center justify-center min-h-[450px] bg-white rounded-2xl border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
         <p className="text-slate-500 text-sm font-medium">Loading Site Settings...</p>
       </div>
@@ -212,569 +370,300 @@ export default function SiteSettingsSection() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="w-full font-sans space-y-6">
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-2xl border text-sm font-semibold flex items-center gap-3 transition-all animate-bounce ${
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-2xl border text-sm font-semibold flex items-center gap-3 transition-all ${
             toast.type === "success"
-              ? "bg-emerald-900/90 border-emerald-500 text-emerald-100 backdrop-blur-md"
-              : "bg-rose-900/90 border-rose-500 text-rose-100 backdrop-blur-md"
+              ? "bg-emerald-900 border-emerald-500 text-emerald-100"
+              : "bg-rose-900 border-rose-500 text-rose-100"
           }`}
         >
-          <span className="material-symbols-outlined text-[20px]">
-            {toast.type === "success" ? "check_circle" : "error"}
-          </span>
+          {toast.type === "success" ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <AlertTriangle className="w-5 h-5 text-rose-400" />}
           <span>{toast.message}</span>
         </div>
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 border border-slate-800 shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/20 via-purple-500/10 to-transparent pointer-events-none" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                <span className="material-symbols-outlined text-2xl">settings_suggest</span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Site Settings</h1>
+          <p className="text-slate-500 text-xs mt-0.5">Manage your platform configuration and integrations.</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
+              Unsaved changes
+            </span>
+          )}
+          <button
+            onClick={handleReset}
+            disabled={resetting}
+            className="px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Reset Defaults
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold transition-all flex items-center gap-2"
+          >
+            {saving ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" />
+                Save Settings
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Navigation Tabs (Pill style matching reference screenshot) */}
+      <div className="flex items-center gap-2.5 overflow-x-auto pb-2 custom-scrollbar">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2.5 rounded-xl font-semibold text-xs flex items-center gap-2 transition-all shrink-0 border ${
+                isActive
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+              {tab.id === "security" && (
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                    isActive ? "bg-indigo-700 text-indigo-100" : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {blockedCount.toLocaleString()}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ── TAB: AI INTEGRATION (High-End Stripe / Apple-Esque Polish) ── */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === "ai" && (
+        <div className="relative bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 overflow-hidden animate-fade-in">
+          {/* Subtle Gradient Top Accent */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500"></div>
+
+          {/* Card Header */}
+          <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-violet-200 rounded-xl blur-md opacity-60"></div>
+                <div className="relative p-2.5 bg-white border border-violet-100 rounded-xl text-violet-600 shadow-sm">
+                  <Sparkles className="w-5 h-5" />
+                </div>
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-white">Site Settings & Platform Config</h1>
-                <p className="text-xs text-slate-400">Manage branding, analytics, social channels, and email security shield</p>
+                <h2 className="text-lg font-bold text-slate-900 tracking-tight">AI Configuration</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Manage your LLM API keys and model parameters.</p>
               </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                System Active
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {isDirty && (
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
-                Unsaved changes
-              </span>
-            )}
-            <button
-              onClick={handleReset}
-              disabled={resetting}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition-all flex items-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-[16px]">restart_alt</span>
-              Reset Defaults
-            </button>
+          {/* Card Body - Settings Form */}
+          <div className="p-8 space-y-10">
+            {/* Section 1: OpenRouter (Gemini) */}
+            <section>
+              <div className="flex items-center gap-2 mb-5">
+                <Cpu className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Primary Engine (Gemini)</h3>
+              </div>
+
+              <div className="space-y-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                {/* API Key Input */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-semibold text-slate-600">OpenRouter API Key</label>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(form.openRouterApiKey, "OpenRouter Key")}
+                      className="text-[11px] font-mono text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      {copiedKey === "OpenRouter Key" ? "Copied!" : "Copy Key"}
+                    </button>
+                  </div>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Key className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    </div>
+                    <input
+                      type={showOpenRouter ? "text" : "password"}
+                      value={form.openRouterApiKey}
+                      onChange={(e) => handleChange("openRouterApiKey", e.target.value)}
+                      placeholder="sk-or-v1-..."
+                      className="block w-full pl-10 pr-12 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-mono text-slate-700 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOpenRouter(!showOpenRouter)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600 transition-colors"
+                    >
+                      {showOpenRouter ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid for Model & Temp */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-2">Model Identifier</label>
+                    <input
+                      type="text"
+                      value={form.aiModel}
+                      onChange={(e) => handleChange("aiModel", e.target.value)}
+                      placeholder="google/gemini-2.0-flash-001"
+                      className="block w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-mono text-indigo-600 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-slate-600">AI Temperature</label>
+                      <span className="text-xs font-bold font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                        {form.aiTemperature.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="relative pt-1 flex items-center gap-3">
+                      <Sliders className="w-4 h-4 text-slate-400" />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={form.aiTemperature}
+                        onChange={(e) => handleChange("aiTemperature", parseFloat(e.target.value))}
+                        className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700 transition-all"
+                      />
+                    </div>
+                    <div className="flex justify-between mt-1.5 px-7 text-[10px] text-slate-400 font-medium">
+                      <span>Precise</span>
+                      <span>Creative</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Section 2: Groq Cloud */}
+            <section>
+              <div className="flex items-center gap-2 mb-5">
+                <Zap className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                  Fast Inference Engine (Groq)
+                </h3>
+              </div>
+
+              <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                <label className="flex items-center justify-between text-xs font-semibold text-slate-600 mb-2">
+                  <span>Groq Cloud Direct API Key</span>
+                  <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                    Used for Dynamic Autocomplete
+                  </span>
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Key className="h-4 w-4 text-slate-400 group-focus-within:text-amber-500 transition-colors" />
+                  </div>
+                  <input
+                    type={showGroq ? "text" : "password"}
+                    value={form.groqApiKey}
+                    onChange={(e) => handleChange("groqApiKey", e.target.value)}
+                    placeholder="gsk_..."
+                    className="block w-full pl-10 pr-12 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-mono text-slate-700 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowGroq(!showGroq)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-amber-600 transition-colors"
+                  >
+                    {showGroq ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Card Footer / Action Area */}
+          <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <p className="text-xs text-slate-400 font-medium">Keys are encrypted at rest using AES-256.</p>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-600/30 text-xs font-bold transition-all flex items-center gap-2"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 shadow-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-indigo-500/25"
             >
               {saving ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Saving...
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-[18px]">save</span>
-                  Save Changes
+                  <Save className="w-4 h-4" />
+                  <span>Save Changes</span>
                 </>
               )}
             </button>
           </div>
         </div>
-
-        {/* Quick Indicators */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-4 border-t border-slate-800/80 text-xs">
-          <div className="flex items-center gap-2 bg-slate-800/50 p-2.5 rounded-lg border border-slate-700/50">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
-            <div>
-              <span className="text-slate-400 block text-[10px]">BRANDING</span>
-              <span className="font-bold text-white">{form.siteName || "VidyaLoans"}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 bg-slate-800/50 p-2.5 rounded-lg border border-slate-700/50">
-            <span className="material-symbols-outlined text-indigo-400 text-base">analytics</span>
-            <div>
-              <span className="text-slate-400 block text-[10px]">GA4 TRACKING</span>
-              <span className="font-bold text-white">{form.googleAnalyticsId || "Disabled"}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 bg-slate-800/50 p-2.5 rounded-lg border border-slate-700/50">
-            <span className="material-symbols-outlined text-purple-400 text-base">share</span>
-            <div>
-              <span className="text-slate-400 block text-[10px]">SOCIAL CHANNELS</span>
-              <span className="font-bold text-white">7 Channels Active</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 bg-slate-800/50 p-2.5 rounded-lg border border-slate-700/50">
-            <span className={`material-symbols-outlined text-base ${form.disposableEmailBlock ? "text-emerald-400" : "text-amber-400"}`}>
-              {form.disposableEmailBlock ? "verified_user" : "gpp_maybe"}
-            </span>
-            <div>
-              <span className="text-slate-400 block text-[10px]">DISPOSABLE SHIELD</span>
-              <span className={`font-bold ${form.disposableEmailBlock ? "text-emerald-300" : "text-amber-300"}`}>
-                {form.disposableEmailBlock ? `${form.disposableBlockLevel.toUpperCase()} BLOCK` : "OFF"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1">
-        {[
-          { id: "identity", label: "General Identity", icon: "badge" },
-          { id: "social", label: "Social Media Links", icon: "share" },
-          { id: "branding", label: "Branding Assets", icon: "palette" },
-          { id: "analytics", label: "Integrations & Analytics", icon: "insights" },
-          { id: "disposable", label: "Disposable Email Protection", icon: "security" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shrink-0 ${
-              activeTab === tab.id
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* TAB 1: GENERAL IDENTITY */}
-      {activeTab === "identity" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-              <span className="material-symbols-outlined">domain</span>
-              <h3>Core Site Identity</h3>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Site Title / Name</label>
-              <input
-                type="text"
-                value={form.siteName}
-                onChange={(e) => handleChange("siteName", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                placeholder="e.g. VidyaLoans"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Tagline / Slogan</label>
-              <input
-                type="text"
-                value={form.tagline}
-                onChange={(e) => handleChange("tagline", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                placeholder="e.g. Overseas Education Financing Portal"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Default Meta Title (SEO)</label>
-              <input
-                type="text"
-                value={form.metaTitle}
-                onChange={(e) => handleChange("metaTitle", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Default Meta Description</label>
-              <textarea
-                rows={3}
-                value={form.metaDescription}
-                onChange={(e) => handleChange("metaDescription", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-              />
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-              <span className="material-symbols-outlined">contact_phone</span>
-              <h3>Contact Info & Locale</h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Support Email</label>
-                <input
-                  type="email"
-                  value={form.supportEmail}
-                  onChange={(e) => handleChange("supportEmail", e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Sales/Contact Email</label>
-                <input
-                  type="email"
-                  value={form.contactEmail}
-                  onChange={(e) => handleChange("contactEmail", e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Helpline Phone</label>
-                <input
-                  type="text"
-                  value={form.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Toll-Free Number</label>
-                <input
-                  type="text"
-                  value={form.tollFree}
-                  onChange={(e) => handleChange("tollFree", e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Physical Office Address</label>
-              <textarea
-                rows={2}
-                value={form.address}
-                onChange={(e) => handleChange("address", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Default Currency</label>
-                <select
-                  value={form.currency}
-                  onChange={(e) => handleChange("currency", e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                >
-                  <option value="INR">INR (₹)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="CAD">CAD ($)</option>
-                  <option value="AUD">AUD ($)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Platform Timezone</label>
-                <select
-                  value={form.timezone}
-                  onChange={(e) => handleChange("timezone", e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                >
-                  <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                  <option value="UTC">UTC</option>
-                  <option value="America/New_York">America/New_York (EST)</option>
-                  <option value="Europe/London">Europe/London (GMT)</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Footer Copyright Text</label>
-              <input
-                type="text"
-                value={form.copyrightText}
-                onChange={(e) => handleChange("copyrightText", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-              />
-            </div>
-          </div>
-        </div>
       )}
 
-      {/* TAB 2: SOCIAL MEDIA LINKS */}
-      {activeTab === "social" && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b pb-4">
-            <div>
-              <h3 className="font-bold text-slate-900 text-base">Social Media Profiles & Channels</h3>
-              <p className="text-xs text-slate-500">Configure links to your social handles displayed across the header, footer, and emails</p>
-            </div>
-            <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold">
-              7 Channels Configured
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { key: "facebookUrl", label: "Facebook Page", icon: "facebook", placeholder: "https://facebook.com/yourpage", color: "text-blue-600" },
-              { key: "instagramUrl", label: "Instagram Handle", icon: "photo_camera", placeholder: "https://instagram.com/yourhandle", color: "text-pink-600" },
-              { key: "twitterUrl", label: "Twitter / X Profile", icon: "tag", placeholder: "https://x.com/yourhandle", color: "text-slate-800" },
-              { key: "linkedinUrl", label: "LinkedIn Company", icon: "work", placeholder: "https://linkedin.com/company/yourcompany", color: "text-blue-700" },
-              { key: "youtubeUrl", label: "YouTube Channel", icon: "play_circle", placeholder: "https://youtube.com/@yourchannel", color: "text-red-600" },
-              { key: "whatsappNumber", label: "WhatsApp Business Number", icon: "chat", placeholder: "+919876543210", color: "text-emerald-600" },
-              { key: "telegramUrl", label: "Telegram Channel", icon: "send", placeholder: "https://t.me/yourchannel", color: "text-sky-500" },
-            ].map((s) => (
-              <div key={s.key} className="p-4 rounded-xl border border-slate-200 hover:border-indigo-300 transition-all bg-slate-50/50 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center ${s.color} shadow-sm shrink-0`}>
-                  <span className="material-symbols-outlined">{s.icon}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <label className="block text-xs font-bold text-slate-800 mb-1">{s.label}</label>
-                  <input
-                    type="text"
-                    value={(form as any)[s.key]}
-                    onChange={(e) => handleChange(s.key as any, e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium bg-white"
-                    placeholder={s.placeholder}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: BRANDING ASSETS */}
-      {activeTab === "branding" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-                <span className="material-symbols-outlined">image</span>
-                <h3>Logo & Icon URLs</h3>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Light Mode Logo URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={form.logoLightUrl}
-                    onChange={(e) => handleChange("logoLightUrl", e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium"
-                  />
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                    <img src={form.logoLightUrl} alt="Logo Light" className="max-h-7 object-contain" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Dark Mode Logo URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={form.logoDarkUrl}
-                    onChange={(e) => handleChange("logoDarkUrl", e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium"
-                  />
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
-                    <img src={form.logoDarkUrl} alt="Logo Dark" className="max-h-7 object-contain" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Favicon URL</label>
-                  <input
-                    type="text"
-                    value={form.faviconUrl}
-                    onChange={(e) => handleChange("faviconUrl", e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mobile App Icon</label>
-                  <input
-                    type="text"
-                    value={form.appIconUrl}
-                    onChange={(e) => handleChange("appIconUrl", e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-                <span className="material-symbols-outlined">colorize</span>
-                <h3>Theme Color Palette</h3>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={form.primaryColor}
-                      onChange={(e) => handleChange("primaryColor", e.target.value)}
-                      className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={form.primaryColor}
-                      onChange={(e) => handleChange("primaryColor", e.target.value)}
-                      className="w-full px-2 py-1 border border-slate-300 rounded text-xs uppercase"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Secondary Color</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={form.secondaryColor}
-                      onChange={(e) => handleChange("secondaryColor", e.target.value)}
-                      className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={form.secondaryColor}
-                      onChange={(e) => handleChange("secondaryColor", e.target.value)}
-                      className="w-full px-2 py-1 border border-slate-300 rounded text-xs uppercase"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Dark Mode BG</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={form.darkThemeBg}
-                      onChange={(e) => handleChange("darkThemeBg", e.target.value)}
-                      className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={form.darkThemeBg}
-                      onChange={(e) => handleChange("darkThemeBg", e.target.value)}
-                      className="w-full px-2 py-1 border border-slate-300 rounded text-xs uppercase"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Preview Card */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Live Color Preview</span>
-                <div className="flex items-center gap-3">
-                  <button style={{ backgroundColor: form.primaryColor }} className="px-4 py-2 rounded-xl text-white text-xs font-bold shadow">
-                    Primary Button
-                  </button>
-                  <button style={{ backgroundColor: form.secondaryColor }} className="px-4 py-2 rounded-xl text-white text-xs font-bold shadow">
-                    Secondary Accent
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-              <span className="material-symbols-outlined">code</span>
-              <h3>Custom CSS Overrides</h3>
-            </div>
-            <textarea
-              rows={4}
-              value={form.customCss}
-              onChange={(e) => handleChange("customCss", e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs text-slate-800 bg-slate-900/90 text-emerald-400"
-              placeholder="/* Add site wide custom CSS rules */"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: INTEGRATIONS & ANALYTICS */}
-      {activeTab === "analytics" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { label: "Google Analytics 4 ID", field: "googleAnalyticsId", placeholder: "G-XXXXXXXXXX", icon: "analytics" },
-              { label: "Google Tag Manager ID", field: "googleTagManagerId", placeholder: "GTM-XXXXXXX", icon: "label" },
-              { label: "Meta / Facebook Pixel ID", field: "facebookPixelId", placeholder: "123456789012345", icon: "cell_tower" },
-              { label: "PostHog API Key", field: "posthogApiKey", placeholder: "phc_live_xxxxxxxx", icon: "dataset" },
-              { label: "Mixpanel Project Token", field: "mixpanelToken", placeholder: "mp_token_xxxxxxx", icon: "insights" },
-              { label: "Hotjar Site ID", field: "hotjarSiteId", placeholder: "1234567", icon: "visibility" },
-            ].map((item) => (
-              <div key={item.field} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-1">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                  <span className="material-symbols-outlined text-indigo-600 text-sm">{item.icon}</span>
-                  {item.label}
-                </div>
-                <input
-                  type="text"
-                  value={(form as any)[item.field]}
-                  onChange={(e) => handleChange(item.field as any, e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium"
-                  placeholder={item.placeholder}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b pb-3">
-                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <span className="material-symbols-outlined text-indigo-600">code</span>
-                  Custom &lt;head&gt; Scripts
-                </h3>
-                <span className="text-[10px] text-slate-400 font-mono">HTML / JS Injector</span>
-              </div>
-              <textarea
-                rows={6}
-                value={form.customHeadScripts}
-                onChange={(e) => handleChange("customHeadScripts", e.target.value)}
-                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-slate-950 text-indigo-300"
-              />
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b pb-3">
-                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <span className="material-symbols-outlined text-indigo-600">terminal</span>
-                  Custom &lt;body&gt; Header / Footer Scripts
-                </h3>
-                <span className="text-[10px] text-slate-400 font-mono">Chat & Tracking Widgets</span>
-              </div>
-              <textarea
-                rows={6}
-                value={form.customBodyScripts}
-                onChange={(e) => handleChange("customBodyScripts", e.target.value)}
-                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-slate-950 text-emerald-300"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 5: DISPOSABLE EMAIL PROTECTION */}
-      {activeTab === "disposable" && (
-        <div className="space-y-6">
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ── TAB: SECURITY & SEO (Disposable Email Protection) ── */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === "security" && (
+        <div className="space-y-6 animate-fade-in">
           {/* Master Switch & Mode Selector */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
               <div>
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${form.disposableEmailBlock ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                    <span className="material-symbols-outlined text-2xl">shield</span>
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      form.disposableEmailBlock ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    <Shield className="w-5 h-5" />
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-base">Disposable & Temporary Email Shield</h3>
-                    <p className="text-xs text-slate-500">Prevent fake account creation and spam by blocking disposable domain emails</p>
+                    <p className="text-xs text-slate-500">
+                      Block fraudulent applications and fake accounts with {blockedCount.toLocaleString()} blocked
+                      domains
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Master Toggle */}
+              {/* Master Shield Toggle */}
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -794,9 +683,27 @@ export default function SiteSettingsSection() {
               <label className="block text-xs font-bold text-slate-800 mb-3">Enforcement Level Policy</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { id: "strict", title: "Strict Block", desc: "Instantly block registration and applications using disposable email domains.", icon: "block", color: "border-emerald-500 bg-emerald-50/40 text-emerald-900" },
-                  { id: "warning", title: "Warning Banner", desc: "Warn the user that temp email addresses are discouraged before proceeding.", icon: "warning", color: "border-amber-500 bg-amber-50/40 text-amber-900" },
-                  { id: "audit_only", title: "Audit Log Only", desc: "Allow registration but flag the user account in admin audit logs for staff review.", icon: "visibility", color: "border-indigo-500 bg-indigo-50/40 text-indigo-900" },
+                  {
+                    id: "strict",
+                    title: "Strict Block",
+                    desc: "Instantly reject student loan applications and user signups using disposable domains.",
+                    icon: "block",
+                    color: "border-emerald-500 bg-emerald-50/40 text-emerald-900",
+                  },
+                  {
+                    id: "warning",
+                    title: "Warning Banner",
+                    desc: "Alert applicant that institutional verification will require an official email.",
+                    icon: "warning",
+                    color: "border-amber-500 bg-amber-50/40 text-amber-900",
+                  },
+                  {
+                    id: "audit_only",
+                    title: "Audit Log Only",
+                    desc: "Allow submission but flag the application in admin audit logs for manual underwriting review.",
+                    icon: "visibility",
+                    color: "border-indigo-500 bg-indigo-50/40 text-indigo-900",
+                  },
                 ].map((mode) => (
                   <button
                     key={mode.id}
@@ -823,24 +730,29 @@ export default function SiteSettingsSection() {
 
           {/* Blacklist and Whitelist Domain Managers */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3">
               <div className="flex items-center justify-between border-b pb-3">
                 <div className="flex items-center gap-2 text-rose-600 font-bold text-sm">
                   <span className="material-symbols-outlined">do_not_disturb_on</span>
                   <h3>Blocked Email Domains (Blacklist)</h3>
                 </div>
-                <span className="text-[10px] text-slate-400">Comma or newline separated</span>
+                <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                  {blockedCount.toLocaleString()} Domains
+                </span>
               </div>
+              <p className="text-[11px] text-slate-500">
+                Comma or newline separated list of blocked disposable, temporary, and burner email providers.
+              </p>
               <textarea
-                rows={6}
+                rows={10}
                 value={form.blockedDomains}
                 onChange={(e) => handleChange("blockedDomains", e.target.value)}
-                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-rose-50/30 text-rose-950"
-                placeholder="tempmail.com, mailinator.com, yopmail.com"
+                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-rose-50/20 text-rose-950 leading-relaxed focus:ring-2 focus:ring-rose-400 custom-scrollbar shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                placeholder="0-mail.com, tempmail.com, mailinator.com..."
               />
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3">
               <div className="flex items-center justify-between border-b pb-3">
                 <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
                   <span className="material-symbols-outlined">verified</span>
@@ -848,12 +760,15 @@ export default function SiteSettingsSection() {
                 </div>
                 <span className="text-[10px] text-slate-400">Comma or newline separated</span>
               </div>
+              <p className="text-[11px] text-slate-500">
+                Trusted consumer and enterprise domains that will always bypass the disposable check.
+              </p>
               <textarea
-                rows={6}
+                rows={10}
                 value={form.allowedDomains}
                 onChange={(e) => handleChange("allowedDomains", e.target.value)}
-                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-emerald-50/30 text-emerald-950"
-                placeholder="gmail.com, yahoo.com, outlook.com"
+                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-emerald-50/20 text-emerald-950 leading-relaxed focus:ring-2 focus:ring-emerald-400 custom-scrollbar shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                placeholder="gmail.com, yahoo.com, outlook.com, hotmail.com, icloud.com..."
               />
             </div>
           </div>
@@ -865,26 +780,28 @@ export default function SiteSettingsSection() {
               <h3>Live Disposable Email Tester Widget</h3>
             </div>
 
-            <p className="text-xs text-slate-400">Test any email address against your active disposable email protection rules live</p>
+            <p className="text-xs text-slate-400">
+              Test any email address against your active disposable email protection rules live
+            </p>
 
             <div className="flex items-center gap-3">
               <input
                 type="email"
                 value={testEmail}
                 onChange={(e) => setTestEmail(e.target.value)}
-                placeholder="e.g. user@tempmail.com"
+                placeholder="e.g. test@0-mail.com or user@gmail.com"
                 className="flex-1 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-white text-xs font-mono focus:ring-2 focus:ring-indigo-500"
               />
               <button
                 onClick={handleTestEmail}
                 disabled={testLoading}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shrink-0 flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shrink-0 flex items-center gap-2 shadow-md shadow-indigo-600/20"
               >
                 {testLoading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-base">saved_search</span>
+                    <Search className="w-4 h-4" />
                     Test Email
                   </>
                 )}
@@ -893,7 +810,7 @@ export default function SiteSettingsSection() {
 
             {testResult && (
               <div
-                className={`p-4 rounded-xl border text-xs space-y-2 animate-fadeIn ${
+                className={`p-4 rounded-xl border text-xs space-y-2 animate-fade-in ${
                   testResult.blocked
                     ? "bg-rose-950/60 border-rose-600/60 text-rose-200"
                     : "bg-emerald-950/60 border-emerald-600/60 text-emerald-200"
@@ -901,10 +818,8 @@ export default function SiteSettingsSection() {
               >
                 <div className="flex items-center justify-between font-bold text-sm">
                   <span className="flex items-center gap-2">
-                    <span className="material-symbols-outlined">
-                      {testResult.blocked ? "cancel" : "check_circle"}
-                    </span>
-                    {testResult.blocked ? "DISPOSABLE EMAIL DETECTED" : "EMAIL IS VALID & ALLOWED"}
+                    <span className="material-symbols-outlined">{testResult.blocked ? "cancel" : "check_circle"}</span>
+                    {testResult.blocked ? "DISPOSABLE EMAIL DETECTED & BLOCKED" : "EMAIL IS VALID & ALLOWED"}
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-white/10">
                     {testResult.action}
@@ -925,11 +840,441 @@ export default function SiteSettingsSection() {
                   </div>
                   <div>
                     <span className="opacity-60 block">RESULT REASON</span>
-                    <span className="truncate block" title={testResult.reason}>{testResult.reason}</span>
+                    <span className="truncate block" title={testResult.reason}>
+                      {testResult.reason}
+                    </span>
                   </div>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ── TAB: GENERAL & BRANDING ── */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === "general" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+              <Building2 className="w-4 h-4" />
+              <h3>Core Site Identity</h3>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Site Title / Name</label>
+              <input
+                type="text"
+                value={form.siteName}
+                onChange={(e) => handleChange("siteName", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Tagline / Slogan</label>
+              <input
+                type="text"
+                value={form.tagline}
+                onChange={(e) => handleChange("tagline", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Support Email</label>
+                <input
+                  type="email"
+                  value={form.supportEmail}
+                  onChange={(e) => handleChange("supportEmail", e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Phone</label>
+                <input
+                  type="text"
+                  value={form.phone}
+                  onChange={(e) => handleChange("phone", e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+              <span className="material-symbols-outlined">palette</span>
+              <h3>Branding & Theme Colors</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={form.primaryColor}
+                    onChange={(e) => handleChange("primaryColor", e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5"
+                  />
+                  <input
+                    type="text"
+                    value={form.primaryColor}
+                    onChange={(e) => handleChange("primaryColor", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Secondary Color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={form.secondaryColor}
+                    onChange={(e) => handleChange("secondaryColor", e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5"
+                  />
+                  <input
+                    type="text"
+                    value={form.secondaryColor}
+                    onChange={(e) => handleChange("secondaryColor", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Logo URL (Transparent PNG)</label>
+              <input
+                type="text"
+                value={form.logoLightUrl}
+                onChange={(e) => handleChange("logoLightUrl", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Copyright Footer Text</label>
+              <input
+                type="text"
+                value={form.copyrightText}
+                onChange={(e) => handleChange("copyrightText", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ── TAB: PAYMENTS & ADS ── */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === "payments" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+              <CreditCard className="w-4 h-4" />
+              <h3>Razorpay Gateway Config</h3>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Key ID</label>
+              <input
+                type="text"
+                value={form.razorpayKeyId}
+                onChange={(e) => handleChange("razorpayKeyId", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Key Secret</label>
+              <div className="relative">
+                <input
+                  type={showRazorpaySecret ? "text" : "password"}
+                  value={form.razorpayKeySecret}
+                  onChange={(e) => handleChange("razorpayKeySecret", e.target.value)}
+                  className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRazorpaySecret(!showRazorpaySecret)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600"
+                >
+                  {showRazorpaySecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+              <span className="material-symbols-outlined">ads_click</span>
+              <h3>Google Ads & Conversions</h3>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Google Ads Conversion ID</label>
+              <input
+                type="text"
+                value={form.googleAdsId}
+                onChange={(e) => handleChange("googleAdsId", e.target.value)}
+                placeholder="e.g. AW-1234567890"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ── TAB: AMBER HQ LEADS API ── */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === "amber" && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4 animate-fade-in">
+          <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+            <ExternalLink className="w-4 h-4" />
+            <h3>Amber HQ Student Accommodation API</h3>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">API Key</label>
+            <input
+              type="text"
+              value={form.amberApiKey}
+              onChange={(e) => handleChange("amberApiKey", e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">API Secret</label>
+            <div className="relative">
+              <input
+                type={showAmberSecret ? "text" : "password"}
+                value={form.amberApiSecret}
+                onChange={(e) => handleChange("amberApiSecret", e.target.value)}
+                className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowAmberSecret(!showAmberSecret)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600"
+              >
+                {showAmberSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Webhook Endpoint URL</label>
+            <input
+              type="text"
+              value={form.amberWebhookUrl}
+              onChange={(e) => handleChange("amberWebhookUrl", e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ── TAB: GOOGLE & SOCIAL DISCOVERY ── */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === "discovery" && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+                <Globe className="w-4 h-4" />
+                <h3>Google Tag & Tracking Identifiers</h3>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Google Tag Manager ID</label>
+                <input
+                  type="text"
+                  value={form.googleTagManagerId}
+                  onChange={(e) => handleChange("googleTagManagerId", e.target.value)}
+                  placeholder="GTM-MD6CB6LJ"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Google Analytics 4 (GA4)</label>
+                <input
+                  type="text"
+                  value={form.googleAnalyticsId}
+                  onChange={(e) => handleChange("googleAnalyticsId", e.target.value)}
+                  placeholder="G-SB8FV1EK2S"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Facebook / Meta Pixel ID</label>
+                <input
+                  type="text"
+                  value={form.facebookPixelId}
+                  onChange={(e) => handleChange("facebookPixelId", e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+                <span className="material-symbols-outlined">share</span>
+                <h3>Social Media Handles</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Facebook URL</label>
+                  <input
+                    type="text"
+                    value={form.facebookUrl}
+                    onChange={(e) => handleChange("facebookUrl", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Instagram URL</label>
+                  <input
+                    type="text"
+                    value={form.instagramUrl}
+                    onChange={(e) => handleChange("instagramUrl", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">X (Twitter) URL</label>
+                  <input
+                    type="text"
+                    value={form.twitterUrl}
+                    onChange={(e) => handleChange("twitterUrl", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">LinkedIn URL</label>
+                  <input
+                    type="text"
+                    value={form.linkedinUrl}
+                    onChange={(e) => handleChange("linkedinUrl", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b pb-3">
+                <Code className="w-4 h-4 text-indigo-600" />
+                Custom &lt;head&gt; Scripts (GTM Script)
+              </h3>
+              <textarea
+                rows={5}
+                value={form.customHeadScripts}
+                onChange={(e) => handleChange("customHeadScripts", e.target.value)}
+                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-slate-950 text-emerald-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b pb-3">
+                <Terminal className="w-4 h-4 text-indigo-600" />
+                Custom &lt;body&gt; Scripts (GTM NoScript)
+              </h3>
+              <textarea
+                rows={5}
+                value={form.customBodyScripts}
+                onChange={(e) => handleChange("customBodyScripts", e.target.value)}
+                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-slate-950 text-emerald-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ── TAB: EMAIL & AWS SES ── */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === "email" && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4 animate-fade-in">
+          <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+            <Mail className="w-4 h-4" />
+            <h3>Amazon Simple Email Service (AWS SES)</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">AWS Region</label>
+              <input
+                type="text"
+                value={form.awsSesRegion}
+                onChange={(e) => handleChange("awsSesRegion", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Sender Email Address</label>
+              <input
+                type="email"
+                value={form.awsSesSenderEmail}
+                onChange={(e) => handleChange("awsSesSenderEmail", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">AWS Access Key</label>
+              <input
+                type="text"
+                value={form.awsSesAccessKey}
+                onChange={(e) => handleChange("awsSesAccessKey", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">AWS Secret Key</label>
+              <div className="relative">
+                <input
+                  type={showAwsSecret ? "text" : "password"}
+                  value={form.awsSesSecretKey}
+                  onChange={(e) => handleChange("awsSesSecretKey", e.target.value)}
+                  className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAwsSecret(!showAwsSecret)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600"
+                >
+                  {showAwsSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ── TAB: EVENT SCRAPER ── */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {activeTab === "scraper" && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4 animate-fade-in">
+          <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+            <Calendar className="w-4 h-4" />
+            <h3>Education Event & Fair Scraper</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Cron Schedule</label>
+              <input
+                type="text"
+                value={form.eventScraperCron}
+                onChange={(e) => handleChange("eventScraperCron", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Target Scrape Source URL</label>
+              <input
+                type="text"
+                value={form.eventScraperSource}
+                onChange={(e) => handleChange("eventScraperSource", e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              />
+            </div>
           </div>
         </div>
       )}

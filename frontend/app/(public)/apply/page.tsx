@@ -22,11 +22,7 @@ const FIELD_LIMITS = {
     otp: 6,
 };
 
-const DISPOSABLE_DOMAINS = [
-    "tempmail.com", "yopmail.com", "mailinator.com", "10minutemail.com", 
-    "trashmail.com", "guerrillamail.com", "getnada.com", "temp-mail.org", 
-    "dispostable.com", "throwawaymail.com"
-];
+const DISPOSABLE_DOMAINS = require('@/lib/disposable-domains.json');
 
 function formatINR(valStr: string): string {
     const val = parseFloat(valStr);

@@ -1,5 +1,5 @@
 export class UpdateSiteSettingsDto {
-  // General Identity
+  // General Identity & Branding
   siteName?: string;
   tagline?: string;
   metaTitle?: string;
@@ -12,17 +12,6 @@ export class UpdateSiteSettingsDto {
   currency?: string;
   timezone?: string;
   copyrightText?: string;
-
-  // Social Media Links
-  facebookUrl?: string;
-  instagramUrl?: string;
-  twitterUrl?: string;
-  linkedinUrl?: string;
-  youtubeUrl?: string;
-  whatsappNumber?: string;
-  telegramUrl?: string;
-
-  // Branding Assets
   logoLightUrl?: string;
   logoDarkUrl?: string;
   faviconUrl?: string;
@@ -32,18 +21,20 @@ export class UpdateSiteSettingsDto {
   darkThemeBg?: string;
   customCss?: string;
 
-  // Integrations & Analytics
-  googleAnalyticsId?: string;
-  googleTagManagerId?: string;
-  facebookPixelId?: string;
-  posthogApiKey?: string;
-  mixpanelToken?: string;
-  hotjarSiteId?: string;
-  customHeadScripts?: string;
-  customBodyScripts?: string;
-  webhookUrl?: string;
+  // Payments & Ads
+  razorpayKeyId?: string;
+  razorpayKeySecret?: string;
+  stripePublishableKey?: string;
+  stripeSecretKey?: string;
+  googleAdsId?: string;
 
-  // Disposable Email Protection
+  // AI Integration
+  openRouterApiKey?: string;
+  aiModel?: string;
+  aiTemperature?: number;
+  groqApiKey?: string;
+
+  // Security, SEO & Disposable Email Protection
   disposableEmailBlock?: boolean;
   disposableBlockLevel?: string;
   blockedDomains?: string;
@@ -51,4 +42,45 @@ export class UpdateSiteSettingsDto {
   disposableApiKey?: string;
   disposableProvider?: string;
   disposableAction?: string;
+  enableRecaptcha?: boolean;
+  recaptchaSiteKey?: string;
+
+  // Amber HQ Leads API
+  amberApiKey?: string;
+  amberApiSecret?: string;
+  amberWebhookUrl?: string;
+
+  // Google & Social Discovery
+  googleAnalyticsId?: string;
+  googleTagManagerId?: string;
+  facebookPixelId?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
+  youtubeUrl?: string;
+  whatsappNumber?: string;
+  telegramUrl?: string;
+  posthogApiKey?: string;
+  mixpanelToken?: string;
+  hotjarSiteId?: string;
+  customHeadScripts?: string;
+  customBodyScripts?: string;
+  webhookUrl?: string;
+
+  // Email & AWS SES
+  awsSesRegion?: string;
+  awsSesAccessKey?: string;
+  awsSesSecretKey?: string;
+  awsSesSenderEmail?: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPassword?: string;
+
+  // Event Scraper
+  eventScraperCron?: string;
+  eventScraperEnabled?: boolean;
+  eventScraperSource?: string;
 }
+

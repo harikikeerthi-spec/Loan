@@ -1,11 +1,26 @@
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { SiteSettingsService } from '../../site-settings/site-settings.service';
 
 @Injectable()
 export class OpenRouterService {
     private readonly apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    private readonly apiKey = process.env.OPENROUTER_API_KEY;
+    private readonly defaultApiKey = process.env.OPENROUTER_API_KEY || '';
     private readonly REQUEST_TIMEOUT_MS = 30_000; // 30 seconds
+
+    constructor(@Optional() private readonly siteSettingsService?: SiteSettingsService) {}
+
+    public async getApiKey(): Promise<string> {
+        if (this.siteSettingsService) {
+            try {
+                const settings = await this.siteSettingsService.getSettings();
+                if (settings?.openRouterApiKey && settings.openRouterApiKey.startsWith('sk-')) {
+                    return settings.openRouterApiKey;
+                }
+            } catch (e) {}
+        }
+        return this.defaultApiKey;
+    }
     
     // Fallback models to try if primary model fails (in order of preference)
     private readonly FALLBACK_MODELS = [
@@ -28,7 +43,8 @@ export class OpenRouterService {
     }
 
     async chat(prompt: string, model: string = 'openai/gpt-4o-mini'): Promise<string> {
-        if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
+        const apiKey = await this.getApiKey();
+        if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
             console.warn('OPENROUTER_API_KEY is not set. Using mock response or failing.');
             throw new Error('OPENROUTER_API_KEY is not configured in environment variables.');
         }
@@ -41,7 +57,7 @@ export class OpenRouterService {
             max_tokens: 2048,
         };
 
-        const maskedKey = this.apiKey ? `${this.apiKey.slice(0, 4)}...${this.apiKey.slice(-4)} (len ${this.apiKey.length})` : '[NOT SET]';
+        const maskedKey = apiKey ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)} (len ${apiKey.length})` : '[NOT SET]';
         console.log('OpenRouter request:', {
             url: this.apiUrl,
             model: requestBody.model,
@@ -53,7 +69,7 @@ export class OpenRouterService {
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
                     'HTTP-Referer': 'https://vidyaloan.com',
                     'X-Title': 'VidyaLoan',
@@ -100,7 +116,8 @@ export class OpenRouterService {
 
     async getJson<T>(prompt: string, model: string = 'openai/gpt-4o-mini'): Promise<T> {
         const jsonPrompt = `${prompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting.`;
-        if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') throw new Error('OPENROUTER_API_KEY is not configured');
+        const apiKey = await this.getApiKey();
+        if (!apiKey || apiKey === 'your_openrouter_api_key_here') throw new Error('OPENROUTER_API_KEY is not configured');
 
         // Build list of models to try
         const modelsToTry = [model, ...this.FALLBACK_MODELS].filter((m, i, a) => a.indexOf(m) === i); // Remove duplicates
@@ -112,7 +129,7 @@ export class OpenRouterService {
                 const response = await fetch(this.apiUrl, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${this.apiKey}`,
+                        'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json',
                         'HTTP-Referer': 'https://vidyaloan.com',
                         'X-Title': 'VidyaLoan',
@@ -243,7 +260,8 @@ export class OpenRouterService {
     }
 
     async chatWithVision(prompt: string, imageUrl: string, model: string = 'google/gemini-2.5-flash'): Promise<string> {
-        if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
+        const apiKey = await this.getApiKey();
+        if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
             throw new Error('OPENROUTER_API_KEY is not configured');
         }
 
@@ -282,7 +300,7 @@ export class OpenRouterService {
                 const response = await fetch(this.apiUrl, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${this.apiKey}`,
+                        'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json',
                         'HTTP-Referer': 'https://vidyaloan.com',
                         'X-Title': 'VidyaLoan',
