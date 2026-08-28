@@ -219,6 +219,10 @@ const sectionToPathMap: Record<string, string> = {
     overview: '/admin/dashboard',
     applications: '/admin/applications',
     users: '/admin/users',
+    users_students: '/admin/users/students',
+    users_staff: '/admin/users/staff',
+    users_agents: '/admin/users/agents',
+    users_banks: '/admin/users/banks',
     analytics: '/admin/analytics',
     system: '/admin/system',
     banks: '/admin/banks',
@@ -244,6 +248,15 @@ const pathToSectionMap: Record<string, string> = {
     '/admin/dashboard': 'overview',
     '/admin/applications': 'applications',
     '/admin/users': 'users',
+    '/admin/users/students': 'users_students',
+    '/admin/users/user': 'users_students',
+    '/admin/users/staff': 'users_staff',
+    '/admin/staff': 'users_staff',
+    '/admin/users/agents': 'users_agents',
+    '/admin/users/agent': 'users_agents',
+    '/admin/agents': 'users_agents',
+    '/admin/users/banks': 'users_banks',
+    '/admin/users/bank': 'users_banks',
     '/admin/analytics': 'analytics',
     '/admin/system': 'system',
     '/admin/banks': 'banks',
@@ -322,6 +335,7 @@ export default function AdminDashboardPage() {
     const [filterToDate, setFilterToDate] = useState("");
     const [filterBlogTime, setFilterBlogTime] = useState("all");
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [usersExpanded, setUsersExpanded] = useState(true);
     const [supportExpanded, setSupportExpanded] = useState(false);
     const [marketingExpanded, setMarketingExpanded] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
@@ -345,6 +359,14 @@ export default function AdminDashboardPage() {
         background: { immigrationApplied: "No", immigrationAppliedCountry: "", medicalCondition: "No", medicalConditionDetails: "", visaRefusal: "No", visaRefusalDetails: "", criminalOffence: "No", criminalOffenceDetails: "" },
         emergencyContact: { name: "", phone: "", email: "", relation: "" }
     });
+
+    const openCreateUserModal = (defaultRole = "user") => {
+        setNewUserQuery(prev => ({
+            ...prev,
+            role: defaultRole
+        }));
+        setShowCreateUserModal(true);
+    };
 
     const [editingUser, setEditingUser] = useState<any>(null);
     const [updateLoading, setUpdateLoading] = useState(false);
@@ -442,10 +464,11 @@ export default function AdminDashboardPage() {
                 disbursedCount: appStats.data?.statusStats?.disbursed || 0,
                 appCount: appStats.data?.total || 0,
                 userCount: userList.length,
+                studentCount: userList.filter((u: any) => u.role === 'user' || u.role === 'student').length,
+                staffCount: userList.filter((u: any) => u.role === 'staff' || u.role === 'staff_admin').length,
+                bankCount: userList.filter((u: any) => u.role === 'bank' || u.role === 'partner_bank').length,
+                agentCount: userList.filter((u: any) => u.role === 'agent' || u.role === 'partner_agent').length,
                 activeAdmins: userList.filter((u: any) => u.role === 'admin' || u.role === 'super_admin').length,
-                staffCount: userList.filter((u: any) => u.role === 'staff').length,
-                bankCount: userList.filter((u: any) => u.role === 'bank').length,
-                agentCount: userList.filter((u: any) => u.role === 'agent').length,
             });
             setAuditLogs(logs.data || []);
             // Count pending applications for notification badge
@@ -466,9 +489,18 @@ export default function AdminDashboardPage() {
         }
         try {
             let res: any;
-            if (activeSection === "users") {
+            const isUserSection = activeSection === "users" || activeSection === "users_students" || activeSection === "users_staff" || activeSection === "users_agents" || activeSection === "users_banks";
+            if (isUserSection) {
                 const offset = (currentPage - 1) * itemsPerPage;
-                res = await adminApi.getUsers(itemsPerPage, offset, lastSearchQuery, roleFilter === "all" ? "" : roleFilter);
+                let queryRole = "";
+                if (activeSection === "users_students") queryRole = "student";
+                else if (activeSection === "users_staff") queryRole = "staff";
+                else if (activeSection === "users_agents") queryRole = "agent";
+                else if (activeSection === "users_banks") queryRole = "bank";
+                else if (activeSection === "users") {
+                    queryRole = roleFilter === "all" ? "" : roleFilter;
+                }
+                res = await adminApi.getUsers(itemsPerPage, offset, lastSearchQuery, queryRole);
                 if (res && res.data) {
                     setData(res.data || []);
                     setTotalItems(res.total || res.data.length);
@@ -540,7 +572,7 @@ export default function AdminDashboardPage() {
     }, [searchQuery]);
 
     useEffect(() => {
-        if (activeSection === "users") {
+        if (activeSection === "users" || activeSection === "users_students" || activeSection === "users_staff" || activeSection === "users_agents" || activeSection === "users_banks") {
             setCurrentPage(1);
         }
         if (activeSection === "applications") {
@@ -1117,7 +1149,6 @@ export default function AdminDashboardPage() {
         { section: "analytics", icon: "analytics", label: "Platform Analytics", badge: 0 },
         { section: "applications", icon: "description", label: "Applications", badge: pendingCount },
         { section: "system", icon: "admin_panel_settings", label: "System Control", badge: announcements.length },
-        { section: "users", icon: "people", label: "Users", badge: 0 },
         { section: "banks", icon: "account_balance", label: "Bank Partners", badge: 0 },
         { section: "countries", icon: "public", label: "Study Countries", badge: 0 },
         { section: "chat", icon: "forum", label: "Student Chat", badge: 0 },
@@ -1125,6 +1156,17 @@ export default function AdminDashboardPage() {
         { section: "site_settings", icon: "settings_suggest", label: "Site Settings", badge: 0 },
         { section: "audit_logs", icon: "policy", label: "Audit Logs", badge: 0 },
     ];
+
+    // User Directory sub-nav items
+    const userNavItems = [
+        { section: "users", icon: "group", label: "All Users" },
+        { section: "users_students", icon: "school", label: "Students / Users" },
+        { section: "users_staff", icon: "badge", label: "Staff Operations" },
+        { section: "users_agents", icon: "support_agent", label: "Agents & Partners" },
+        { section: "users_banks", icon: "account_balance", label: "Bank Representatives" },
+    ];
+
+    const isUserSection = activeSection === "users" || activeSection === "users_students" || activeSection === "users_staff" || activeSection === "users_agents" || activeSection === "users_banks";
 
     // Marketing sub-nav items
     const marketingNavItems = [
@@ -1148,7 +1190,11 @@ export default function AdminDashboardPage() {
         applications: 'Applications',
         system: 'System Control',
         site_settings: 'Site Settings & Platform Configuration',
-        users: 'User Management',
+        users: 'User Directory · All Users',
+        users_students: 'User Directory · Students & Users',
+        users_staff: 'User Directory · Staff Operations',
+        users_agents: 'User Directory · Agents & Partners',
+        users_banks: 'User Directory · Bank Representatives',
         banks: 'Bank Partners Management',
         countries: 'Supported Study Destinations',
         blogs: 'Blog Management',
@@ -1222,7 +1268,49 @@ export default function AdminDashboardPage() {
 
                 <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto custom-scrollbar">
                     <div className={`px-3 mb-2 mt-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 group-hover/sidebar:opacity-100'}`}>Menu</div>
-                    {navItems.map(item => (
+                    
+                    {/* Top menu items before users */}
+                    {navItems.slice(0, 4).map(item => (
+                        <NavItem key={item.section} {...item} active={activeSection} onClick={setActiveSection} expanded={sidebarOpen} />
+                    ))}
+
+                    {/* ── User Directory & Sub-roles ── */}
+                    <div className="px-1 mt-1 mb-1">
+                        <button
+                            onClick={() => { setUsersExpanded(e => !e); if (!usersExpanded && !isUserSection) setActiveSection('users'); }}
+                            title="User Management"
+                            className={`w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 transition-colors text-xs font-medium ${isUserSection ? 'bg-indigo-500/10 text-indigo-400 font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                        >
+                            <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                                <span className={`material-symbols-outlined text-[18px] ${isUserSection ? 'text-indigo-400' : 'text-slate-500'}`}>people</span>
+                            </div>
+                            <span className={`flex-1 transition-all duration-200 whitespace-nowrap truncate ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+                                User Management
+                            </span>
+                            <span className={`material-symbols-outlined text-[14px] opacity-50 transition-opacity duration-200 ${sidebarOpen ? 'inline-block' : 'hidden group-hover/sidebar:inline-block'}`}>
+                                {usersExpanded || isUserSection ? 'expand_less' : 'expand_more'}
+                            </span>
+                        </button>
+                        {(usersExpanded || isUserSection) && (
+                            <div className={`ml-3 mt-0.5 space-y-0.5 border-l border-slate-700/50 pl-2 transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
+                                {userNavItems.map(item => (
+                                    <button
+                                        key={item.section}
+                                        onClick={() => setActiveSection(item.section)}
+                                        className={`w-full text-left px-2 py-1 rounded flex items-center gap-2 transition-colors text-[11px] ${
+                                            activeSection === item.section ? 'bg-indigo-500/10 text-indigo-400 font-semibold' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-300'
+                                        }`}
+                                    >
+                                        <span className={`material-symbols-outlined text-[13px] ${activeSection === item.section ? 'text-indigo-400' : 'text-slate-500'}`}>{item.icon}</span>
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Remaining menu items */}
+                    {navItems.slice(4).map(item => (
                         <NavItem key={item.section} {...item} active={activeSection} onClick={setActiveSection} expanded={sidebarOpen} />
                     ))}
 
@@ -2067,36 +2155,138 @@ export default function AdminDashboardPage() {
                     )}
 
                     {/* ─── USERS MANAGEMENT DASHBOARD ──────────────────────────────────────── */}
-                    {activeSection === "users" && (
+                    {isUserSection && (
                         <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
+                            {/* Top Role Category Navigation Pill Tabs */}
+                            <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-200/50 rounded-2xl border border-slate-200/80 w-fit">
+                                {[
+                                    { sec: "users", label: "All Users", icon: "group", count: stats.userCount || 0 },
+                                    { sec: "users_students", label: "Students / Users", icon: "school", count: stats.studentCount || 0 },
+                                    { sec: "users_staff", label: "Staff Operations", icon: "badge", count: stats.staffCount || 0 },
+                                    { sec: "users_agents", label: "Agents & Partners", icon: "support_agent", count: stats.agentCount || 0 },
+                                    { sec: "users_banks", label: "Bank Representatives", icon: "account_balance", count: stats.bankCount || 0 },
+                                ].map(tab => (
+                                    <button
+                                        key={tab.sec}
+                                        onClick={() => setActiveSection(tab.sec)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                                            activeSection === tab.sec
+                                                ? 'bg-white text-indigo-700 shadow-sm font-bold border border-slate-200/80'
+                                                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                                        }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[17px]">{tab.icon}</span>
+                                        <span>{tab.label}</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                            activeSection === tab.sec
+                                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60'
+                                                : 'bg-slate-200/80 text-slate-600'
+                                        }`}>
+                                            {tab.count}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Section Header */}
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                                 <div>
-                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">User Identity Domain</h2>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight flex items-center gap-2.5">
+                                        <span className="material-symbols-outlined text-indigo-600 text-[24px]">
+                                            {activeSection === "users_students" ? "school" :
+                                             activeSection === "users_staff" ? "badge" :
+                                             activeSection === "users_agents" ? "support_agent" :
+                                             activeSection === "users_banks" ? "account_balance" : "groups"}
+                                        </span>
+                                        {activeSection === "users_students" ? "Students & User Accounts" :
+                                         activeSection === "users_staff" ? "Staff & Operations Team" :
+                                         activeSection === "users_agents" ? "Channel Agents & Partners" :
+                                         activeSection === "users_banks" ? "Bank Representatives & Officers" : "User Identity Directory"}
+                                    </h2>
                                     <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-[14px]">groups</span>
-                                        Managing {stats.userCount || 0} authenticated platform nodes
+                                        <span className="material-symbols-outlined text-[14px]">info</span>
+                                        {activeSection === "users_students" ? `Managing ${stats.studentCount || 0} registered student accounts and study abroad applicants` :
+                                         activeSection === "users_staff" ? `Managing ${stats.staffCount || 0} loan processing officers, underwriters, and operations staff` :
+                                         activeSection === "users_agents" ? `Managing ${stats.agentCount || 0} referral partners, consultants, and channel agents` :
+                                         activeSection === "users_banks" ? `Managing ${stats.bankCount || 0} bank partner accounts and financial institution officers` :
+                                         `Managing ${stats.userCount || 0} authenticated platform identity nodes`}
                                     </p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setShowCreateUserModal(true)} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-[11px] font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1.5">
+                                    <button 
+                                        onClick={() => openCreateUserModal(
+                                            activeSection === "users_staff" ? "staff" :
+                                            activeSection === "users_agents" ? "agent" :
+                                            activeSection === "users_banks" ? "bank" : "user"
+                                        )} 
+                                        className="px-3.5 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                                    >
                                         <span className="material-symbols-outlined text-[16px]">person_add</span>
-                                        Add User Node
+                                        {activeSection === "users_students" ? "Add Student Profile" :
+                                         activeSection === "users_staff" ? "Add Staff Member" :
+                                         activeSection === "users_agents" ? "Add Agent Partner" :
+                                         activeSection === "users_banks" ? "Add Bank Officer" : "Add User Node"}
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                                <StatCard label="Total Nodes" value={stats.userCount || 0} icon="group" color="text-slate-900" loading={loading} />
-                                <StatCard label="Students" value={stats.studentCount || 0} icon="school" color="text-indigo-600" loading={loading} />
-                                <StatCard label="Operations" value={stats.staffCount || 0} icon="badge" color="text-blue-600" loading={loading} />
-                                <StatCard label="Bank Nodes" value={stats.bankCount || 0} icon="account_balance" color="text-emerald-600" loading={loading} />
-                                <StatCard label="Agents" value={stats.agentCount || 0} icon="support_agent" color="text-amber-600" loading={loading} />
-                            </div>
+                            {/* Dynamic Stat Cards */}
+                            {activeSection === "users" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                                    <StatCard label="Total Nodes" value={stats.userCount || 0} icon="group" color="text-slate-900" loading={loading} />
+                                    <StatCard label="Students / Users" value={stats.studentCount || 0} icon="school" color="text-indigo-600" loading={loading} />
+                                    <StatCard label="Operations Staff" value={stats.staffCount || 0} icon="badge" color="text-blue-600" loading={loading} />
+                                    <StatCard label="Bank Officers" value={stats.bankCount || 0} icon="account_balance" color="text-emerald-600" loading={loading} />
+                                    <StatCard label="Agent Partners" value={stats.agentCount || 0} icon="support_agent" color="text-amber-600" loading={loading} />
+                                </div>
+                            )}
+
+                            {activeSection === "users_students" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <StatCard label="Registered Students" value={stats.studentCount || 0} icon="school" color="text-indigo-600" loading={loading} />
+                                    <StatCard label="Total Applications" value={stats.appCount || 0} icon="receipt_long" color="text-blue-600" loading={loading} />
+                                    <StatCard label="Disbursed Loans" value={stats.disbursedCount || 0} icon="electric_bolt" color="text-emerald-600" loading={loading} />
+                                    <StatCard label="Active Students" value={activeUsersCount || 1} icon="insights" color="text-amber-600" loading={loading} />
+                                </div>
+                            )}
+
+                            {activeSection === "users_staff" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <StatCard label="Total Staff Members" value={stats.staffCount || 0} icon="badge" color="text-indigo-600" loading={loading} />
+                                    <StatCard label="Active on Duty" value={data.filter((u: any) => !u.isResigned && u.status !== 'resigned' && !u.isOnLeave).length} icon="task_alt" color="text-emerald-600" loading={loading} />
+                                    <StatCard label="Currently On Leave" value={data.filter((u: any) => u.isOnLeave).length} icon="beach_access" color="text-amber-600" loading={loading} />
+                                    <StatCard label="Resigned Staff" value={data.filter((u: any) => u.isResigned || u.status === 'resigned').length} icon="person_off" color="text-rose-600" loading={loading} />
+                                </div>
+                            )}
+
+                            {activeSection === "users_agents" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <StatCard label="Total Agent Partners" value={stats.agentCount || 0} icon="support_agent" color="text-amber-600" loading={loading} />
+                                    <StatCard label="Active Logins" value={data.filter((u: any) => u.last_login_at).length} icon="login" color="text-indigo-600" loading={loading} />
+                                    <StatCard label="Referral Channels" value={stats.agentCount || 0} icon="share" color="text-emerald-600" loading={loading} />
+                                    <StatCard label="Connected Nodes" value={stats.agentCount || 0} icon="hub" color="text-blue-600" loading={loading} />
+                                </div>
+                            )}
+
+                            {activeSection === "users_banks" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <StatCard label="Bank Representatives" value={stats.bankCount || 0} icon="account_balance" color="text-emerald-600" loading={loading} />
+                                    <StatCard label="Active Sessions" value={data.filter((u: any) => u.last_login_at).length} icon="verified_user" color="text-indigo-600" loading={loading} />
+                                    <StatCard label="Banking Nodes" value={stats.bankCount || 0} icon="domain" color="text-blue-600" loading={loading} />
+                                    <StatCard label="Partner Institutions" value={stats.bankCount || 0} icon="account_balance_wallet" color="text-amber-600" loading={loading} />
+                                </div>
+                            )}
                             
+                            {/* Entity Registry Table */}
                             <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                                 <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                                     <div>
-                                        <h3 className="text-sm font-semibold text-slate-900">Entity Registry</h3>
+                                        <h3 className="text-sm font-semibold text-slate-900">
+                                            {activeSection === "users_students" ? "Student Registry" :
+                                             activeSection === "users_staff" ? "Staff Operations Roster" :
+                                             activeSection === "users_agents" ? "Agent Partner Directory" :
+                                             activeSection === "users_banks" ? "Bank Officers Directory" : "Entity Registry"}
+                                        </h3>
                                         <p className="text-[11px] text-slate-500 mt-1">{totalItems} records active in current buffer</p>
                                     </div>
                                     <div className="flex flex-wrap gap-3 items-center">
@@ -2110,17 +2300,19 @@ export default function AdminDashboardPage() {
                                                 className="pl-8 pr-4 py-1.5 bg-white border border-slate-200 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48 transition-all"
                                             />
                                         </div>
-                                        <div className="flex bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
-                                            {['all', 'user', 'student', 'staff', 'bank', 'agent', 'admin'].map(r => (
-                                                <button
-                                                    key={r}
-                                                    onClick={() => setRoleFilter(r)}
-                                                    className={`px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider transition-colors border-r last:border-r-0 border-slate-100 ${roleFilter === r ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
-                                                >
-                                                    {r}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        {activeSection === "users" && (
+                                            <div className="flex bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
+                                                {['all', 'user', 'student', 'staff', 'bank', 'agent'].map(r => (
+                                                    <button
+                                                        key={r}
+                                                        onClick={() => setRoleFilter(r)}
+                                                        className={`px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider transition-colors border-r last:border-r-0 border-slate-100 cursor-pointer ${roleFilter === r ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                                                    >
+                                                        {r}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                         {selectedUsers.length > 0 && (
                                             <button
                                                 disabled
@@ -2205,8 +2397,6 @@ export default function AdminDashboardPage() {
                                                                     <option value="staff" className="bg-white text-slate-900 font-medium">Staff</option>
                                                                     <option value="bank" className="bg-white text-slate-900 font-medium">Bank</option>
                                                                     <option value="agent" className="bg-white text-slate-900 font-medium">Agent</option>
-                                                                    <option value="admin" className="bg-white text-slate-900 font-medium">Admin</option>
-                                                                    <option value="super_admin" className="bg-white text-slate-900 font-medium">Super Admin</option>
                                                                 </select>
                                                                 <span className="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-[12px] pointer-events-none text-slate-400">
                                                                     arrow_drop_down
@@ -2275,14 +2465,14 @@ export default function AdminDashboardPage() {
                                                                 </button>
                                                                 <button
                                                                     onClick={() => setEditingUser({ ...item })}
-                                                                    className="p-1.5 text-slate-400 hover:text-slate-900 rounded hover:bg-slate-100 transition-all border border-transparent hover:border-slate-200"
+                                                                    className="p-1.5 text-slate-400 hover:text-slate-900 rounded hover:bg-slate-100 transition-all border border-transparent hover:border-slate-200 cursor-pointer"
                                                                     title="Edit User"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[16px]">edit</span>
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleDeleteUser(item.id, `${item.firstName} ${item.lastName}`)}
-                                                                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
+                                                                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100 cursor-pointer"
                                                                     title="Delete User"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -2320,7 +2510,7 @@ export default function AdminDashboardPage() {
                                                     setCurrentPage(prev => Math.max(1, prev - 1));
                                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                                 }}
-                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
+                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm cursor-pointer"
                                             >
                                                 <span className="material-symbols-outlined text-[16px]">chevron_left</span>
                                                 Previous
@@ -2332,7 +2522,7 @@ export default function AdminDashboardPage() {
                                                         <button
                                                             key={pageNum}
                                                             onClick={() => setCurrentPage(pageNum)}
-                                                            className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
+                                                            className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all cursor-pointer ${currentPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
                                                         >
                                                             {pageNum}
                                                         </button>
@@ -2346,7 +2536,7 @@ export default function AdminDashboardPage() {
                                                     setCurrentPage(prev => prev + 1);
                                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                                 }}
-                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
+                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm cursor-pointer"
                                             >
                                                 Next
                                                 <span className="material-symbols-outlined text-[16px]">chevron_right</span>
@@ -3453,9 +3643,9 @@ export default function AdminDashboardPage() {
                         <div className="p-10 pb-6 border-b border-gray-100 shrink-0">
                             <h3 className="text-2xl font-black font-display text-gray-900 mb-2 flex items-center gap-3">
                                 <span className="material-symbols-outlined text-[#6605c7]">person_add</span>
-                                Create Student Profile
+                                Create User Profile
                             </h3>
-                            <p className="text-xs font-medium text-gray-500">Comprehensive student registration as per documentation standards.</p>
+                            <p className="text-xs font-medium text-gray-500">Comprehensive registration and role assignment for platform users.</p>
                         </div>
 
                         <div className="overflow-y-auto no-scrollbar p-10 pt-6 space-y-12">
@@ -3497,15 +3687,20 @@ export default function AdminDashboardPage() {
                                 <section>
                                     <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                                         <label className="text-sm font-bold text-slate-700 mb-3 block">Functional Role Assignment</label>
-                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                                            {['user', 'staff', 'agent', 'bank', 'admin'].map(r => (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            {[
+                                                { role: 'user', label: 'User / Student' },
+                                                { role: 'staff', label: 'Staff Member' },
+                                                { role: 'agent', label: 'Agent Partner' },
+                                                { role: 'bank', label: 'Bank Officer' }
+                                            ].map(r => (
                                                 <button
-                                                    key={r}
+                                                    key={r.role}
                                                     type="button"
-                                                    onClick={() => setNewUserQuery({ ...newUserQuery, role: r })}
-                                                    className={`px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${newUserQuery.role === r ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200 hover:border-slate-300'}`}
+                                                    onClick={() => setNewUserQuery({ ...newUserQuery, role: r.role })}
+                                                    className={`px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all cursor-pointer ${newUserQuery.role === r.role ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'}`}
                                                 >
-                                                    {r}
+                                                    {r.label}
                                                 </button>
                                             ))}
                                         </div>

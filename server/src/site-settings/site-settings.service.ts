@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
+import { DISPOSABLE_DOMAINS } from './disposable-domains';
 
 const DEFAULT_SETTINGS = {
   id: 'default',
@@ -38,14 +39,14 @@ const DEFAULT_SETTINGS = {
   customCss: '/* Custom site overrides */\n:root {\n  --brand-primary: #6605c7;\n}',
 
   // Integrations & Analytics
-  googleAnalyticsId: 'G-SB8FV1EK2S',
-  googleTagManagerId: 'GTM-MD6CB6LJ',
+  googleAnalyticsId: 'G-1Z8RYR9RBW',
+  googleTagManagerId: 'GTM-PSHKZ8FK',
   facebookPixelId: '987654321098765',
   posthogApiKey: 'phc_vidyaloans_live_key_998877',
   mixpanelToken: 'mp_token_vidyaloans_production',
   hotjarSiteId: '3456789',
-  customHeadScripts: '<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\'gtm.start\':new Date().getTime(),event:\'gtm.js\'});})(window,document,\'script\',\'dataLayer\',\'GTM-MD6CB6LJ\');</script>',
-  customBodyScripts: '<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MD6CB6LJ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>',
+  customHeadScripts: '<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\'gtm.start\':new Date().getTime(),event:\'gtm.js\'});})(window,document,\'script\',\'dataLayer\',\'GTM-PSHKZ8FK\');</script>',
+  customBodyScripts: '<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PSHKZ8FK" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>',
   webhookUrl: 'https://api.vidyaloans.com/v1/webhooks/events',
 
   // AI Service Settings
@@ -57,7 +58,7 @@ const DEFAULT_SETTINGS = {
   // Disposable Email Protection
   disposableEmailBlock: true,
   disposableBlockLevel: 'strict', // strict, warning, audit_only
-  blockedDomains: require('./disposable-domains.json').join(', '),
+  blockedDomains: DISPOSABLE_DOMAINS.join(', '),
   allowedDomains: 'gmail.com, yahoo.com, outlook.com, hotmail.com, icloud.com, proton.me, protonmail.com, vidyaloans.com',
   disposableApiKey: '',
   disposableProvider: 'builtin', // builtin, kickbox, zerobounce, debounce, hunter

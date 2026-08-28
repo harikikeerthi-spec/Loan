@@ -166,8 +166,8 @@ const DEFAULT_FORM: SiteSettings = {
   amberApiSecret: "",
   amberWebhookUrl: "https://api.vidyaloans.in/api/webhooks/amber",
 
-  googleAnalyticsId: "G-SB8FV1EK2S",
-  googleTagManagerId: "GTM-MD6CB6LJ",
+  googleAnalyticsId: "G-1Z8RYR9RBW",
+  googleTagManagerId: "GTM-PSHKZ8FK",
   facebookPixelId: "987654321098765",
   facebookUrl: "https://facebook.com/vidyaloans",
   instagramUrl: "https://instagram.com/vidyaloans",
@@ -180,9 +180,9 @@ const DEFAULT_FORM: SiteSettings = {
   mixpanelToken: "mp_token_vidyaloans_production",
   hotjarSiteId: "3456789",
   customHeadScripts:
-    "<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});})(window,document,'script','dataLayer','GTM-MD6CB6LJ');</script>",
+    "<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});})(window,document,'script','dataLayer','GTM-PSHKZ8FK');</script>",
   customBodyScripts:
-    "<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-MD6CB6LJ\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>",
+    "<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-PSHKZ8FK\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>",
   webhookUrl: "https://api.vidyaloans.com/v1/webhooks/events",
 
   awsSesRegion: "ap-south-1",
@@ -1087,7 +1087,7 @@ export default function SiteSettingsSection() {
                   type="text"
                   value={form.googleTagManagerId}
                   onChange={(e) => handleChange("googleTagManagerId", e.target.value)}
-                  placeholder="GTM-MD6CB6LJ"
+                  placeholder="GTM-PSHKZ8FK"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
                 />
               </div>
@@ -1097,7 +1097,7 @@ export default function SiteSettingsSection() {
                   type="text"
                   value={form.googleAnalyticsId}
                   onChange={(e) => handleChange("googleAnalyticsId", e.target.value)}
-                  placeholder="G-SB8FV1EK2S"
+                  placeholder="G-1Z8RYR9RBW"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
                 />
               </div>
