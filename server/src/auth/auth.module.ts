@@ -18,6 +18,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { FirebaseAuthService } from './firebase-auth.service';
 import { CsrfService } from './csrf.service';
 
+import { SiteSettingsModule } from '../site-settings/site-settings.module';
+
 @Module({
   imports: [
     EventEmitterModule,
@@ -25,6 +27,7 @@ import { CsrfService } from './csrf.service';
     forwardRef(() => AssignmentModule),
     UsersModule,
     ConfigModule,
+    SiteSettingsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

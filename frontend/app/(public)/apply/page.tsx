@@ -22,8 +22,6 @@ const FIELD_LIMITS = {
     otp: 6,
 };
 
-const DISPOSABLE_DOMAINS = require('@/lib/disposable-domains.json');
-
 function formatINR(valStr: string): string {
     const val = parseFloat(valStr);
     if (isNaN(val) || val <= 0) return "";
@@ -139,12 +137,6 @@ export default function ApplyLandingPage() {
         const cleanEmail = email.trim().toLowerCase();
         if (!cleanEmail || !cleanEmail.includes("@")) {
             setErrorMessage("Please enter a valid email address.");
-            return;
-        }
-
-        const domain = cleanEmail.split("@")[1];
-        if (domain && DISPOSABLE_DOMAINS.includes(domain)) {
-            setErrorMessage("Temporary/disposable email addresses are not allowed. Please use your official personal email (e.g. Gmail, Yahoo, Outlook).");
             return;
         }
 

@@ -450,6 +450,26 @@ export class AuthController {
       };
     }
 
+    if (body.email) {
+      const emailCheck = await this.authService.checkDisposableEmail(body.email);
+      if (emailCheck.blocked) {
+        return {
+          success: false,
+          message: emailCheck.reason || 'Temporary or disposable email addresses are not allowed. Please use your official personal email.',
+        };
+      }
+    }
+
+    if (body.coApplicantEmail) {
+      const coAppCheck = await this.authService.checkDisposableEmail(body.coApplicantEmail);
+      if (coAppCheck.blocked) {
+        return {
+          success: false,
+          message: coAppCheck.reason || 'Co-applicant email is a temporary or blocked domain. Please provide an official personal email.',
+        };
+      }
+    }
+
     try {
       const selectedBank = body.bank || 'Any Bank';
       const selectedCountry = body.country === 'Other' ? (body.otherCountry || 'Other') : (body.country || 'Global');

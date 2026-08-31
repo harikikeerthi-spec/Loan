@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PhoneNumberUtil } from 'google-libphonenumber';
+import { SiteSettingsService } from '../site-settings/site-settings.service';
 
 const phoneUtil = PhoneNumberUtil.getInstance();
 
@@ -91,8 +92,13 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private eventEmitter: EventEmitter2,
-    private firebaseAuthService: FirebaseAuthService
+    private firebaseAuthService: FirebaseAuthService,
+    private siteSettingsService: SiteSettingsService,
   ) { }
+
+  public async checkDisposableEmail(email: string) {
+    return this.siteSettingsService.checkDisposableEmail(email);
+  }
 
   /**
    * Generate both access and refresh tokens for a user
@@ -295,8 +301,12 @@ export class AuthService {
     const username = emailParts[0];
     const domain = emailParts[1];
 
-    if (this.isTempEmailDomain(domain)) {
-      return { success: false, message: 'Temporary or disposable email addresses are not allowed' };
+    const disposableCheck = await this.siteSettingsService.checkDisposableEmail(email);
+    if (disposableCheck.blocked) {
+      return {
+        success: false,
+        message: disposableCheck.reason || 'Temporary or disposable email addresses are not allowed. Please use your official personal email (e.g. Gmail, Yahoo, Outlook).'
+      };
     }
 
     // Validate username: minimum 8 characters
@@ -364,6 +374,13 @@ export class AuthService {
   }
 
   async checkUserExists(email: string) {
+    const disposableCheck = await this.siteSettingsService.checkDisposableEmail(email);
+    if (disposableCheck.blocked) {
+      return {
+        exists: false,
+        message: disposableCheck.reason || 'Temporary or disposable email addresses are not allowed.'
+      };
+    }
     const user = await this.usersService.findOne(email);
     if (user) {
       return { exists: true, message: 'User found' };
@@ -396,8 +413,12 @@ export class AuthService {
     const username = emailParts[0];
     const domain = emailParts[1];
 
-    if (this.isTempEmailDomain(domain)) {
-      return { success: false, message: 'Temporary or disposable email addresses are not allowed' };
+    const disposableCheck = await this.siteSettingsService.checkDisposableEmail(email);
+    if (disposableCheck.blocked) {
+      return {
+        success: false,
+        message: disposableCheck.reason || 'Temporary or disposable email addresses are not allowed. Please use your official personal email (e.g. Gmail, Yahoo, Outlook).'
+      };
     }
 
     // Check if user exists first to allow existing/testing/unauthorized accounts to login
@@ -482,6 +503,14 @@ export class AuthService {
 
     // Invalidate OTP after verification
     this.otps.delete(email);
+
+    // Verify email is not blocked/disposable
+    const disposableCheck = await this.siteSettingsService.checkDisposableEmail(email);
+    if (disposableCheck.blocked) {
+      throw new BadRequestException(
+        disposableCheck.reason || 'Temporary or disposable email addresses are not allowed. Please use your official personal email.'
+      );
+    }
 
     try {
       // Find or create user
@@ -602,6 +631,13 @@ export class AuthService {
 
       if (!email) {
         throw new UnauthorizedException('Firebase token does not contain an email');
+      }
+
+      const disposableCheck = await this.siteSettingsService.checkDisposableEmail(email);
+      if (disposableCheck.blocked) {
+        throw new UnauthorizedException(
+          disposableCheck.reason || 'Temporary or disposable email addresses are not allowed. Please use your official personal email.'
+        );
       }
 
       // Find or create user
@@ -953,6 +989,13 @@ export class AuthService {
     }
 
     const cleanEmail = email.toLowerCase().trim();
+
+    const disposableCheck = await this.siteSettingsService.checkDisposableEmail(cleanEmail);
+    if (disposableCheck.blocked) {
+      throw new BadRequestException(
+        disposableCheck.reason || 'Temporary or disposable email addresses are not allowed. Please use your official personal email (e.g. Gmail, Yahoo, Outlook).'
+      );
+    }
 
     // Verify OTP (with '123456' E2E master bypass)
     const stored = this.otps.get(cleanEmail);

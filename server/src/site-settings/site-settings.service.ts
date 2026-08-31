@@ -2,6 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
 import { DISPOSABLE_DOMAINS } from './disposable-domains';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const DISPOSABLE_DOMAINS_SET = new Set(
+  DISPOSABLE_DOMAINS.map((d: string) => d.toLowerCase().trim()),
+);
 
 const DEFAULT_SETTINGS = {
   id: 'default',
@@ -65,14 +71,39 @@ const DEFAULT_SETTINGS = {
   disposableAction: 'reject', // reject, otp_verify, flag_review
 };
 
-// In-memory fallback in case Prisma model is pending migration
+const PERSISTENT_SETTINGS_PATH = path.join(process.cwd(), 'scratch', 'site_settings.json');
+
+// In-memory fallback
 let memorySettingsStore: any = { ...DEFAULT_SETTINGS };
+
+// Try loading persisted file on startup
+try {
+  if (fs.existsSync(PERSISTENT_SETTINGS_PATH)) {
+    const raw = fs.readFileSync(PERSISTENT_SETTINGS_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    memorySettingsStore = { ...DEFAULT_SETTINGS, ...parsed };
+  }
+} catch (e) {
+  // ignore
+}
 
 @Injectable()
 export class SiteSettingsService {
   private readonly logger = new Logger(SiteSettingsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  private persistToFile(settings: any) {
+    try {
+      const dir = path.dirname(PERSISTENT_SETTINGS_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(PERSISTENT_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf8');
+    } catch (e) {
+      this.logger.warn(`Failed to persist site settings to file: ${e.message}`);
+    }
+  }
 
   async getSettings() {
     try {
@@ -82,19 +113,21 @@ export class SiteSettingsService {
         });
 
         if (settings) {
-          memorySettingsStore = { ...settings };
-          return settings;
+          memorySettingsStore = { ...DEFAULT_SETTINGS, ...settings };
+          this.persistToFile(memorySettingsStore);
+          return memorySettingsStore;
         }
 
         // If not found in DB, seed default entry
         const created = await (this.prisma as any).siteSetting.create({
           data: DEFAULT_SETTINGS,
         });
-        memorySettingsStore = { ...created };
-        return created;
+        memorySettingsStore = { ...DEFAULT_SETTINGS, ...created };
+        this.persistToFile(memorySettingsStore);
+        return memorySettingsStore;
       }
     } catch (e) {
-      this.logger.warn(`Database query for siteSetting failed, using in-memory store fallback: ${e.message}`);
+      this.logger.warn(`Database query for siteSetting failed, using fallback: ${e.message}`);
     }
 
     return memorySettingsStore;
@@ -108,11 +141,12 @@ export class SiteSettingsService {
           update: { ...dto },
           create: { ...DEFAULT_SETTINGS, ...dto },
         });
-        memorySettingsStore = { ...updated };
-        return updated;
+        memorySettingsStore = { ...memorySettingsStore, ...updated };
+        this.persistToFile(memorySettingsStore);
+        return memorySettingsStore;
       }
     } catch (e) {
-      this.logger.warn(`Database update for siteSetting failed, falling back to memory store: ${e.message}`);
+      this.logger.warn(`Database update for siteSetting failed, falling back to memory/file store: ${e.message}`);
     }
 
     memorySettingsStore = {
@@ -120,6 +154,7 @@ export class SiteSettingsService {
       ...dto,
       updatedAt: new Date(),
     };
+    this.persistToFile(memorySettingsStore);
 
     return memorySettingsStore;
   }
@@ -132,83 +167,163 @@ export class SiteSettingsService {
           update: { ...DEFAULT_SETTINGS },
           create: { ...DEFAULT_SETTINGS },
         });
-        memorySettingsStore = { ...reset };
-        return reset;
+        memorySettingsStore = { ...DEFAULT_SETTINGS, ...reset };
+        this.persistToFile(memorySettingsStore);
+        return memorySettingsStore;
       }
     } catch (e) {
       this.logger.warn(`Database reset failed, resetting memory store: ${e.message}`);
     }
 
     memorySettingsStore = { ...DEFAULT_SETTINGS, updatedAt: new Date() };
+    this.persistToFile(memorySettingsStore);
     return memorySettingsStore;
   }
 
-  async checkDisposableEmail(email: string) {
+  /**
+   * Dynamically check whether an email address is blocked or disposable based on the
+   * current settings stored in the database / admin configuration.
+   */
+  async checkDisposableEmail(email: string): Promise<{
+    email: string;
+    domain: string;
+    isDisposable: boolean;
+    blocked: boolean;
+    whitelisted: boolean;
+    protectionEnabled: boolean;
+    blockLevel: string;
+    action: string;
+    reason: string;
+  }> {
     const settings = await this.getSettings();
+    const cleanEmail = (email || '').trim().toLowerCase();
 
-    if (!email || !email.includes('@')) {
+    if (!cleanEmail || !cleanEmail.includes('@')) {
       return {
-        isDisposable: false,
+        email: cleanEmail,
         domain: '',
-        allowed: false,
-        reason: 'Invalid email format',
+        isDisposable: false,
+        blocked: true,
+        whitelisted: false,
+        protectionEnabled: !!settings.disposableEmailBlock,
+        blockLevel: settings.disposableBlockLevel || 'strict',
         action: 'reject',
+        reason: 'Please enter a valid email address with @ symbol',
       };
     }
 
-    const domain = email.split('@')[1].toLowerCase().trim();
-    const blockedList = (settings.blockedDomains || '')
-      .split(/[\n,]+/)
-      .map((d: string) => d.trim().toLowerCase())
-      .filter(Boolean);
+    const emailParts = cleanEmail.split('@');
+    const username = emailParts[0];
+    const domain = emailParts[1].toLowerCase().trim();
 
-    const allowedList = (settings.allowedDomains || '')
-      .split(/[\n,]+/)
-      .map((d: string) => d.trim().toLowerCase())
-      .filter(Boolean);
+    const parseList = (str: string | undefined | null): string[] => {
+      if (!str) return [];
+      return str
+        .split(/[\n,;\s]+/)
+        .map((d: string) => d.trim().toLowerCase())
+        .filter(Boolean);
+    };
 
-    // 1. Check explicit whitelist
-    if (allowedList.some((al: string) => domain === al || domain.endsWith('.' + al))) {
+    const allowedList = parseList(settings.allowedDomains);
+    const blockedList = parseList(settings.blockedDomains);
+
+    // 1. Check explicit whitelist first (whitelist always overrides any block)
+    const isWhitelisted = allowedList.some((item: string) => {
+      const normalized = item.replace(/^[@*.]+/g, '').trim();
+      return (
+        cleanEmail === item ||
+        domain === normalized ||
+        domain.endsWith('.' + normalized)
+      );
+    });
+
+    if (isWhitelisted) {
       return {
-        email,
+        email: cleanEmail,
         domain,
         isDisposable: false,
         blocked: false,
         whitelisted: true,
-        protectionEnabled: settings.disposableEmailBlock,
-        blockLevel: settings.disposableBlockLevel,
+        protectionEnabled: !!settings.disposableEmailBlock,
+        blockLevel: settings.disposableBlockLevel || 'strict',
         action: 'allow',
-        reason: 'Domain is explicitly whitelisted',
+        reason: 'Email domain is explicitly whitelisted in security settings',
       };
     }
 
-    // 2. Check blacklist if protection is enabled
-    const isBlocked = blockedList.some((bl: string) => domain === bl || domain.endsWith('.' + bl));
-
-    if (isBlocked && settings.disposableEmailBlock) {
+    // If master shield is disabled by admin in Site Settings, allow the email
+    if (!settings.disposableEmailBlock) {
       return {
-        email,
+        email: cleanEmail,
+        domain,
+        isDisposable: false,
+        blocked: false,
+        whitelisted: false,
+        protectionEnabled: false,
+        blockLevel: settings.disposableBlockLevel || 'strict',
+        action: 'allow',
+        reason: 'Disposable email shield protection is disabled in site settings',
+      };
+    }
+
+    // 2. Check dynamic blocked list configured by admin (supports exact emails, domains, subdomains, wildcards)
+    const isDynamicBlocked = blockedList.some((item: string) => {
+      const normalized = item.replace(/^[@*.]+/g, '').trim();
+      return (
+        cleanEmail === item ||
+        domain === normalized ||
+        domain.endsWith('.' + normalized)
+      );
+    });
+
+    // 3. Check built-in disposable domain dataset and disposable patterns
+    const isBuiltinDisposable =
+      DISPOSABLE_DOMAINS_SET.has(domain) ||
+      domain.includes('tempmail') ||
+      domain.includes('temp-mail') ||
+      domain.includes('disposable') ||
+      domain.includes('throwaway') ||
+      domain.includes('10minutemail') ||
+      domain.includes('fakeinbox') ||
+      domain.includes('yopmail') ||
+      domain.includes('mailinator') ||
+      domain.includes('guerrillamail') ||
+      domain.includes('sharklasers') ||
+      domain.includes('dispostable') ||
+      domain.includes('getnada') ||
+      domain.includes('trashmail') ||
+      domain.includes('burnermail') ||
+      domain.includes('maildrop');
+
+    const isBlocked = isDynamicBlocked || isBuiltinDisposable;
+
+    if (isBlocked) {
+      const isStrict = (settings.disposableBlockLevel || 'strict') === 'strict';
+      return {
+        email: cleanEmail,
         domain,
         isDisposable: true,
-        blocked: true,
+        blocked: isStrict,
         whitelisted: false,
-        protectionEnabled: settings.disposableEmailBlock,
-        blockLevel: settings.disposableBlockLevel,
-        action: settings.disposableAction || 'reject',
-        reason: `Domain '@${domain}' is registered as a disposable temporary email provider`,
+        protectionEnabled: true,
+        blockLevel: settings.disposableBlockLevel || 'strict',
+        action: isStrict ? (settings.disposableAction || 'reject') : 'warning',
+        reason: isDynamicBlocked
+          ? `The email or domain '@${domain}' has been blocked by administrator policy. Temporary/disposable email addresses are not permitted.`
+          : `The domain '@${domain}' is a temporary/disposable email provider. Please use your official personal email (e.g. Gmail, Yahoo, Outlook).`,
       };
     }
 
     return {
-      email,
+      email: cleanEmail,
       domain,
       isDisposable: false,
       blocked: false,
       whitelisted: false,
-      protectionEnabled: settings.disposableEmailBlock,
-      blockLevel: settings.disposableBlockLevel,
+      protectionEnabled: true,
+      blockLevel: settings.disposableBlockLevel || 'strict',
       action: 'allow',
-      reason: 'Domain passed validation checks',
+      reason: 'Email domain passed all security and disposable validation checks',
     };
   }
 }
