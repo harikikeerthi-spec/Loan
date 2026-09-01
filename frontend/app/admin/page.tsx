@@ -247,7 +247,7 @@ const pathToSectionMap: Record<string, string> = {
     '/admin': 'overview',
     '/admin/dashboard': 'overview',
     '/admin/applications': 'applications',
-    '/admin/users': 'users',
+    '/admin/users': 'users_students',
     '/admin/users/students': 'users_students',
     '/admin/users/user': 'users_students',
     '/admin/users/staff': 'users_staff',
@@ -1159,14 +1159,13 @@ export default function AdminDashboardPage() {
 
     // User Directory sub-nav items
     const userNavItems = [
-        { section: "users", icon: "group", label: "All Users" },
         { section: "users_students", icon: "school", label: "Students / Users" },
         { section: "users_staff", icon: "badge", label: "Staff Operations" },
         { section: "users_agents", icon: "support_agent", label: "Agents & Partners" },
         { section: "users_banks", icon: "account_balance", label: "Bank Representatives" },
     ];
 
-    const isUserSection = activeSection === "users" || activeSection === "users_students" || activeSection === "users_staff" || activeSection === "users_agents" || activeSection === "users_banks";
+    const isUserSection = activeSection === "users_students" || activeSection === "users_staff" || activeSection === "users_agents" || activeSection === "users_banks" || activeSection === "users";
 
     // Marketing sub-nav items
     const marketingNavItems = [
@@ -1277,7 +1276,7 @@ export default function AdminDashboardPage() {
                     {/* ── User Directory & Sub-roles ── */}
                     <div className="px-1 mt-1 mb-1">
                         <button
-                            onClick={() => { setUsersExpanded(e => !e); if (!usersExpanded && !isUserSection) setActiveSection('users'); }}
+                            onClick={() => { setUsersExpanded(e => !e); if (!usersExpanded && !isUserSection) setActiveSection('users_students'); }}
                             title="User Management"
                             className={`w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 transition-colors text-xs font-medium ${isUserSection ? 'bg-indigo-500/10 text-indigo-400 font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
                         >
@@ -2160,7 +2159,6 @@ export default function AdminDashboardPage() {
                             {/* Top Role Category Navigation Pill Tabs */}
                             <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-200/50 rounded-2xl border border-slate-200/80 w-fit">
                                 {[
-                                    { sec: "users", label: "All Users", icon: "group", count: stats.userCount || 0 },
                                     { sec: "users_students", label: "Students / Users", icon: "school", count: stats.studentCount || 0 },
                                     { sec: "users_staff", label: "Staff Operations", icon: "badge", count: stats.staffCount || 0 },
                                     { sec: "users_agents", label: "Agents & Partners", icon: "support_agent", count: stats.agentCount || 0 },
@@ -2222,10 +2220,10 @@ export default function AdminDashboardPage() {
                                         className="px-3.5 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
                                     >
                                         <span className="material-symbols-outlined text-[16px]">person_add</span>
-                                        {activeSection === "users_students" ? "Add Student Profile" :
-                                         activeSection === "users_staff" ? "Add Staff Member" :
-                                         activeSection === "users_agents" ? "Add Agent Partner" :
-                                         activeSection === "users_banks" ? "Add Bank Officer" : "Add User Node"}
+                                        {activeSection === "users_students" ? "Create Student Profile" :
+                                         activeSection === "users_staff" ? "Create Staff Profile" :
+                                         activeSection === "users_agents" ? "Create Agent Profile" :
+                                         activeSection === "users_banks" ? "Create Bank Officer Profile" : "Create Student Profile"}
                                     </button>
                                 </div>
                             </div>
@@ -3642,13 +3640,24 @@ export default function AdminDashboardPage() {
                     <div className="relative w-full max-w-4xl glass-card bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
                         <div className="p-10 pb-6 border-b border-gray-100 shrink-0">
                             <h3 className="text-2xl font-black font-display text-gray-900 mb-2 flex items-center gap-3">
-                                <span className="material-symbols-outlined text-[#6605c7]">person_add</span>
-                                Create User Profile
+                                <span className="material-symbols-outlined text-[#6605c7]">
+                                    {newUserQuery.role === 'staff' ? 'badge' :
+                                     newUserQuery.role === 'agent' ? 'support_agent' :
+                                     newUserQuery.role === 'bank' ? 'account_balance' : 'school'}
+                                </span>
+                                {newUserQuery.role === 'staff' ? 'Create Staff Profile' :
+                                 newUserQuery.role === 'agent' ? 'Create Agent Partner Profile' :
+                                 newUserQuery.role === 'bank' ? 'Create Bank Representative Profile' : 'Create Student Profile'}
                             </h3>
-                            <p className="text-xs font-medium text-gray-500">Comprehensive registration and role assignment for platform users.</p>
+                            <p className="text-xs font-medium text-gray-500">
+                                {newUserQuery.role === 'staff' ? 'Register and onboard a new loan processing officer or operations staff member.' :
+                                 newUserQuery.role === 'agent' ? 'Register a new education consultant or referral channel partner.' :
+                                 newUserQuery.role === 'bank' ? 'Register a new lending partner officer or bank representative.' :
+                                 'Comprehensive registration and account setup for study abroad student applicants.'}
+                            </p>
                         </div>
 
-                        <div className="overflow-y-auto no-scrollbar p-10 pt-6 space-y-12">
+                        <div className="overflow-y-auto no-scrollbar p-10 pt-6 space-y-8">
                             <form id="student-creation-form" onSubmit={handleCreateUser} className="space-y-8">
                                 <section>
                                     <div className="flex items-center gap-2 mb-6 text-indigo-600 font-bold text-xs uppercase tracking-widest">
@@ -3682,37 +3691,19 @@ export default function AdminDashboardPage() {
                                         </div>
                                     </div>
                                 </section>
-
-                                {/* Role Selection */}
-                                <section>
-                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <label className="text-sm font-bold text-slate-700 mb-3 block">Functional Role Assignment</label>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                            {[
-                                                { role: 'user', label: 'User / Student' },
-                                                { role: 'staff', label: 'Staff Member' },
-                                                { role: 'agent', label: 'Agent Partner' },
-                                                { role: 'bank', label: 'Bank Officer' }
-                                            ].map(r => (
-                                                <button
-                                                    key={r.role}
-                                                    type="button"
-                                                    onClick={() => setNewUserQuery({ ...newUserQuery, role: r.role })}
-                                                    className={`px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all cursor-pointer ${newUserQuery.role === r.role ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'}`}
-                                                >
-                                                    {r.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </section>
                             </form>
                         </div>
 
                         <div className="p-8 bg-gray-50 border-t border-gray-100 flex gap-4 shrink-0">
                             <button type="button" onClick={() => setShowCreateUserModal(false)} className="flex-1 px-8 py-4 bg-white text-gray-500 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-100 border border-gray-200 transition-all">Cancel</button>
                             <button form="student-creation-form" type="submit" disabled={createUserLoading} className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10 active:scale-95 transition-all">
-                                {createUserLoading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : "Finalize Registration"}
+                                {createUserLoading ? (
+                                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    newUserQuery.role === 'staff' ? 'Create Staff Profile' :
+                                    newUserQuery.role === 'agent' ? 'Create Agent Profile' :
+                                    newUserQuery.role === 'bank' ? 'Create Bank Officer Profile' : 'Create Student Profile'
+                                )}
                             </button>
                         </div>
                     </div>

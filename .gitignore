@@ -58,6 +58,9 @@ ENV/
 uploads/
 coverage/
 .nyc_output/
+scratch/
+**/scratch/
+*.tsbuildinfo
 
 # Windows reserved device names (cannot be indexed by Git on Windows)
 nul

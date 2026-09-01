@@ -204,10 +204,8 @@ type TabType =
   | "payments"
   | "ai"
   | "security"
-  | "amber"
   | "discovery"
-  | "email"
-  | "scraper";
+  | "email";
 
 export default function SiteSettingsSection() {
   const [activeTab, setActiveTab] = useState<TabType>("ai");
@@ -353,11 +351,9 @@ export default function SiteSettingsSection() {
     { id: "general", label: "General & Branding", icon: <Building2 className="w-4 h-4" /> },
     { id: "payments", label: "Payments & Ads", icon: <CreditCard className="w-4 h-4" /> },
     { id: "ai", label: "AI Integration", icon: <Cpu className="w-4 h-4" /> },
-    { id: "security", label: "Security & SEO", icon: <Shield className="w-4 h-4" /> },
-    { id: "amber", label: "Amber HQ Leads API", icon: <ExternalLink className="w-4 h-4" /> },
+    { id: "security", label: "Security & Disposable Shield", icon: <Shield className="w-4 h-4" /> },
     { id: "discovery", label: "Google & Social Discovery", icon: <Globe className="w-4 h-4" /> },
     { id: "email", label: "Email & AWS SES", icon: <Mail className="w-4 h-4" /> },
-    { id: "scraper", label: "Event Scraper", icon: <Calendar className="w-4 h-4" /> },
   ];
 
   if (loading) {
@@ -728,49 +724,27 @@ export default function SiteSettingsSection() {
             </div>
           </div>
 
-          {/* Blacklist and Whitelist Domain Managers */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2 text-rose-600 font-bold text-sm">
-                  <span className="material-symbols-outlined">do_not_disturb_on</span>
-                  <h3>Blocked Email Domains (Blacklist)</h3>
-                </div>
-                <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                  {blockedCount.toLocaleString()} Domains
-                </span>
+          {/* Blacklist Domain Manager */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2 text-rose-600 font-bold text-sm">
+                <span className="material-symbols-outlined">do_not_disturb_on</span>
+                <h3>Blocked Disposable & Fraudulent Email Domains</h3>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Comma or newline separated list of blocked disposable, temporary, and burner email providers.
-              </p>
-              <textarea
-                rows={10}
-                value={form.blockedDomains}
-                onChange={(e) => handleChange("blockedDomains", e.target.value)}
-                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-rose-50/20 text-rose-950 leading-relaxed focus:ring-2 focus:ring-rose-400 custom-scrollbar shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-                placeholder="0-mail.com, tempmail.com, mailinator.com..."
-              />
+              <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+                {blockedCount.toLocaleString()} Domains / Rules
+              </span>
             </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
-                  <span className="material-symbols-outlined">verified</span>
-                  <h3>Whitelisted Domains (Exceptions)</h3>
-                </div>
-                <span className="text-[10px] text-slate-400">Comma or newline separated</span>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Trusted consumer and enterprise domains that will always bypass the disposable check.
-              </p>
-              <textarea
-                rows={10}
-                value={form.allowedDomains}
-                onChange={(e) => handleChange("allowedDomains", e.target.value)}
-                className="w-full p-3 rounded-xl border border-slate-300 font-mono text-xs bg-emerald-50/20 text-emerald-950 leading-relaxed focus:ring-2 focus:ring-emerald-400 custom-scrollbar shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-                placeholder="gmail.com, yahoo.com, outlook.com, hotmail.com, icloud.com..."
-              />
-            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              All official, personal, university, corporate, and legitimate email addresses (e.g. Gmail, Outlook, Yahoo, Hotmail, iCloud, custom domain emails) are <strong>automatically approved</strong> for signup, login, and loan applications. Only temporary, disposable, burner providers or specific emails added to this blacklist below will be blocked.
+            </p>
+            <textarea
+              rows={8}
+              value={form.blockedDomains}
+              onChange={(e) => handleChange("blockedDomains", e.target.value)}
+              className="w-full p-4 rounded-xl border border-slate-300 font-mono text-xs bg-rose-50/20 text-rose-950 leading-relaxed focus:ring-2 focus:ring-rose-400 custom-scrollbar shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              placeholder="tempmail.com, mailinator.com, 10minutemail.com, spammer@bad.com..."
+            />
           </div>
 
           {/* Real-time Email Protection Live Tester */}
@@ -1023,54 +997,6 @@ export default function SiteSettingsSection() {
       )}
 
       {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ── TAB: AMBER HQ LEADS API ── */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {activeTab === "amber" && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4 animate-fade-in">
-          <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-            <ExternalLink className="w-4 h-4" />
-            <h3>Amber HQ Student Accommodation API</h3>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">API Key</label>
-            <input
-              type="text"
-              value={form.amberApiKey}
-              onChange={(e) => handleChange("amberApiKey", e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">API Secret</label>
-            <div className="relative">
-              <input
-                type={showAmberSecret ? "text" : "password"}
-                value={form.amberApiSecret}
-                onChange={(e) => handleChange("amberApiSecret", e.target.value)}
-                className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-              />
-              <button
-                type="button"
-                onClick={() => setShowAmberSecret(!showAmberSecret)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600"
-              >
-                {showAmberSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Webhook Endpoint URL</label>
-            <input
-              type="text"
-              value={form.amberWebhookUrl}
-              onChange={(e) => handleChange("amberWebhookUrl", e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
       {/* ── TAB: GOOGLE & SOCIAL DISCOVERY ── */}
       {/* ────────────────────────────────────────────────────────────────────────── */}
       {activeTab === "discovery" && (
@@ -1242,38 +1168,6 @@ export default function SiteSettingsSection() {
                   {showAwsSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ── TAB: EVENT SCRAPER ── */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {activeTab === "scraper" && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4 animate-fade-in">
-          <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-            <Calendar className="w-4 h-4" />
-            <h3>Education Event & Fair Scraper</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Cron Schedule</label>
-              <input
-                type="text"
-                value={form.eventScraperCron}
-                onChange={(e) => handleChange("eventScraperCron", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Target Scrape Source URL</label>
-              <input
-                type="text"
-                value={form.eventScraperSource}
-                onChange={(e) => handleChange("eventScraperSource", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-              />
             </div>
           </div>
         </div>
