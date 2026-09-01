@@ -369,7 +369,6 @@ export default function Navbar() {
                     <MobileLink href="/community" label="Community" onClick={() => setMobileOpen(false)} />
                     <MobileLink href="/blog" label="Blog" onClick={() => setMobileOpen(false)} />
                     <MobileLink href="/sop-writer" label="AI Tools" onClick={() => setMobileOpen(false)} />
-                    <MobileLink href="/visa-mock" label="Visa Interview Prep" onClick={() => setMobileOpen(false)} />
                     {isAuthenticated ? (
                         <>
                             <MobileLink

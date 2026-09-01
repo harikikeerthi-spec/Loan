@@ -205,16 +205,15 @@ export function getFallbackUniversities(country?: string, query?: string): Array
   return uniquePool.slice(0, 30);
 }
 
-const GROQ_MODELS = [
-  'qwen/qwen3.8-27b',
-  'openai/gpt-oss-120b',
-  'qwen/qwen3.6-27b',
-  'openai/gpt-oss-20b'
+const OPENROUTER_MODELS = [
+  'openai/gpt-4o-mini',
+  'meta-llama/llama-3.3-70b-instruct',
+  'mistralai/mistral-7b-instruct:free'
 ];
 
-async function callGroqWithFallback(prompt: string, systemPrompt?: string) {
-  const API_KEY = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY || process.env.GROQ_AI_KEY || '';
-  const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+async function callOpenRouterWithFallback(prompt: string, systemPrompt?: string) {
+  const API_KEY = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || '';
+  const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
   if (!API_KEY) return null;
 
@@ -225,7 +224,7 @@ async function callGroqWithFallback(prompt: string, systemPrompt?: string) {
   });
   messages.push({ role: 'user', content: prompt });
 
-  for (const model of GROQ_MODELS) {
+  for (const model of OPENROUTER_MODELS) {
     // 1st attempt: standard json_object response format
     try {
       const res = await fetch(API_URL, {
@@ -233,6 +232,8 @@ async function callGroqWithFallback(prompt: string, systemPrompt?: string) {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${API_KEY}`,
+          'HTTP-Referer': 'https://vidyaloan.com',
+          'X-Title': 'VidyaLoan',
         },
         body: JSON.stringify({
           model,
@@ -249,10 +250,10 @@ async function callGroqWithFallback(prompt: string, systemPrompt?: string) {
         }
       } else {
         const errText = await res.text();
-        console.warn(`Groq model ${model} failed, trying next:`, errText);
+        console.warn(`OpenRouter model ${model} failed, trying next:`, errText);
       }
     } catch (e) {
-      console.warn(`Groq model ${model} 1st attempt exception:`, e);
+      console.warn(`OpenRouter model ${model} 1st attempt exception:`, e);
     }
 
     // 2nd attempt: plain text output with sanitization
@@ -262,6 +263,8 @@ async function callGroqWithFallback(prompt: string, systemPrompt?: string) {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${API_KEY}`,
+          'HTTP-Referer': 'https://vidyaloan.com',
+          'X-Title': 'VidyaLoan',
         },
         body: JSON.stringify({
           model,
@@ -283,7 +286,7 @@ async function callGroqWithFallback(prompt: string, systemPrompt?: string) {
         }
       }
     } catch (e) {
-      console.warn(`Groq model ${model} 2nd attempt exception:`, e);
+      console.warn(`OpenRouter model ${model} 2nd attempt exception:`, e);
     }
   }
 
@@ -362,7 +365,7 @@ export async function fetchUniversityData(body: ReqBody) {
     }
   }
 
-  const parsed = await callGroqWithFallback(prompt, systemPrompt);
+  const parsed = await callOpenRouterWithFallback(prompt, systemPrompt);
 
   if (parsed) {
     if (type === 'university_detail') {
@@ -433,7 +436,7 @@ export async function fetchUniversityData(body: ReqBody) {
     }
   }
 
-  // Fail-Safe Fallback: When AI fails or GROQ_API_KEY is not set on AWS server, return dataset
+  // Fail-Safe Fallback: When AI fails or OPENROUTER_API_KEY is not set on server, return dataset
   if (type === 'university_detail') {
     const slugKey = (slug || query || '').toLowerCase();
     const found = localUniversitiesMap[slugKey] || Object.values(localUniversitiesMap).find(u => u.name.toLowerCase().includes(slugKey));

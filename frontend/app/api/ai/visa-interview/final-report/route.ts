@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.GROQ_AI_KEY || '';
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || '';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 function avg(values: number[]): number {
     if (!values.length) return 0;
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     try {
         const { visaType, conversationHistory, evaluations } = await req.json();
 
-        if (!GROQ_API_KEY) {
+        if (!OPENROUTER_API_KEY) {
             return NextResponse.json(
                 { success: false, message: 'AI service not configured' },
                 { status: 500 }
@@ -93,14 +93,16 @@ SCORING GUIDE:
 - overallRisk: "Low" | "Medium" | "High"
 - sectionScores: 1-10 for each category`;
 
-        const res = await fetch(GROQ_URL, {
+        const res = await fetch(OPENROUTER_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'HTTP-Referer': 'https://vidyaloan.com',
+                'X-Title': 'VidyaLoan',
             },
             body: JSON.stringify({
-                model: 'llama-3.1-8b-instant',
+                model: 'openai/gpt-4o-mini',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: 'Generate the comprehensive final report now.' },

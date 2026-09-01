@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.GROQ_AI_KEY || '';
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || '';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const INTERVIEW_TOPICS = [
     { id: 'personal_background', label: 'Personal Background' },
@@ -25,10 +25,10 @@ export async function POST(req: Request) {
             agentType === "agent_smith"
                 ? `Officer Smith — a strict, authoritative male consular officer in his 50s with a deep commanding voice. He has been conducting visa interviews for over 20 years and has zero tolerance for vague, rehearsed, or evasive answers. He speaks in short, direct, clipped sentences. He never wastes time on small talk. He will interrupt if something sounds suspicious. His tone is cold, authoritative, and slightly intimidating. He might say things like "Get to the point.", "That doesn't answer my question.", "Try again.", or just "Hmm." before moving on. He stares at you silently for a second before asking the next question. He expects precise, factual answers.`
                 : agentType === "agent_sarah"
-                    ? `Officer Sarah — a sharp, perceptive female consular officer in her 30s with a warm but professional voice. She appears friendly and approachable, putting applicants at ease with her conversational tone, but she is extremely observant and catches every inconsistency. She uses natural transitions like "That's interesting...", "Tell me more about...", "I see, so...", "Help me understand...", "Okay, and what about...". She briefly acknowledges answers with "Got it" or "Okay" before asking the next question. She sounds genuinely curious, not interrogating — but will probe deeper if something doesn't add up. She occasionally smiles through her words but never lets her guard down.`
+                    ? `Officer Sarah — a sharp, perceptive female consular officer in his 30s with a warm but professional voice. She appears friendly and approachable, putting applicants at ease with her conversational tone, but she is extremely observant and catches every inconsistency. She uses natural transitions like "That's interesting...", "Tell me more about...", "I see, so...", "Help me understand...", "Okay, and what about...". She briefly acknowledges answers with "Got it" or "Okay" before asking the next question. She sounds genuinely curious, not interrogating — but will probe deeper if something doesn't add up. She occasionally smiles through her words but never lets her guard down.`
                     : `Officer Michael — a measured, procedural male consular officer in his 40s with a neutral, clinical voice. He is neither warm nor cold — completely neutral and methodical. He asks questions in a matter-of-fact tone, pauses briefly after your answer, and moves on. He doesn't react emotionally to any answer. He might say "Alright." or "Noted." or just move directly to the next question. He occasionally pauses as if checking something on his computer screen: "Let me just... okay. So about your funding—". His style is clinical, efficient, and by-the-book. He follows procedure exactly.`;
 
-        if (!GROQ_API_KEY) {
+        if (!OPENROUTER_API_KEY) {
             return NextResponse.json(
                 { success: false, message: 'AI service not configured' },
                 { status: 500 }
@@ -89,14 +89,16 @@ Return ONLY a JSON object:
   "currentTopic": "personal_background"
 }`;
 
-        const res = await fetch(GROQ_URL, {
+        const res = await fetch(OPENROUTER_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'HTTP-Referer': 'https://vidyaloan.com',
+                'X-Title': 'VidyaLoan',
             },
             body: JSON.stringify({
-                model: 'llama-3.1-8b-instant',
+                model: 'openai/gpt-4o-mini',
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: 'Begin the visa interview now. The applicant has just stepped up to the window.' },

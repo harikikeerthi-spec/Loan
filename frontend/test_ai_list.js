@@ -5,8 +5,8 @@ async function test() {
   let apiKey = '';
   if (fs.existsSync(envPath)) {
     const content = fs.readFileSync(envPath, 'utf8');
-    const match = content.match(/GROQ_API_KEY=(.*)/);
-    if (match) apiKey = match[1];
+    const match = content.match(/OPENROUTER_API_KEY=(.*)/);
+    if (match) apiKey = match[1].trim();
   }
   
   if (!apiKey) {
@@ -14,7 +14,7 @@ async function test() {
     return;
   }
 
-  const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+  const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
   const prompt = `Return a list of up to 15 real, well-known universities for Higher Education in USA. 
     User Profile:  degree, GPA 0, Target: .
     
@@ -37,28 +37,30 @@ async function test() {
 
   try {
     console.log("Fetching list...");
-    const groqResp = await fetch(API_URL, {
+    const resp = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://vidyaloan.com',
+        'X-Title': 'VidyaLoan',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'openai/gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' }
       })
     });
 
-    if (groqResp.ok) {
-      const data = await groqResp.json();
+    if (resp.ok) {
+      const data = await resp.json();
       console.log("Raw content:");
       console.log(data.choices[0].message.content);
       const parsed = JSON.parse(data.choices[0].message.content);
       console.log("Universities count:", parsed.universities.length);
       console.log("First uni slug:", parsed.universities[0].slug);
     } else {
-      console.log("Error:", await groqResp.text());
+      console.log("Error:", await resp.text());
     }
   } catch(e) {
     console.error(e);

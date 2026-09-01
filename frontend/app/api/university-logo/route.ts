@@ -29,23 +29,25 @@ export async function GET(request: Request) {
         }
     }
 
-    const groqApiKey = process.env.GROQ_API_KEY;
-    if (!groqApiKey) {
-        return NextResponse.json({ error: 'GROQ API Key not configured' }, { status: 500 });
+    const openRouterApiKey = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+    if (!openRouterApiKey) {
+        return NextResponse.json({ error: 'OpenRouter API Key not configured' }, { status: 500 });
     }
 
     const promise = (async () => {
         try {
             const prompt = `What is the primary, official website domain for the university/college "${name}" located in "${country}"? Reply STRICTLY with ONLY the raw domain name (e.g., harvard.edu, ox.ac.uk, utoronto.ca). Do not include http://, https://, or www. Do not write any explanations or other words. If you are entirely unsure, reply with UNKNOWN.`;
 
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${groqApiKey}`,
-                    'Content-Type': 'application/json'
+                    'Authorization': `Bearer ${openRouterApiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://vidyaloan.com',
+                    'X-Title': 'VidyaLoan',
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.3-70b-versatile',
+                    model: 'openai/gpt-4o-mini',
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0,
                     max_tokens: 15,
@@ -53,7 +55,7 @@ export async function GET(request: Request) {
             });
 
             if (!response.ok) {
-                console.error('Groq API Error:', await response.text());
+                console.error('OpenRouter API Error:', await response.text());
                 return null;
             }
 

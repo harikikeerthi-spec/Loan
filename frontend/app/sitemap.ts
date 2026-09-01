@@ -19,7 +19,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: '/sop-analyzer', priority: 0.7, changeFrequency: 'weekly' as const },
     { url: '/sop-writer', priority: 0.7, changeFrequency: 'weekly' as const },
     { url: '/grade-converter', priority: 0.7, changeFrequency: 'monthly' as const },
-    { url: '/visa-mock', priority: 0.7, changeFrequency: 'weekly' as const },
     { url: '/repayment-stress', priority: 0.7, changeFrequency: 'monthly' as const },
     { url: '/how-it-works', priority: 0.8, changeFrequency: 'monthly' as const },
     { url: '/about-us', priority: 0.7, changeFrequency: 'monthly' as const },

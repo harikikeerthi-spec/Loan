@@ -32,7 +32,6 @@ export class UpdateSiteSettingsDto {
   openRouterApiKey?: string;
   aiModel?: string;
   aiTemperature?: number;
-  groqApiKey?: string;
 
   // Security, SEO & Disposable Email Protection
   disposableEmailBlock?: boolean;

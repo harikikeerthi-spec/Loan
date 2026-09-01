@@ -65,7 +65,6 @@ interface SiteSettings {
   openRouterApiKey: string;
   aiModel: string;
   aiTemperature: number;
-  groqApiKey: string;
 
   // Security, SEO & Disposable Email Protection
   disposableEmailBlock: boolean;
@@ -149,7 +148,6 @@ const DEFAULT_FORM: SiteSettings = {
   openRouterApiKey: "",
   aiModel: "google/gemini-2.0-flash-001",
   aiTemperature: 0.7,
-  groqApiKey: "",
 
   disposableEmailBlock: true,
   disposableBlockLevel: "strict",
@@ -218,7 +216,6 @@ export default function SiteSettingsSection() {
 
   // Visibility toggles for passwords & API keys
   const [showOpenRouter, setShowOpenRouter] = useState(false);
-  const [showGroq, setShowGroq] = useState(false);
   const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
   const [showAmberSecret, setShowAmberSecret] = useState(false);
   const [showAwsSecret, setShowAwsSecret] = useState(false);
@@ -565,44 +562,6 @@ export default function SiteSettingsSection() {
                       <span>Creative</span>
                     </div>
                   </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Section 2: Groq Cloud */}
-            <section>
-              <div className="flex items-center gap-2 mb-5">
-                <Zap className="w-4 h-4 text-amber-500" />
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                  Fast Inference Engine (Groq)
-                </h3>
-              </div>
-
-              <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-                <label className="flex items-center justify-between text-xs font-semibold text-slate-600 mb-2">
-                  <span>Groq Cloud Direct API Key</span>
-                  <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                    Used for Dynamic Autocomplete
-                  </span>
-                </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Key className="h-4 w-4 text-slate-400 group-focus-within:text-amber-500 transition-colors" />
-                  </div>
-                  <input
-                    type={showGroq ? "text" : "password"}
-                    value={form.groqApiKey}
-                    onChange={(e) => handleChange("groqApiKey", e.target.value)}
-                    placeholder="gsk_..."
-                    className="block w-full pl-10 pr-12 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-mono text-slate-700 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowGroq(!showGroq)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-amber-600 transition-colors"
-                  >
-                    {showGroq ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
                 </div>
               </div>
             </section>

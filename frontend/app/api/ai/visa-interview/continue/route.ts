@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.GROQ_AI_KEY || '';
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || '';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const TOPIC_ORDER = [
     'personal_background',
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
                     ? `Officer Sarah — a warm but sharp female consular officer in her 30s. She's approachable and conversational, but catches everything. She uses natural transitions: "That's interesting, so...", "Okay, and...", "I see. Tell me more about...", "Help me understand something...", "Got it. Now...". She briefly acknowledges answers before asking the next question — "Alright, that makes sense." or "Okay." She sounds like she's genuinely curious, not interrogating.`
                     : `Officer Michael — a measured, professional male officer in his 40s. Completely neutral. He doesn't react much to answers. He may say "Alright." or "Noted." or just move to the next question. Occasionally pauses as if reviewing paperwork: "Let me just... okay. So your funding—who's covering the tuition?" He's clinical and efficient. Never hostile, never warm.`;
 
-        if (!GROQ_API_KEY) {
+        if (!OPENROUTER_API_KEY) {
             return NextResponse.json(
                 { success: false, message: 'AI service not configured' },
                 { status: 500 }
@@ -97,29 +97,31 @@ Return ONLY a JSON object:
   "endInterview": false
 }`;
 
-        // Build conversation for Groq
-        const groqMessages: { role: string; content: string }[] = [
+        // Build conversation for OpenRouter
+        const openRouterMessages: { role: string; content: string }[] = [
             { role: 'system', content: systemPrompt },
         ];
 
         if (conversationHistory && Array.isArray(conversationHistory)) {
             for (const msg of conversationHistory) {
-                groqMessages.push({
+                openRouterMessages.push({
                     role: msg.role === 'officer' ? 'assistant' : 'user',
                     content: msg.content,
                 });
             }
         }
 
-        const res = await fetch(GROQ_URL, {
+        const res = await fetch(OPENROUTER_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'HTTP-Referer': 'https://vidyaloan.com',
+                'X-Title': 'VidyaLoan',
             },
             body: JSON.stringify({
-                model: 'llama-3.1-8b-instant',
-                messages: groqMessages,
+                model: 'openai/gpt-4o-mini',
+                messages: openRouterMessages,
                 temperature: 0.7,
                 max_tokens: 400,
                 response_format: { type: 'json_object' },

@@ -59,7 +59,6 @@ const DEFAULT_SETTINGS = {
   openRouterApiKey: process.env.OPENROUTER_API_KEY || '',
   aiModel: 'google/gemini-2.0-flash-001',
   aiTemperature: 0.7,
-  groqApiKey: process.env.GROQ_API_KEY || '',
 
   // Disposable Email Protection
   disposableEmailBlock: true,
