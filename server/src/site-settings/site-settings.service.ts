@@ -68,7 +68,77 @@ const DEFAULT_SETTINGS = {
   disposableApiKey: '',
   disposableProvider: 'builtin', // builtin, kickbox, zerobounce, debounce, hunter
   disposableAction: 'reject', // reject, otp_verify, flag_review
+
+  // Email & AWS SES
+  awsSesRegion: process.env.AWS_REGION || 'ap-south-1',
+  awsSesAccessKey: process.env.SMTP_USER || process.env.AWS_ACCESS_KEY_ID || '',
+  awsSesSecretKey: process.env.SMTP_PASS || process.env.AWS_SECRET_ACCESS_KEY || '',
+  awsSesSenderEmail: process.env.EMAIL_FROM_ADDRESS || 'support@vidyaloans.in',
+  smtpHost: process.env.SMTP_HOST || 'email-smtp.ap-south-1.amazonaws.com',
+  smtpPort: Number(process.env.SMTP_PORT) || 587,
+  smtpUser: process.env.SMTP_USER || '',
+  smtpPassword: process.env.SMTP_PASS || '',
 };
+
+const PRISMA_SITE_SETTING_FIELDS = new Set([
+  'siteName',
+  'tagline',
+  'metaTitle',
+  'metaDescription',
+  'supportEmail',
+  'contactEmail',
+  'phone',
+  'tollFree',
+  'address',
+  'currency',
+  'timezone',
+  'copyrightText',
+  'facebookUrl',
+  'instagramUrl',
+  'twitterUrl',
+  'linkedinUrl',
+  'youtubeUrl',
+  'whatsappNumber',
+  'telegramUrl',
+  'logoLightUrl',
+  'logoDarkUrl',
+  'faviconUrl',
+  'appIconUrl',
+  'primaryColor',
+  'secondaryColor',
+  'darkThemeBg',
+  'customCss',
+  'googleAnalyticsId',
+  'googleTagManagerId',
+  'facebookPixelId',
+  'posthogApiKey',
+  'mixpanelToken',
+  'hotjarSiteId',
+  'customHeadScripts',
+  'customBodyScripts',
+  'webhookUrl',
+  'openRouterApiKey',
+  'aiModel',
+  'aiTemperature',
+  'disposableEmailBlock',
+  'disposableBlockLevel',
+  'blockedDomains',
+  'allowedDomains',
+  'disposableApiKey',
+  'disposableProvider',
+  'disposableAction',
+]);
+
+function filterPrismaSiteSettingFields(data: any): Record<string, any> {
+  if (!data || typeof data !== 'object') return {};
+  const filtered: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (PRISMA_SITE_SETTING_FIELDS.has(key)) {
+      filtered[key] = value;
+    }
+  }
+  return filtered;
+}
 
 const PERSISTENT_SETTINGS_PATH = path.join(process.cwd(), 'scratch', 'site_settings.json');
 
@@ -112,14 +182,29 @@ export class SiteSettingsService {
         });
 
         if (settings) {
-          memorySettingsStore = { ...DEFAULT_SETTINGS, ...settings };
+          memorySettingsStore = {
+            ...DEFAULT_SETTINGS,
+            ...settings,
+            openRouterApiKey: settings.openRouterApiKey || process.env.OPENROUTER_API_KEY || '',
+            awsSesRegion: settings.awsSesRegion || process.env.AWS_REGION || 'ap-south-1',
+            awsSesSenderEmail: settings.awsSesSenderEmail || process.env.EMAIL_FROM_ADDRESS || 'support@vidyaloans.in',
+            awsSesAccessKey: settings.awsSesAccessKey || process.env.SMTP_USER || process.env.AWS_ACCESS_KEY_ID || '',
+            awsSesSecretKey: settings.awsSesSecretKey || process.env.SMTP_PASS || process.env.AWS_SECRET_ACCESS_KEY || '',
+            smtpHost: settings.smtpHost || process.env.SMTP_HOST || 'email-smtp.ap-south-1.amazonaws.com',
+            smtpPort: Number(settings.smtpPort) || Number(process.env.SMTP_PORT) || 587,
+            smtpUser: settings.smtpUser || process.env.SMTP_USER || '',
+            smtpPassword: settings.smtpPassword || process.env.SMTP_PASS || '',
+          };
           this.persistToFile(memorySettingsStore);
           return memorySettingsStore;
         }
 
         // If not found in DB, seed default entry
         const created = await (this.prisma as any).siteSetting.create({
-          data: DEFAULT_SETTINGS,
+          data: {
+            id: 'default',
+            ...filterPrismaSiteSettingFields(DEFAULT_SETTINGS),
+          },
         });
         memorySettingsStore = { ...DEFAULT_SETTINGS, ...created };
         this.persistToFile(memorySettingsStore);
@@ -132,15 +217,46 @@ export class SiteSettingsService {
     return memorySettingsStore;
   }
 
+  async getPublicSettings() {
+    const settings = await this.getSettings();
+    // Strip confidential server secrets from public API responses
+    const {
+      razorpayKeySecret,
+      stripeSecretKey,
+      openRouterApiKey,
+      groqApiKey,
+      awsSesSecretKey,
+      awsSesAccessKey,
+      smtpPassword,
+      amberApiKey,
+      amberApiSecret,
+      ...publicSettings
+    } = settings;
+
+    return publicSettings;
+  }
+
   async updateSettings(dto: UpdateSiteSettingsDto) {
     try {
       if ((this.prisma as any).siteSetting) {
+        const dbUpdateData = filterPrismaSiteSettingFields(dto);
+        const dbCreateData = {
+          id: 'default',
+          ...filterPrismaSiteSettingFields(DEFAULT_SETTINGS),
+          ...dbUpdateData,
+        };
+
         const updated = await (this.prisma as any).siteSetting.upsert({
           where: { id: 'default' },
-          update: { ...dto },
-          create: { ...DEFAULT_SETTINGS, ...dto },
+          update: dbUpdateData,
+          create: dbCreateData,
         });
-        memorySettingsStore = { ...memorySettingsStore, ...updated };
+        memorySettingsStore = {
+          ...memorySettingsStore,
+          ...dto,
+          ...updated,
+          updatedAt: new Date(),
+        };
         this.persistToFile(memorySettingsStore);
         return memorySettingsStore;
       }
@@ -161,12 +277,21 @@ export class SiteSettingsService {
   async resetDefaults() {
     try {
       if ((this.prisma as any).siteSetting) {
+        const dbData = {
+          id: 'default',
+          ...filterPrismaSiteSettingFields(DEFAULT_SETTINGS),
+        };
+
         const reset = await (this.prisma as any).siteSetting.upsert({
           where: { id: 'default' },
-          update: { ...DEFAULT_SETTINGS },
-          create: { ...DEFAULT_SETTINGS },
+          update: filterPrismaSiteSettingFields(DEFAULT_SETTINGS),
+          create: dbData,
         });
-        memorySettingsStore = { ...DEFAULT_SETTINGS, ...reset };
+        memorySettingsStore = {
+          ...DEFAULT_SETTINGS,
+          ...reset,
+          updatedAt: new Date(),
+        };
         this.persistToFile(memorySettingsStore);
         return memorySettingsStore;
       }

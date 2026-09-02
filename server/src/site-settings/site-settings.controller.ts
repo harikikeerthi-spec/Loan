@@ -6,6 +6,15 @@ import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
 export class SiteSettingsController {
   constructor(private readonly siteSettingsService: SiteSettingsService) {}
 
+  @Get('public')
+  async getPublicSettings() {
+    const settings = await this.siteSettingsService.getPublicSettings();
+    return {
+      success: true,
+      data: settings,
+    };
+  }
+
   @Get()
   async getSettings() {
     const settings = await this.siteSettingsService.getSettings();

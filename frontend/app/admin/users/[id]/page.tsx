@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
-export default function UserProfileEdit({ params }: { params: { id: string } }) {
+export default function UserProfileEdit({ params }: { params?: Promise<{ id: string }> | { id: string } }) {
     const router = useRouter();
-    const userId = params.id;
+    const routeParams = useParams();
+    const resolvedParams = params && typeof (params as any)?.then === "function" ? use(params as Promise<{ id: string }>) : (params as { id?: string });
+    const userId = (resolvedParams?.id || routeParams?.id || "") as string;
 
     // State management
     const [loading, setLoading] = useState(true);

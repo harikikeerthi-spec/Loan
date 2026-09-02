@@ -1154,6 +1154,8 @@ export const adminApi = {
     // Site Settings & Platform Config
     getSiteSettings: () =>
         apiFetch<any>(`${API_URL}/site-settings`),
+    getPublicSiteSettings: () =>
+        apiFetch<any>(`${API_URL}/site-settings/public`),
     updateSiteSettings: (data: any) =>
         apiFetch<any>(`${API_URL}/site-settings`, {
             method: "PUT",
@@ -1937,6 +1939,13 @@ export const supportApi = {
     // Notifications
     getNotifications: () => apiFetch(`${API_URL}/support/notifications`),
     markNotificationRead: (id: string) => apiFetch(`${API_URL}/support/notifications/${id}/read`, { method: "PATCH" }),
+};
+
+export const siteSettingsApi = {
+    getPublicSettings: () => adminApi.getPublicSiteSettings(),
+    getSettings: () => adminApi.getSiteSettings(),
+    updateSettings: (data: any) => adminApi.updateSiteSettings(data),
+    resetDefaults: () => adminApi.resetSiteSettings(),
 };
 
 /** Shared REST path builders + staff-dashboard catalog (single source for URLs). */

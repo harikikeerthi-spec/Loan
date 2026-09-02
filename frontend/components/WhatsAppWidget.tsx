@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useSiteSettings } from '@/contexts/SiteSettingsContext';
 
 export default function WhatsAppWidget() {
     const pathname = usePathname();
+    const { settings } = useSiteSettings();
     const [isVisible, setIsVisible] = useState(false);
     const [showTooltip, setShowTooltip] = useState(false);
 
@@ -21,9 +23,11 @@ export default function WhatsAppWidget() {
     }, []);
 
     const openWhatsApp = () => {
-        const phoneNumber = process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886';
-        const message = encodeURIComponent("Hi VidyaLoan team! I'm interested in an education loan and would like to speak with a mentor.");
-        window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+        const rawNumber = settings?.whatsappNumber || process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+918143797779';
+        const cleanNumber = rawNumber.replace(/[^0-9]/g, '');
+        const siteName = settings?.siteName || "VidyaLoan";
+        const message = encodeURIComponent(`Hi ${siteName} team! I'm interested in an education loan and would like to speak with a mentor.`);
+        window.open(`https://wa.me/${cleanNumber}?text=${message}`, '_blank');
     };
 
     // Hide on dashboards and home page

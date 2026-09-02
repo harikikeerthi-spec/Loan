@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SiteSettingsProvider } from "@/contexts/SiteSettingsContext";
 import { UniversityProvider } from "@/context/UniversityContext";
 import { DialogProvider } from "@/contexts/DialogContext";
 import SelectedUniversityWidget from "@/components/SelectedUniversityWidget";
@@ -89,18 +90,20 @@ export default function RootLayout({
         </div>
 
         <div className="relative z-10">
-          <AuthProvider>
-            <DialogProvider>
-              <ReferralTracker />
-              <UniversityProvider>
-                <ProfileGate>
-                  {children}
-                  <SelectedUniversityWidget />
-                  <CookieConsentBanner />
-                </ProfileGate>
-              </UniversityProvider>
-            </DialogProvider>
-          </AuthProvider>
+          <SiteSettingsProvider>
+            <AuthProvider>
+              <DialogProvider>
+                <ReferralTracker />
+                <UniversityProvider>
+                  <ProfileGate>
+                    {children}
+                    <SelectedUniversityWidget />
+                    <CookieConsentBanner />
+                  </ProfileGate>
+                </UniversityProvider>
+              </DialogProvider>
+            </AuthProvider>
+          </SiteSettingsProvider>
         </div>
       </body>
     </html>

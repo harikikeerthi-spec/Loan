@@ -54,12 +54,12 @@ interface SiteSettings {
   darkThemeBg: string;
   customCss: string;
 
-  // Payments & Ads
+  // Payments
   razorpayKeyId: string;
   razorpayKeySecret: string;
   stripePublishableKey: string;
   stripeSecretKey: string;
-  googleAdsId: string;
+  googleAdsId?: string;
 
   // AI Integration
   openRouterApiKey: string;
@@ -143,7 +143,6 @@ const DEFAULT_FORM: SiteSettings = {
   razorpayKeySecret: "",
   stripePublishableKey: "",
   stripeSecretKey: "",
-  googleAdsId: "AW-1234567890",
 
   openRouterApiKey: "",
   aiModel: "google/gemini-2.0-flash-001",
@@ -184,13 +183,13 @@ const DEFAULT_FORM: SiteSettings = {
   webhookUrl: "https://api.vidyaloans.com/v1/webhooks/events",
 
   awsSesRegion: "ap-south-1",
-  awsSesAccessKey: "AKIAXXXXXXXXXXXXXXXX",
-  awsSesSecretKey: "••••••••••••••••••••••••",
-  awsSesSenderEmail: "no-reply@vidyaloans.in",
+  awsSesAccessKey: "",
+  awsSesSecretKey: "",
+  awsSesSenderEmail: "support@vidyaloans.in",
   smtpHost: "email-smtp.ap-south-1.amazonaws.com",
   smtpPort: 587,
-  smtpUser: "AKIAXXXXXXXXXXXXXXXX",
-  smtpPassword: "••••••••••••••••••••••••",
+  smtpUser: "",
+  smtpPassword: "",
 
   eventScraperCron: "0 0 * * *",
   eventScraperEnabled: true,
@@ -217,8 +216,10 @@ export default function SiteSettingsSection() {
   // Visibility toggles for passwords & API keys
   const [showOpenRouter, setShowOpenRouter] = useState(false);
   const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
+  const [showStripeSecret, setShowStripeSecret] = useState(false);
   const [showAmberSecret, setShowAmberSecret] = useState(false);
   const [showAwsSecret, setShowAwsSecret] = useState(false);
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
 
   // Email Tester state
   const [testEmail, setTestEmail] = useState("user@0-mail.com");
@@ -251,9 +252,6 @@ export default function SiteSettingsSection() {
           ...DEFAULT_FORM,
           ...res.data,
           blockedDomains: fullBlocked,
-          openRouterApiKey: res.data.openRouterApiKey || DEFAULT_FORM.openRouterApiKey,
-          googleTagManagerId: res.data.googleTagManagerId || DEFAULT_FORM.googleTagManagerId,
-          googleAnalyticsId: res.data.googleAnalyticsId || DEFAULT_FORM.googleAnalyticsId,
         };
 
         setForm(mergedForm);
@@ -290,6 +288,7 @@ export default function SiteSettingsSection() {
     setSaving(true);
     try {
       const res = await adminApi.updateSiteSettings(form);
+      const updatedData = res?.data || form;
       if (res && res.data) {
         setForm((prev) => ({ ...prev, ...res.data }));
         setInitialForm((prev) => ({ ...prev, ...res.data }));
@@ -297,6 +296,11 @@ export default function SiteSettingsSection() {
       } else {
         showToast("Settings updated successfully!", "success");
         setInitialForm(form);
+      }
+
+      // Broadcast hot reload to all UI components
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("site-settings-updated", { detail: updatedData }));
       }
     } catch (e) {
       console.error("Error saving site settings:", e);
@@ -315,6 +319,10 @@ export default function SiteSettingsSection() {
         setForm((prev) => ({ ...prev, ...res.data }));
         setInitialForm((prev) => ({ ...prev, ...res.data }));
         showToast("Settings reset to defaults", "success");
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("site-settings-updated", { detail: res.data }));
+        }
       }
     } catch (e) {
       console.error("Error resetting settings:", e);
@@ -346,7 +354,7 @@ export default function SiteSettingsSection() {
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: "general", label: "General & Branding", icon: <Building2 className="w-4 h-4" /> },
-    { id: "payments", label: "Payments & Ads", icon: <CreditCard className="w-4 h-4" /> },
+    { id: "payments", label: "Payments", icon: <CreditCard className="w-4 h-4" /> },
     { id: "ai", label: "AI Integration", icon: <Cpu className="w-4 h-4" /> },
     { id: "security", label: "Security & Disposable Shield", icon: <Shield className="w-4 h-4" /> },
     { id: "discovery", label: "Google & Social Discovery", icon: <Globe className="w-4 h-4" /> },
@@ -560,6 +568,16 @@ export default function SiteSettingsSection() {
                     <div className="flex justify-between mt-1.5 px-7 text-[10px] text-slate-400 font-medium">
                       <span>Precise</span>
                       <span>Creative</span>
+                    </div>
+
+                    <div className="mt-3 p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 text-[11px] text-slate-600 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-indigo-700">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>What is AI Temperature?</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-slate-600">
+                        Controls response randomness. <strong>0.0 – 0.3:</strong> Factual, strict, and precise (best for loan eligibility, document analysis & underwriting). <strong>0.5 – 0.7:</strong> Balanced assistance for customer support. <strong>0.8 – 1.0:</strong> Creative & diverse (best for SOP writing).
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -938,18 +956,37 @@ export default function SiteSettingsSection() {
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
             <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-              <span className="material-symbols-outlined">ads_click</span>
-              <h3>Google Ads & Conversions</h3>
+              <CreditCard className="w-4 h-4" />
+              <h3>Stripe Gateway Config</h3>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Google Ads Conversion ID</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Publishable Key</label>
               <input
                 type="text"
-                value={form.googleAdsId}
-                onChange={(e) => handleChange("googleAdsId", e.target.value)}
-                placeholder="e.g. AW-1234567890"
+                value={form.stripePublishableKey}
+                onChange={(e) => handleChange("stripePublishableKey", e.target.value)}
+                placeholder="pk_live_..."
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Secret Key</label>
+              <div className="relative">
+                <input
+                  type={showStripeSecret ? "text" : "password"}
+                  value={form.stripeSecretKey}
+                  onChange={(e) => handleChange("stripeSecretKey", e.target.value)}
+                  placeholder="sk_live_..."
+                  className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowStripeSecret(!showStripeSecret)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600"
+                >
+                  {showStripeSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1126,6 +1163,65 @@ export default function SiteSettingsSection() {
                 >
                   {showAwsSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* AWS SES SMTP Relay */}
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm mb-3">
+              <Mail className="w-4 h-4" />
+              <h3>AWS SES SMTP Relay Configuration</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">SMTP Host</label>
+                <input
+                  type="text"
+                  value={form.smtpHost}
+                  onChange={(e) => handleChange("smtpHost", e.target.value)}
+                  placeholder="email-smtp.ap-south-1.amazonaws.com"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">SMTP Port</label>
+                <input
+                  type="number"
+                  value={form.smtpPort}
+                  onChange={(e) => handleChange("smtpPort", parseInt(e.target.value) || 587)}
+                  placeholder="587"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">SMTP Username</label>
+                <input
+                  type="text"
+                  value={form.smtpUser}
+                  onChange={(e) => handleChange("smtpUser", e.target.value)}
+                  placeholder="AKIA..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">SMTP Password</label>
+                <div className="relative">
+                  <input
+                    type={showSmtpPassword ? "text" : "password"}
+                    value={form.smtpPassword}
+                    onChange={(e) => handleChange("smtpPassword", e.target.value)}
+                    placeholder="••••••••••••••••••••••••"
+                    className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-300 font-mono text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600"
+                  >
+                    {showSmtpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

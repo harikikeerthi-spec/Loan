@@ -4,11 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
 
 export default function Navbar() {
     const { user, isAuthenticated, logout } = useAuth();
+    const { settings } = useSiteSettings();
     const router = useRouter();
     const [scrolled, setScrolled] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
@@ -115,8 +117,8 @@ export default function Navbar() {
                 <div className="flex items-center gap-8 lg:gap-12">
                     <Link href="/" className="flex items-center gap-2 group cursor-pointer relative z-10">
                         <Image
-                            src="/images/vidyaloans-logo-transparent.png"
-                            alt="VidyaLoans Logo"
+                            src={settings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                            alt={`${settings?.siteName || "VidyaLoans"} Logo`}
                             width={40}
                             height={40}
                             className="w-10 h-10 object-contain drop-shadow-sm"
@@ -124,7 +126,7 @@ export default function Navbar() {
                         />
                         <span className="font-bold text-2xl tracking-tight font-display transition-colors duration-500 text-[#1a1626]">
                             <link rel="stylesheet" href="#" />
-                            VidyaLoans
+                            {settings?.siteName || "VidyaLoans"}
                         </span>
                     </Link>
 

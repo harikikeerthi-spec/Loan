@@ -1,7 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 export default function Footer() {
+    const { settings } = useSiteSettings();
+
+    const siteName = settings?.siteName || "VidyaLoans";
+    const logoUrl = settings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png";
+    const tagline = settings?.tagline || "Empowering students with transparent, flexible, and accessible education financing solutions worldwide.";
+    const supportEmail = settings?.supportEmail || "support@vidyaloans.com";
+    const phone = settings?.phone || "+91 8143797779";
+    const copyrightText = settings?.copyrightText || `© ${new Date().getFullYear()} ${siteName} Inc. All rights reserved.`;
+
     return (
         <footer className="bg-[#0c0714] text-white relative overflow-hidden">
             {/* Subtle gradient glow at top */}
@@ -16,35 +28,43 @@ export default function Footer() {
                     <div className="lg:col-span-3">
                         <Link href="/" className="flex items-center gap-2 mb-6 group">
                             <Image
-                                src="/images/vidyaloans-logo-transparent.png"
-                                alt="VidyaLoans Logo"
+                                src={logoUrl}
+                                alt={`${siteName} Logo`}
                                 width={40}
                                 height={40}
                                 className="w-10 h-10 object-contain"
                             />
-                            <span className="text-xl font-bold font-display tracking-tight text-white">VidyaLoans</span>
+                            <span className="text-xl font-bold font-display tracking-tight text-white">{siteName}</span>
                         </Link>
                         <p className="text-gray-400 text-[13px] leading-relaxed mb-8 max-w-xs font-normal">
-                            Empowering students with transparent, flexible, and accessible education financing solutions worldwide.
+                            {tagline}
                         </p>
 
                         {/* Social Icons */}
                         <div className="flex items-center gap-2.5 mb-8">
-                            <SocialIcon href="https://www.instagram.com/vidya_loans/" icon="/images/social/instagram.png" alt="Instagram" color="hover:bg-[#E1306C]" />
-                            <SocialIcon href="https://www.linkedin.com/company/vidyaloans/" icon="/images/social/linkedin.png" alt="LinkedIn" color="hover:bg-[#0077B5]" />
-                            <SocialIcon href="https://www.youtube.com/@VidyaLoans" icon="/images/social/youtube.png" alt="YouTube" color="hover:bg-red-600" />
-                            <SocialIcon href="https://x.com/VidyaLoans07" icon="/images/social/twitter.png" alt="Twitter" color="hover:bg-black" />
+                            {settings?.instagramUrl && (
+                                <SocialIcon href={settings.instagramUrl} icon="/images/social/instagram.png" alt="Instagram" color="hover:bg-[#E1306C]" />
+                            )}
+                            {settings?.linkedinUrl && (
+                                <SocialIcon href={settings.linkedinUrl} icon="/images/social/linkedin.png" alt="LinkedIn" color="hover:bg-[#0077B5]" />
+                            )}
+                            {settings?.youtubeUrl && (
+                                <SocialIcon href={settings.youtubeUrl} icon="/images/social/youtube.png" alt="YouTube" color="hover:bg-red-600" />
+                            )}
+                            {settings?.twitterUrl && (
+                                <SocialIcon href={settings.twitterUrl} icon="/images/social/twitter.png" alt="Twitter" color="hover:bg-black" />
+                            )}
                         </div>
 
                         {/* Contact */}
                         <div className="space-y-2.5">
-                            <a href="mailto:support@vidyaloan.in" className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
+                            <a href={`mailto:${supportEmail}`} className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
                                 <span className="material-symbols-outlined text-base text-gray-500 group-hover:text-[#6605c7] transition-colors">mail</span>
-                                support@Vidyaloans.in
+                                {supportEmail}
                             </a>
-                            <a href="tel:+918143797779" className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
+                            <a href={`tel:${phone.replace(/\s+/g, '')}`} className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
                                 <span className="material-symbols-outlined text-base text-gray-500 group-hover:text-[#6605c7] transition-colors">call</span>
-                                +91 8143797779
+                                {phone}
                             </a>
                         </div>
                     </div>
@@ -113,7 +133,7 @@ export default function Footer() {
                 <div className="pt-8 border-t border-white/[0.06]">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                         <p className="text-[11px] text-gray-500 order-3 md:order-1 font-normal opacity-80">
-                            &copy; 2026 VidyaLoan Inc. All rights reserved.
+                            {copyrightText}
                         </p>
 
                         {/* Made in India */}

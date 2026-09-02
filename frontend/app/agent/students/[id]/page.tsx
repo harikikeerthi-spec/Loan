@@ -1,20 +1,24 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useMemo, useState, useEffect, use } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAgent } from "../../AgentContext";
 import { agentApi } from "@/lib/api";
 
 interface PageProps {
-    params: {
+    params?: Promise<{
+        id: string;
+    }> | {
         id: string;
     };
 }
 
 export default function AgentStudentDetail({ params }: PageProps) {
     const router = useRouter();
-    const studentId = params.id;
+    const routeParams = useParams();
+    const resolvedParams = params && typeof (params as any)?.then === "function" ? use(params as Promise<{ id: string }>) : (params as { id?: string });
+    const studentId = (resolvedParams?.id || routeParams?.id || "") as string;
     const {
         applications,
         docUploadState, setDocUploadState,
