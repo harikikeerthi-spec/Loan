@@ -8,6 +8,7 @@ import UniversityCard from "@/components/UniversityCard";
 import UniDetailModal from "@/components/UniDetailModal";
 import { aiApi, onboardingApi, documentApi, authApi, referenceApi } from '@/lib/api';
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 const COUNTRY_FLAGS: Record<string, string> = {
     'USA': '🇺🇸', 'UK': '🇬🇧', 'Canada': '🇨🇦', 'Australia': '🇦🇺', 'Germany': '🇩🇪', 'Ireland': '🇮🇪', 'Singapore': '🇸🇬', 'Other': '🌍'
@@ -697,6 +698,7 @@ export default function OnboardingPage() {
     const chatEndRef = useRef<HTMLDivElement | null>(null);
 
     const { user, token, refreshUser } = useAuth();
+    const { settings: siteSettings } = useSiteSettings();
     const [currentIdx, setCurrentIdx] = useState(0);
     const [answers, setAnswers] = useState<Record<string, { value: string; label: string }>>({});
     const [aiUniversities, setAiUniversities] = useState<any[]>([]);
@@ -3561,7 +3563,7 @@ export default function OnboardingPage() {
                 <div className="welcome-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '20px', textAlign: 'center', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
                     <div style={{ maxWidth: '600px', background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
                         <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #f3e8ff, #ede9fe)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 8px 24px rgba(124,58,237,0.12)' }}>
-                            <img src="/images/vidyaloans-logo-transparent.png" alt="VidyaLoans Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
+                            <img src={siteSettings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"} alt={`${siteSettings?.siteName || "VidyaLoans"} Logo`} style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
                         </div>
                         <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
                             Welcome, {user?.firstName ? (user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName) : 'Future Student'}! 👋

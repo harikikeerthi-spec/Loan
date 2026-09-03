@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { supportApi, blogApi } from "@/lib/api";
@@ -39,6 +40,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
 
 export default function ITLayout({ children }: { children: React.ReactNode }) {
     const { user, isStaff, isAdmin, isLoading, logout } = useAuth();
+    const { settings: siteSettings } = useSiteSettings();
     const router = useRouter();
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(true);
@@ -89,12 +91,12 @@ export default function ITLayout({ children }: { children: React.ReactNode }) {
                 <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800 flex-shrink-0 gap-3">
                     <Link href="/it" className="flex items-center gap-3 min-w-0">
                         <img
-                            src="/images/vidyaloans-logo-transparent.png"
-                            alt="VidyaLoans Logo"
+                            src={siteSettings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                            alt={`${siteSettings?.siteName || "VidyaLoans"} Logo`}
                             className="w-8 h-8 object-contain shrink-0"
                         />
                         <span className={`font-bold text-sm text-white tracking-wide whitespace-nowrap transition-all duration-300 ${!collapsed ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
-                            VidyaLoans<span className="text-indigo-400"> IT</span>
+                            {siteSettings?.siteName || "VidyaLoans"}<span className="text-indigo-400"> IT</span>
                         </span>
                     </Link>
 

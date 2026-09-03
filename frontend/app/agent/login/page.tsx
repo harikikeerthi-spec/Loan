@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { authApi } from "@/lib/api";
 
 // Allowed agent roles for accessing agent portal
@@ -17,6 +18,7 @@ function AgentLoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { login } = useAuth();
+    const { settings: siteSettings } = useSiteSettings();
 
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -153,8 +155,8 @@ function AgentLoginContent() {
                             {/* Vidyaloans Logo */}
                             <div className="w-12 h-12 rounded-2xl bg-white border border-[#6605c7]/10 flex items-center justify-center shadow-sm">
                                 <img
-                                    src="/images/vidyaloans-logo-transparent.png"
-                                    alt="VidyaLoans Logo"
+                                    src={siteSettings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                                    alt={`${siteSettings?.siteName || "VidyaLoans"} Logo`}
                                     className="w-9 h-9 object-contain"
                                 />
                             </div>

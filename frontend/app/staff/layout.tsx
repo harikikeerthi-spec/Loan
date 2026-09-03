@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { adminApi, staffProfileApi, apiFetch } from "@/lib/api";
@@ -77,6 +78,7 @@ const NavItem = ({ section, icon, label, badge, active, expanded }: any) => {
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
     const { isStaff, isLoading, isAuthenticated, user, logout, token } = useAuth();
+    const { settings: siteSettings } = useSiteSettings();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -372,12 +374,12 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     {/* Header Logo */}
                     <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0 gap-2.5">
                         <img
-                            src="/images/vidyaloans-logo-transparent.png"
-                            alt="VidyaLoans Logo"
+                            src={siteSettings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                            alt={`${siteSettings?.siteName || "VidyaLoans"} Logo`}
                             className="w-7 h-7 object-contain flex-shrink-0"
                         />
                         <span className={`font-semibold text-[14px] text-white tracking-wide whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
-                            VidyaLoans<span className="text-indigo-400"> Staff</span>
+                            {siteSettings?.siteName || "VidyaLoans"}<span className="text-indigo-400"> Staff</span>
                         </span>
                     </div>
 

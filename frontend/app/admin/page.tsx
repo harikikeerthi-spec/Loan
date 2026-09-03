@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { adminApi, assignmentApi, staffProfileApi } from "@/lib/api";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
+import { adminApi, assignmentApi, staffProfileApi, referenceApi } from "@/lib/api";
 import { format, formatDistanceToNow } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import CampaignsDashboard from "@/components/Admin/CampaignsDashboard";
@@ -284,6 +285,7 @@ export default function AdminDashboardPage() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { user, logout } = useAuth();
+    const { settings: siteSettings } = useSiteSettings();
 
     // Resolve initial activeSection from current URL path or search params
     const getInitialSection = () => {
@@ -350,7 +352,7 @@ export default function AdminDashboardPage() {
     const [showCreateUserModal, setShowCreateUserModal] = useState(false);
     const [createUserLoading, setCreateUserLoading] = useState(false);
     const [newUserQuery, setNewUserQuery] = useState({
-        email: "", firstName: "", lastName: "", middleName: "", mobile: "", role: "user",
+        email: "", firstName: "", lastName: "", middleName: "", mobile: "", role: "user", bank: "",
         dob: "", gender: "", maritalStatus: "",
         mailingAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
         permanentAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
@@ -363,7 +365,8 @@ export default function AdminDashboardPage() {
     const openCreateUserModal = (defaultRole = "user") => {
         setNewUserQuery(prev => ({
             ...prev,
-            role: defaultRole
+            role: defaultRole,
+            bank: prev.bank || (bankPartners[0]?.shortName || "")
         }));
         setShowCreateUserModal(true);
     };
@@ -385,6 +388,13 @@ export default function AdminDashboardPage() {
     const [newAnnouncement, setNewAnnouncement] = useState({ title: "", message: "", type: "info", target: "all" });
     const [annLoading, setAnnLoading] = useState(false);
     const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+    // Bank Partners & User Management Dropdown State
+    const [bankPartners, setBankPartners] = useState<any[]>([]);
+    const [bankPartnerFilter, setBankPartnerFilter] = useState<string>("all");
+    const [comparedBankPartner, setComparedBankPartner] = useState<any>(null);
+    const [userProfileTab, setUserProfileTab] = useState<'credentials' | 'applications' | 'bank_compare'>('credentials');
+    const [updatingUserBank, setUpdatingUserBank] = useState(false);
 
     // Portal control - filter + bulk
     const [roleFilter, setRoleFilter] = useState("all");
@@ -449,13 +459,17 @@ export default function AdminDashboardPage() {
     const loadOverview = useCallback(async () => {
         setLoading(true);
         try {
-            const [blogStats, appStats, users, logs]: [any, any, any, any] = await Promise.all([
+            const [blogStats, appStats, users, logs, banksRes]: [any, any, any, any, any] = await Promise.all([
                 adminApi.getBlogStats().catch(() => ({ data: {} })),
                 adminApi.getApplicationStats().catch(() => ({ data: {} })),
                 adminApi.getUsers().catch(() => ({ data: [] })),
-                adminApi.getAuditLogs(10).catch(() => ({ data: [] }))
+                adminApi.getAuditLogs(10).catch(() => ({ data: [] })),
+                referenceApi.getBanks().catch(() => ({ data: [] }))
             ]);
             const userList = users.data || [];
+            if (banksRes?.success && Array.isArray(banksRes.data)) {
+                setBankPartners(banksRes.data);
+            }
             setStats({
                 blogs: blogStats.data || {},
                 apps: appStats.data || {},
@@ -488,6 +502,11 @@ export default function AdminDashboardPage() {
             setData([]);
         }
         try {
+            // Always ensure bank partners are loaded for filtering & comparison
+            referenceApi.getBanks().then((res: any) => {
+                if (res?.success && Array.isArray(res.data)) setBankPartners(res.data);
+            }).catch(() => {});
+
             let res: any;
             const isUserSection = activeSection === "users" || activeSection === "users_students" || activeSection === "users_staff" || activeSection === "users_agents" || activeSection === "users_banks";
             if (isUserSection) {
@@ -642,26 +661,66 @@ export default function AdminDashboardPage() {
 
     // ─── Handlers ──────────────────────────────────────────────────────────────
 
-    // Handler to view user credentials and all their loans
-    const handleViewUserProfile = useCallback(async (applicant: any) => {
+    // Handler to view user credentials, comparison, and all their loans
+    const handleViewUserProfile = useCallback(async (applicant: any, defaultTab?: 'credentials' | 'applications' | 'bank_compare') => {
         setUserProfileLoading(true);
         try {
             // Fetch user details specifically for this applicant
             const userRes: any = await adminApi.getUsers(1, 0, applicant.email).catch(() => ({ data: [] }));
             const selectedUser = (userRes.data || []).find((u: any) => u.email === applicant.email);
+            const currentUser = selectedUser || applicant;
             
             // Fetch all applications for this user
             const appsRes: any = await adminApi.getApplications({ search: applicant.email }).catch(() => ({ data: [] }));
             
-            setSelectedUserProfile(selectedUser || applicant);
+            setSelectedUserProfile(currentUser);
             setUserCredentials(selectedUser);
             setUserLoans(appsRes.data || []);
+
+            // Auto-detect matching bank partner
+            const userBankKey = (currentUser?.bank || currentUser?.bankId || currentUser?.partnerBank || currentUser?.firstName || '').toLowerCase().trim();
+            let matchedPartner = bankPartners.find((b: any) => 
+                b.shortName?.toLowerCase() === userBankKey ||
+                b.name?.toLowerCase().includes(userBankKey) ||
+                (userBankKey && userBankKey.includes(b.shortName?.toLowerCase()))
+            );
+            if (!matchedPartner && bankPartners.length > 0) {
+                matchedPartner = bankPartners[0];
+            }
+            setComparedBankPartner(matchedPartner || null);
+
+            if (defaultTab) {
+                setUserProfileTab(defaultTab);
+            } else if (currentUser?.role === 'bank' || currentUser?.role === 'partner_bank') {
+                setUserProfileTab('bank_compare');
+            } else {
+                setUserProfileTab('credentials');
+            }
         } catch (e) {
             console.error('Error loading user profile:', e);
         } finally {
             setUserProfileLoading(false);
         }
-    }, []);
+    }, [bankPartners]);
+
+    const handleUpdateUserBank = async (userId: string, email: string, bankShortName: string) => {
+        setUpdatingUserBank(true);
+        try {
+            await adminApi.updateUserDetails({
+                email: email,
+                bank: bankShortName,
+            } as any);
+            alert(`Bank Partner updated to "${bankShortName.toUpperCase()}" for ${email}`);
+            if (selectedUserProfile) {
+                setSelectedUserProfile((prev: any) => ({ ...prev, bank: bankShortName }));
+            }
+            loadData(true);
+        } catch (err: any) {
+            alert("Failed to update bank partner association: " + (err.message || err));
+        } finally {
+            setUpdatingUserBank(false);
+        }
+    };
 
     const handleBlogStatus = async (blogId: string, currentStatus: boolean) => {
         try {
@@ -979,7 +1038,7 @@ export default function AdminDashboardPage() {
                 alert("New user account created successfully.");
                 setShowCreateUserModal(false);
                 setNewUserQuery({
-                    email: "", firstName: "", lastName: "", middleName: "", mobile: "", role: "user",
+                    email: "", firstName: "", lastName: "", middleName: "", mobile: "", role: "user", bank: "",
                     dob: "", gender: "", maritalStatus: "",
                     mailingAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
                     permanentAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
@@ -1047,7 +1106,14 @@ export default function AdminDashboardPage() {
     const filteredData = data.filter(item => {
         const query = searchQuery.toLowerCase();
 
-        if (activeSection === 'users') {
+        if (activeSection === 'users' || activeSection === 'users_students' || activeSection === 'users_staff' || activeSection === 'users_agents' || activeSection === 'users_banks') {
+            if (bankPartnerFilter !== 'all') {
+                const target = bankPartnerFilter.toLowerCase();
+                const bankField = (item.bank || item.bankId || item.partnerBank || item.targetUniversity || '').toLowerCase();
+                const emailField = (item.email || '').toLowerCase();
+                const nameField = `${item.firstName || ''} ${item.lastName || ''}`.toLowerCase();
+                return bankField.includes(target) || emailField.includes(target) || nameField.includes(target);
+            }
             return true;
         }
         if (activeSection === 'blogs') {
@@ -1256,12 +1322,12 @@ export default function AdminDashboardPage() {
                 }`}>
                 <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0 gap-2.5">
                     <img
-                        src="/images/vidyaloans-logo-transparent.png"
-                        alt="VidyaLoans Logo"
+                        src={siteSettings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                        alt={`${siteSettings?.siteName || "VidyaLoans"} Logo`}
                         className="w-7 h-7 object-contain flex-shrink-0"
                     />
                     <span className={`font-semibold text-[13px] text-white tracking-wide whitespace-nowrap transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 group-hover/sidebar:opacity-100 group-hover/sidebar:w-auto'}`}>
-                        VidyaLoans<span className="text-indigo-400"> Admin</span>
+                        {siteSettings?.siteName || "VidyaLoans"}<span className="text-indigo-400"> Admin</span>
                     </span>
                 </div>
 
@@ -2311,6 +2377,23 @@ export default function AdminDashboardPage() {
                                                 ))}
                                             </div>
                                         )}
+                                        {(activeSection === "users_banks" || activeSection === "users") && bankPartners.length > 0 && (
+                                            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded px-2.5 py-1 shadow-xs">
+                                                <span className="material-symbols-outlined text-[15px] text-emerald-600">account_balance</span>
+                                                <select
+                                                    value={bankPartnerFilter}
+                                                    onChange={e => setBankPartnerFilter(e.target.value)}
+                                                    className="text-[11px] font-semibold text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+                                                >
+                                                    <option value="all">All Bank Partners ({bankPartners.length})</option>
+                                                    {bankPartners.map((bp: any) => (
+                                                        <option key={bp.id || bp.shortName} value={bp.shortName}>
+                                                            {bp.name} ({bp.shortName})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
                                         {selectedUsers.length > 0 && (
                                             <button
                                                 disabled
@@ -2454,6 +2537,17 @@ export default function AdminDashboardPage() {
                                                         </td>
                                                         <td className="px-5 py-3 text-right">
                                                             <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => handleViewUserProfile(item, item.role === 'bank' ? 'bank_compare' : 'credentials')}
+                                                                    className={`p-1.5 rounded transition-all border cursor-pointer ${
+                                                                        item.role === 'bank' 
+                                                                            ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 shadow-xs' 
+                                                                            : 'text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 border-transparent hover:border-indigo-100'
+                                                                    }`}
+                                                                    title={item.role === 'bank' ? "Compare Bank Profile & Partners" : "View Identity Profile"}
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[16px]">{item.role === 'bank' ? 'compare_arrows' : 'visibility'}</span>
+                                                                </button>
                                                                 <button
                                                                     disabled
                                                                     className="p-1.5 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100"
@@ -3690,6 +3784,39 @@ export default function AdminDashboardPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {newUserQuery.role === 'bank' && (
+                                        <div className="mt-6 p-5 rounded-2xl bg-emerald-50/70 border border-emerald-100">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="material-symbols-outlined text-emerald-700 text-lg">account_balance</span>
+                                                <label className="text-[11px] font-black uppercase tracking-widest text-emerald-900 block">
+                                                    Assigned Lending Bank Partner *
+                                                </label>
+                                            </div>
+                                            <select
+                                                value={newUserQuery.bank || ""}
+                                                onChange={e => {
+                                                    const selected = bankPartners.find(b => b.shortName === e.target.value);
+                                                    setNewUserQuery({
+                                                        ...newUserQuery,
+                                                        bank: e.target.value,
+                                                        firstName: newUserQuery.firstName || (selected?.shortName || e.target.value)
+                                                    });
+                                                }}
+                                                className="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer shadow-xs"
+                                            >
+                                                <option value="">-- Select Bank Partner ({bankPartners.length} Active Partners) --</option>
+                                                {bankPartners.map((bp: any) => (
+                                                    <option key={bp.id || bp.shortName} value={bp.shortName}>
+                                                        {bp.name} ({bp.shortName.toUpperCase()}) · {bp.type} · ROI {bp.interestRateMin}% - {bp.interestRateMax}%
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <p className="text-[10px] text-emerald-700 mt-2 font-medium">
+                                                Links the officer profile to the selected lender's underwriting portal, auto-allocation queue, and decision system.
+                                            </p>
+                                        </div>
+                                    )}
                                 </section>
                             </form>
                         </div>
@@ -3779,15 +3906,40 @@ export default function AdminDashboardPage() {
                                     <span className="material-symbols-outlined">close</span>
                                 </button>
                             </div>
-                            <div className="flex gap-8 overflow-x-auto pb-2">
-                                <div className="whitespace-nowrap pb-3 text-[11px] font-black uppercase tracking-widest border-b-2 border-purple-600 text-purple-600 flex items-center gap-2">
+                            <div className="flex gap-4 overflow-x-auto pb-2">
+                                <button
+                                    onClick={() => setUserProfileTab('credentials')}
+                                    className={`whitespace-nowrap pb-3 text-[11px] font-black uppercase tracking-widest border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                                        userProfileTab === 'credentials'
+                                            ? 'border-indigo-600 text-indigo-600'
+                                            : 'border-transparent text-slate-400 hover:text-slate-600'
+                                    }`}
+                                >
                                     <span className="material-symbols-outlined text-[14px]">badge</span>
                                     Credentials
-                                </div>
-                                <div className="whitespace-nowrap pb-3 text-[11px] font-black uppercase tracking-widest border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2 cursor-default">
+                                </button>
+                                <button
+                                    onClick={() => setUserProfileTab('applications')}
+                                    className={`whitespace-nowrap pb-3 text-[11px] font-black uppercase tracking-widest border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                                        userProfileTab === 'applications'
+                                            ? 'border-indigo-600 text-indigo-600'
+                                            : 'border-transparent text-slate-400 hover:text-slate-600'
+                                    }`}
+                                >
                                     <span className="material-symbols-outlined text-[14px]">description</span>
                                     Applications ({userLoans.length})
-                                </div>
+                                </button>
+                                <button
+                                    onClick={() => setUserProfileTab('bank_compare')}
+                                    className={`whitespace-nowrap pb-3 text-[11px] font-black uppercase tracking-widest border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                                        userProfileTab === 'bank_compare'
+                                            ? 'border-emerald-600 text-emerald-600'
+                                            : 'border-transparent text-slate-400 hover:text-emerald-600'
+                                    }`}
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">account_balance</span>
+                                    Bank Profile & Compare
+                                </button>
                             </div>
                         </div>
 
@@ -3797,93 +3949,286 @@ export default function AdminDashboardPage() {
                                     <div className="w-12 h-12 border-3 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
                                     <p className="text-[12px] font-bold text-slate-500">Loading user profile...</p>
                                 </div>
-                            ) : (
-                                <>
-                                    {/* User Credentials Section */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <span className="material-symbols-outlined text-indigo-600 text-[20px]">security</span>
-                                            <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wide">Personal Information</h3>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4 bg-indigo-50 p-6 rounded-lg border border-indigo-100">
-                                            <DetailRow label="Full Name" value={`${userCredentials?.firstName || selectedUserProfile.firstName} ${userCredentials?.lastName || selectedUserProfile.lastName}`} highlight />
-                                            <DetailRow label="Email" value={userCredentials?.email || selectedUserProfile.email} />
-                                            <DetailRow label="Phone" value={userCredentials?.mobile || userCredentials?.phoneNumber || '—'} />
-                                            <DetailRow label="Role" value={userCredentials?.role?.toUpperCase() || '—'} />
-                                            <DetailRow label="Date of Birth" value={userCredentials?.dob ? format(new Date(userCredentials.dob), 'dd MMM yyyy') : '—'} />
-                                            <DetailRow label="Gender" value={userCredentials?.gender || '—'} />
-                                            {userCredentials?.createdAt && (
-                                                <DetailRow label="Member Since" value={format(new Date(userCredentials.createdAt), 'dd MMM yyyy')} />
-                                            )}
+                            ) : userProfileTab === 'bank_compare' ? (
+                                /* ─── Bank Profile vs Bank Partner Comparison View ─── */
+                                <div className="space-y-6">
+                                    {/* Partner Selector Header */}
+                                    <div className="p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100 rounded-2xl border border-emerald-200 shadow-sm">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                            <div>
+                                                <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-[11px] uppercase tracking-wider">
+                                                    <span className="material-symbols-outlined text-[18px] text-emerald-600">compare_arrows</span>
+                                                    Bank Partner Comparison Engine
+                                                </div>
+                                                <p className="text-[12px] text-emerald-900 font-medium mt-0.5">
+                                                    Compare this user profile against active institutional lending partners.
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="relative min-w-[200px]">
+                                                    <select
+                                                        value={comparedBankPartner?.shortName || ""}
+                                                        onChange={(e) => {
+                                                            const partner = bankPartners.find(b => b.shortName === e.target.value);
+                                                            setComparedBankPartner(partner || null);
+                                                        }}
+                                                        className="w-full px-3.5 py-2.5 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer shadow-xs"
+                                                    >
+                                                        {bankPartners.map((bp: any) => (
+                                                            <option key={bp.id || bp.shortName} value={bp.shortName}>
+                                                                {bp.name} ({bp.shortName.toUpperCase()})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                {comparedBankPartner && (
+                                                    <a
+                                                        href={`/bank/decisions?bankId=${encodeURIComponent(comparedBankPartner.shortName)}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="px-3 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 shadow-sm shrink-0"
+                                                        title="Launch Lender Underwriting Portal"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                                                        Portal
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Applied Loans Section */}
-                                    <div className="space-y-6 pt-6 border-t border-slate-200">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <span className="material-symbols-outlined text-emerald-600 text-[20px]">account_balance</span>
-                                            <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wide">Loan Applications ({userLoans.length})</h3>
-                                        </div>
-                                        
-                                        {userLoans.length > 0 ? (
-                                            <div className="space-y-3">
-                                                {userLoans.map((loan: any, idx: number) => (
-                                                    <div key={idx} className="p-4 border border-slate-100 rounded-lg hover:border-slate-200 hover:bg-slate-50/50 transition-all group">
-                                                        <div className="flex items-start justify-between mb-3">
-                                                            <div className="flex-1">
-                                                                <p className="text-[12px] font-bold text-slate-900">
-                                                                    {loan.bank} - {loan.loanType?.toUpperCase()}
-                                                                </p>
-                                                                <p className="text-[10px] text-slate-500 mt-1">
-                                                                    App ID: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-[9px] font-mono">{loan.applicationNumber || loan.id?.substring(0, 8)}</code>
-                                                                </p>
-                                                            </div>
-                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                                                                loan.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                                                loan.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                                loan.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                                loan.status === 'disbursed' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
-                                                                loan.status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                                                                'bg-slate-50 text-slate-600 border-slate-100'
-                                                            }`}>
-                                                                {loan.status}
+                                    {/* Side by Side Comparison Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        {/* Left Box: User / Officer Profile */}
+                                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
+                                            <div>
+                                                <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-200">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs">
+                                                            <span className="material-symbols-outlined text-[16px]">person</span>
+                                                        </div>
+                                                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">User Identity Profile</h4>
+                                                    </div>
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                                        selectedUserProfile.role === 'bank' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
+                                                    }`}>
+                                                        {selectedUserProfile.role?.toUpperCase() || 'USER'}
+                                                    </span>
+                                                </div>
+
+                                                <div className="space-y-3 text-[11px]">
+                                                    <div>
+                                                        <span className="text-slate-400 font-bold uppercase text-[9px] block">Full Name</span>
+                                                        <p className="font-bold text-slate-900 text-sm mt-0.5">{selectedUserProfile.firstName} {selectedUserProfile.lastName}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 font-bold uppercase text-[9px] block">Email & Mobile</span>
+                                                        <p className="font-semibold text-slate-800">{selectedUserProfile.email}</p>
+                                                        <p className="text-slate-500 font-mono text-[10px]">{selectedUserProfile.mobile || selectedUserProfile.phone || '—'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 font-bold uppercase text-[9px] block">Current Assigned Bank</span>
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            <span className="material-symbols-outlined text-[15px] text-indigo-500">account_balance</span>
+                                                            <span className="font-black text-indigo-900 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded text-[10px]">
+                                                                {selectedUserProfile.bank ? selectedUserProfile.bank.toUpperCase() : 'Default / Not Assigned'}
                                                             </span>
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-3">
-                                                            <div className="text-[10px]">
-                                                                <span className="text-slate-500 font-medium">Amount</span>
-                                                                <p className="text-[12px] font-bold text-slate-900 mt-0.5">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(loan.amount || 0)}</p>
-                                                            </div>
-                                                            <div className="text-[10px]">
-                                                                <span className="text-slate-500 font-medium">Applied On</span>
-                                                                <p className="text-[12px] font-bold text-slate-900 mt-0.5">{loan.createdAt ? new Date(loan.createdAt).toLocaleDateString('en-IN') : '—'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 font-bold uppercase text-[9px] block">Active Applications In Buffer</span>
+                                                        <p className="font-black text-slate-900 text-sm mt-0.5">{userLoans.length} Application{userLoans.length === 1 ? '' : 's'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 font-bold uppercase text-[9px] block">System ID</span>
+                                                        <code className="bg-slate-200/70 px-1.5 py-0.5 rounded text-[9px] font-mono text-slate-700">
+                                                            {selectedUserProfile.id || 'N/A'}
+                                                        </code>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {comparedBankPartner && (
+                                                <div className="mt-5 pt-4 border-t border-slate-200">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateUserBank(selectedUserProfile.id, selectedUserProfile.email, comparedBankPartner.shortName)}
+                                                        disabled={updatingUserBank || selectedUserProfile.bank === comparedBankPartner.shortName}
+                                                        className={`w-full py-2.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                                            selectedUserProfile.bank === comparedBankPartner.shortName
+                                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-default'
+                                                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                                                        }`}
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">
+                                                            {selectedUserProfile.bank === comparedBankPartner.shortName ? 'check_circle' : 'link'}
+                                                        </span>
+                                                        {selectedUserProfile.bank === comparedBankPartner.shortName 
+                                                            ? 'Currently Assigned to This Bank' 
+                                                            : `Link User to ${comparedBankPartner.shortName.toUpperCase()}`}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Right Box: Bank Partner Master Parameters */}
+                                        <div className="bg-white border-2 border-emerald-200 rounded-2xl p-5 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                                            <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-50 rounded-full blur-xl pointer-events-none" />
+                                            
+                                            {comparedBankPartner ? (
+                                                <div>
+                                                    <div className="flex items-center justify-between pb-3 mb-4 border-b border-emerald-100">
+                                                        <div className="flex items-center gap-2.5">
+                                                            {comparedBankPartner.logoUrl ? (
+                                                                <img src={comparedBankPartner.logoUrl} alt="" className="w-8 h-8 rounded-lg object-contain bg-slate-50 border border-slate-200 p-0.5" />
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-xs">
+                                                                    <span className="material-symbols-outlined text-[18px]">account_balance</span>
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <h4 className="text-xs font-black text-slate-900 leading-tight">{comparedBankPartner.name}</h4>
+                                                                <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest">{comparedBankPartner.type || 'LENDING PARTNER'}</span>
                                                             </div>
                                                         </div>
-                                                        {loan.universityName && (
-                                                            <p className="text-[10px] text-slate-500 mt-3">
-                                                                <span className="font-medium">University:</span> {loan.universityName} {loan.country && `(${loan.country})`}
-                                                            </p>
-                                                        )}
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedApp(loan);
-                                                                setSelectedUserProfile(null);
-                                                            }}
-                                                            className="mt-3 w-full px-3 py-2 bg-slate-900 text-white rounded text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"
-                                                        >
-                                                            <span className="material-symbols-outlined text-[12px]">open_in_full</span>
-                                                            View Full Details
-                                                        </button>
+                                                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                                                            {comparedBankPartner.shortName}
+                                                        </span>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                                                <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">folder_off</span>
-                                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No loan applications</p>
-                                            </div>
-                                        )}
+
+                                                    <div className="space-y-3 text-[11px]">
+                                                        <div className="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-100">
+                                                            <span className="text-emerald-800 font-black uppercase text-[9px] block">Interest Rate (ROI)</span>
+                                                            <p className="text-emerald-950 font-black text-sm mt-0.5">
+                                                                {comparedBankPartner.interestRateMin || comparedBankPartner.minRoi || 8.5}% - {comparedBankPartner.interestRateMax || comparedBankPartner.maxRoi || 14.5}% <span className="text-[10px] font-semibold text-emerald-700">p.a.</span>
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                                                <span className="text-slate-400 font-bold uppercase text-[8px] block">Max Loan Limit</span>
+                                                                <p className="font-extrabold text-slate-900 text-xs mt-0.5">{comparedBankPartner.maxLoanAmount || '₹1.50 Cr'}</p>
+                                                            </div>
+                                                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                                                <span className="text-slate-400 font-bold uppercase text-[8px] block">Collateral-Free</span>
+                                                                <p className="font-extrabold text-slate-900 text-xs mt-0.5">{comparedBankPartner.collateralFreeLimit || '₹50 Lakhs'}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                                                <span className="text-slate-400 font-bold uppercase text-[8px] block">Processing SLA</span>
+                                                                <p className="font-extrabold text-slate-900 text-xs mt-0.5">{comparedBankPartner.processingTime || '3-5 Days'}</p>
+                                                            </div>
+                                                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                                                <span className="text-slate-400 font-bold uppercase text-[8px] block">Processing Fee</span>
+                                                                <p className="font-extrabold text-slate-900 text-xs mt-0.5">{comparedBankPartner.processingFee || '0.5% - 1%'}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        {Array.isArray(comparedBankPartner.features) && comparedBankPartner.features.length > 0 && (
+                                                            <div>
+                                                                <span className="text-slate-400 font-bold uppercase text-[9px] block mb-1">Key Schemes & Highlights</span>
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {comparedBankPartner.features.slice(0, 4).map((f: string, idx: number) => (
+                                                                        <span key={idx} className="px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded text-[9px] font-bold border border-emerald-100">
+                                                                            ✓ {f}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-12">
+                                                    <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">account_balance</span>
+                                                    <p className="text-xs text-slate-400 font-bold">Select a Bank Partner above to compare</p>
+                                                </div>
+                                            )}
+
+                                            {comparedBankPartner?.website && (
+                                                <div className="mt-4 pt-3 border-t border-slate-100">
+                                                    <a
+                                                        href={comparedBankPartner.website}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center justify-center gap-1"
+                                                    >
+                                                        <span>Visit Official {comparedBankPartner.name} Portal</span>
+                                                        <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
+                                </div>
+                            ) : userProfileTab === 'applications' ? (
+                                /* ─── Applications Tab ─── */
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <span className="material-symbols-outlined text-emerald-600 text-[20px]">account_balance</span>
+                                        <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wide">Loan Applications ({userLoans.length})</h3>
+                                    </div>
+                                    
+                                    {userLoans.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {userLoans.map((loan: any, idx: number) => (
+                                                <div key={idx} className="p-4 border border-slate-100 rounded-lg hover:border-slate-200 hover:bg-slate-50/50 transition-all group">
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="flex-1">
+                                                            <p className="text-[12px] font-bold text-slate-900">
+                                                                {loan.bank} - {loan.loanType?.toUpperCase()}
+                                                            </p>
+                                                            <p className="text-[10px] text-slate-500 mt-1">
+                                                                App ID: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-[9px] font-mono">{loan.applicationNumber || loan.id?.substring(0, 8)}</code>
+                                                            </p>
+                                                        </div>
+                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                                                            loan.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                            loan.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                            loan.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                            loan.status === 'disbursed' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                                            loan.status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                                                            'bg-slate-50 text-slate-600 border-slate-100'
+                                                        }`}>
+                                                            {loan.status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div className="text-[10px]">
+                                                            <span className="text-slate-500 font-medium">Amount</span>
+                                                            <p className="text-[12px] font-bold text-slate-900 mt-0.5">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(loan.amount || 0)}</p>
+                                                        </div>
+                                                        <div className="text-[10px]">
+                                                            <span className="text-slate-500 font-medium">Applied On</span>
+                                                            <p className="text-[12px] font-bold text-slate-900 mt-0.5">{loan.createdAt ? new Date(loan.createdAt).toLocaleDateString('en-IN') : '—'}</p>
+                                                        </div>
+                                                    </div>
+                                                    {loan.universityName && (
+                                                        <p className="text-[10px] text-slate-500 mt-3">
+                                                            <span className="font-medium">University:</span> {loan.universityName} {loan.country && `(${loan.country})`}
+                                                        </p>
+                                                    )}
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedApp(loan);
+                                                            setSelectedUserProfile(null);
+                                                        }}
+                                                        className="mt-3 w-full px-3 py-2 bg-slate-900 text-white rounded text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[12px]">open_in_full</span>
+                                                        View Full Details
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                                            <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">folder_off</span>
+                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No loan applications</p>
+                                        </div>
+                                    )}
 
                                     {/* Summary Statistics */}
                                     <div className="space-y-6 pt-6 border-t border-slate-200">
@@ -3912,7 +4257,27 @@ export default function AdminDashboardPage() {
                                             </div>
                                         )}
                                     </div>
-                                </>
+                                </div>
+                            ) : (
+                                /* ─── Credentials Tab ─── */
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <span className="material-symbols-outlined text-indigo-600 text-[20px]">security</span>
+                                        <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wide">Personal Information</h3>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 bg-indigo-50 p-6 rounded-lg border border-indigo-100">
+                                        <DetailRow label="Full Name" value={`${userCredentials?.firstName || selectedUserProfile.firstName} ${userCredentials?.lastName || selectedUserProfile.lastName}`} highlight />
+                                        <DetailRow label="Email" value={userCredentials?.email || selectedUserProfile.email} />
+                                        <DetailRow label="Phone" value={userCredentials?.mobile || userCredentials?.phoneNumber || '—'} />
+                                        <DetailRow label="Role" value={userCredentials?.role?.toUpperCase() || '—'} />
+                                        <DetailRow label="Assigned Bank" value={selectedUserProfile.bank ? selectedUserProfile.bank.toUpperCase() : '—'} />
+                                        <DetailRow label="Date of Birth" value={userCredentials?.dob ? format(new Date(userCredentials.dob), 'dd MMM yyyy') : '—'} />
+                                        <DetailRow label="Gender" value={userCredentials?.gender || '—'} />
+                                        {userCredentials?.createdAt && (
+                                            <DetailRow label="Member Since" value={format(new Date(userCredentials.createdAt), 'dd MMM yyyy')} />
+                                        )}
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>

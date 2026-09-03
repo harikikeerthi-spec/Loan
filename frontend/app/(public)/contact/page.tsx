@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
-
-const offices = [
-    { city: "Nuzvid", role: "Headquarters & Counselor Center", address: "Nuzvid, Krishna District, Andhra Pradesh", phone: "+91 9240209000" },
-
-];
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 export default function ContactUsPage() {
+    const { settings } = useSiteSettings();
+    const siteName = settings?.siteName || "VidyaLoans";
+    const supportEmail = settings?.supportEmail || "support@vidyaloans.com";
+    const phone = settings?.phone || "+91 8143797779";
+    const address = settings?.address || "Nuzvid, Krishna District, Andhra Pradesh";
+
+    const offices = [
+        { city: "Headquarters", role: "Headquarters & Counselor Center", address, phone },
+    ];
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -320,23 +325,23 @@ export default function ContactUsPage() {
                             <h3 className="text-lg font-bold font-display text-gray-900">Direct Contacts</h3>
 
                             <div className="space-y-4">
-                                <a href="mailto:support@vidyaloans.in" className="flex items-center gap-4 group p-3 bg-white/20 hover:bg-white/60 border border-gray-100 hover:border-purple-500/20 rounded-2xl transition-all shadow-sm">
+                                <a href={`mailto:${supportEmail}`} className="flex items-center gap-4 group p-3 bg-white/20 hover:bg-white/60 border border-gray-100 hover:border-purple-500/20 rounded-2xl transition-all shadow-sm">
                                     <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
                                         <span className="material-symbols-outlined text-lg">mail</span>
                                     </div>
                                     <div>
                                         <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest block mb-0.5">Email Support</span>
-                                        <span className="text-[13px] font-bold text-gray-900 group-hover:text-[#6605c7] transition-colors font-mono">support@vidyaloan.in</span>
+                                        <span className="text-[13px] font-bold text-gray-900 group-hover:text-[#6605c7] transition-colors font-mono">{supportEmail}</span>
                                     </div>
                                 </a>
 
-                                <a href="tel:+919240209000" className="flex items-center gap-4 group p-3 bg-white/20 hover:bg-white/60 border border-gray-100 hover:border-purple-500/20 rounded-2xl transition-all shadow-sm">
+                                <a href={`tel:${phone.replace(/\s+/g, '')}`} className="flex items-center gap-4 group p-3 bg-white/20 hover:bg-white/60 border border-gray-100 hover:border-purple-500/20 rounded-2xl transition-all shadow-sm">
                                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                                         <span className="material-symbols-outlined text-lg">call</span>
                                     </div>
                                     <div>
                                         <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest block mb-0.5">Call Helpline</span>
-                                        <span className="text-[13px] font-bold text-gray-900 group-hover:text-indigo-600 transition-colors font-mono">+91 9240209000</span>
+                                        <span className="text-[13px] font-bold text-gray-900 group-hover:text-indigo-600 transition-colors font-mono">{phone}</span>
                                     </div>
                                 </a>
                             </div>

@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/landing', '/apply'],
+        allow: '/',
         disallow: [
           '/dashboard',
           '/document-vault',
@@ -18,6 +18,7 @@ export default function robots(): MetadataRoute.Robots {
           '/admin',
           '/bank',
           '/agent',
+          '/it',
           '/api',
         ],
       },

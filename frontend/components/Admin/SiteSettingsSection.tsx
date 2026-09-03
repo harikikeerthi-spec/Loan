@@ -282,6 +282,22 @@ export default function SiteSettingsSection() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleImageUpload = (field: "logoLightUrl" | "logoDarkUrl" | "faviconUrl" | "appIconUrl", file: File) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("Image size must be less than 2MB", "error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        handleChange(field, e.target.result as string);
+        showToast("Image loaded! Click 'Save Settings' to apply platform-wide.", "success");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   const handleSave = async () => {
@@ -292,15 +308,27 @@ export default function SiteSettingsSection() {
       if (res && res.data) {
         setForm((prev) => ({ ...prev, ...res.data }));
         setInitialForm((prev) => ({ ...prev, ...res.data }));
-        showToast("Settings saved successfully!", "success");
+        showToast("Settings saved and reflected site-wide!", "success");
       } else {
-        showToast("Settings updated successfully!", "success");
+        showToast("Settings updated and applied!", "success");
         setInitialForm(form);
       }
 
-      // Broadcast hot reload to all UI components
+      // Hot reload: update localStorage and broadcast across all tabs and windows
       if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("vidyaloans_site_settings", JSON.stringify(updatedData));
+        } catch (e) {}
+
         window.dispatchEvent(new CustomEvent("site-settings-updated", { detail: updatedData }));
+
+        if ("BroadcastChannel" in window) {
+          try {
+            const channel = new BroadcastChannel("site_settings_sync");
+            channel.postMessage({ type: "SETTINGS_UPDATED", data: updatedData });
+            channel.close();
+          } catch (e) {}
+        }
       }
     } catch (e) {
       console.error("Error saving site settings:", e);
@@ -318,10 +346,22 @@ export default function SiteSettingsSection() {
       if (res && res.data) {
         setForm((prev) => ({ ...prev, ...res.data }));
         setInitialForm((prev) => ({ ...prev, ...res.data }));
-        showToast("Settings reset to defaults", "success");
+        showToast("Settings reset to defaults and reflected site-wide!", "success");
 
         if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("vidyaloans_site_settings", JSON.stringify(res.data));
+          } catch (e) {}
+
           window.dispatchEvent(new CustomEvent("site-settings-updated", { detail: res.data }));
+
+          if ("BroadcastChannel" in window) {
+            try {
+              const channel = new BroadcastChannel("site_settings_sync");
+              channel.postMessage({ type: "SETTINGS_UPDATED", data: res.data });
+              channel.close();
+            } catch (e) {}
+          }
         }
       }
     } catch (e) {
@@ -803,113 +843,403 @@ export default function SiteSettingsSection() {
       )}
 
       {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ── TAB: GENERAL & BRANDING ── */}
+      {/* ── TAB: GENERAL & BRANDING (Live Dynamic Reflection Engine) ── */}
       {/* ────────────────────────────────────────────────────────────────────────── */}
       {activeTab === "general" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
-            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-              <Building2 className="w-4 h-4" />
-              <h3>Core Site Identity</h3>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Site Title / Name</label>
-              <input
-                type="text"
-                value={form.siteName}
-                onChange={(e) => handleChange("siteName", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Tagline / Slogan</label>
-              <input
-                type="text"
-                value={form.tagline}
-                onChange={(e) => handleChange("tagline", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Support Email</label>
-                <input
-                  type="email"
-                  value={form.supportEmail}
-                  onChange={(e) => handleChange("supportEmail", e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-                />
+        <div className="space-y-6 animate-fade-in">
+          {/* Live Preview Card */}
+          <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-indigo-950 p-6 rounded-2xl border border-slate-700/60 shadow-xl text-white">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Live Website Header Preview (Real-Time Reflection)</h3>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Phone</label>
-                <input
-                  type="text"
-                  value={form.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              <span className="text-[11px] font-mono text-indigo-300 bg-indigo-500/20 px-2.5 py-0.5 rounded-full border border-indigo-400/30">
+                Instant DOM Sync
+              </span>
+            </div>
+
+            {/* Simulated Live Navbar */}
+            <div className="bg-white/95 backdrop-blur-md rounded-xl p-4 text-slate-900 flex flex-wrap items-center justify-between gap-4 shadow-lg border border-white/40">
+              <div className="flex items-center gap-3">
+                <img
+                  src={form.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                  alt="Live Logo Preview"
+                  className="w-9 h-9 object-contain drop-shadow-sm"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/images/vidyaloans-logo-transparent.png";
+                  }}
                 />
+                <div>
+                  <div className="text-lg font-bold tracking-tight text-slate-900 font-display flex items-center gap-1.5">
+                    {form.siteName || "VidyaLoans"}
+                  </div>
+                  <div className="text-[11px] text-slate-500 max-w-sm truncate">
+                    {form.tagline || "Overseas Education Financing & Study Abroad Loan Portal"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex flex-col text-right text-[11px] text-slate-600">
+                  <span className="font-semibold text-slate-800">Helpline: {form.phone || "+91 8143797779"}</span>
+                  <span className="text-slate-500">{form.supportEmail || "support@vidyaloans.com"}</span>
+                </div>
+                <button
+                  style={{ backgroundColor: form.primaryColor || "#6605c7" }}
+                  className="px-4 py-2 rounded-xl text-white text-xs font-bold shadow-md transition-transform active:scale-95"
+                >
+                  Apply Now
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
-            <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
-              <span className="material-symbols-outlined">palette</span>
-              <h3>Branding & Theme Colors</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Core Site Identity & SEO */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+                <Building2 className="w-4 h-4" />
+                <h3>Core Brand Identity & SEO</h3>
+              </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Color</label>
-                <div className="flex items-center gap-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Site Title / Brand Name</label>
+                <input
+                  type="text"
+                  value={form.siteName}
+                  onChange={(e) => handleChange("siteName", e.target.value)}
+                  placeholder="VidyaLoans"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-semibold shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Tagline / Slogan</label>
+                <input
+                  type="text"
+                  value={form.tagline}
+                  onChange={(e) => handleChange("tagline", e.target.value)}
+                  placeholder="Overseas Education Financing & Study Abroad Loan Portal"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Meta Title (Browser Page Title)</label>
+                <input
+                  type="text"
+                  value={form.metaTitle}
+                  onChange={(e) => handleChange("metaTitle", e.target.value)}
+                  placeholder="VidyaLoans - Instant Education Loans for Overseas Studies"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Meta Description (Search Engines & Social Sharing)</label>
+                <textarea
+                  rows={3}
+                  value={form.metaDescription}
+                  onChange={(e) => handleChange("metaDescription", e.target.value)}
+                  placeholder="Compare and apply for top education loans with lowest interest rates, quick approval, and zero hidden charges."
+                  className="w-full p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
+            </div>
+
+            {/* Branding Visual Assets (Upload & URLs) */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+                <span className="material-symbols-outlined text-lg">image</span>
+                <h3>Branding Assets & Logos</h3>
+              </div>
+
+              {/* Logo Light */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Light Theme Logo URL</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                    <img
+                      src={form.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                      alt="Logo"
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/images/vidyaloans-logo-transparent.png";
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <input
+                      type="text"
+                      value={form.logoLightUrl}
+                      onChange={(e) => handleChange("logoLightUrl", e.target.value)}
+                      placeholder="/images/vidyaloans-logo-transparent.png"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                    />
+                    <label className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">
+                      <span className="material-symbols-outlined text-sm">upload_file</span>
+                      <span>Upload New Logo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload("logoLightUrl", file);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Favicon & App Icon */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Favicon URL (.ico / .png)</label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 p-1 flex items-center justify-center shrink-0">
+                      <img
+                        src={form.faviconUrl || "/favicon.ico"}
+                        alt="Favicon"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/favicon.ico";
+                        }}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={form.faviconUrl}
+                      onChange={(e) => handleChange("faviconUrl", e.target.value)}
+                      placeholder="/favicon.ico"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">App Icon URL</label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 p-1 flex items-center justify-center shrink-0">
+                      <img
+                        src={form.appIconUrl || "/images/icon.png"}
+                        alt="Icon"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/images/icon.png";
+                        }}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={form.appIconUrl}
+                      onChange={(e) => handleChange("appIconUrl", e.target.value)}
+                      placeholder="/images/icon.png"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Theme Colors */}
+              <div className="border-t pt-3 space-y-3">
+                <span className="block text-xs font-bold uppercase tracking-wider text-slate-600">Dynamic Theme Colors</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Brand Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={form.primaryColor || "#6605c7"}
+                        onChange={(e) => handleChange("primaryColor", e.target.value)}
+                        className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5"
+                      />
+                      <input
+                        type="text"
+                        value={form.primaryColor}
+                        onChange={(e) => handleChange("primaryColor", e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Secondary / Indigo Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={form.secondaryColor || "#4f46e5"}
+                        onChange={(e) => handleChange("secondaryColor", e.target.value)}
+                        className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5"
+                      />
+                      <input
+                        type="text"
+                        value={form.secondaryColor}
+                        onChange={(e) => handleChange("secondaryColor", e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Corporate & Contact Details */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+                <Mail className="w-4 h-4" />
+                <h3>Contact & Regional Localization</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Support Email</label>
                   <input
-                    type="color"
-                    value={form.primaryColor}
-                    onChange={(e) => handleChange("primaryColor", e.target.value)}
-                    className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5"
+                    type="email"
+                    value={form.supportEmail}
+                    onChange={(e) => handleChange("supportEmail", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Email</label>
+                  <input
+                    type="email"
+                    value={form.contactEmail}
+                    onChange={(e) => handleChange("contactEmail", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Helpline Phone</label>
                   <input
                     type="text"
-                    value={form.primaryColor}
-                    onChange={(e) => handleChange("primaryColor", e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                    value={form.phone}
+                    onChange={(e) => handleChange("phone", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Toll-Free Phone</label>
+                  <input
+                    type="text"
+                    value={form.tollFree}
+                    onChange={(e) => handleChange("tollFree", e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Secondary Color</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={form.secondaryColor}
-                    onChange={(e) => handleChange("secondaryColor", e.target.value)}
-                    className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 p-0.5"
-                  />
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Corporate Address / Office</label>
+                <input
+                  type="text"
+                  value={form.address}
+                  onChange={(e) => handleChange("address", e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Default Currency</label>
                   <input
                     type="text"
-                    value={form.secondaryColor}
-                    onChange={(e) => handleChange("secondaryColor", e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                    value={form.currency}
+                    onChange={(e) => handleChange("currency", e.target.value)}
+                    placeholder="INR"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Platform Timezone</label>
+                  <input
+                    type="text"
+                    value={form.timezone}
+                    onChange={(e) => handleChange("timezone", e.target.value)}
+                    placeholder="Asia/Kolkata"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium"
                   />
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Copyright Footer Text</label>
+                <input
+                  type="text"
+                  value={form.copyrightText}
+                  onChange={(e) => handleChange("copyrightText", e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Logo URL (Transparent PNG)</label>
-              <input
-                type="text"
-                value={form.logoLightUrl}
-                onChange={(e) => handleChange("logoLightUrl", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Copyright Footer Text</label>
-              <input
-                type="text"
-                value={form.copyrightText}
-                onChange={(e) => handleChange("copyrightText", e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-              />
+
+            {/* Social Media & Live Chat Overrides */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm border-b pb-3">
+                <Globe className="w-4 h-4" />
+                <h3>Social Channels & WhatsApp Widget</h3>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  WhatsApp Support Number (Powers Floating Chat Widget)
+                </label>
+                <input
+                  type="text"
+                  value={form.whatsappNumber}
+                  onChange={(e) => handleChange("whatsappNumber", e.target.value)}
+                  placeholder="+918143797779"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-xs font-mono"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Instagram URL</label>
+                  <input
+                    type="text"
+                    value={form.instagramUrl}
+                    onChange={(e) => handleChange("instagramUrl", e.target.value)}
+                    placeholder="https://instagram.com/..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">LinkedIn URL</label>
+                  <input
+                    type="text"
+                    value={form.linkedinUrl}
+                    onChange={(e) => handleChange("linkedinUrl", e.target.value)}
+                    placeholder="https://linkedin.com/company/..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">YouTube Channel URL</label>
+                  <input
+                    type="text"
+                    value={form.youtubeUrl}
+                    onChange={(e) => handleChange("youtubeUrl", e.target.value)}
+                    placeholder="https://youtube.com/@..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Telegram Community URL</label>
+                  <input
+                    type="text"
+                    value={form.telegramUrl}
+                    onChange={(e) => handleChange("telegramUrl", e.target.value)}
+                    placeholder="https://t.me/..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Custom CSS Styling Injection</label>
+                <textarea
+                  rows={3}
+                  value={form.customCss}
+                  onChange={(e) => handleChange("customCss", e.target.value)}
+                  placeholder="/* Overwrite default site styling */ :root { --brand-primary: #6605c7; }"
+                  className="w-full p-2.5 rounded-xl border border-slate-300 font-mono text-xs bg-slate-950 text-indigo-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                />
+              </div>
             </div>
           </div>
         </div>

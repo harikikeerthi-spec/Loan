@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { adminApi, documentApi } from "@/lib/api";
+import { adminApi, documentApi, referenceApi } from "@/lib/api";
 import { format } from "date-fns";
 
 export default function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -16,19 +16,42 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
     const [userData, setUserData] = useState<any>(null);
     const [userApplications, setUserApplications] = useState<any[]>([]);
     const [userDocuments, setUserDocuments] = useState<any[]>([]);
-    const [activeTab, setActiveTab] = useState<"profile" | "applications" | "documents">("profile");
+    const [activeTab, setActiveTab] = useState<"profile" | "applications" | "documents" | "bank_compare">("profile");
     const [selectedApplication, setSelectedApplication] = useState<any>(null);
+
+    // Dynamic Bank Partner & Comparison State
+    const [bankPartners, setBankPartners] = useState<any[]>([]);
+    const [comparedBankPartner, setComparedBankPartner] = useState<any>(null);
+    const [updatingBank, setUpdatingBank] = useState(false);
 
     useEffect(() => {
         const fetchUserDetails = async () => {
             setLoading(true);
             try {
                 // Fetch all users and find the one with matching ID
-                const usersRes = await adminApi.getUsers() as any;
+                const [usersRes, banksRes]: [any, any] = await Promise.all([
+                    adminApi.getUsers().catch(() => ({ data: [] })),
+                    referenceApi.getBanks().catch(() => ({ data: [] }))
+                ]);
                 const foundUser = usersRes.data?.find((u: any) => u.id === userId || u._id === userId);
                 
+                const banks = banksRes.success && Array.isArray(banksRes.data) ? banksRes.data : [];
+                setBankPartners(banks);
+
                 if (foundUser) {
                     setUserData(foundUser);
+
+                    const userBankKey = (foundUser.bank || foundUser.partnerBank || foundUser.bankId || foundUser.firstName || '').toLowerCase().trim();
+                    const matchedBank = banks.find((b: any) => 
+                        b.shortName?.toLowerCase() === userBankKey ||
+                        b.name?.toLowerCase().includes(userBankKey) ||
+                        (userBankKey && userBankKey.includes(b.shortName?.toLowerCase()))
+                    ) || banks[0];
+                    setComparedBankPartner(matchedBank || null);
+
+                    if (foundUser.role === 'bank' || foundUser.role === 'partner_bank') {
+                        setActiveTab("bank_compare");
+                    }
 
                     // Fetch user's applications
                     const appsRes = await adminApi.getApplications({}) as any;
@@ -54,6 +77,23 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
 
         fetchUserDetails();
     }, [userId]);
+
+    const handleUpdateBankAssignment = async (bankShortName: string) => {
+        if (!userData) return;
+        setUpdatingBank(true);
+        try {
+            await adminApi.updateUserDetails({
+                email: userData.email,
+                bank: bankShortName,
+            } as any);
+            alert(`Lending Partner updated to "${bankShortName.toUpperCase()}" for ${userData.email}`);
+            setUserData((prev: any) => ({ ...prev, bank: bankShortName }));
+        } catch (e: any) {
+            alert("Failed to update bank partner assignment: " + (e.message || e));
+        } finally {
+            setUpdatingBank(false);
+        }
+    };
 
     const handleBack = () => {
         router.back();
@@ -133,18 +173,19 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                 </div>
 
                 {/* Tab Navigation */}
-                <div className="max-w-6xl mx-auto px-6 flex gap-8 border-t border-slate-200">
+                <div className="max-w-6xl mx-auto px-6 flex gap-8 border-t border-slate-200 overflow-x-auto">
                     {[
                         { id: "profile", label: "Profile Information", icon: "badge" },
                         { id: "applications", label: "Applications", icon: "description", count: userApplications.length },
                         { id: "documents", label: "Documents", icon: "folder", count: userDocuments.length },
+                        { id: "bank_compare", label: "Bank Profile & Compare", icon: "account_balance" },
                     ].map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`py-4 font-bold text-[13px] uppercase tracking-wide border-b-2 flex items-center gap-2 transition-colors ${
+                            className={`py-4 font-bold text-[13px] uppercase tracking-wide border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
                                 activeTab === tab.id
-                                    ? "border-indigo-600 text-indigo-600"
+                                    ? tab.id === "bank_compare" ? "border-emerald-600 text-emerald-600" : "border-indigo-600 text-indigo-600"
                                     : "border-transparent text-slate-500 hover:text-slate-700"
                             }`}
                         >
@@ -477,6 +518,223 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                                 <p className="text-slate-500 font-semibold">No documents found for this user</p>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Bank Profile & Comparison Tab */}
+                {activeTab === "bank_compare" && (
+                    <div className="space-y-6">
+                        {/* Comparison Switcher & Summary Bar */}
+                        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100 border border-emerald-200 rounded-2xl p-6 shadow-sm">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-xs uppercase tracking-wider">
+                                        <span className="material-symbols-outlined text-[20px] text-emerald-600">account_balance</span>
+                                        Bank Profile vs Bank Partner Comparison Engine
+                                    </div>
+                                    <p className="text-xs text-emerald-900 font-medium mt-1">
+                                        Compare this user identity & buffer workload against all active institutional lending partner configurations.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3 w-full md:w-auto">
+                                    <div className="relative flex-1 md:w-64">
+                                        <select
+                                            value={comparedBankPartner?.shortName || ""}
+                                            onChange={(e) => {
+                                                const partner = bankPartners.find(b => b.shortName === e.target.value);
+                                                setComparedBankPartner(partner || null);
+                                            }}
+                                            className="w-full px-4 py-2.5 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer shadow-xs"
+                                        >
+                                            {bankPartners.map((bp: any) => (
+                                                <option key={bp.id || bp.shortName} value={bp.shortName}>
+                                                    {bp.name} ({bp.shortName.toUpperCase()})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {comparedBankPartner && (
+                                        <a
+                                            href={`/bank/decisions?bankId=${encodeURIComponent(comparedBankPartner.shortName)}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm shrink-0"
+                                            title="Launch Partner Underwriting Decision Queue"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                                            Lender Portal
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Side by Side Comparison Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Left Box: User Identity & Profile Specs */}
+                            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-black">
+                                                <span className="material-symbols-outlined text-[20px]">person</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-bold text-slate-900">User Profile Identity</h3>
+                                                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">{userData.email}</p>
+                                            </div>
+                                        </div>
+                                        <span className={`px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider ${
+                                            userData.role?.includes('bank') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-700'
+                                        }`}>
+                                            {userData.role?.toUpperCase() || 'USER'}
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 text-xs">
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Full Legal Name</span>
+                                            <p className="font-bold text-slate-900 mt-1">{userData.firstName || "—"} {userData.lastName || ""}</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Phone / Mobile</span>
+                                            <p className="font-bold text-slate-900 mt-1 font-mono">{userData.mobile || userData.phone || userData.phoneNumber || "—"}</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Assigned Lending Partner</span>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <span className="material-symbols-outlined text-[16px] text-indigo-600">account_balance</span>
+                                                <p className="font-black text-indigo-900">
+                                                    {userData.bank ? userData.bank.toUpperCase() : "Default / Unassigned"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Application Queue</span>
+                                            <p className="font-black text-slate-900 mt-1 text-sm">{userApplications.length} File{userApplications.length === 1 ? '' : 's'}</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Last Login IP</span>
+                                            <p className="font-mono text-slate-700 mt-1">{userData.last_login_ip || "0.0.0.0"}</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Last Login Location</span>
+                                            <p className="font-semibold text-slate-700 mt-1">{userData.last_login_location || "Unknown"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {comparedBankPartner && (
+                                    <div className="mt-6 pt-4 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleUpdateBankAssignment(comparedBankPartner.shortName)}
+                                            disabled={updatingBank || userData.bank === comparedBankPartner.shortName}
+                                            className={`w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                                                userData.bank === comparedBankPartner.shortName
+                                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 cursor-default'
+                                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
+                                            }`}
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">
+                                                {userData.bank === comparedBankPartner.shortName ? 'check_circle' : 'link'}
+                                            </span>
+                                            {userData.bank === comparedBankPartner.shortName
+                                                ? 'Assigned to This Lending Partner'
+                                                : `Set Active Bank Partner to ${comparedBankPartner.shortName.toUpperCase()}`}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Box: Master Bank Partner Parameters */}
+                            <div className="bg-white rounded-2xl border-2 border-emerald-200 p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                                <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-50 rounded-full blur-2xl pointer-events-none" />
+
+                                {comparedBankPartner ? (
+                                    <div>
+                                        <div className="flex items-center justify-between pb-4 mb-5 border-b border-emerald-100">
+                                            <div className="flex items-center gap-3">
+                                                {comparedBankPartner.logoUrl ? (
+                                                    <img src={comparedBankPartner.logoUrl} alt="" className="w-10 h-10 rounded-xl object-contain bg-slate-50 border border-slate-200 p-1" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black">
+                                                        <span className="material-symbols-outlined text-[20px]">account_balance</span>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <h3 className="text-sm font-black text-slate-900 leading-tight">{comparedBankPartner.name}</h3>
+                                                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">{comparedBankPartner.type || 'LENDING INSTITUTION'}</span>
+                                                </div>
+                                            </div>
+                                            <span className="px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                                                {comparedBankPartner.shortName}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-4 text-xs">
+                                            <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-100">
+                                                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 block">Interest Rate Spread (ROI)</span>
+                                                <p className="text-emerald-950 font-black text-base mt-0.5">
+                                                    {comparedBankPartner.interestRateMin || 8.5}% - {comparedBankPartner.interestRateMax || 14.5}% <span className="text-xs font-semibold text-emerald-700">p.a.</span>
+                                                </p>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Max Loan Limit</span>
+                                                    <p className="font-black text-slate-900 mt-1">{comparedBankPartner.maxLoanAmount || '₹1.50 Cr'}</p>
+                                                </div>
+                                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Collateral-Free Cap</span>
+                                                    <p className="font-black text-slate-900 mt-1">{comparedBankPartner.collateralFreeLimit || '₹50 Lakhs'}</p>
+                                                </div>
+                                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Turnaround SLA</span>
+                                                    <p className="font-black text-slate-900 mt-1">{comparedBankPartner.processingTime || '3-5 Days'}</p>
+                                                </div>
+                                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Processing Fee</span>
+                                                    <p className="font-black text-slate-900 mt-1">{comparedBankPartner.processingFee || '0.5% - 1%'}</p>
+                                                </div>
+                                            </div>
+
+                                            {Array.isArray(comparedBankPartner.features) && comparedBankPartner.features.length > 0 && (
+                                                <div>
+                                                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">Underwriting Scheme Highlights</span>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {comparedBankPartner.features.slice(0, 5).map((feature: string, idx: number) => (
+                                                            <span key={idx} className="px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-lg text-[10px] font-bold border border-emerald-100">
+                                                                ✓ {feature}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-16">
+                                        <span className="material-symbols-outlined text-4xl text-slate-300 block mb-2">account_balance</span>
+                                        <p className="text-xs text-slate-400 font-bold">Select a Bank Partner from the dropdown to compare specifications.</p>
+                                    </div>
+                                )}
+
+                                {comparedBankPartner?.website && (
+                                    <div className="mt-6 pt-4 border-t border-slate-100">
+                                        <a
+                                            href={comparedBankPartner.website}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center justify-center gap-1.5"
+                                        >
+                                            <span>Visit Official {comparedBankPartner.name} Portal</span>
+                                            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { adminApi } from "@/lib/api";
@@ -54,6 +55,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
 
 export default function BankLayout({ children }: { children: React.ReactNode }) {
     const { user, isBank, isAdmin, isLoading, logout, token } = useAuth();
+    const { settings: siteSettings } = useSiteSettings();
     const router = useRouter();
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(true);
@@ -307,8 +309,8 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 {/* Logo Section */}
                 <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0 gap-2.5">
                     <img
-                        src="/images/vidyaloans-logo-transparent.png"
-                        alt="VidyaLoans Logo"
+                        src={siteSettings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                        alt={`${siteSettings?.siteName || "VidyaLoans"} Logo`}
                         className="w-7 h-7 object-contain flex-shrink-0"
                     />
                     <AnimatePresence>
@@ -321,7 +323,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 className="flex items-center gap-2 min-w-0 flex-1"
                             >
                                 <span className="font-semibold text-[13px] text-white tracking-wide whitespace-nowrap">
-                                    VidyaLoans<span className="text-indigo-400"> Bank</span>
+                                    {siteSettings?.siteName || "VidyaLoans"}<span className="text-indigo-400"> Bank</span>
                                 </span>
                                 {selectedBankKey && bankLogos[selectedBankKey] && (
                                     <>

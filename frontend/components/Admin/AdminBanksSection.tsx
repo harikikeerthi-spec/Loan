@@ -44,6 +44,8 @@ export default function AdminBanksSection() {
     const [maxRoiInput, setMaxRoiInput] = useState<number>(14.5);
     const [savingRoi, setSavingRoi] = useState(false);
 
+    const [savingBank, setSavingBank] = useState(false);
+
     // Form states
     const [form, setForm] = useState({
         name: "",
@@ -56,7 +58,7 @@ export default function AdminBanksSection() {
         interestRateMax: 14.5,
         maxLoanAmount: "No Limit",
         collateralRequired: false,
-        collateralFreeLimit: "",
+        collateralFreeLimit: "50 Lakhs",
         processingFee: "1% + GST",
         processingTime: "48 hours",
         features: ["100% Financing: Covers tuition fees, living costs, and travel expenses"],
@@ -103,7 +105,7 @@ export default function AdminBanksSection() {
             interestRateMax: 14.5,
             maxLoanAmount: "No Limit",
             collateralRequired: false,
-            collateralFreeLimit: "",
+            collateralFreeLimit: "50 Lakhs",
             processingFee: "1% + GST",
             processingTime: "48 hours",
             features: ["100% Financing: Covers tuition fees, living costs, and travel expenses"],
@@ -142,6 +144,16 @@ export default function AdminBanksSection() {
         });
         setFeatureInput("");
         setShowModal(true);
+    };
+
+    const handleNameChange = (nameVal: string) => {
+        setForm(prev => ({
+            ...prev,
+            name: nameVal,
+            shortName: !editingBank 
+                ? nameVal.toLowerCase().trim().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-") 
+                : prev.shortName
+        }));
     };
 
     const handleOpenRoiModal = (bank: BankPartner) => {
@@ -224,12 +236,21 @@ export default function AdminBanksSection() {
         e.preventDefault();
         if (!form.name.trim()) return alert("Bank Name is required");
         if (!form.shortName.trim()) return alert("Bank Short Name (slug) is required");
+        if (Number(form.interestRateMin) <= 0 || Number(form.interestRateMax) <= 0) {
+            return alert("Interest rate must be greater than 0");
+        }
+        if (Number(form.interestRateMin) > Number(form.interestRateMax)) {
+            return alert("Min interest rate cannot be greater than Max interest rate");
+        }
 
         const payload = {
             ...form,
+            interestRateMin: Number(form.interestRateMin),
+            interestRateMax: Number(form.interestRateMax),
             shortName: form.shortName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "")
         };
 
+        setSavingBank(true);
         try {
             let res: any;
             if (editingBank) {
@@ -247,6 +268,8 @@ export default function AdminBanksSection() {
             }
         } catch (err: any) {
             alert(err?.message || "Error saving bank partner details");
+        } finally {
+            setSavingBank(false);
         }
     };
 
@@ -525,6 +548,354 @@ export default function AdminBanksSection() {
                                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-50"
                             >
                                 {savingRoi ? "Saving ROI..." : "Save ROI Rates"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add / Edit Bank Partner Modal */}
+            {showModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-100 overflow-hidden my-8 animate-scale-in flex flex-col max-h-[90vh]">
+                        {/* Modal Header */}
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-xl">account_balance</span>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-900 text-base">
+                                        {editingBank ? "Edit Bank Partner" : "Add Lending Bank Partner"}
+                                    </h3>
+                                    <p className="text-[11px] text-slate-500 font-medium">
+                                        {editingBank ? `Configuring parameters for ${editingBank.name}` : "Register a new financial institution in the lender network"}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition-all cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+
+                        {/* Modal Form Body */}
+                        <form id="bank-partner-form" onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                            {/* Section 1: Institution Identity */}
+                            <div>
+                                <h4 className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 mb-3 flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[15px]">domain</span>
+                                    Institution Identity & Code
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Bank / NBFC Name *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={form.name}
+                                            onChange={e => handleNameChange(e.target.value)}
+                                            placeholder="e.g. HDFC Credila Financial Services"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Short Code / Slug (System ID) *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={form.shortName}
+                                            onChange={e => setForm({ ...form, shortName: e.target.value })}
+                                            placeholder="e.g. credila or hdfc-credila"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Institution Type
+                                        </label>
+                                        <select
+                                            value={form.type}
+                                            onChange={e => setForm({ ...form, type: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-600 text-slate-900 cursor-pointer"
+                                        >
+                                            <option value="NBFC">NBFC (Non-Banking Financial Company)</option>
+                                            <option value="Public">Public Sector Bank (PSB)</option>
+                                            <option value="Private">Private Commercial Bank</option>
+                                            <option value="International">International Fintech / Cross-border</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Country of Origin
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={form.country}
+                                            onChange={e => setForm({ ...form, country: e.target.value })}
+                                            placeholder="India"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 2: Interest Rates & Loan Limits */}
+                            <div className="pt-2 border-t border-slate-100">
+                                <h4 className="text-[11px] font-bold uppercase tracking-wider text-purple-600 mb-3 flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[15px]">percent</span>
+                                    Interest Rates & Loan Parameters
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Min Interest Rate (% p.a.) *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            value={form.interestRateMin}
+                                            onChange={e => setForm({ ...form, interestRateMin: parseFloat(e.target.value) || 0 })}
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-purple-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Max Interest Rate (% p.a.) *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            value={form.interestRateMax}
+                                            onChange={e => setForm({ ...form, interestRateMax: parseFloat(e.target.value) || 0 })}
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-purple-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Max Loan Amount
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={form.maxLoanAmount}
+                                            onChange={e => setForm({ ...form, maxLoanAmount: e.target.value })}
+                                            placeholder="e.g. ₹1.5 Crore or No Limit"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Collateral Free Limit
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={form.collateralFreeLimit}
+                                            onChange={e => setForm({ ...form, collateralFreeLimit: e.target.value })}
+                                            placeholder="e.g. ₹50 Lakhs"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Processing Fee
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={form.processingFee}
+                                            onChange={e => setForm({ ...form, processingFee: e.target.value })}
+                                            placeholder="e.g. 1% + GST"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Processing Turnaround Time
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={form.processingTime}
+                                            onChange={e => setForm({ ...form, processingTime: e.target.value })}
+                                            placeholder="e.g. 48 hours"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Checkbox Flags */}
+                            <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-6 items-center">
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.collateralRequired}
+                                        onChange={e => setForm({ ...form, collateralRequired: e.target.checked })}
+                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                    />
+                                    <span className="text-xs font-semibold text-slate-700">Collateral Required Mandatory</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.isPopular}
+                                        onChange={e => setForm({ ...form, isPopular: e.target.checked })}
+                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                    />
+                                    <span className="text-xs font-semibold text-slate-700">Popular / Featured Partner</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.educationLoan}
+                                        onChange={e => setForm({ ...form, educationLoan: e.target.checked })}
+                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                    />
+                                    <span className="text-xs font-semibold text-slate-700">Offers Overseas Education Loans</span>
+                                </label>
+                            </div>
+
+                            {/* Section 4: Key Highlights & Features */}
+                            <div className="pt-2 border-t border-slate-100">
+                                <h4 className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 mb-3 flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[15px]">verified</span>
+                                    Key Highlights & Schemes
+                                </h4>
+                                <div className="flex gap-2 mb-3">
+                                    <input
+                                        type="text"
+                                        value={featureInput}
+                                        onChange={e => setFeatureInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); } }}
+                                        placeholder="Add highlight (e.g. 100% financing with zero margin money)..."
+                                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-emerald-600 text-slate-900"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAddFeature}
+                                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">add</span>
+                                        Add
+                                    </button>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {form.features.map((feat, idx) => (
+                                        <div key={idx} className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-md text-xs text-slate-700 font-medium">
+                                            <span className="flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-emerald-500 text-[14px]">check_circle</span>
+                                                {feat}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveFeature(idx)}
+                                                className="text-slate-400 hover:text-red-600 transition-colors p-0.5"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">delete</span>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Section 5: Web & Contact Details */}
+                            <div className="pt-2 border-t border-slate-100">
+                                <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[15px]">contact_support</span>
+                                    Web, Contact & Branding
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Official Website URL
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={form.website}
+                                            onChange={e => setForm({ ...form, website: e.target.value })}
+                                            placeholder="https://www.hdfccredila.com"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Official Underwriting Email
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={form.email}
+                                            onChange={e => setForm({ ...form, email: e.target.value })}
+                                            placeholder="underwriting@credila.com"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Lender Helpline / Contact
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={form.contactNumber}
+                                            onChange={e => setForm({ ...form, contactNumber: e.target.value })}
+                                            placeholder="+91 1800-209-6600"
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-indigo-600 text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">
+                                            Bank Logo URL
+                                        </label>
+                                        <div className="flex gap-2 items-center">
+                                            <input
+                                                type="url"
+                                                value={form.logoUrl}
+                                                onChange={e => setForm({ ...form, logoUrl: e.target.value })}
+                                                placeholder="https://logo.clearbit.com/hdfccredila.com"
+                                                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-indigo-600 text-slate-900"
+                                            />
+                                            {form.logoUrl && (
+                                                <div className="w-8 h-8 rounded border border-slate-200 bg-white p-1 overflow-hidden shrink-0 flex items-center justify-center">
+                                                    <img src={form.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowModal(false)}
+                                className="px-4 py-2 border border-slate-200 rounded-lg text-xs text-slate-600 hover:bg-slate-100 transition-all font-semibold cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                form="bank-partner-form"
+                                type="submit"
+                                disabled={savingBank}
+                                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {savingBank ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span>Saving Partner...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined text-[15px]">{editingBank ? "check" : "add"}</span>
+                                        <span>{editingBank ? "Update Bank Partner" : "Create Bank Partner"}</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

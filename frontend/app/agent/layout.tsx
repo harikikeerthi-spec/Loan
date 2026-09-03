@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { AgentProvider, useAgent } from "./AgentContext";
 import Link from "next/link";
 import SupportTicketModal from "@/components/SupportTicketModal";
@@ -10,6 +11,7 @@ import SupportTicketModal from "@/components/SupportTicketModal";
 function AgentLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const { user } = useAuth();
+    const { settings: siteSettings } = useSiteSettings();
     const [notificationsOpen, setNotificationsOpen] = React.useState(false);
     const [isSupportOpen, setIsSupportOpen] = React.useState(false);
     const {
@@ -66,14 +68,14 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                     {/* Brand Header Logo */}
                     <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0 gap-2.5">
                         <img
-                            src="/images/vidyaloans-logo-transparent.png"
-                            alt="VidyaLoans Logo"
+                            src={siteSettings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                            alt={`${siteSettings?.siteName || "VidyaLoans"} Logo`}
                             className="w-7 h-7 object-contain flex-shrink-0 cursor-pointer"
                             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                         />
                         {!sidebarCollapsed && (
                             <span className="font-semibold text-[13px] text-white tracking-wide whitespace-nowrap flex-1">
-                                VidyaLoans<span className="text-indigo-400"> Agent</span>
+                                {siteSettings?.siteName || "VidyaLoans"}<span className="text-indigo-400"> Agent</span>
                             </span>
                         )}
                         {!sidebarCollapsed && (

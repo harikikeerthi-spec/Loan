@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 const FIELD_LIMITS = {
     universityName: 100,
@@ -23,8 +24,7 @@ const FIELD_LIMITS = {
 };
 
 function formatINR(valStr: string): string {
-    const val = parseFloat(valStr);
-    if (isNaN(val) || val <= 0) return "";
+    const val = Number(valStr) || 0;
     if (val >= 10000000) {
         const cr = (val / 10000000).toFixed(2).replace(/\.00$/, "");
         return `₹${val.toLocaleString("en-IN")} (${cr} Cr)`;
@@ -39,6 +39,7 @@ function formatINR(valStr: string): string {
 export default function ApplyLandingPage() {
     const router = useRouter();
     const { login } = useAuth();
+    const { settings: siteSettings } = useSiteSettings();
 
     // Step state: 1 = Academic Details, 2 = Co-Applicant Details, 3 = User & Verification Details, 4 = Success
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -251,15 +252,15 @@ export default function ApplyLandingPage() {
             <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-purple-100 shadow-xs px-4 lg:px-8 py-3.5 flex justify-between items-center">
                 <Link href="/" className="flex items-center gap-2.5 group">
                     <Image
-                        src="/images/vidyaloans-logo-transparent.png"
-                        alt="VidyaLoans Logo"
+                        src={siteSettings?.logoLightUrl || "/images/vidyaloans-logo-transparent.png"}
+                        alt={`${siteSettings?.siteName || "VidyaLoans"} Logo`}
                         width={42}
                         height={42}
                         className="w-10 h-10 object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
                         priority
                     />
                     <span className="font-extrabold text-2xl tracking-tight text-[#1a1626] font-display">
-                        VidyaLoans
+                        {siteSettings?.siteName || "VidyaLoans"}
                     </span>
                 </Link>
 
